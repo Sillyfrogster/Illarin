@@ -17,11 +17,11 @@ func readWorkingCopyStanding(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 ) workingCopyStanding {
 	t.Helper()
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+assetID+"?workingCopy=true", nil), session))
+		http.MethodGet, "/v1/assets/"+workID+"?workingCopy=true", nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the working copy = %d: %s", response.Code, response.Body.String())
 	}
@@ -37,7 +37,7 @@ func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if readWorkingCopyStanding(t, r, session, started.ID).UnpublishedChanges {
@@ -54,7 +54,7 @@ func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
 		t.Error("a private edit reads as though readers already have it")
 	}
 
-	update := apitest.PublishAssetUpdate(t, r, session, started.ID,
+	update := apitest.PublishWorkUpdate(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf"}`)
 	if update.Code != http.StatusOK {
 		t.Fatalf("publish an update status = %d, want 200: %s", update.Code, update.Body.String())

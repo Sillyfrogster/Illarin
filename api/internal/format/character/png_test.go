@@ -25,11 +25,11 @@ func testPNG(t *testing.T) []byte {
 	return encoded.Bytes()
 }
 
-func pngChunk(kind string, data []byte) []byte {
+func pngChunk(chunkType string, data []byte) []byte {
 	var chunk bytes.Buffer
 	_ = binary.Write(&chunk, binary.BigEndian, uint32(len(data)))
-	chunk.WriteString(kind)
+	chunk.WriteString(chunkType)
 	chunk.Write(data)
-	_ = binary.Write(&chunk, binary.BigEndian, crc32.ChecksumIEEE(append([]byte(kind), data...)))
+	_ = binary.Write(&chunk, binary.BigEndian, crc32.ChecksumIEEE(append([]byte(chunkType), data...)))
 	return chunk.Bytes()
 }

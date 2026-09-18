@@ -50,7 +50,7 @@ func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
 	t.Parallel()
 	err := full.Register(
 		gin.New(),
-		apitest.Services{Assets: &work.Service{}, Links: &connect.Apps{}},
+		apitest.Services{Works: &work.Service{}, Links: &connect.Apps{}},
 		api.Deadlines{Upload: time.Minute, Download: time.Minute, Deliver: time.Minute},
 	)
 
@@ -74,15 +74,15 @@ func TestAnUploadIsNotHeldToTheListingDeadline(t *testing.T) {
 
 func TestADownloadIsNotHeldToTheListingDeadline(t *testing.T) {
 	t.Parallel()
-	setup, r, session, assets := harness.NewVerifiedRoutersWithService(t, 1<<20, deadlines(alreadyPast))
+	setup, r, session, works := harness.NewVerifiedRoutersWithService(t, 1<<20, deadlines(alreadyPast))
 
 	file := []byte("bytes worth waiting for")
 	metadata := apitest.ExampleMetadata("Roomy")
 	metadata["filename"] = "roomy.lumitheme"
-	rec := apitest.UploadAndFinish(t, setup, session, assets, metadata, file)
+	rec := apitest.UploadAndFinish(t, setup, session, works, metadata, file)
 
 	var created struct {
-		Asset *struct {
+		Work *struct {
 			ID string `json:"id"`
 		} `json:"asset"`
 	}
@@ -90,11 +90,11 @@ func TestADownloadIsNotHeldToTheListingDeadline(t *testing.T) {
 		t.Fatalf("decode: %v", err)
 	}
 
-	if created.Asset == nil {
+	if created.Work == nil {
 		t.Fatal("completed ingest has no asset")
 	}
 	rec = httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/download/"+created.Asset.ID, nil))
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/download/"+created.Work.ID, nil))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200. body: %s", rec.Code, rec.Body.String())

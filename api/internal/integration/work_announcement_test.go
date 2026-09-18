@@ -14,13 +14,13 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 )
 
-type assetAnnouncement struct {
+type workAnnouncement struct {
 	ID            string           `json:"id"`
 	EventID       string           `json:"eventId"`
 	UpdateID      string           `json:"updateId"`
 	UpdateNumber  int              `json:"updateNumber"`
 	Destination   string           `json:"destination"`
-	Kind          string           `json:"kind"`
+	Type          string           `json:"kind"`
 	Removed       bool             `json:"removed"`
 	State         string           `json:"state"`
 	SettledReason string           `json:"settledReason"`
@@ -33,17 +33,17 @@ type assetAnnouncement struct {
 	Last          *deliveryAttempt `json:"last"`
 }
 
-type assetAnnouncementList struct {
-	Announcements []assetAnnouncement `json:"announcements"`
+type workAnnouncementList struct {
+	Announcements []workAnnouncement `json:"announcements"`
 }
 
-type assetUpdateEvent struct {
+type workUpdateEvent struct {
 	ID         string    `json:"id"`
 	Type       string    `json:"type"`
 	OccurredAt time.Time `json:"occurredAt"`
-	Asset      struct {
+	Work       struct {
 		ID   string `json:"id"`
-		Kind string `json:"kind"`
+		Type string `json:"kind"`
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	} `json:"asset"`
@@ -71,17 +71,17 @@ func (s destinationStack) creatorWebhook(t *testing.T, session *http.Cookie) add
 	return made
 }
 
-func (s destinationStack) publishedCharacter(t *testing.T, session *http.Cookie) apitest.StartedAsset {
+func (s destinationStack) publishedCharacter(t *testing.T, session *http.Cookie) apitest.StartedWork {
 	t.Helper()
 	started := apitest.StartCharacter(t, s.router, session)
 	apitest.WriteCharacterFloor(t, s.router, session, started)
-	if got := apitest.PublishAsset(t, s.router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, s.router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 	return started
 }
 
-func (s destinationStack) describe(t *testing.T, session *http.Cookie, started apitest.StartedAsset, text string) {
+func (s destinationStack) describe(t *testing.T, session *http.Cookie, started apitest.StartedWork, text string) {
 	t.Helper()
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
 	core := apitest.EditableBlock(coreBlock)
@@ -91,23 +91,23 @@ func (s destinationStack) describe(t *testing.T, session *http.Cookie, started a
 	}
 }
 
-func (s destinationStack) announced(t *testing.T, session *http.Cookie, assetID, body string) {
+func (s destinationStack) announced(t *testing.T, session *http.Cookie, workID, body string) {
 	t.Helper()
-	response := apitest.PublishAssetUpdate(t, s.router, session, assetID, body)
+	response := apitest.PublishWorkUpdate(t, s.router, session, workID, body)
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish an update = %d: %s", response.Code, response.Body.String())
 	}
 }
 
-func (s destinationStack) announcements(t *testing.T, session *http.Cookie, assetID string) []assetAnnouncement {
+func (s destinationStack) announcements(t *testing.T, session *http.Cookie, workID string) []workAnnouncement {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+assetID+"/announcements", nil,
+		http.MethodGet, "/v1/assets/"+workID+"/announcements", nil,
 	), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read announcements = %d: %s", response.Code, response.Body.String())
 	}
-	var listed assetAnnouncementList
+	var listed workAnnouncementList
 	if err := json.Unmarshal(response.Body.Bytes(), &listed); err != nil {
 		t.Fatalf("decode announcements: %v", err)
 	}
@@ -123,9 +123,9 @@ func (s destinationStack) sendAnnouncementsAt(t *testing.T, at time.Time) int {
 	return made
 }
 
-func (s destinationStack) onlyAnnouncement(t *testing.T, session *http.Cookie, assetID string) assetAnnouncement {
+func (s destinationStack) onlyAnnouncement(t *testing.T, session *http.Cookie, workID string) workAnnouncement {
 	t.Helper()
-	listed := s.announcements(t, session, assetID)
+	listed := s.announcements(t, session, workID)
 	if len(listed) != 1 {
 		t.Fatalf("the asset shows %d announcements, want 1: %+v", len(listed), listed)
 	}
@@ -164,20 +164,20 @@ func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *te
 	if len(arrivals) != 1 {
 		t.Fatalf("the webhook received %d requests, want 1", len(arrivals))
 	}
-	var event assetUpdateEvent
+	var event workUpdateEvent
 	if err := json.Unmarshal(arrivals[0].Body, &event); err != nil {
 		t.Fatalf("decode the event: %v", err)
 	}
-	if event.Type != "asset.update.published.v1" || event.Asset.ID != started.ID ||
-		event.Asset.Kind != "character" || event.Asset.Name != "Ilse of the west shelf" ||
+	if event.Type != "asset.update.published.v1" || event.Work.ID != started.ID ||
+		event.Work.Type != "character" || event.Work.Name != "Ilse of the west shelf" ||
 		event.Update.Number != 2 || event.Update.VersionLabel != "v2" ||
 		!event.Update.ContentChanged || event.OccurredAt.IsZero() ||
 		!strings.HasPrefix(event.Update.Summary, "Moved her") {
 		t.Errorf("event = %+v", event)
 	}
-	if event.Asset.URL != "http://localhost:3000/a/"+started.ID ||
+	if event.Work.URL != "http://localhost:3000/a/"+started.ID ||
 		event.Update.HistoryURL != "http://localhost:3000/a/"+started.ID+"/history#version-2" {
-		t.Errorf("links = %q and %q", event.Asset.URL, event.Update.HistoryURL)
+		t.Errorf("links = %q and %q", event.Work.URL, event.Update.HistoryURL)
 	}
 	body := string(arrivals[0].Body)
 	for _, private := range []string{"Private reasoning", "east shelf.", "notes", "diff"} {
@@ -236,10 +236,10 @@ func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *te
 		if one.State != "delivered" || one.SettledReason != "arrived" || one.Attempts != 1 {
 			t.Errorf("settled announcement = %+v", one)
 		}
-		if one.ID != webhookID && one.Kind == "webhook" {
+		if one.ID != webhookID && one.Type == "webhook" {
 			t.Errorf("the webhook-id %q is not the delivery %q", webhookID, one.ID)
 		}
-		if one.Kind == "discord" && one.MessageID != discordMessageID {
+		if one.Type == "discord" && one.MessageID != discordMessageID {
 			t.Errorf("Discord announcement kept message %q", one.MessageID)
 		}
 	}
@@ -260,7 +260,7 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	if chosen.Code != http.StatusNoContent {
 		t.Fatalf("remember defaults = %d", chosen.Code)
 	}
-	if got := apitest.PublishAsset(t, stack.router, stack.editor, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, stack.router, stack.editor, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 	stack.describe(t, stack.editor, started, "A private save changes nothing public.")
@@ -286,7 +286,7 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	if len(arrivals) != 1 {
 		t.Fatalf("the remembered destination received %d requests, want 1", len(arrivals))
 	}
-	var event assetUpdateEvent
+	var event workUpdateEvent
 	if err := json.Unmarshal(arrivals[0].Body, &event); err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +343,7 @@ func TestAnExplicitSelectionIsRememberedAndAnEmptyOneAnnouncesNowhere(t *testing
 	}
 }
 
-func TestAnUnlistedAssetAnnouncesOnlyWithExplicitConsent(t *testing.T) {
+func TestAnUnlistedWorkAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
@@ -367,7 +367,7 @@ func TestAnUnlistedAssetAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	}
 
 	stack.describe(t, stack.editor, started, "Needs consent.")
-	refused := apitest.PublishAssetUpdate(t, stack.router, stack.editor, started.ID,
+	refused := apitest.PublishWorkUpdate(t, stack.router, stack.editor, started.ID,
 		fmt.Sprintf(`{"summary":"Needs consent","destinationIds":[%q]}`, hook.Destination.ID))
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "announceUnlisted") {
 		t.Fatalf("selecting a destination for an unlisted asset = %d: %s", refused.Code, refused.Body.String())
@@ -384,12 +384,12 @@ func TestAnUnlistedAssetAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	if len(stack.to.arrivals()) != 1 {
 		t.Fatalf("a consented unlisted announcement made %d requests, want 1", len(stack.to.arrivals()))
 	}
-	var event assetUpdateEvent
+	var event workUpdateEvent
 	if err := json.Unmarshal(stack.to.arrivals()[0].Body, &event); err != nil {
 		t.Fatal(err)
 	}
-	if event.Asset.URL != "http://localhost:3000/a/"+started.ID {
-		t.Errorf("the unlisted announcement carries %q", event.Asset.URL)
+	if event.Work.URL != "http://localhost:3000/a/"+started.ID {
+		t.Errorf("the unlisted announcement carries %q", event.Work.URL)
 	}
 }
 
@@ -407,7 +407,7 @@ func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 	stack.describe(t, stack.editor, started, "Changed.")
 
 	for _, id := range []string{theirs.Destination.ID, disabled.Destination.ID} {
-		refused := apitest.PublishAssetUpdate(t, stack.router, stack.editor, started.ID,
+		refused := apitest.PublishWorkUpdate(t, stack.router, stack.editor, started.ID,
 			fmt.Sprintf(`{"summary":"Changed","destinationIds":[%q]}`, id))
 		if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "destinationIds") {
 			t.Fatalf("publishing to an ineligible destination = %d: %s", refused.Code, refused.Body.String())
@@ -419,7 +419,7 @@ func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 		t.Fatal("a refused announcement left the update published")
 	}
 	var events int
-	if err := stack.pool.QueryRow(context.Background(), `select count(*) from asset_update_events`).Scan(&events); err != nil {
+	if err := stack.pool.QueryRow(context.Background(), `select count(*) from work_update_events`).Scan(&events); err != nil {
 		t.Fatal(err)
 	}
 	if events != 0 {
@@ -477,35 +477,35 @@ func TestAnnouncementsRetryOnTheSharedScheduleWithAnInjectedClock(t *testing.T) 
 	}
 }
 
-func TestEveryAttemptRechecksTheAssetAndTheDestination(t *testing.T) {
+func TestEveryAttemptRechecksTheWorkAndTheDestination(t *testing.T) {
 	t.Parallel()
-	type revoke func(t *testing.T, stack destinationStack, started apitest.StartedAsset, hook addedDestination)
+	type revoke func(t *testing.T, stack destinationStack, started apitest.StartedWork, hook addedDestination)
 	for name, one := range map[string]struct {
 		reason string
 		act    revoke
 	}{
-		"withheld": {"withheld", func(t *testing.T, stack destinationStack, started apitest.StartedAsset, _ addedDestination) {
+		"withheld": {"withheld", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
 			withheld := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
 				"/v1/assets/"+started.ID+"/withhold", `{"reason":"Under review"}`, stack.editor))
 			if withheld.Code != http.StatusNoContent {
 				t.Fatalf("withhold = %d: %s", withheld.Code, withheld.Body.String())
 			}
 		}},
-		"unlisted": {"unlisted", func(t *testing.T, stack destinationStack, started apitest.StartedAsset, _ addedDestination) {
+		"unlisted": {"unlisted", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
 			unlisted := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
 				"/v1/assets/"+started.ID+"/discovery", `{"discovery":"unlisted"}`, stack.editor))
 			if unlisted.Code != http.StatusNoContent {
 				t.Fatalf("unlist = %d: %s", unlisted.Code, unlisted.Body.String())
 			}
 		}},
-		"deleted": {"deleted", func(t *testing.T, stack destinationStack, started apitest.StartedAsset, _ addedDestination) {
+		"deleted": {"deleted", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
 			deleted := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 				http.MethodDelete, "/v1/assets/"+started.ID, nil), stack.editor))
 			if deleted.Code != http.StatusNoContent {
 				t.Fatalf("delete = %d: %s", deleted.Code, deleted.Body.String())
 			}
 		}},
-		"withdrawn": {"withdrawn", func(t *testing.T, stack destinationStack, started apitest.StartedAsset, _ addedDestination) {
+		"withdrawn": {"withdrawn", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
 			stack.describe(t, stack.editor, started, "A replacement so the old one can go.")
 			stack.announced(t, stack.editor, started.ID, `{"summary":"Replacement","destinationIds":[]}`)
 			withdraw := apitest.AuthorizedJSONRequest(t, http.MethodPost,
@@ -515,14 +515,14 @@ func TestEveryAttemptRechecksTheAssetAndTheDestination(t *testing.T) {
 				t.Fatalf("withdraw = %d: %s", got.Code, got.Body.String())
 			}
 		}},
-		"disabled": {"disabled", func(t *testing.T, stack destinationStack, _ apitest.StartedAsset, hook addedDestination) {
+		"disabled": {"disabled", func(t *testing.T, stack destinationStack, _ apitest.StartedWork, hook addedDestination) {
 			got := stack.updateDestinationRequest(t, stack.editor, http.MethodDelete,
 				updateDestinationsPath+"/"+hook.Destination.ID+"/verification", "")
 			if got.Code != http.StatusOK {
 				t.Fatalf("disable = %d: %s", got.Code, got.Body.String())
 			}
 		}},
-		"removed": {"removed", func(t *testing.T, stack destinationStack, _ apitest.StartedAsset, hook addedDestination) {
+		"removed": {"removed", func(t *testing.T, stack destinationStack, _ apitest.StartedWork, hook addedDestination) {
 			got := stack.updateDestinationRequest(t, stack.editor, http.MethodDelete,
 				updateDestinationsPath+"/"+hook.Destination.ID, "")
 			if got.Code != http.StatusNoContent {
@@ -553,8 +553,8 @@ func TestEveryAttemptRechecksTheAssetAndTheDestination(t *testing.T) {
 			}
 			var state, reason string
 			err := stack.pool.QueryRow(context.Background(), `
-				select state, coalesce(settled_reason, '') from asset_update_deliveries
-				 where event_id = (select id from asset_update_events order by occurred_at limit 1)
+				select state, coalesce(settled_reason, '') from work_update_deliveries
+				 where event_id = (select id from work_update_events order by occurred_at limit 1)
 			`).Scan(&state, &reason)
 			if err != nil {
 				t.Fatalf("read the cancelled announcement: %v", err)

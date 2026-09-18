@@ -27,7 +27,7 @@ type DestinationPolicy struct {
 
 func (s *Service) AppChoices(ctx context.Context, appID uuid.UUID) ([]Choice, error) {
 	return choicesFrom(ctx, s.pool, `
-		select destination.id, destination.name, destination.kind, destination.state,
+		select destination.id, destination.name, destination.type, destination.state,
 		       destination.events, destination.role_name, allowed.by_default
 		  from publication_app_destinations allowed
 		  join publication_destinations destination on destination.id = allowed.destination_id
@@ -49,7 +49,7 @@ func (s *Service) GrantChoices(ctx context.Context, grantID uuid.UUID) ([]Choice
 		return s.AppChoices(ctx, appID)
 	}
 	return choicesFrom(ctx, s.pool, `
-		select destination.id, destination.name, destination.kind, destination.state,
+		select destination.id, destination.name, destination.type, destination.state,
 		       destination.events, destination.role_name, allowed.by_default
 		  from publication_grant_destinations allowed
 		  join publication_destinations destination on destination.id = allowed.destination_id
@@ -63,7 +63,7 @@ func (s *Service) PostChoices(ctx context.Context, grantID *uuid.UUID) ([]Choice
 		return s.GrantChoices(ctx, *grantID)
 	}
 	return choicesFrom(ctx, s.pool, `
-		select destination.id, destination.name, destination.kind, destination.state,
+		select destination.id, destination.name, destination.type, destination.state,
 		       destination.events, destination.role_name, false
 		  from publication_destinations destination
 		 order by destination.name, destination.created_at
@@ -217,7 +217,7 @@ func CollectSending(rows pgx.Rows) ([]Sending, error) {
 		var one Sending
 		var role *string
 		err := rows.Scan(
-			&one.ID, &one.Name, &one.Kind, &one.State, &one.Events, &role, &one.Ping,
+			&one.ID, &one.Name, &one.Type, &one.State, &one.Events, &role, &one.Ping,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("read a destination a post captured: %w", err)
@@ -240,7 +240,7 @@ func collectChoices(rows pgx.Rows) ([]Choice, error) {
 		var one Choice
 		var role *string
 		err := rows.Scan(
-			&one.ID, &one.Name, &one.Kind, &one.State, &one.Events, &role, &one.ByDefault,
+			&one.ID, &one.Name, &one.Type, &one.State, &one.Events, &role, &one.ByDefault,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("read a destination a post may send to: %w", err)

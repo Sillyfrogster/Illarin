@@ -8,11 +8,11 @@ import (
 	"github.com/google/uuid"
 )
 
-func (e AssetDiscoveryRequestDiscovery) Valid() bool {
+func (e WorkVisibilityRequestVisibility) Valid() bool {
 	switch e {
-	case AssetDiscoveryRequestDiscoveryListed:
+	case WorkVisibilityRequestVisibilityListed:
 		return true
-	case AssetDiscoveryRequestDiscoveryUnlisted:
+	case WorkVisibilityRequestVisibilityUnlisted:
 		return true
 	default:
 		return false
@@ -49,185 +49,185 @@ type AppTarget struct {
 	Label  string `json:"label"`
 }
 
-type AssetDetail struct {
-	AddableBlocks         *[]AddableBlock           `json:"addableBlocks,omitempty"`
-	AllowedApps           []AssetDetailAllowedApps  `json:"allowedApps" tstype:"'lumiverse'[],required"`
-	AppTargets            []AppTarget               `json:"appTargets"`
-	Blocks                []block.AssetBlock        `json:"blocks"`
-	Blurb                 string                    `json:"blurb"`
-	CreatedAt             time.Time                 `json:"createdAt"`
-	Creator               string                    `json:"creator"`
-	Discovery             AssetDetailDiscovery      `json:"discovery"`
-	Downloads             []DownloadTarget          `json:"downloads"`
-	EligibleApps          []AssetDetailEligibleApps `json:"eligibleApps" tstype:"'lumiverse'[],required"`
-	ExtensionDependencies []ExtensionDependency     `json:"extensionDependencies"`
-	Id                    uuid.UUID                 `json:"id"`
-	Identifier            *string                   `json:"identifier,omitempty"`
-	InstalledAppVersions  []string                  `json:"installedAppVersions"`
-	IsNsfw                *bool                     `json:"isNsfw" tstype:"boolean | null,required"`
-	IsOwner               bool                      `json:"isOwner"`
-	Kind                  AssetDetailKind           `json:"kind"`
-	LatestUpdate          *RecordedVersion          `json:"latestUpdate,omitempty"`
-	Lifecycle             AssetDetailLifecycle      `json:"lifecycle"`
-	LinkedInstallOnly     bool                      `json:"linkedInstallOnly"`
-	Media                 []AssetImage              `json:"media"`
-	Name                  string                    `json:"name"`
-	Original              *OriginalUpload           `json:"original" tstype:"OriginalUpload | null,required"`
-	Preview               *string                   `json:"preview" tstype:"string | null,required"`
-	Readiness             *[]ReadinessItem          `json:"readiness,omitempty"`
-	SealedBlocks          *int                      `json:"sealedBlocks,omitempty"`
-	Tags                  []AssetTag                `json:"tags"`
-	UnpublishedChanges    *bool                     `json:"unpublishedChanges,omitempty"`
-	Visibility            AssetDetailVisibility     `json:"visibility"`
-	Watch                 *notify.AssetWatch        `json:"watch,omitempty"`
-	Withhold              *AssetWithhold            `json:"withhold,omitempty"`
-	WorkingCopyVersion    *int64                    `json:"workingCopyVersion,omitempty"`
+type WorkDetail struct {
+	AddableBlocks         *[]AddableBlock          `json:"addableBlocks,omitempty"`
+	AllowedApps           []WorkDetailAllowedApps  `json:"allowedApps" tstype:"'lumiverse'[],required"`
+	AppTargets            []AppTarget              `json:"appTargets"`
+	Blocks                []block.WorkBlock        `json:"blocks"`
+	Blurb                 string                   `json:"blurb"`
+	CreatedAt             time.Time                `json:"createdAt"`
+	Creator               string                   `json:"creator"`
+	Visibility            WorkDetailVisibility     `json:"discovery"`
+	Downloads             []DownloadTarget         `json:"downloads"`
+	EligibleApps          []WorkDetailEligibleApps `json:"eligibleApps" tstype:"'lumiverse'[],required"`
+	ExtensionDependencies []ExtensionDependency    `json:"extensionDependencies"`
+	Id                    uuid.UUID                `json:"id"`
+	Identifier            *string                  `json:"identifier,omitempty"`
+	InstalledAppVersions  []string                 `json:"installedAppVersions"`
+	IsNsfw                *bool                    `json:"isNsfw" tstype:"boolean | null,required"`
+	IsOwner               bool                     `json:"isOwner"`
+	Type                  WorkDetailType           `json:"kind"`
+	LatestUpdate          *RecordedVersion         `json:"latestUpdate,omitempty"`
+	Lifecycle             WorkDetailLifecycle      `json:"lifecycle"`
+	LinkedInstallOnly     bool                     `json:"linkedInstallOnly"`
+	Media                 []WorkImage              `json:"media"`
+	Name                  string                   `json:"name"`
+	Original              *OriginalUpload          `json:"original" tstype:"OriginalUpload | null,required"`
+	Preview               *string                  `json:"preview" tstype:"string | null,required"`
+	Readiness             *[]ReadinessItem         `json:"readiness,omitempty"`
+	SealedBlocks          *int                     `json:"sealedBlocks,omitempty"`
+	Tags                  []WorkTag                `json:"tags"`
+	UnpublishedChanges    *bool                    `json:"unpublishedChanges,omitempty"`
+	NSFWPreference        WorkDetailNSFWPreference `json:"visibility"`
+	Follow                *notify.WorkFollow       `json:"watch,omitempty"`
+	Withhold              *WorkWithhold            `json:"withhold,omitempty"`
+	WorkingCopyVersion    *int64                   `json:"workingCopyVersion,omitempty"`
 }
 
-type AssetDetailAllowedApps string
+type WorkDetailAllowedApps string
 
 const (
-	AssetDetailAllowedAppsLumiverse AssetDetailAllowedApps = "lumiverse"
+	WorkDetailAllowedAppsLumiverse WorkDetailAllowedApps = "lumiverse"
 )
 
-type AssetDetailDiscovery string
+type WorkDetailVisibility string
 
 const (
-	AssetDetailDiscoveryListed   AssetDetailDiscovery = "listed"
-	AssetDetailDiscoveryUnlisted AssetDetailDiscovery = "unlisted"
+	WorkDetailVisibilityListed   WorkDetailVisibility = "listed"
+	WorkDetailVisibilityUnlisted WorkDetailVisibility = "unlisted"
 )
 
-type AssetDetailEligibleApps string
+type WorkDetailEligibleApps string
 
 const (
-	AssetDetailEligibleAppsLumiverse AssetDetailEligibleApps = "lumiverse"
+	WorkDetailEligibleAppsLumiverse WorkDetailEligibleApps = "lumiverse"
 )
 
-type AssetDetailKind string
+type WorkDetailType string
 
 const (
-	AssetDetailKindCharacter AssetDetailKind = "character"
-	AssetDetailKindExtension AssetDetailKind = "extension"
-	AssetDetailKindLorebook  AssetDetailKind = "lorebook"
-	AssetDetailKindPack      AssetDetailKind = "pack"
-	AssetDetailKindPreset    AssetDetailKind = "preset"
-	AssetDetailKindTheme     AssetDetailKind = "theme"
+	WorkDetailTypeCharacter WorkDetailType = "character"
+	WorkDetailTypeExtension WorkDetailType = "extension"
+	WorkDetailTypeLorebook  WorkDetailType = "lorebook"
+	WorkDetailTypePack      WorkDetailType = "pack"
+	WorkDetailTypePreset    WorkDetailType = "preset"
+	WorkDetailTypeTheme     WorkDetailType = "theme"
 )
 
-type AssetDetailLifecycle string
+type WorkDetailLifecycle string
 
 const (
-	AssetDetailLifecycleDraft     AssetDetailLifecycle = "draft"
-	AssetDetailLifecyclePublished AssetDetailLifecycle = "published"
+	WorkDetailLifecycleDraft     WorkDetailLifecycle = "draft"
+	WorkDetailLifecyclePublished WorkDetailLifecycle = "published"
 )
 
-type AssetDetailVisibility string
+type WorkDetailNSFWPreference string
 
 const (
-	AssetDetailVisibilityBlurred AssetDetailVisibility = "blurred"
-	AssetDetailVisibilityHidden  AssetDetailVisibility = "hidden"
-	AssetDetailVisibilityShown   AssetDetailVisibility = "shown"
+	WorkDetailNSFWPreferenceBlurred WorkDetailNSFWPreference = "blurred"
+	WorkDetailNSFWPreferenceHidden  WorkDetailNSFWPreference = "hidden"
+	WorkDetailNSFWPreferenceShown   WorkDetailNSFWPreference = "shown"
 )
 
-type AssetDiscoveryRequest struct {
-	Discovery AssetDiscoveryRequestDiscovery `json:"discovery"`
+type WorkVisibilityRequest struct {
+	Visibility WorkVisibilityRequestVisibility `json:"discovery"`
 }
 
-type AssetDiscoveryRequestDiscovery string
+type WorkVisibilityRequestVisibility string
 
 const (
-	AssetDiscoveryRequestDiscoveryListed   AssetDiscoveryRequestDiscovery = "listed"
-	AssetDiscoveryRequestDiscoveryUnlisted AssetDiscoveryRequestDiscovery = "unlisted"
+	WorkVisibilityRequestVisibilityListed   WorkVisibilityRequestVisibility = "listed"
+	WorkVisibilityRequestVisibilityUnlisted WorkVisibilityRequestVisibility = "unlisted"
 )
 
-type AssetImage struct {
-	Bytes     int            `json:"bytes"`
-	DetailUrl string         `json:"detailUrl"`
-	Height    int            `json:"height"`
-	Id        uuid.UUID      `json:"id"`
-	IsCover   bool           `json:"isCover"`
-	Role      AssetImageRole `json:"role"`
-	ThumbUrl  string         `json:"thumbUrl"`
-	Width     int            `json:"width"`
+type WorkImage struct {
+	Bytes     int           `json:"bytes"`
+	DetailUrl string        `json:"detailUrl"`
+	Height    int           `json:"height"`
+	Id        uuid.UUID     `json:"id"`
+	IsCover   bool          `json:"isCover"`
+	Role      WorkImageRole `json:"role"`
+	ThumbUrl  string        `json:"thumbUrl"`
+	Width     int           `json:"width"`
 }
 
-type AssetImageRole string
+type WorkImageRole string
 
 const (
-	AssetImageRoleAvatar           AssetImageRole = "avatar"
-	AssetImageRoleAvatarAlt        AssetImageRole = "avatar_alt"
-	AssetImageRoleExpression       AssetImageRole = "expression"
-	AssetImageRoleGallery          AssetImageRole = "gallery"
-	AssetImageRolePackItem         AssetImageRole = "pack_item"
-	AssetImageRolePerspectiveLayer AssetImageRole = "perspective_layer"
+	WorkImageRoleAvatar           WorkImageRole = "avatar"
+	WorkImageRoleAvatarAlt        WorkImageRole = "avatar_alt"
+	WorkImageRoleExpression       WorkImageRole = "expression"
+	WorkImageRoleGallery          WorkImageRole = "gallery"
+	WorkImageRolePackItem         WorkImageRole = "pack_item"
+	WorkImageRolePerspectiveLayer WorkImageRole = "perspective_layer"
 )
 
-type AssetList struct {
-	EmptyState *AssetListEmptyState `json:"emptyState" tstype:"AssetListEmptyState | null,required"`
-	Facets     []BrowseFacet        `json:"facets"`
-	Items      []BrowseAsset        `json:"items"`
-	NextCursor *BrowseCursor        `json:"nextCursor,omitempty"`
-	Platforms  []BrowseOption       `json:"platforms"`
-	Suppressed int                  `json:"suppressed"`
-	Total      int                  `json:"total"`
-	Visibility AssetListVisibility  `json:"visibility"`
+type WorkList struct {
+	EmptyState     *WorkListEmptyState    `json:"emptyState" tstype:"WorkListEmptyState | null,required"`
+	Facets         []BrowseFacet          `json:"facets"`
+	Items          []BrowseWork           `json:"items"`
+	NextCursor     *BrowseCursor          `json:"nextCursor,omitempty"`
+	Platforms      []BrowseOption         `json:"platforms"`
+	Suppressed     int                    `json:"suppressed"`
+	Total          int                    `json:"total"`
+	NSFWPreference WorkListNSFWPreference `json:"visibility"`
 }
 
-type AssetListEmptyState string
+type WorkListEmptyState string
 
 const (
-	AssetListEmptyStateCatalog     AssetListEmptyState = "catalog"
-	AssetListEmptyStateLessThannil AssetListEmptyState = "<nil>"
-	AssetListEmptyStateNoMatches   AssetListEmptyState = "no_matches"
-	AssetListEmptyStateSuppressed  AssetListEmptyState = "suppressed"
+	WorkListEmptyStateCatalog     WorkListEmptyState = "catalog"
+	WorkListEmptyStateLessThannil WorkListEmptyState = "<nil>"
+	WorkListEmptyStateNoMatches   WorkListEmptyState = "no_matches"
+	WorkListEmptyStateSuppressed  WorkListEmptyState = "suppressed"
 )
 
-type AssetListVisibility string
+type WorkListNSFWPreference string
 
 const (
-	AssetListVisibilityBlurred AssetListVisibility = "blurred"
-	AssetListVisibilityHidden  AssetListVisibility = "hidden"
-	AssetListVisibilityShown   AssetListVisibility = "shown"
+	WorkListNSFWPreferenceBlurred WorkListNSFWPreference = "blurred"
+	WorkListNSFWPreferenceHidden  WorkListNSFWPreference = "hidden"
+	WorkListNSFWPreferenceShown   WorkListNSFWPreference = "shown"
 )
 
-type AssetTag struct {
+type WorkTag struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
 }
 
-type AssetWithhold struct {
+type WorkWithhold struct {
 	At     time.Time `json:"at"`
 	Reason string    `json:"reason"`
 }
 
-type BrowseAsset struct {
-	Cover      *BrowseCover           `json:"cover" tstype:"BrowseCover | null,required"`
-	Creator    string                 `json:"creator"`
-	Id         uuid.UUID              `json:"id"`
-	IsNsfw     *bool                  `json:"isNsfw" tstype:"boolean | null,required"`
-	Kind       BrowseAssetKind        `json:"kind"`
-	Name       string                 `json:"name"`
-	OwnerState *BrowseAssetOwnerState `json:"ownerState,omitempty"`
-	Withhold   *AssetWithhold         `json:"withhold,omitempty"`
+type BrowseWork struct {
+	Cover      *BrowseCover          `json:"cover" tstype:"BrowseCover | null,required"`
+	Creator    string                `json:"creator"`
+	Id         uuid.UUID             `json:"id"`
+	IsNsfw     *bool                 `json:"isNsfw" tstype:"boolean | null,required"`
+	Type       BrowseWorkType        `json:"kind"`
+	Name       string                `json:"name"`
+	OwnerState *BrowseWorkOwnerState `json:"ownerState,omitempty"`
+	Withhold   *WorkWithhold         `json:"withhold,omitempty"`
 }
 
-type BrowseAssetKind string
+type BrowseWorkType string
 
 const (
-	BrowseAssetKindCharacter BrowseAssetKind = "character"
-	BrowseAssetKindExtension BrowseAssetKind = "extension"
-	BrowseAssetKindLorebook  BrowseAssetKind = "lorebook"
-	BrowseAssetKindPack      BrowseAssetKind = "pack"
-	BrowseAssetKindPreset    BrowseAssetKind = "preset"
-	BrowseAssetKindTheme     BrowseAssetKind = "theme"
+	BrowseWorkTypeCharacter BrowseWorkType = "character"
+	BrowseWorkTypeExtension BrowseWorkType = "extension"
+	BrowseWorkTypeLorebook  BrowseWorkType = "lorebook"
+	BrowseWorkTypePack      BrowseWorkType = "pack"
+	BrowseWorkTypePreset    BrowseWorkType = "preset"
+	BrowseWorkTypeTheme     BrowseWorkType = "theme"
 )
 
-type BrowseAssetOwnerState string
+type BrowseWorkOwnerState string
 
 const (
-	BrowseAssetOwnerStateDraft    BrowseAssetOwnerState = "draft"
-	BrowseAssetOwnerStateUnlisted BrowseAssetOwnerState = "unlisted"
-	BrowseAssetOwnerStateWithheld BrowseAssetOwnerState = "withheld"
+	BrowseWorkOwnerStateDraft    BrowseWorkOwnerState = "draft"
+	BrowseWorkOwnerStateUnlisted BrowseWorkOwnerState = "unlisted"
+	BrowseWorkOwnerStateWithheld BrowseWorkOwnerState = "withheld"
 )
 
 type BrowseCover struct {
@@ -254,30 +254,30 @@ type BrowseOption struct {
 	Value    string `json:"value"`
 }
 
-type DeletedAsset struct {
-	DeletedAt        time.Time        `json:"deletedAt"`
-	Id               uuid.UUID        `json:"id"`
-	Kind             DeletedAssetKind `json:"kind"`
-	Name             string           `json:"name"`
-	RecoverableUntil time.Time        `json:"recoverableUntil"`
+type DeletedWork struct {
+	DeletedAt        time.Time       `json:"deletedAt"`
+	Id               uuid.UUID       `json:"id"`
+	Type             DeletedWorkType `json:"kind"`
+	Name             string          `json:"name"`
+	RecoverableUntil time.Time       `json:"recoverableUntil"`
 }
 
-type DeletedAssetKind string
+type DeletedWorkType string
 
 const (
-	DeletedAssetKindCharacter DeletedAssetKind = "character"
-	DeletedAssetKindExtension DeletedAssetKind = "extension"
-	DeletedAssetKindLorebook  DeletedAssetKind = "lorebook"
-	DeletedAssetKindPack      DeletedAssetKind = "pack"
-	DeletedAssetKindPreset    DeletedAssetKind = "preset"
-	DeletedAssetKindTheme     DeletedAssetKind = "theme"
+	DeletedWorkTypeCharacter DeletedWorkType = "character"
+	DeletedWorkTypeExtension DeletedWorkType = "extension"
+	DeletedWorkTypeLorebook  DeletedWorkType = "lorebook"
+	DeletedWorkTypePack      DeletedWorkType = "pack"
+	DeletedWorkTypePreset    DeletedWorkType = "preset"
+	DeletedWorkTypeTheme     DeletedWorkType = "theme"
 )
 
-type DeletedAssetList struct {
-	Items []DeletedAsset `json:"items"`
+type DeletedWorkList struct {
+	Items []DeletedWork `json:"items"`
 }
 
-type DependencyAsset struct {
+type DependencyWork struct {
 	Creator string    `json:"creator"`
 	Id      uuid.UUID `json:"id"`
 	Name    string    `json:"name"`
@@ -315,8 +315,8 @@ type DownloadTarget struct {
 }
 
 type ExtensionDependency struct {
-	Assets []DependencyAsset `json:"assets"`
-	Name   string            `json:"name"`
+	Works []DependencyWork `json:"assets"`
+	Name  string           `json:"name"`
 }
 
 type OriginalUpload struct {
@@ -325,51 +325,51 @@ type OriginalUpload struct {
 	MediaType string    `json:"mediaType"`
 }
 
-type ListAssetsParams struct {
-	Kind     *ListAssetsParamsKind `json:"kind,omitempty"`
-	Platform *string               `json:"platform,omitempty"`
-	Creator  *string               `json:"creator,omitempty"`
-	Q        *string               `json:"q,omitempty"`
-	Facet    *[]string             `json:"facet,omitempty"`
-	Nsfw     *ListAssetsParamsNsfw `json:"nsfw,omitempty"`
-	Limit    *int                  `json:"limit,omitempty"`
-	Before   *time.Time            `json:"before,omitempty"`
-	BeforeId *uuid.UUID            `json:"beforeId,omitempty"`
+type ListWorksParams struct {
+	Type     *ListWorksParamsType `json:"kind,omitempty"`
+	Platform *string              `json:"platform,omitempty"`
+	Creator  *string              `json:"creator,omitempty"`
+	Q        *string              `json:"q,omitempty"`
+	Facet    *[]string            `json:"facet,omitempty"`
+	Nsfw     *ListWorksParamsNsfw `json:"nsfw,omitempty"`
+	Limit    *int                 `json:"limit,omitempty"`
+	Before   *time.Time           `json:"before,omitempty"`
+	BeforeId *uuid.UUID           `json:"beforeId,omitempty"`
 }
 
-type GetAssetParams struct {
-	WorkingCopy *bool               `json:"workingCopy,omitempty"`
-	Nsfw        *GetAssetParamsNsfw `json:"nsfw,omitempty"`
+type GetWorkParams struct {
+	WorkingCopy *bool              `json:"workingCopy,omitempty"`
+	Nsfw        *GetWorkParamsNsfw `json:"nsfw,omitempty"`
 }
 
-type ListAssetsParamsKind string
+type ListWorksParamsType string
 
 const (
-	ListAssetsParamsKindCharacter ListAssetsParamsKind = "character"
-	ListAssetsParamsKindExtension ListAssetsParamsKind = "extension"
-	ListAssetsParamsKindLorebook  ListAssetsParamsKind = "lorebook"
-	ListAssetsParamsKindPack      ListAssetsParamsKind = "pack"
-	ListAssetsParamsKindPreset    ListAssetsParamsKind = "preset"
-	ListAssetsParamsKindTheme     ListAssetsParamsKind = "theme"
+	ListWorksParamsTypeCharacter ListWorksParamsType = "character"
+	ListWorksParamsTypeExtension ListWorksParamsType = "extension"
+	ListWorksParamsTypeLorebook  ListWorksParamsType = "lorebook"
+	ListWorksParamsTypePack      ListWorksParamsType = "pack"
+	ListWorksParamsTypePreset    ListWorksParamsType = "preset"
+	ListWorksParamsTypeTheme     ListWorksParamsType = "theme"
 )
 
-type ListAssetsParamsNsfw string
+type ListWorksParamsNsfw string
 
 const (
-	ListAssetsParamsNsfwBlurred ListAssetsParamsNsfw = "blurred"
-	ListAssetsParamsNsfwHidden  ListAssetsParamsNsfw = "hidden"
-	ListAssetsParamsNsfwShown   ListAssetsParamsNsfw = "shown"
+	ListWorksParamsNsfwBlurred ListWorksParamsNsfw = "blurred"
+	ListWorksParamsNsfwHidden  ListWorksParamsNsfw = "hidden"
+	ListWorksParamsNsfwShown   ListWorksParamsNsfw = "shown"
 )
 
-type GetAssetParamsNsfw string
+type GetWorkParamsNsfw string
 
 const (
-	GetAssetParamsNsfwBlurred GetAssetParamsNsfw = "blurred"
-	GetAssetParamsNsfwHidden  GetAssetParamsNsfw = "hidden"
-	GetAssetParamsNsfwShown   GetAssetParamsNsfw = "shown"
+	GetWorkParamsNsfwBlurred GetWorkParamsNsfw = "blurred"
+	GetWorkParamsNsfwHidden  GetWorkParamsNsfw = "hidden"
+	GetWorkParamsNsfwShown   GetWorkParamsNsfw = "shown"
 )
 
-type AssetIdentityRequest struct {
+type WorkIdentityRequest struct {
 	Blurb  string `json:"blurb"`
 	IsNsfw *bool  `json:"isNsfw" tstype:"boolean | null,required"`
 	Name   string `json:"name"`
@@ -406,7 +406,7 @@ type CandidateConflict struct {
 type CandidateConflictCode string
 
 const (
-	CandidateConflictCodeAssetFrozen         CandidateConflictCode = "asset_frozen"
+	CandidateConflictCodeWorkFrozen          CandidateConflictCode = "asset_frozen"
 	CandidateConflictCodeWorkingCopyConflict CandidateConflictCode = "working_copy_conflict"
 )
 

@@ -20,7 +20,7 @@ var ErrPageSize = errors.New("a page holds between 1 and 50 notifications")
 type Entry struct {
 	ID        uuid.UUID
 	Type      Type
-	Asset     *uuid.UUID
+	Work      *uuid.UUID
 	Words     Words
 	Count     int
 	CreatedAt time.Time
@@ -49,7 +49,7 @@ func (s *Service) Inbox(ctx context.Context, account uuid.UUID, after *Cursor, l
 		before, beforeID = &after.Before, &after.BeforeID
 	}
 	rows, err := s.pool.Query(ctx, `
-		select id, type, asset_id, words, update_count, created_at, read_at
+		select id, type, work_id, words, update_count, created_at, read_at
 		  from inbox_entries
 		 where account_id = $1
 		   and ($2::timestamptz is null or (created_at, id) < ($2, $3::uuid))
@@ -64,7 +64,7 @@ func (s *Service) Inbox(ctx context.Context, account uuid.UUID, after *Cursor, l
 	for rows.Next() {
 		var entry Entry
 		if err := rows.Scan(
-			&entry.ID, &entry.Type, &entry.Asset, &entry.Words, &entry.Count, &entry.CreatedAt, &entry.ReadAt,
+			&entry.ID, &entry.Type, &entry.Work, &entry.Words, &entry.Count, &entry.CreatedAt, &entry.ReadAt,
 		); err != nil {
 			return Page{}, fmt.Errorf("read an inbox entry: %w", err)
 		}

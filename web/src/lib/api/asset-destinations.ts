@@ -1,27 +1,27 @@
 import { ask } from "./request";
 
 import type {
-  AddAssetUpdateDestinationRequest,
-  AddedAssetUpdateDestination,
-  AssetUpdateAnnouncement,
-  AssetUpdateDestination,
-  AssetUpdateDestinationChoice,
-  UpdateAssetUpdateDestinationRequest,
+  AddedWorkUpdateDestination,
+  AddWorkUpdateDestinationRequest,
+  UpdateWorkUpdateDestinationRequest,
+  WorkUpdateAnnouncement,
+  WorkUpdateDestination,
+  WorkUpdateDestinationChoice,
 } from "./shapes";
 export type {
-  AssetUpdateAnnouncement,
-  AssetUpdateDestination,
-  AssetUpdateDestinationChoice,
+  WorkUpdateAnnouncement,
+  WorkUpdateDestination,
+  WorkUpdateDestinationChoice,
 };
 
-type AddedDestination = AddedAssetUpdateDestination;
-type NewDestination = AddAssetUpdateDestinationRequest;
-type DestinationChange = UpdateAssetUpdateDestinationRequest;
+type AddedDestination = AddedWorkUpdateDestination;
+type NewDestination = AddWorkUpdateDestinationRequest;
+type DestinationChange = UpdateWorkUpdateDestinationRequest;
 
 const base = "/account/update-destinations";
 
 export function readUpdateDestinations(signal?: AbortSignal) {
-  return ask<{ destinations: AssetUpdateDestination[] }>("GET", base, {
+  return ask<{ destinations: WorkUpdateDestination[] }>("GET", base, {
     signal,
   });
 }
@@ -31,15 +31,15 @@ export function addUpdateDestination(body: NewDestination) {
 }
 
 export function changeUpdateDestination(id: string, body: DestinationChange) {
-  return ask<AssetUpdateDestination>("PATCH", `${base}/${id}`, { body });
+  return ask<WorkUpdateDestination>("PATCH", `${base}/${id}`, { body });
 }
 
 export function verifyUpdateDestination(id: string) {
-  return ask<AssetUpdateDestination>("POST", `${base}/${id}/verification`);
+  return ask<WorkUpdateDestination>("POST", `${base}/${id}/verification`);
 }
 
 export function disableUpdateDestination(id: string) {
-  return ask<AssetUpdateDestination>("DELETE", `${base}/${id}/verification`);
+  return ask<WorkUpdateDestination>("DELETE", `${base}/${id}/verification`);
 }
 
 export function rotateUpdateDestinationSecret(id: string) {
@@ -54,7 +54,7 @@ export function readAssetUpdateDestinationChoices(
   assetId: string,
   signal?: AbortSignal,
 ) {
-  return ask<{ destinations: AssetUpdateDestinationChoice[] }>(
+  return ask<{ destinations: WorkUpdateDestinationChoice[] }>(
     "GET",
     `/assets/${assetId}/update-destinations`,
     { signal },
@@ -65,7 +65,7 @@ export function readAssetUpdateAnnouncements(
   assetId: string,
   signal?: AbortSignal,
 ) {
-  return ask<{ announcements: AssetUpdateAnnouncement[] }>(
+  return ask<{ announcements: WorkUpdateAnnouncement[] }>(
     "GET",
     `/assets/${assetId}/announcements`,
     { signal },

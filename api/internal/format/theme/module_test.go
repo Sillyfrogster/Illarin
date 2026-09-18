@@ -104,9 +104,9 @@ func TestBothThemeModulesDeclareTheirPublicContract(t *testing.T) {
 	t.Parallel()
 	for _, module := range Modules() {
 		declaration := module.Declaration()
-		if declaration.Kind != Kind || declaration.ID != module.ID() {
+		if declaration.Type != Type || declaration.ID != module.ID() {
 			t.Errorf("declaration identity = %s/%s, want %s/%s",
-				declaration.Kind, declaration.ID, Kind, module.ID())
+				declaration.Type, declaration.ID, Type, module.ID())
 		}
 		if !declaration.Direction.Read || !declaration.Direction.Write {
 			t.Errorf("%s direction = %+v, want read and write", module.ID(), declaration.Direction)
@@ -178,7 +178,7 @@ func TestSillyTavernReportsAndAvoidsFlatteningExtraColourModes(t *testing.T) {
 	elements := []block.Element{{
 		ID: uuid.New(), Type: block.TypeColorSet, Role: block.RoleThemeTokens, Content: palette,
 	}}
-	targets := registry.OfferedTargets(format.CapabilitySubject{Kind: Kind, Elements: elements})
+	targets := registry.OfferedTargets(format.CapabilitySubject{Type: Type, Elements: elements})
 	if len(targets) != 1 {
 		t.Fatalf("targets = %+v, want the SillyTavern target", targets)
 	}
@@ -227,8 +227,8 @@ func TestLumiverseThemeKeepsItsHeaderPaletteComponentsAndFont(t *testing.T) {
 		t.Fatalf("palette = %+v, want the nine dark-mode colours", palette)
 	}
 	styles := elementFor(t, parsed.Elements, block.RoleStylesheets).(block.StylesheetSet)
-	if len(styles.Stylesheets) != 2 || len(styles.Assets) != 1 ||
-		!bytes.Equal(styles.Assets[0].Data, []byte("font fixture")) {
+	if len(styles.Stylesheets) != 2 || len(styles.Files) != 1 ||
+		!bytes.Equal(styles.Files[0].Data, []byte("font fixture")) {
 		t.Fatalf("stylesheets = %+v, want two components and the font", styles)
 	}
 	encodedStyles, err := json.Marshal(styles)
@@ -301,7 +301,7 @@ func TestSillyTavernStylesheetLossMatchesWhatItCanWrite(t *testing.T) {
 				Content: test.styles,
 			})
 			targets := registry.OfferedTargets(format.CapabilitySubject{
-				Kind: Kind, Elements: elements,
+				Type: Type, Elements: elements,
 			})
 			if len(targets) != 1 || targets[0].Format != SillyTavernID {
 				t.Fatalf("targets = %+v, want only the SillyTavern theme", targets)
@@ -393,8 +393,8 @@ func parse(t *testing.T, file format.Inspection) format.Parsed {
 func write(t *testing.T, module format.Reader, parsed format.Parsed) format.Artifact {
 	t.Helper()
 	writer := module.(format.Writer)
-	written, err := writer.Write(context.Background(), format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
+	written, err := writer.Write(context.Background(), format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
 	})
 	if err != nil {
 		t.Fatalf("write %s: %v", module.ID(), err)
@@ -433,12 +433,12 @@ func inspect(t *testing.T, data []byte, filename string) format.Inspection {
 	return file
 }
 
-func themeBundle(t *testing.T, document string, assets map[string][]byte) []byte {
+func themeBundle(t *testing.T, document string, files map[string][]byte) []byte {
 	t.Helper()
 	var output bytes.Buffer
 	archive := zip.NewWriter(&output)
 	writeArchiveEntry(t, archive, "theme.json", []byte(document))
-	for name, data := range assets {
+	for name, data := range files {
 		writeArchiveEntry(t, archive, name, data)
 	}
 	if err := archive.Close(); err != nil {

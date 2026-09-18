@@ -14,15 +14,15 @@ import (
 
 func TestTheTestRouterServesTheSameRoutesAsTheServer(t *testing.T) {
 	t.Parallel()
-	assets, links := &work.Service{}, &connect.Apps{}
+	works, links := &work.Service{}, &connect.Apps{}
 
 	served := routesOf(t, func(r *gin.Engine) error {
 		return registerRoutes(
-			r, services{Assets: assets, Links: links}, api.DefaultDeadlines(), apitest.Ready)
+			r, services{Works: works, Links: links}, api.DefaultDeadlines(), apitest.Ready)
 	})
 	tested := routesOf(t, func(r *gin.Engine) error {
 		return full.Register(
-			r, apitest.Services{Assets: assets, Links: links}, api.DefaultDeadlines())
+			r, apitest.Services{Works: works, Links: links}, api.DefaultDeadlines())
 	})
 
 	if !slices.Equal(served, tested) {

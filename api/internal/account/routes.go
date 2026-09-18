@@ -39,5 +39,5 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPatch, "/v1/account/email", d.JSON, h.ChangeUnverifiedEmail)
 	routes.Handle(http.MethodPatch, "/v1/account/handle", d.JSON, h.RenameHandle)
 	routes.Handle(http.MethodPut, "/v1/account/password", d.JSON, h.SetPassword)
-	routes.Handle(http.MethodPut, "/v1/account/nsfw-visibility", d.JSON, h.SetNsfwVisibility)
+	routes.Handle(http.MethodPut, "/v1/account/nsfw-visibility", d.JSON, h.SetNsfwPreference)
 }

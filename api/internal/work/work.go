@@ -14,41 +14,41 @@ const (
 	LifecyclePublished Lifecycle = "published"
 )
 
-type Discovery string
+type Visibility string
 
 const (
-	DiscoveryListed   Discovery = "listed"
-	DiscoveryUnlisted Discovery = "unlisted"
+	VisibilityListed   Visibility = "listed"
+	VisibilityUnlisted Visibility = "unlisted"
 )
 
-func (d Discovery) Valid() bool {
-	return d == DiscoveryListed || d == DiscoveryUnlisted
+func (d Visibility) Valid() bool {
+	return d == VisibilityListed || d == VisibilityUnlisted
 }
 
-type Asset struct {
+type Work struct {
 	ID                uuid.UUID
-	Kind              string
+	Type              string
 	Format            string
 	OriginFormat      *string
-	AssetVersion      string
+	WorkVersion       string
 	CreditedAuthor    string
 	Nickname          string
 	Name              string
 	Blurb             string
 	Tags              []string
 	IsNSFW            *bool
-	Discovery         Discovery
+	Visibility        Visibility
 	Lifecycle         Lifecycle
 	CurrentRevisionID uuid.UUID
 	CreatedAt         time.Time
 }
 
-type ContentVisibility string
+type NSFWPreference string
 
 const (
-	ContentHidden  ContentVisibility = "hidden"
-	ContentBlurred ContentVisibility = "blurred"
-	ContentShown   ContentVisibility = "shown"
+	NSFWHidden  NSFWPreference = "hidden"
+	NSFWBlurred NSFWPreference = "blurred"
+	NSFWShown   NSFWPreference = "shown"
 )
 
 type DetailImage struct {
@@ -63,7 +63,7 @@ type DetailImage struct {
 }
 
 type SavedBlocks struct {
-	Kind   string
+	Type   string
 	Blocks []block.Block
 }
 

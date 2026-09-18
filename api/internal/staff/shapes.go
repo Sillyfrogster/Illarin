@@ -12,6 +12,6 @@ type RestrictProfileRequest struct {
 	Reason string `json:"reason"`
 }
 
-type WithholdAssetRequest struct {
+type WithholdWorkRequest struct {
 	Reason string `json:"reason"`
 }

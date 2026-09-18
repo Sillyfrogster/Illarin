@@ -10,7 +10,7 @@ import (
 
 // Files hands a connected app the file it was sent
 type Files interface {
-	LinkedInstanceFile(c *gin.Context, assetID uuid.UUID, target string)
+	LinkedInstanceFile(c *gin.Context, workID uuid.UUID, target string)
 }
 
 type Handlers struct {
@@ -43,7 +43,7 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPost, "/v1/deliveries/collect", d.Deliver, h.CollectDeliveries)
 	routes.Handle(http.MethodDelete, "/v1/deliveries/:id", d.JSON, h.DiscardDelivery)
 	routes.Handle(http.MethodPost, "/v1/library/sync", d.JSON, h.SyncLibrary)
-	routes.Handle(http.MethodGet, "/v1/assets/:id/instances", d.JSON, h.GetAssetInstances)
-	routes.Handle(http.MethodPost, "/v1/assets/:id/deliveries", d.JSON, h.SendAssetToInstance)
+	routes.Handle(http.MethodGet, "/v1/assets/:id/instances", d.JSON, h.GetWorkInstances)
+	routes.Handle(http.MethodPost, "/v1/assets/:id/deliveries", d.JSON, h.SendWorkToInstance)
 	routes.Handle(http.MethodGet, "/delivery/:id/export", d.Download, h.DownloadDeliveryExport)
 }

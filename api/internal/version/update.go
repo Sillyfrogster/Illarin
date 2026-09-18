@@ -24,7 +24,7 @@ type UpdateAnnouncement struct {
 
 type Update struct {
 	ID                uuid.UUID
-	AssetID           uuid.UUID
+	WorkID            uuid.UUID
 	Number            int
 	RecordedAt        time.Time
 	VersionLabel      string

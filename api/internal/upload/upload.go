@@ -13,37 +13,37 @@ import (
 
 var (
 	ErrIngestNotFound   = errors.New("ingest operation not found")
-	ErrKindNotBuildable = errors.New("that kind cannot be built yet")
-	ErrAppNotAnswered   = errors.New("that kind needs to know which app it is for")
+	ErrTypeNotBuildable = errors.New("that type cannot be built yet")
+	ErrAppNotAnswered   = errors.New("that type needs to know which app it is for")
 )
 
 type CreateInput struct {
-	OwnerID   uuid.UUID
-	Kind      string
-	Filename  string
-	File      io.Reader
-	Name      string
-	Blurb     string
-	Tags      []string
-	IsNSFW    bool
-	Discovery work.Discovery
-	CreatedAt *time.Time
+	OwnerID    uuid.UUID
+	Type       string
+	Filename   string
+	File       io.Reader
+	Name       string
+	Blurb      string
+	Tags       []string
+	IsNSFW     bool
+	Visibility work.Visibility
+	CreatedAt  *time.Time
 }
 
 type IngestInput struct {
-	OwnerID   uuid.UUID
-	Filename  string
-	File      io.Reader
-	Name      *string
-	Blurb     *string
-	Tags      *[]string
-	IsNSFW    *bool
-	Discovery work.Discovery
+	OwnerID    uuid.UUID
+	Filename   string
+	File       io.Reader
+	Name       *string
+	Blurb      *string
+	Tags       *[]string
+	IsNSFW     *bool
+	Visibility work.Visibility
 }
 
 type RevisionInput struct {
 	OwnerID  uuid.UUID
-	AssetID  uuid.UUID
+	WorkID   uuid.UUID
 	Filename string
 	File     io.Reader
 }
@@ -63,7 +63,7 @@ type Operation struct {
 	ID      uuid.UUID
 	Status  Status
 	Failure *Failure
-	Asset   *work.Asset
+	Work    *work.Work
 	Preview *Preview
 }
 

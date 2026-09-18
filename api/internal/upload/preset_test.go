@@ -28,7 +28,7 @@ func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
 	}
 }
 
-func TestAKindThatDependsOnNoAppRefusesAnAnswer(t *testing.T) {
+func TestATypeThatDependsOnNoAppRefusesAnAnswer(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 
@@ -119,7 +119,7 @@ func TestTheAppAnsweredIsStoredNowhere(t *testing.T) {
 
 	started := apitest.StartPreset(t, r, session, "sillytavern")
 
-	page := readAsset(t, r, session, started.ID)
+	page := readWork(t, r, session, started.ID)
 	if strings.Contains(page, "sillytavern") {
 		t.Errorf("the preset page carries the app that was answered: %s", page)
 	}
@@ -150,7 +150,7 @@ func TestAPresetIsReadyToPublishOnItsNameRatingAndOneFragment(t *testing.T) {
 	}
 }
 
-func readAsset(t *testing.T, r http.Handler, session *http.Cookie, id string) string {
+func readWork(t *testing.T, r http.Handler, session *http.Cookie, id string) string {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+id, nil)
 	response := apitest.Send(t, r, apitest.Authorized(request, session))

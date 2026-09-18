@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	promptOwnerKind = "prompt_fragment"
+	promptOwnerType = "prompt_fragment"
 	promptPayload   = "prompt_fragment_text"
 	AppLumiverse    = "lumiverse"
 )
@@ -25,7 +25,7 @@ var ErrPolicyRequired = errors.New("choose at least one allowed app before seali
 func ImportPromptFragments(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	blocks []block.Block,
 	carried map[uuid.UUID]string,
 	imports []format.ProtectedPrompt,
@@ -51,12 +51,12 @@ func ImportPromptFragments(
 		))
 	}
 
-	apps, err := policy(ctx, tx, assetID, nil)
+	apps, err := policy(ctx, tx, workID, nil)
 	if err != nil {
 		return err
 	}
 	if len(apps) == 0 {
-		apps, err = policy(ctx, tx, assetID, &initialApps)
+		apps, err = policy(ctx, tx, workID, &initialApps)
 		if err != nil {
 			return err
 		}
@@ -65,8 +65,8 @@ func ImportPromptFragments(
 		}
 		for _, app := range apps {
 			if _, err := tx.Exec(ctx, `
-				insert into protected_delivery_apps (asset_id, app) values ($1, $2)
-			`, assetID, app); err != nil {
+				insert into protected_delivery_apps (work_id, app) values ($1, $2)
+			`, workID, app); err != nil {
 				return fmt.Errorf("save imported protected delivery policy: %w", err)
 			}
 		}
@@ -81,7 +81,7 @@ func ImportPromptFragments(
 		}
 		text := imported.Text
 		if imported.ReuseExisting {
-			held, err := heldPromptText(ctx, tx, assetID, carried, imported)
+			held, err := heldPromptText(ctx, tx, workID, carried, imported)
 			if err != nil {
 				return err
 			}
@@ -91,14 +91,14 @@ func ImportPromptFragments(
 			text: text, sourceKey: imported.SourceKey, replaceSourceKey: true,
 		}
 	}
-	return replacePromptPayloads(ctx, tx, assetID, values)
+	return replacePromptPayloads(ctx, tx, workID, values)
 }
 
-// UnfillablePrompts names the sealed fragments this asset holds no wording for.
+// UnfillablePrompts names the sealed fragments this work holds no wording for.
 func UnfillablePrompts(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	carried map[uuid.UUID]string,
 	imports []format.ProtectedPrompt,
 ) ([]uuid.UUID, error) {
@@ -107,7 +107,7 @@ func UnfillablePrompts(
 		if !imported.ReuseExisting {
 			continue
 		}
-		if _, err := heldPromptText(ctx, tx, assetID, carried, imported); err != nil {
+		if _, err := heldPromptText(ctx, tx, workID, carried, imported); err != nil {
 			if _, classified := format.FailureOf(err); !classified {
 				return nil, err
 			}
@@ -121,7 +121,7 @@ func UnfillablePrompts(
 func heldPromptText(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	carried map[uuid.UUID]string,
 	imported format.ProtectedPrompt,
 ) (string, error) {
@@ -130,7 +130,7 @@ func heldPromptText(
 			"a reusable sealed prompt needs a source key",
 		))
 	}
-	sealed, held, err := promptTextBySourceKey(ctx, tx, assetID, imported.SourceKey)
+	sealed, held, err := promptTextBySourceKey(ctx, tx, workID, imported.SourceKey)
 	if err != nil {
 		return "", err
 	}
@@ -149,15 +149,15 @@ func heldPromptText(
 func promptTextBySourceKey(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	sourceKey string,
 ) (string, bool, error) {
 	rows, err := tx.Query(ctx, `
 		select payload
 		  from protected_content
-		 where asset_id = $1 and owner_kind = $2 and payload_type = $3 and source_key = $4
+		 where work_id = $1 and owner_type = $2 and payload_type = $3 and source_key = $4
 		 for update
-	`, assetID, promptOwnerKind, promptPayload, sourceKey)
+	`, workID, promptOwnerType, promptPayload, sourceKey)
 	if err != nil {
 		return "", false, fmt.Errorf("read existing sealed prompt: %w", err)
 	}
@@ -190,28 +190,28 @@ func promptTextBySourceKey(
 	return texts[0], true, nil
 }
 
-func AppTargets(kind, app string) []string {
-	if kind == "preset" && app == AppLumiverse {
+func AppTargets(workType, app string) []string {
+	if workType == "preset" && app == AppLumiverse {
 		return []string{"preset_lumiverse"}
 	}
 	return nil
 }
 
 // AllowsTarget says whether any of the apps may receive the work in the target format
-func AllowsTarget(apps []string, kind, target string) bool {
+func AllowsTarget(apps []string, workType, target string) bool {
 	for _, app := range apps {
-		if slices.Contains(AppTargets(kind, app), target) {
+		if slices.Contains(AppTargets(workType, app), target) {
 			return true
 		}
 	}
 	return false
 }
 
-func EligibleApps(kind string, offered []string) []string {
+func EligibleApps(workType string, offered []string) []string {
 	apps := []string{}
 	for _, app := range []string{AppLumiverse} {
 		eligible := false
-		for _, target := range AppTargets(kind, app) {
+		for _, target := range AppTargets(workType, app) {
 			for _, candidate := range offered {
 				if candidate == target {
 					eligible = true
@@ -249,7 +249,7 @@ func HasPromptFragments(blocks []block.Block) bool {
 func SyncPromptFragments(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	blocks []block.Block,
 	allowedApps *[]string,
 ) error {
@@ -277,16 +277,16 @@ func SyncPromptFragments(
 	}
 
 	if len(sealed) == 0 {
-		if _, err := tx.Exec(ctx, `delete from protected_content where asset_id = $1`, assetID); err != nil {
+		if _, err := tx.Exec(ctx, `delete from protected_content where work_id = $1`, workID); err != nil {
 			return fmt.Errorf("remove protected prompts: %w", err)
 		}
-		if _, err := tx.Exec(ctx, `delete from protected_delivery_apps where asset_id = $1`, assetID); err != nil {
+		if _, err := tx.Exec(ctx, `delete from protected_delivery_apps where work_id = $1`, workID); err != nil {
 			return fmt.Errorf("remove protected delivery policy: %w", err)
 		}
 		return nil
 	}
 
-	apps, err := policy(ctx, tx, assetID, allowedApps)
+	apps, err := policy(ctx, tx, workID, allowedApps)
 	if err != nil {
 		return err
 	}
@@ -294,17 +294,17 @@ func SyncPromptFragments(
 		return ErrPolicyRequired
 	}
 	if allowedApps != nil {
-		if _, err := tx.Exec(ctx, `delete from protected_delivery_apps where asset_id = $1`, assetID); err != nil {
+		if _, err := tx.Exec(ctx, `delete from protected_delivery_apps where work_id = $1`, workID); err != nil {
 			return fmt.Errorf("replace protected delivery policy: %w", err)
 		}
 		for _, app := range apps {
-			if _, err := tx.Exec(ctx, `insert into protected_delivery_apps (asset_id, app) values ($1, $2)`, assetID, app); err != nil {
+			if _, err := tx.Exec(ctx, `insert into protected_delivery_apps (work_id, app) values ($1, $2)`, workID, app); err != nil {
 				return fmt.Errorf("save protected delivery policy: %w", err)
 			}
 		}
 	}
 
-	return replacePromptPayloads(ctx, tx, assetID, sealed)
+	return replacePromptPayloads(ctx, tx, workID, sealed)
 }
 
 type promptValue struct {
@@ -316,7 +316,7 @@ type promptValue struct {
 func replacePromptPayloads(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	values map[uuid.UUID]promptValue,
 ) error {
 	for id, value := range values {
@@ -331,28 +331,28 @@ func replacePromptPayloads(
 		}
 		if _, err := tx.Exec(ctx, `
 			insert into protected_content (
-				asset_id, owner_kind, owner_id, payload_type, payload, source_key, digest
+				work_id, owner_type, owner_id, payload_type, payload, source_key, digest
 			) values ($1, $2, $3, $4, $5, $6, $7)
-			on conflict (asset_id, owner_kind, owner_id) do update
+			on conflict (work_id, owner_type, owner_id) do update
 			set payload = excluded.payload,
 				payload_type = excluded.payload_type,
 				source_key = case when $8 then excluded.source_key else protected_content.source_key end,
 				digest = excluded.digest
-		`, assetID, promptOwnerKind, id, promptPayload, payload, sourceKey, digest[:],
+		`, workID, promptOwnerType, id, promptPayload, payload, sourceKey, digest[:],
 			value.replaceSourceKey); err != nil {
 			return fmt.Errorf("save protected prompt: %w", err)
 		}
 	}
 	if _, err := tx.Exec(ctx, `
 		delete from protected_content
-		 where asset_id = $1 and owner_kind = $2 and not (owner_id = any($3::uuid[]))
-	`, assetID, promptOwnerKind, promptIDs(values)); err != nil {
+		 where work_id = $1 and owner_type = $2 and not (owner_id = any($3::uuid[]))
+	`, workID, promptOwnerType, promptIDs(values)); err != nil {
 		return fmt.Errorf("remove unsealed prompts: %w", err)
 	}
 	return nil
 }
 
-func policy(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, supplied *[]string) ([]string, error) {
+func policy(ctx context.Context, tx pgx.Tx, workID uuid.UUID, supplied *[]string) ([]string, error) {
 	if supplied != nil {
 		seen := map[string]bool{}
 		apps := make([]string, 0, len(*supplied))
@@ -365,7 +365,7 @@ func policy(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, supplied *[]strin
 		}
 		return apps, nil
 	}
-	rows, err := tx.Query(ctx, `select app from protected_delivery_apps where asset_id = $1 order by app`, assetID)
+	rows, err := tx.Query(ctx, `select app from protected_delivery_apps where work_id = $1 order by app`, workID)
 	if err != nil {
 		return nil, fmt.Errorf("read protected delivery policy: %w", err)
 	}
@@ -383,17 +383,17 @@ func policy(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, supplied *[]strin
 
 func RestorePromptFragments(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
-}, assetID uuid.UUID, blocks []block.Block) error {
-	return restorePromptFragments(ctx, q, assetID, blocks, "protected_content")
+}, workID uuid.UUID, blocks []block.Block) error {
+	return restorePromptFragments(ctx, q, workID, blocks, "protected_content")
 }
 
 func restorePromptFragments(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
-}, assetID uuid.UUID, blocks []block.Block, table string) error {
+}, workID uuid.UUID, blocks []block.Block, table string) error {
 	rows, err := q.Query(ctx, `
 		select owner_id, payload from `+table+`
-		 where asset_id = $1 and owner_kind = $2 and payload_type = $3
-	`, assetID, promptOwnerKind, promptPayload)
+		 where work_id = $1 and owner_type = $2 and payload_type = $3
+	`, workID, promptOwnerType, promptPayload)
 	if err != nil {
 		return fmt.Errorf("read protected prompts: %w", err)
 	}
@@ -442,8 +442,8 @@ func restorePromptFragments(ctx context.Context, q interface {
 
 func Apps(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
-}, assetID uuid.UUID) ([]string, error) {
-	rows, err := q.Query(ctx, `select app from protected_delivery_apps where asset_id = $1 order by app`, assetID)
+}, workID uuid.UUID) ([]string, error) {
+	rows, err := q.Query(ctx, `select app from protected_delivery_apps where work_id = $1 order by app`, workID)
 	if err != nil {
 		return nil, fmt.Errorf("read protected delivery policy: %w", err)
 	}

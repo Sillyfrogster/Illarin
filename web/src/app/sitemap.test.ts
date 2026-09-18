@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import type { AssetListParams, BrowseAsset, BrowsePage } from "@/lib/api/query";
+import type { AssetListParams, BrowsePage, BrowseWork } from "@/lib/api/query";
 import { buildSitemap } from "./sitemap";
 
 const FIRST_ID = "11111111-1111-4111-8111-111111111111";
 const SECOND_ID = "22222222-2222-4222-8222-222222222222";
 
-function asset(id: string, name: string): BrowseAsset {
+function asset(id: string, name: string): BrowseWork {
   return {
     id,
     name,

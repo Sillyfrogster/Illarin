@@ -14,11 +14,11 @@ import (
 
 func (SillyTavernModule) Write(
 	_ context.Context,
-	asset format.ExportAsset,
+	work format.ExportWork,
 ) (format.Artifact, error) {
-	held := preservedBy(asset.Preserved)
+	held := preservedBy(work.Preserved)
 	named := slotsByApp[SillyTavern]
-	list := sillyTavernFragments(fragments(asset))
+	list := sillyTavernFragments(fragments(work))
 	identifiers := sillyTavernIdentifiers(list, held)
 
 	body := map[string]json.RawMessage{
@@ -33,7 +33,7 @@ func (SillyTavernModule) Write(
 		{block.RoleCompletionSettings, named.completion},
 		{block.RoleAdvancedSettings, named.advanced},
 	} {
-		for _, setting := range settings(asset, group.role) {
+		for _, setting := range settings(work, group.role) {
 			if setting.Value == nil || !slices.ContainsFunc(group.slots, func(s slot) bool {
 				return s.name == setting.Name
 			}) {
@@ -42,12 +42,12 @@ func (SillyTavernModule) Write(
 			body[setting.Name] = writeValue(setting)
 		}
 	}
-	for _, text := range nudges(asset) {
+	for _, text := range nudges(work) {
 		if slices.Contains(named.nudges, text.Name) {
 			body[text.Name] = keys.Must(text.Text)
 		}
 	}
-	if written := writeSillyTavernScripts(asset, held); len(written) > 0 {
+	if written := writeSillyTavernScripts(work, held); len(written) > 0 {
 		body[stExtensions] = keys.Must(map[string][]map[string]json.RawMessage{
 			stScripts: written,
 		})
@@ -151,10 +151,10 @@ func writeSillyTavernOrder(
 }
 
 func writeSillyTavernScripts(
-	asset format.ExportAsset,
+	work format.ExportWork,
 	held kept,
 ) []map[string]json.RawMessage {
-	list := scripts(asset)
+	list := scripts(work)
 	written := make([]map[string]json.RawMessage, 0, len(list))
 	for _, script := range list {
 		fields := map[string]json.RawMessage{

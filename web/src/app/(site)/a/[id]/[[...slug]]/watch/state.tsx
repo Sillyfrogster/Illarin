@@ -3,15 +3,15 @@
 import { useMutation } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import {
-  type AssetWatch,
   stopWatchingAsset,
+  type WorkFollow,
   watchAsset,
 } from "@/lib/api/notifications";
 import { rememberNotNow, saidNotNow } from "@/lib/asset-watch";
 import { useAuth } from "@/lib/auth";
 
 export type AssetWatching = {
-  watch: AssetWatch;
+  watch: WorkFollow;
   kind: string;
   pending: boolean;
   failure: string | null;
@@ -20,7 +20,7 @@ export type AssetWatching = {
   sayNotNow: () => void;
 };
 
-type Changed = { from: AssetWatch | undefined; to: AssetWatch };
+type Changed = { from: WorkFollow | undefined; to: WorkFollow };
 
 const WatchContext = createContext<AssetWatching | null>(null);
 
@@ -33,7 +33,7 @@ export function AssetWatchProvider({
 }: {
   assetId: string;
   children: ReactNode;
-  initial: AssetWatch | undefined;
+  initial: WorkFollow | undefined;
   kind: string;
 }) {
   const { account } = useAuth();

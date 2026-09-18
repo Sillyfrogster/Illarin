@@ -151,29 +151,29 @@ func (r *reader) blocks(path string, raw json.RawMessage, place string, depth in
 }
 
 func (r *reader) block(path string, raw json.RawMessage, place string, depth int) (Block, error) {
-	fields, kind, err := r.node(path, raw)
+	fields, calloutType, err := r.node(path, raw)
 	if err != nil {
 		return nil, err
 	}
-	if !allows(place, kind) {
-		if !isBlock(kind) {
+	if !allows(place, calloutType) {
+		if !isBlock(calloutType) {
 			return nil, Problem{
 				Path:    path + ".type",
-				Message: fmt.Sprintf("%q is not a post block.", kind),
+				Message: fmt.Sprintf("%q is not a post block.", calloutType),
 			}
 		}
 		return nil, Problem{
 			Path:    path + ".type",
-			Message: fmt.Sprintf("%q cannot go here. Allowed: %s.", kind, strings.Join(blockPlaces[place], ", ")),
+			Message: fmt.Sprintf("%q cannot go here. Allowed: %s.", calloutType, strings.Join(blockPlaces[place], ", ")),
 		}
 	}
-	switch kind {
+	switch calloutType {
 	case "paragraph":
 		return r.paragraph(path, fields)
 	case "heading":
 		return r.heading(path, fields)
 	case "bulletList", "orderedList":
-		return r.list(path, fields, kind == "orderedList", depth)
+		return r.list(path, fields, calloutType == "orderedList", depth)
 	case "taskList":
 		return r.taskList(path, fields, depth)
 	case "quote":
@@ -194,7 +194,7 @@ func (r *reader) block(path string, raw json.RawMessage, place string, depth int
 		}
 		return Divider{}, nil
 	}
-	return nil, Problem{Path: path + ".type", Message: fmt.Sprintf("%q is not a post block.", kind)}
+	return nil, Problem{Path: path + ".type", Message: fmt.Sprintf("%q is not a post block.", calloutType)}
 }
 
 func (r *reader) node(path string, raw json.RawMessage) (map[string]json.RawMessage, string, error) {
@@ -206,24 +206,24 @@ func (r *reader) node(path string, raw json.RawMessage) (map[string]json.RawMess
 	if err := json.Unmarshal(raw, &fields); err != nil {
 		return nil, "", Problem{Path: path, Message: "A block has to be a JSON object."}
 	}
-	kind, err := readString(path+".type", fields, "type")
+	calloutType, err := readString(path+".type", fields, "type")
 	if err != nil {
 		return nil, "", err
 	}
-	return fields, kind, nil
+	return fields, calloutType, nil
 }
 
-func isBlock(kind string) bool {
+func isBlock(calloutType string) bool {
 	for _, allowed := range blockPlaces {
-		if contains(allowed, kind) {
+		if contains(allowed, calloutType) {
 			return true
 		}
 	}
 	return false
 }
 
-func allows(place, kind string) bool {
-	return contains(blockPlaces[place], kind)
+func allows(place, calloutType string) bool {
+	return contains(blockPlaces[place], calloutType)
 }
 
 func onlyKeys(path string, fields map[string]json.RawMessage, allowed ...string) error {

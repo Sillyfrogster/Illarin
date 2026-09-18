@@ -72,8 +72,8 @@ var contentFloors = map[string][]Requirement{
 	},
 }
 
-func ContentFloor(kind string, blocks []Block) []Check {
-	requirements := contentFloors[kind]
+func ContentFloor(workType string, blocks []Block) []Check {
+	requirements := contentFloors[workType]
 	checks := make([]Check, 0, len(requirements))
 	for _, requirement := range requirements {
 		check := Check{Requirement: requirement}
@@ -95,8 +95,8 @@ func ContentFloor(kind string, blocks []Block) []Check {
 	return checks
 }
 
-func RequiredRoles(kind string) []Role {
-	requirements := contentFloors[kind]
+func RequiredRoles(workType string) []Role {
+	requirements := contentFloors[workType]
 	roles := make([]Role, 0, len(requirements))
 	for _, requirement := range requirements {
 		roles = append(roles, requirement.Role)

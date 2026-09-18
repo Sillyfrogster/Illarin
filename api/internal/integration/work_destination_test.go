@@ -25,10 +25,10 @@ func (s destinationStack) updateDestinationRequest(t *testing.T, session *http.C
 	return apitest.Send(t, s.router, request)
 }
 
-func (s destinationStack) addUpdateDestination(t *testing.T, session *http.Cookie, kind, address string) addedDestination {
+func (s destinationStack) addUpdateDestination(t *testing.T, session *http.Cookie, destinationType, address string) addedDestination {
 	t.Helper()
 	response := s.updateDestinationRequest(t, session, http.MethodPost, updateDestinationsPath,
-		fmt.Sprintf(`{"name":"Creator updates","kind":%q,"address":%q}`, kind, address))
+		fmt.Sprintf(`{"name":"Creator updates","kind":%q,"address":%q}`, destinationType, address))
 	if response.Code != http.StatusCreated {
 		t.Fatalf("create update destination = %d, want 201: %s", response.Code, response.Body.String())
 	}
@@ -42,7 +42,7 @@ func (s destinationStack) addUpdateDestination(t *testing.T, session *http.Cooki
 	return made
 }
 
-func TestAssetUpdateDestinationsBelongOnlyToTheirCreator(t *testing.T) {
+func TestWorkUpdateDestinationsBelongOnlyToTheirCreator(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	creator := apitest.VerifiedSignUp(t, stack.router, stack.outbox, "creator@example.com", "asset.creator")
@@ -84,7 +84,7 @@ func TestAssetUpdateDestinationsBelongOnlyToTheirCreator(t *testing.T) {
 	}
 }
 
-func TestAssetUpdateDestinationVerificationRequiresASignedChallenge(t *testing.T) {
+func TestWorkUpdateDestinationVerificationRequiresASignedChallenge(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.addUpdateDestination(t, stack.editor, "webhook", stack.to.address())
@@ -120,7 +120,7 @@ func TestAssetUpdateDestinationVerificationRequiresASignedChallenge(t *testing.T
 	}
 }
 
-func TestAssetUpdateDestinationChangesStayWithTheOwner(t *testing.T) {
+func TestWorkUpdateDestinationChangesStayWithTheOwner(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	creator := apitest.VerifiedSignUp(t, stack.router, stack.outbox, "updates@example.com", "updates.creator")
@@ -189,7 +189,7 @@ func TestAssetUpdateDestinationChangesStayWithTheOwner(t *testing.T) {
 	}
 }
 
-func TestAssetUpdateDiscordDestinationsVerifyCapabilitiesWithoutMentionControls(t *testing.T) {
+func TestWorkUpdateDiscordDestinationsVerifyCapabilitiesWithoutMentionControls(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
@@ -230,7 +230,7 @@ func TestAssetUpdateDiscordDestinationsVerifyCapabilitiesWithoutMentionControls(
 	}
 }
 
-func TestAssetUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *testing.T) {
+func TestWorkUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	first := apitest.StartCharacter(t, stack.router, stack.editor)
@@ -249,13 +249,13 @@ func TestAssetUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *
 	if chosen.Code != http.StatusNoContent {
 		t.Fatalf("save destination defaults = %d", chosen.Code)
 	}
-	for _, assetID := range []string{first.ID, second.ID} {
-		got := stack.updateDestinationRequest(t, stack.editor, http.MethodGet, "/v1/assets/"+assetID+"/update-destinations", "")
+	for _, workID := range []string{first.ID, second.ID} {
+		got := stack.updateDestinationRequest(t, stack.editor, http.MethodGet, "/v1/assets/"+workID+"/update-destinations", "")
 		var choices destinationChoiceList
 		if got.Code != http.StatusOK || json.Unmarshal(got.Body.Bytes(), &choices) != nil {
 			t.Fatalf("read choices = %d", got.Code)
 		}
-		if len(choices.Destinations) != 1 || choices.Destinations[0].ID != channel.Destination.ID || choices.Destinations[0].ByDefault != (assetID == first.ID) {
+		if len(choices.Destinations) != 1 || choices.Destinations[0].ID != channel.Destination.ID || choices.Destinations[0].ByDefault != (workID == first.ID) {
 			t.Error("choices include an ineligible destination or defaults leaked between assets")
 		}
 		if strings.Contains(got.Body.String(), "address") || strings.Contains(got.Body.String(), "secret") {
@@ -288,7 +288,7 @@ func TestAssetUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *
 	}
 }
 
-func TestAssetUpdateDestinationsRefuseUnsafeAddressesAndChangedDNS(t *testing.T) {
+func TestWorkUpdateDestinationsRefuseUnsafeAddressesAndChangedDNS(t *testing.T) {
 	t.Parallel()
 	private := false
 	stack := newDestinationStackThrough(t, func(string) ([]netip.Addr, error) {
@@ -327,7 +327,7 @@ func TestAssetUpdateDestinationsRefuseUnsafeAddressesAndChangedDNS(t *testing.T)
 	}
 }
 
-func TestAssetUpdateVerificationCannotReactivateADisabledDestination(t *testing.T) {
+func TestWorkUpdateVerificationCannotReactivateADisabledDestination(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.addUpdateDestination(t, stack.editor, "webhook", stack.to.address())
@@ -354,7 +354,7 @@ func TestAssetUpdateVerificationCannotReactivateADisabledDestination(t *testing.
 	}
 }
 
-func TestAssetUpdateDestinationRotationExpiresTheOldSignature(t *testing.T) {
+func TestWorkUpdateDestinationRotationExpiresTheOldSignature(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	made := stack.addUpdateDestination(t, stack.editor, "webhook", stack.to.address())
@@ -389,17 +389,17 @@ func TestAssetUpdateDestinationRotationExpiresTheOldSignature(t *testing.T) {
 	}
 }
 
-func TestAssetUpdateDestinationCredentialsAreEncryptedAtRest(t *testing.T) {
+func TestWorkUpdateDestinationCredentialsAreEncryptedAtRest(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
-	for _, target := range []struct{ kind, address string }{
+	for _, target := range []struct{ destinationType, address string }{
 		{"webhook", stack.to.address()},
 		{"discord", discordCapability()},
 	} {
-		made := stack.addUpdateDestination(t, stack.editor, target.kind, target.address)
+		made := stack.addUpdateDestination(t, stack.editor, target.destinationType, target.address)
 		var address, secret []byte
 		err := stack.pool.QueryRow(t.Context(), `
-			select address, signing_secret from asset_update_destinations where id = $1
+			select address, signing_secret from work_update_destinations where id = $1
 		`, made.Destination.ID).Scan(&address, &secret)
 		if err != nil {
 			t.Fatal(err)
@@ -411,7 +411,7 @@ func TestAssetUpdateDestinationCredentialsAreEncryptedAtRest(t *testing.T) {
 		if err != nil || string(opened) != target.address {
 			t.Fatal("stored address cannot be opened with the application key")
 		}
-		if target.kind == "discord" {
+		if target.destinationType == "discord" {
 			if secret != nil {
 				t.Error("Discord stored an unrelated signing secret")
 			}
@@ -427,7 +427,7 @@ func TestAssetUpdateDestinationCredentialsAreEncryptedAtRest(t *testing.T) {
 	}
 }
 
-func TestAssetUpdateDestinationDefaultsDoNotAnnounceFirstPublication(t *testing.T) {
+func TestWorkUpdateDestinationDefaultsDoNotAnnounceFirstPublication(t *testing.T) {
 	t.Parallel()
 	stack := newDestinationStack(t)
 	started := apitest.StartCharacter(t, stack.router, stack.editor)
@@ -439,7 +439,7 @@ func TestAssetUpdateDestinationDefaultsDoNotAnnounceFirstPublication(t *testing.
 	if chosen.Code != http.StatusNoContent {
 		t.Fatal("could not save defaults before first publication")
 	}
-	if published := apitest.PublishAsset(t, stack.router, stack.editor, started.ID); published.Code != http.StatusOK {
+	if published := apitest.PublishWork(t, stack.router, stack.editor, started.ID); published.Code != http.StatusOK {
 		t.Fatal("could not publish the asset")
 	}
 	if len(stack.discord.announcements()) != 0 || len(stack.to.arrivals()) != 0 {

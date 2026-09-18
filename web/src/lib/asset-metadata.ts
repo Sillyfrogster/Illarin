@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import type { AssetDetail } from "./api/query";
+import type { WorkDetail } from "./api/query";
 import { assetDisplayName } from "./asset-name";
 import { assetHref } from "./asset-url";
 import { KIND_LABELS } from "./kinds";
 import { SITE_CARD, siteOpenGraph, siteTwitter } from "./site-metadata";
 
-export function assetMetadata(asset: AssetDetail): Metadata {
+export function assetMetadata(asset: WorkDetail): Metadata {
   const name = assetDisplayName(asset.name);
   const title = `${name} · ${KIND_LABELS[asset.kind]}`;
   const description = asset.blurb || `A ${asset.kind} by ${asset.creator}.`;

@@ -1,11 +1,11 @@
 import type {
   AppTarget,
-  AssetBlock,
-  AssetDetail,
-  AssetImage,
-  AssetInstance,
   DownloadTarget,
   QueuedDelivery,
+  WorkBlock,
+  WorkDetail,
+  WorkImage,
+  WorkInstance,
 } from "@/lib/api/query";
 
 type RoleVerdict = DownloadTarget["roles"][number];
@@ -36,7 +36,7 @@ export const DOWNLOAD_DESTINATION = "file";
 
 /** canSendAsset says whether the API will send this asset to an installation. */
 export function canSendAsset(
-  asset: Pick<AssetDetail, "lifecycle" | "withhold">,
+  asset: Pick<WorkDetail, "lifecycle" | "withhold">,
 ): boolean {
   return asset.lifecycle === "published" && !asset.withhold;
 }
@@ -212,7 +212,7 @@ export function formatChoices({
 }
 
 export function deliveryDestinations(
-  instances: AssetInstance[],
+  instances: WorkInstance[],
 ): DeliveryDestination[] {
   return [
     { id: DOWNLOAD_DESTINATION, label: "Download a file" },
@@ -231,7 +231,7 @@ export function installsOnInstance(kind: string): boolean {
 }
 
 export function sendActionLabel(
-  instance: AssetInstance,
+  instance: WorkInstance,
   installs = false,
 ): string {
   if (isWaiting(instance.delivery)) return "Waiting to be collected";
@@ -247,7 +247,7 @@ export function sendActionLabel(
   return "Send";
 }
 
-export function instanceStanding(instance: AssetInstance): string {
+export function instanceStanding(instance: WorkInstance): string {
   if (instance.updateAvailable) {
     return "Installed, and a newer version exists here.";
   }
@@ -264,7 +264,7 @@ export function deliveryFailureLine(reason: string | null | undefined): string {
   return FAILURES[reason ?? ""] ?? "This delivery did not arrive.";
 }
 
-function imageItems(blocks: AssetBlock[], role: string) {
+function imageItems(blocks: WorkBlock[], role: string) {
   return blocks
     .flatMap((block) => block.elements)
     .filter((element) => element.role === role)
@@ -278,8 +278,8 @@ export function travellingGallery({
   blocks,
   images,
 }: {
-  blocks: AssetBlock[];
-  images: AssetImage[];
+  blocks: WorkBlock[];
+  images: WorkImage[];
 }): TravellingImage[] {
   const stored = new Map(images.map((image) => [image.id, image]));
   return imageItems(blocks, "gallery").map((item, index) => ({
@@ -330,8 +330,8 @@ export function downloadBytes({
   carries = true,
 }: {
   format: string;
-  blocks: AssetBlock[];
-  images: AssetImage[];
+  blocks: WorkBlock[];
+  images: WorkImage[];
   chosen: string[];
   carries?: boolean;
 }): number {

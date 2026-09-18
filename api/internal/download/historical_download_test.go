@@ -33,7 +33,7 @@ type writtenCard struct {
 	} `json:"data"`
 }
 
-func describeBlock(t *testing.T, r http.Handler, session *http.Cookie, started apitest.StartedAsset, text string) {
+func describeBlock(t *testing.T, r http.Handler, session *http.Cookie, started apitest.StartedWork, text string) {
 	t.Helper()
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
 	core := apitest.EditableBlock(coreBlock)
@@ -47,10 +47,10 @@ func downloadVersion(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID, target, query string,
+	workID, target, query string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/download/"+assetID+"/"+target+query, nil)
+	request := httptest.NewRequest(http.MethodGet, "/download/"+workID+"/"+target+query, nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -94,7 +94,7 @@ func archivedDescription(t *testing.T, archive []byte) string {
 func archivedIcon(t *testing.T, archive []byte) []byte {
 	t.Helper()
 	for _, image := range archivedCardImages(t, archive) {
-		if image.kind == "icon" {
+		if image.workType == "icon" {
 			return image.data
 		}
 	}
@@ -106,19 +106,19 @@ func publishTwoCoveredVersions(
 	t *testing.T,
 	r *gin.Engine,
 	session *http.Cookie,
-) (apitest.StartedAsset, []byte, []byte) {
+) (apitest.StartedWork, []byte, []byte) {
 	t.Helper()
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
 	firstCover := apitest.PNG(t, 32, 32)
 	apitest.UploadedImageID(t, r, session, started.ID, "avatar", firstCover)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
 	secondCover := apitest.PNG(t, 40, 40)
 	apitest.UploadedImageID(t, r, session, started.ID, "avatar", secondCover)
 	describeBlock(t, r, session, started, "She has moved to the east shelf.")
-	if got := apitest.PublishAssetUpdate(t, r, session, started.ID,
+	if got := apitest.PublishWorkUpdate(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -161,11 +161,11 @@ func TestAnOlderVersionDownloadsWhatItRecordedAndTheNewestWhatReadersHave(t *tes
 
 func TestAnOlderVersionsPicturesOutliveTheirReplacement(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
 	for range 2 {
-		if _, err := sweeper(assets).Sweep(t.Context()); err != nil {
+		if _, err := sweeper(works).Sweep(t.Context()); err != nil {
 			t.Fatalf("sweep: %v", err)
 		}
 		if _, err := pool.Exec(t.Context(),
@@ -219,27 +219,27 @@ func TestAHistoricalDownloadNeverCarriesUnpublishedWork(t *testing.T) {
 
 func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.CardWithThirdPartyNamespaces)
-	apitest.PublishCharacter(t, r, session, assetID)
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
+	apitest.PublishCharacter(t, r, session, workID)
 	removed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/assets/"+assetID+"/preserved/chub", nil), session))
+		http.MethodDelete, "/v1/assets/"+workID+"/preserved/chub", nil), session))
 	if removed.Code != http.StatusNoContent {
 		t.Fatalf("delete chub: %d %s", removed.Code, removed.Body.String())
 	}
-	if got := apitest.PublishAssetUpdate(t, r, session, assetID,
+	if got := apitest.PublishWorkUpdate(t, r, session, workID,
 		`{"summary":"Dropped the chub data"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
 
-	older := downloadVersion(t, r, nil, assetID, "chara_card_v3", "?version=1")
+	older := downloadVersion(t, r, nil, workID, "chara_card_v3", "?version=1")
 	if older.Code != http.StatusOK {
 		t.Fatalf("download version 1: %d %s", older.Code, older.Body.String())
 	}
 	if _, kept := apitest.NamespacesOf(t, apitest.CardBodyOf(t, older.Body.Bytes())["extensions"])["chub"]; !kept {
 		t.Error("version 1 lost the chub namespace it recorded")
 	}
-	newest := downloadVersion(t, r, nil, assetID, "chara_card_v3", "")
+	newest := downloadVersion(t, r, nil, workID, "chara_card_v3", "")
 	if newest.Code != http.StatusOK {
 		t.Fatalf("download the newest: %d %s", newest.Code, newest.Body.String())
 	}
@@ -255,14 +255,14 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 	const firstSecret = "The first private instruction."
 	const secondSecret = "The second private instruction."
 	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", firstSecret)
-	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the sealed prompt: %d %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAssetUpdate(t, router, session, started.ID,
+	if got := apitest.PublishWorkUpdate(t, router, session, started.ID,
 		`{"summary":"Reworded the private instruction"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -279,7 +279,7 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 		}
 	}
 
-	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
@@ -313,7 +313,7 @@ func TestAVersionThatRecordedASealedPromptStaysUnwritableAfterItsRemoval(t *test
 	publicID, sealedID := uuid.New(), uuid.New()
 	const secret = "Words that were sealed when version 1 was recorded."
 	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", secret)
-	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[` +
 		`{"id":"` + publicID.String() + `","name":"House rule","role":"system","text":"Answer plainly.","enabled":true}]}`)
@@ -321,7 +321,7 @@ func TestAVersionThatRecordedASealedPromptStaysUnwritableAfterItsRemoval(t *test
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("remove the sealed prompt: %d %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAssetUpdate(t, router, session, started.ID,
+	if got := apitest.PublishWorkUpdate(t, router, session, started.ID,
 		`{"summary":"Removed the private instruction"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -353,20 +353,20 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, assets, pool := harness.NewVerifiedIngestRouterWithSettings(t, registry, work.DefaultIngestSettings())
+	r, session, works, pool := harness.NewVerifiedIngestRouterWithSettings(t, registry, work.DefaultIngestSettings())
 	metadata := apitest.ExampleMetadata("Zenless lore")
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
-	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte(aSillyTavernBook)))
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte(aSillyTavernBook)))
+	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "lore.json", []byte(aLumiverseBook)), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement: %d %s", revision.Code, revision.Body.String())
 	}
-	if _, err := apitest.Uploads(assets).ProcessNextIngest(t.Context()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
-	if got := apitest.PublishAssetUpdate(t, r, session, assetID,
+	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
+	if got := apitest.PublishWorkUpdate(t, r, session, workID,
 		`{"summary":"Moved the book to the Lumiverse format"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -384,7 +384,7 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 		{"?version=3", "lorebook", http.StatusNotFound},
 		{"?version=0", "lorebook", http.StatusNotFound},
 	} {
-		got := downloadVersion(t, r, nil, assetID, want.target, want.query)
+		got := downloadVersion(t, r, nil, workID, want.target, want.query)
 		if got.Code != want.status {
 			t.Errorf("%s %q = %d, want %d: %s", want.target, want.query, got.Code, want.status, got.Body.String())
 		}
@@ -392,7 +392,7 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 
 	var revisions int
 	if err := pool.QueryRow(t.Context(), `select count(distinct revision_id) from download_events
-		where asset_id = $1 and revision_id is not null`, assetID).Scan(&revisions); err != nil || revisions != 2 {
+		where work_id = $1 and revision_id is not null`, workID).Scan(&revisions); err != nil || revisions != 2 {
 		t.Fatalf("revisions the download events name = %d, error = %v; want each version's own", revisions, err)
 	}
 }
@@ -431,11 +431,11 @@ func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testi
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
 	apitest.UploadedImageID(t, r, session, started.ID, "avatar", firstCover)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
 	apitest.UploadedImageID(t, r, session, started.ID, "avatar", secondCover)
-	if got := apitest.PublishAssetUpdate(t, r, session, started.ID,
+	if got := apitest.PublishWorkUpdate(t, r, session, started.ID,
 		`{"summary":"A new cover"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -458,9 +458,9 @@ func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testi
 	}
 }
 
-func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
+func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
 	deleted := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/assets/"+started.ID, nil), session))
@@ -481,7 +481,7 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatalf("version 1 after recovery = %d, want it whole again", recovered.Code)
 	}
 
-	if err := sweeper(assets).Purge(t.Context(), sha256.Sum256(firstCover), "test_purge", uuid.New()); err != nil {
+	if err := sweeper(works).Purge(t.Context(), sha256.Sum256(firstCover), "test_purge", uuid.New()); err != nil {
 		t.Fatalf("purge the first cover: %v", err)
 	}
 	purged := downloadVersion(t, r, nil, started.ID, "charx", "?version=1")
@@ -497,11 +497,11 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatalf("delete again: %d %s", deleted.Code, deleted.Body.String())
 	}
 	if _, err := pool.Exec(t.Context(),
-		`update assets set recoverable_until = now() - interval '1 second' where id = $1`, started.ID); err != nil {
+		`update works set recoverable_until = now() - interval '1 second' where id = $1`, started.ID); err != nil {
 		t.Fatalf("expire the recovery window: %v", err)
 	}
 	for range 2 {
-		if _, err := sweeper(assets).Sweep(t.Context()); err != nil {
+		if _, err := sweeper(works).Sweep(t.Context()); err != nil {
 			t.Fatalf("sweep: %v", err)
 		}
 		if _, err := pool.Exec(t.Context(),
@@ -513,19 +513,19 @@ func TestHistoryFollowsTheAssetThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatalf("a finally deleted asset still wrote version 2: %d", got.Code)
 	}
 	var kept int
-	if err := pool.QueryRow(t.Context(), `select count(*) from asset_snapshots where asset_id = $1`, started.ID).Scan(&kept); err != nil || kept != 0 {
+	if err := pool.QueryRow(t.Context(), `select count(*) from work_snapshots where work_id = $1`, started.ID).Scan(&kept); err != nil || kept != 0 {
 		t.Fatalf("recorded versions after final deletion = %d, error = %v; want none", kept, err)
 	}
 	var blobs int
 	if err := pool.QueryRow(t.Context(), `select count(*) from blobs blob
-		where exists (select 1 from asset_media media where media.blob_id = blob.id and media.asset_id = $1)`, started.ID).Scan(&blobs); err != nil || blobs != 0 {
+		where exists (select 1 from work_media media where media.blob_id = blob.id and media.work_id = $1)`, started.ID).Scan(&blobs); err != nil || blobs != 0 {
 		t.Fatalf("picture blobs after final deletion = %d, error = %v; want none", blobs, err)
 	}
 }
 
 type recordedDownloadsBody struct {
 	Version           apitest.RecordedVersionBody `json:"version"`
-	Kind              string                      `json:"kind"`
+	Type              string                      `json:"kind"`
 	LinkedInstallOnly bool                        `json:"linkedInstallOnly"`
 	Downloads         []apitest.DownloadTarget    `json:"downloads"`
 	AppTargets        []apitest.AppTarget         `json:"appTargets"`
@@ -542,12 +542,12 @@ func readVersionDownloads(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	number int,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet,
-		"/v1/assets/"+assetID+"/updates/"+strconv.Itoa(number)+"/downloads", nil)
+		"/v1/assets/"+workID+"/updates/"+strconv.Itoa(number)+"/downloads", nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -570,35 +570,35 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
 	metadata := apitest.ExampleMetadata("Zenless lore")
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
-	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte(aSillyTavernBook)))
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, assetID, "lore.json", []byte(aLumiverseBook)), session))
-	if _, err := apitest.Uploads(assets).ProcessNextIngest(t.Context()); err != nil {
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte(aSillyTavernBook)))
+	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "lore.json", []byte(aLumiverseBook)), session))
+	if _, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
-	if got := apitest.PublishAssetUpdate(t, r, session, assetID,
+	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
+	if got := apitest.PublishWorkUpdate(t, r, session, workID,
 		`{"summary":"Moved the book to the Lumiverse format"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
 
 	for number, want := range map[int][]string{1: {"lorebook_sillytavern"}, 2: {"lorebook"}} {
-		answer := readVersionDownloads(t, r, nil, assetID, number)
+		answer := readVersionDownloads(t, r, nil, workID, number)
 		if answer.Code != http.StatusOK {
 			t.Fatalf("version %d downloads: %d %s", number, answer.Code, answer.Body.String())
 		}
 		offered := apitest.DecodeResponse[recordedDownloadsBody](t, answer)
-		if offered.Version.Number != number || offered.Kind != "lorebook" || offered.LinkedInstallOnly {
+		if offered.Version.Number != number || offered.Type != "lorebook" || offered.LinkedInstallOnly {
 			t.Errorf("version %d = %+v", number, offered)
 		}
 		if got := offeredFormats(offered.Downloads); !slices.Equal(got, want) {
 			t.Errorf("version %d is offered %v, want %v", number, got, want)
 		}
 	}
-	if missing := readVersionDownloads(t, r, nil, assetID, 3); missing.Code != http.StatusNotFound {
+	if missing := readVersionDownloads(t, r, nil, workID, 3); missing.Code != http.StatusNotFound {
 		t.Fatalf("a version never recorded = %d, want 404", missing.Code)
 	}
 }

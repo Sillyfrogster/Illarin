@@ -21,12 +21,12 @@ import (
 )
 
 var (
-	ErrNotFound         = errors.New("asset not found")
-	ErrInvalidDiscovery = errors.New("invalid discovery state")
-	ErrAssetFrozen      = errors.New("asset is frozen")
-	ErrInvalidBlock     = block.ErrInvalid
-	ErrStorageCap       = errors.New("account storage cap exceeded")
-	ErrAssetIsDraft     = errors.New("the asset is still a draft")
+	ErrNotFound          = errors.New("work not found")
+	ErrInvalidVisibility = errors.New("invalid visibility state")
+	ErrWorkFrozen        = errors.New("work is frozen")
+	ErrInvalidBlock      = block.ErrInvalid
+	ErrStorageCap        = errors.New("account storage cap exceeded")
+	ErrWorkIsDraft       = errors.New("the work is still a draft")
 )
 
 type Service struct {
@@ -47,7 +47,7 @@ func (s *Service) BeginReadSnapshot(ctx context.Context) (pgx.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(ctx, `set local search_path = asset_public, public`); err != nil {
+	if _, err := tx.Exec(ctx, `set local search_path = work_public, public`); err != nil {
 		tx.Rollback(ctx)
 		return nil, err
 	}
@@ -172,18 +172,18 @@ func (s *Service) EnsureAccountStorage(
 			   and operation.status in ('pending', 'processing')
 			union
 			select revision.blob_id
-			  from asset_revisions revision
-			  join assets asset on asset.id = revision.asset_id
-			 where asset.owner_id = $1
+			  from work_revisions revision
+			  join works work on work.id = revision.work_id
+			 where work.owner_id = $1
 			   and revision.blob_id is not null
-			   and (asset.deleted_at is null or asset.recoverable_until > $3)
+			   and (work.deleted_at is null or work.recoverable_until > $3)
 			union
 			select media.blob_id
-			  from asset_media media
-			  join assets asset on asset.id = media.asset_id
-			 where asset.owner_id = $1
+			  from work_media media
+			  join works work on work.id = media.work_id
+			 where work.owner_id = $1
 			   and media.blob_id is not null
-			   and (asset.deleted_at is null or asset.recoverable_until > $3)
+			   and (work.deleted_at is null or work.recoverable_until > $3)
 		), candidate_blobs as (
 			select distinct unnest($2::uuid[]) as blob_id
 		)
@@ -212,8 +212,8 @@ func (s *Service) EnsureAccountStorage(
 	return nil
 }
 
-func (s *Service) OpenSource(ctx context.Context, assetID uuid.UUID) (io.ReadCloser, error) {
-	location, err := CurrentRevisionLocation(ctx, s.pool, assetID, nil)
+func (s *Service) OpenSource(ctx context.Context, workID uuid.UUID) (io.ReadCloser, error) {
+	location, err := CurrentRevisionLocation(ctx, s.pool, workID, nil)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -231,24 +231,24 @@ func (s *Service) OpenSource(ctx context.Context, assetID uuid.UUID) (io.ReadClo
 func (s *Service) Now() time.Time {
 	return s.now()
 }
-func AssetByID(ctx context.Context, q db.DBTX, id uuid.UUID) (Asset, error) {
-	row, err := db.New(q).AssetByID(ctx, uuidToPgtype(id))
+func WorkByID(ctx context.Context, q db.DBTX, id uuid.UUID) (Work, error) {
+	row, err := db.New(q).WorkByID(ctx, uuidToPgtype(id))
 	if err != nil {
-		return Asset{}, fmt.Errorf("read asset: %w", err)
+		return Work{}, fmt.Errorf("read work: %w", err)
 	}
-	return Asset{
-		ID: uuidFromPgtype(row.ID), Kind: row.Kind, Format: row.Format,
-		OriginFormat: textToPointer(row.OriginFormat), AssetVersion: row.AssetVersion,
+	return Work{
+		ID: uuidFromPgtype(row.ID), Type: row.Type, Format: row.Format,
+		OriginFormat: textToPointer(row.OriginFormat), WorkVersion: row.WorkVersion,
 		CreditedAuthor: row.CreditedAuthor, Nickname: row.Nickname,
 		Name: row.Name, Blurb: row.Blurb, Tags: row.Tags,
-		IsNSFW: &row.IsNsfw, Discovery: Discovery(row.Discovery), Lifecycle: Lifecycle(row.Lifecycle),
+		IsNSFW: &row.IsNsfw, Visibility: Visibility(row.Visibility), Lifecycle: Lifecycle(row.Lifecycle),
 		CurrentRevisionID: uuidFromPgtype(row.CurrentRevisionID),
 		CreatedAt:         timeFromPgtype(row.CreatedAt),
 	}, nil
 }
 
-// missingAsset says the asset is gone in this package's words
-func missingAsset(err error) error {
+// missingWork says the work is gone in this package's words
+func missingWork(err error) error {
 	if errors.Is(err, summary.ErrNotFound) {
 		return ErrNotFound
 	}

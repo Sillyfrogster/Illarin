@@ -12,13 +12,13 @@ import (
 
 func writePublished(ctx context.Context, tx pgx.Tx, reg *format.Registry, workID uuid.UUID) error {
 	var published bool
-	if err := tx.QueryRow(ctx, `select published_snapshot_id is not null from public.assets where id = $1`, workID).Scan(&published); err != nil {
+	if err := tx.QueryRow(ctx, `select published_snapshot_id is not null from public.works where id = $1`, workID).Scan(&published); err != nil {
 		return err
 	}
 	if !published {
 		return nil
 	}
-	if _, err := tx.Exec(ctx, `set local search_path = asset_public, public`); err != nil {
+	if _, err := tx.Exec(ctx, `set local search_path = work_public, public`); err != nil {
 		return err
 	}
 	targets, err := Formats(ctx, tx, reg, workID)
@@ -30,7 +30,7 @@ func writePublished(ctx context.Context, tx pgx.Tx, reg *format.Registry, workID
 		return err
 	}
 	stored, err := json.Marshal(map[string]any{
-		"asset_id": workID, "export": targets, "export_stamp": reg.CapabilityStamp(),
+		"work_id": workID, "export": targets, "export_stamp": reg.CapabilityStamp(),
 		"facets": facets, "facet_stamp": block.FacetStamp(),
 	})
 	if err != nil {
@@ -39,10 +39,10 @@ func writePublished(ctx context.Context, tx pgx.Tx, reg *format.Registry, workID
 	if _, err := tx.Exec(ctx, `set local search_path = public`); err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, `insert into asset_snapshot_projections (snapshot_id, projection)
+	_, err = tx.Exec(ctx, `insert into work_snapshot_summaries (snapshot_id, summary)
 		select published_snapshot_id, $2::jsonb || jsonb_build_object(
 		    'export_computed_at', now(), 'facet_computed_at', now())
-		from assets where id = $1
-		on conflict (snapshot_id) do update set projection = excluded.projection`, workID, stored)
+		from works where id = $1
+		on conflict (snapshot_id) do update set summary = excluded.summary`, workID, stored)
 	return err
 }

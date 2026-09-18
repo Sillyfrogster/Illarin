@@ -367,15 +367,15 @@ func (h *Handlers) SetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, toAPIAccount(updated))
 }
 
-func (h *Handlers) SetNsfwVisibility(c *gin.Context) {
-	var request NsfwVisibilityRequest
-	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil || !request.Visibility.Valid() {
+func (h *Handlers) SetNsfwPreference(c *gin.Context) {
+	var request NsfwPreferenceRequest
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil || !request.Preference.Valid() {
 		api.Refuse(c, http.StatusBadRequest, "Choose hidden, blurred or shown.")
 		return
 	}
 	token := api.SessionToken(c)
-	err := h.accounts.SetNSFWVisibility(
-		c.Request.Context(), token, NSFWVisibility(request.Visibility),
+	err := h.accounts.SetNSFWPreference(
+		c.Request.Context(), token, NSFWPreference(request.Preference),
 	)
 	if errors.Is(err, ErrUnauthorized) {
 		api.Refuse(c, http.StatusUnauthorized, "Sign in before saving a content preference.")

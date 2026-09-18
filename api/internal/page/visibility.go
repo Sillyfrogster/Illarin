@@ -13,34 +13,34 @@ import (
 )
 
 var (
-	ErrInvalidDiscovery = errors.New("invalid discovery state")
-	ErrAlreadyPublished = errors.New("the asset is already published")
+	ErrInvalidVisibility = errors.New("invalid visibility state")
+	ErrAlreadyPublished  = errors.New("the work is already published")
 )
 
-func (s *Service) SetDiscovery(
+func (s *Service) SetVisibility(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	id uuid.UUID,
-	discovery work.Discovery,
+	visibility work.Visibility,
 ) error {
-	if !discovery.Valid() {
-		return ErrInvalidDiscovery
+	if !visibility.Valid() {
+		return ErrInvalidVisibility
 	}
 
 	queries := db.New(s.pool)
-	changed, err := queries.SetAssetDiscovery(ctx, db.SetAssetDiscoveryParams{
-		ID:        uuidToPgtype(id),
-		OwnerID:   uuidToPgtype(ownerID),
-		Discovery: string(discovery),
+	changed, err := queries.SetWorkVisibility(ctx, db.SetWorkVisibilityParams{
+		ID:         uuidToPgtype(id),
+		OwnerID:    uuidToPgtype(ownerID),
+		Visibility: string(visibility),
 	})
 	if err != nil {
-		return fmt.Errorf("set asset discovery: %w", err)
+		return fmt.Errorf("set work visibility: %w", err)
 	}
 	if changed == 1 {
 		return nil
 	}
 
-	state, err := queries.AssetStateForOwner(ctx, db.AssetStateForOwnerParams{
+	state, err := queries.WorkStateForOwner(ctx, db.WorkStateForOwnerParams{
 		ID:      uuidToPgtype(id),
 		OwnerID: uuidToPgtype(ownerID),
 	})
@@ -48,13 +48,13 @@ func (s *Service) SetDiscovery(
 		return work.ErrNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("check asset discovery: %w", err)
+		return fmt.Errorf("check work visibility: %w", err)
 	}
 	if state.WithheldAt.Valid {
-		return work.ErrAssetFrozen
+		return work.ErrWorkFrozen
 	}
 	if work.Lifecycle(state.Lifecycle) == work.LifecycleDraft {
-		return work.ErrAssetIsDraft
+		return work.ErrWorkIsDraft
 	}
 	return work.ErrNotFound
 }
@@ -63,7 +63,7 @@ func (s *Service) SetDiscovery(
 func (s *Service) Publish(
 	ctx context.Context,
 	ownerID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	candidate *work.Candidate,
 ) ([]work.ReadinessItem, error) {
 	tx, err := s.pool.Begin(ctx)
@@ -72,26 +72,26 @@ func (s *Service) Publish(
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := candidate.Lock(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := candidate.Lock(ctx, tx, ownerID, workID); err != nil {
 		return nil, err
 	}
 
-	var kind, name, lifecycle string
+	var workType, name, lifecycle string
 	var isNSFW *bool
-	err = tx.QueryRow(ctx, `select kind, name, is_nsfw, lifecycle from assets where id = $1`, assetID).Scan(&kind, &name, &isNSFW, &lifecycle)
+	err = tx.QueryRow(ctx, `select type, name, is_nsfw, lifecycle from works where id = $1`, workID).Scan(&workType, &name, &isNSFW, &lifecycle)
 	if err != nil {
-		return nil, fmt.Errorf("read asset to publish: %w", err)
+		return nil, fmt.Errorf("read work to publish: %w", err)
 	}
 
 	if work.Lifecycle(lifecycle) != work.LifecycleDraft {
 		return nil, ErrAlreadyPublished
 	}
 
-	blocks, err := block.Read(ctx, tx, assetID)
+	blocks, err := block.Read(ctx, tx, workID)
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.assets.CandidateReadiness(ctx, tx, assetID, kind, name, isNSFW, blocks)
+	items, err := s.works.CandidateReadiness(ctx, tx, workID, workType, name, isNSFW, blocks)
 	if err != nil {
 		return nil, err
 	}
@@ -100,15 +100,15 @@ func (s *Service) Publish(
 	}
 
 	if _, err := tx.Exec(ctx, `
-		update assets set lifecycle = 'published', updated_at = now()
+		update works set lifecycle = 'published', updated_at = now()
 		 where id = $1
-	`, assetID); err != nil {
-		return nil, fmt.Errorf("publish asset: %w", err)
+	`, workID); err != nil {
+		return nil, fmt.Errorf("publish work: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `select record_initial_asset_snapshot($1, false)`, assetID); err != nil {
+	if _, err := tx.Exec(ctx, `select record_initial_work_snapshot($1, false)`, workID); err != nil {
 		return nil, fmt.Errorf("record initial publication: %w", err)
 	}
-	if err := candidate.Commit(ctx, tx, assetID); err != nil {
+	if err := candidate.Commit(ctx, tx, workID); err != nil {
 		return nil, err
 	}
 	return items, nil

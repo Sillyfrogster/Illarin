@@ -280,8 +280,8 @@ func TestAChannelKeepsOnlySafeIdentityAndIsReadyToAnnounce(t *testing.T) {
 
 	made := stack.channelWithRole(t, "Blog readers")
 
-	if made.Kind != "discord" || made.State != "active" {
-		t.Errorf("channel = %s in %s, want an active discord destination", made.Kind, made.State)
+	if made.Type != "discord" || made.State != "active" {
+		t.Errorf("channel = %s in %s, want an active discord destination", made.Type, made.State)
 	}
 	if made.Channel == nil {
 		t.Fatal("the channel identity is missing")
@@ -349,7 +349,7 @@ func TestAContributorSeesTheChannelNameAndItsRoleAndNothingElse(t *testing.T) {
 		t.Fatalf("offered %d destinations, want 1", len(offered.Destinations))
 	}
 	one := offered.Destinations[0]
-	if one.ID != made.ID || one.Kind != "discord" || one.Name != "Announcements" {
+	if one.ID != made.ID || one.Type != "discord" || one.Name != "Announcements" {
 		t.Errorf("offered = %+v", one)
 	}
 	if one.Role != "Blog readers" {
@@ -375,7 +375,7 @@ func TestAFirstPublicationAnnouncesWhatIllarinDecidedToSay(t *testing.T) {
 	if len(sent) != 1 || sent[0].State != "delivered" {
 		t.Fatalf("deliveries = %+v, want one delivered", sent)
 	}
-	if sent[0].Kind != "discord" || sent[0].MessageID != discordMessageID {
+	if sent[0].Type != "discord" || sent[0].MessageID != discordMessageID {
 		t.Errorf("delivery = %+v, want the Discord message it made", sent[0])
 	}
 	read := stack.sentToDiscord(t)

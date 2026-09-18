@@ -1,7 +1,7 @@
 "use client";
 
 import { ShieldCheck } from "lucide-react";
-import type { AssetElement } from "@/lib/api/query";
+import type { WorkElement } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { protectedAppLabel } from "@/lib/protected-apps";
 
@@ -16,11 +16,11 @@ export type SealedPolicyState = {
 export const NO_ALLOWED_APP =
   "Choose at least one allowed app before saving a sealed prompt.";
 
-export function hasSealedPrompts(elements: AssetElement[]): boolean {
+export function hasSealedPrompts(elements: WorkElement[]): boolean {
   return elements.some(elementSealsAPrompt);
 }
 
-export function elementSealsAPrompt(element: AssetElement): boolean {
+export function elementSealsAPrompt(element: WorkElement): boolean {
   return (
     element.type === "prompt_list" &&
     "fragments" in element.content &&

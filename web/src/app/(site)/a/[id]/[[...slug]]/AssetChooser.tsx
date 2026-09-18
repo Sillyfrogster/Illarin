@@ -16,12 +16,12 @@ import { Select } from "@/components/ui/select";
 import { type ApiMethod, api } from "@/lib/api/client";
 import type {
   AppTarget,
-  AssetBlock,
-  AssetImage,
-  AssetInstance,
   DownloadTarget,
   OriginalUpload,
   RecordedVersion,
+  WorkBlock,
+  WorkImage,
+  WorkInstance,
 } from "@/lib/api/query";
 import {
   appLabel,
@@ -68,11 +68,11 @@ export type AssetChooserProps = {
   assetId: string;
   kind: string;
   kindLabel: string;
-  blocks: AssetBlock[];
+  blocks: WorkBlock[];
   downloads: DownloadTarget[];
   appTargets: AppTarget[];
   original: OriginalUpload | null;
-  images: AssetImage[];
+  images: WorkImage[];
   holdsNothing: boolean;
   isOwner: boolean;
   linkedInstallOnly: boolean;
@@ -95,7 +95,7 @@ export function AssetChooser({
   onSent,
   version = null,
 }: AssetChooserProps & {
-  instances: AssetInstance[];
+  instances: WorkInstance[];
   refresh: () => Promise<void>;
   onSent?: () => void;
   version?: RecordedVersion | null;
@@ -577,7 +577,7 @@ function WhatTravels({
   named,
 }: {
   choice: FormatChoice;
-  images: AssetImage[];
+  images: WorkImage[];
   named: string;
 }) {
   return (
@@ -640,12 +640,12 @@ function Sample({
   images,
 }: {
   sample: FormatChoice["losses"][number]["sample"];
-  images: AssetImage[];
+  images: WorkImage[];
 }) {
   const imagesById = new Map(images.map((image) => [image.id, image]));
   const pictures = (sample.images ?? [])
     .map((id) => imagesById.get(id))
-    .filter((image): image is AssetImage => image !== undefined);
+    .filter((image): image is WorkImage => image !== undefined);
 
   if (pictures.length > 0) {
     return (
@@ -682,7 +682,7 @@ function Sample({
   );
 }
 
-function InstanceStanding({ instance }: { instance: AssetInstance }) {
+function InstanceStanding({ instance }: { instance: WorkInstance }) {
   const delivery = instance.delivery;
 
   if (isWaiting(delivery)) {

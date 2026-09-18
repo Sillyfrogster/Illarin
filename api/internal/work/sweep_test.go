@@ -116,13 +116,13 @@ func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 		t.Fatalf("insert owner: %v", err)
 	}
 	created, err := apitest.Uploads(service).Create(ctx, upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: "expired.lumitheme",
+		OwnerID: ownerID, Type: "theme", Filename: "expired.lumitheme",
 		File: bytes.NewReader([]byte("expired but durable")), Name: "Expired",
 	})
 	if err != nil {
 		t.Fatalf("create asset: %v", err)
 	}
-	if err := apitest.Works(service).Delete(ctx, ownerID, created.ID); err != nil {
+	if err := apitest.Pages(service).Delete(ctx, ownerID, created.ID); err != nil {
 		t.Fatalf("delete asset: %v", err)
 	}
 	now = now.Add(page.RecoveryWindow + time.Second)
@@ -137,7 +137,7 @@ func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 	}
 	var references int
 	if err := pool.QueryRow(ctx,
-		`select count(*) from asset_revisions where asset_id = $1 and blob_id is not null`, created.ID,
+		`select count(*) from work_revisions where work_id = $1 and blob_id is not null`, created.ID,
 	).Scan(&references); err != nil {
 		t.Fatalf("count expired references: %v", err)
 	}
@@ -163,18 +163,18 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 	}
 
 	recoverable, err := apitest.Uploads(service).Create(ctx, upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: "recoverable.lumitheme",
+		OwnerID: ownerID, Type: "theme", Filename: "recoverable.lumitheme",
 		File: bytes.NewReader([]byte("recoverable")), Name: "Recoverable",
 	})
 	if err != nil {
 		t.Fatalf("create recoverable asset: %v", err)
 	}
-	if err := apitest.Works(service).Delete(ctx, ownerID, recoverable.ID); err != nil {
+	if err := apitest.Pages(service).Delete(ctx, ownerID, recoverable.ID); err != nil {
 		t.Fatalf("delete recoverable asset: %v", err)
 	}
 	var recoverableBlob uuid.UUID
 	if err := pool.QueryRow(ctx,
-		`select blob_id from asset_revisions where asset_id = $1`, recoverable.ID,
+		`select blob_id from work_revisions where work_id = $1`, recoverable.ID,
 	).Scan(&recoverableBlob); err != nil {
 		t.Fatalf("read recoverable blob: %v", err)
 	}
@@ -318,7 +318,7 @@ func TestConcurrentConvergenceClearsAnOldSweepMark(t *testing.T) {
 	opened.Close()
 }
 
-func TestSweepCollectsAnAssetAfterItsRecoveryWindow(t *testing.T) {
+func TestSweepCollectsAnWorkAfterItsRecoveryWindow(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
@@ -334,18 +334,18 @@ func TestSweepCollectsAnAssetAfterItsRecoveryWindow(t *testing.T) {
 		t.Fatalf("insert owner: %v", err)
 	}
 	created, err := apitest.Uploads(service).Create(ctx, upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: "expired.lumitheme",
+		OwnerID: ownerID, Type: "theme", Filename: "expired.lumitheme",
 		File: bytes.NewReader([]byte("expired source")), Name: "Expired",
 	})
 	if err != nil {
 		t.Fatalf("create asset: %v", err)
 	}
-	if err := apitest.Works(service).Delete(ctx, ownerID, created.ID); err != nil {
+	if err := apitest.Pages(service).Delete(ctx, ownerID, created.ID); err != nil {
 		t.Fatalf("delete asset: %v", err)
 	}
 	var blobID uuid.UUID
 	if err := pool.QueryRow(ctx,
-		`select blob_id from asset_revisions where asset_id = $1`, created.ID,
+		`select blob_id from work_revisions where work_id = $1`, created.ID,
 	).Scan(&blobID); err != nil {
 		t.Fatalf("read blob id: %v", err)
 	}
@@ -363,7 +363,7 @@ func TestSweepCollectsAnAssetAfterItsRecoveryWindow(t *testing.T) {
 	if _, err := store.Open(ctx, blobID); !errors.Is(err, storage.ErrBlobNotFound) {
 		t.Fatalf("expired asset blob error = %v, want ErrBlobNotFound", err)
 	}
-	if err := apitest.Works(service).Restore(ctx, ownerID, created.ID); !errors.Is(err, work.ErrNotFound) {
+	if err := apitest.Pages(service).Restore(ctx, ownerID, created.ID); !errors.Is(err, work.ErrNotFound) {
 		t.Fatalf("restore after recovery error = %v, want ErrNotFound", err)
 	}
 }

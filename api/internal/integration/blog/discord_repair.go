@@ -49,7 +49,7 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 	if err != nil {
 		return DiscordRepairResult{}, err
 	}
-	if held.Kind != KindDiscord || held.Removed {
+	if held.Type != TypeDiscord || held.Removed {
 		return invalid("This delivery has no Discord destination to repair.")
 	}
 	if held.SettledAt == nil {

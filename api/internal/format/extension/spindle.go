@@ -34,10 +34,10 @@ func (Spindle) Declaration() format.Declaration {
 		Write: format.RoleSupport{Grade: format.SupportFull},
 	}
 	return format.Declaration{
-		ID: SpindleID, Label: "Spindle extension", Kind: Kind,
+		ID: SpindleID, Label: "Spindle extension", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionEntry, Containers: []format.Container{format.ZIP},
+			Type: format.RecognitionEntry, Containers: []format.Container{format.ZIP},
 			Entry: spindleManifest,
 		}},
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -103,7 +103,7 @@ func (s Spindle) Parse(ctx context.Context, file format.Inspection, claim format
 		return format.Parsed{}, err
 	}
 	header := format.Header{
-		Name: manifest.Name, AssetVersion: manifest.Version,
+		Name: manifest.Name, WorkVersion: manifest.Version,
 		CreditedAuthor: manifest.Author, Identifier: manifest.Identifier,
 	}
 	if utf8.RuneCountInString(manifest.Description) <= format.MaxBlurbRunes {
@@ -114,7 +114,7 @@ func (s Spindle) Parse(ctx context.Context, file format.Inspection, claim format
 		elements = append(elements, *adds)
 	}
 	return format.Parsed{
-		Kind: Kind, Format: SpindleID, Header: header, Elements: elements, Readme: readme,
+		Type: Type, Format: SpindleID, Header: header, Elements: elements, Readme: readme,
 	}, nil
 }
 
@@ -275,9 +275,9 @@ func spindleElements(manifest spindleManifestFields) []block.Element {
 	}
 }
 
-func (Spindle) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	if len(asset.Upload) == 0 {
+func (Spindle) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+	if len(work.Upload) == 0 {
 		return format.Artifact{}, errors.New("write the Spindle extension: the uploaded archive is missing")
 	}
-	return format.Artifact{Body: asset.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
+	return format.Artifact{Body: work.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
 }

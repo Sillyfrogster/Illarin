@@ -106,10 +106,10 @@ func NewLinkingService(pool *pgxpool.Pool) *connect.Apps {
 
 func NewDeliveryService(
 	pool *pgxpool.Pool,
-	assets *work.Service,
+	works *work.Service,
 	links *connect.Apps,
 ) *connect.Sends {
-	return connect.NewSends(pool, assets, links, DeliverySettings())
+	return connect.NewSends(pool, works, links, DeliverySettings())
 }
 
 func DeliverySettings() connect.Settings {
@@ -128,7 +128,7 @@ func (OpaqueModule) Declaration() format.Declaration {
 	declaration := ReaderDeclaration("test_opaque", "character")
 	declaration.Label = "Test format"
 	declaration.Direction.Write = true
-	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderAssetVersion}
+	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderWorkVersion}
 	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
 	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
 		block.RoleDescription: {
@@ -143,7 +143,7 @@ func (OpaqueModule) Declaration() format.Declaration {
 	return declaration
 }
 
-func (OpaqueModule) Write(_ context.Context, written format.ExportAsset) (format.Artifact, error) {
+func (OpaqueModule) Write(_ context.Context, written format.ExportWork) (format.Artifact, error) {
 	return format.Artifact{
 		Body:      []byte(written.Text(block.RoleDescription)),
 		MediaType: "text/plain", Extension: ".txt",
@@ -156,7 +156,7 @@ func (OpaqueModule) Claim(file format.Inspection) (format.Claim, bool) {
 
 func (OpaqueModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{
-		Kind: "character", Format: "test_opaque",
+		Type: "character", Format: "test_opaque",
 		Elements: []block.Element{
 			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Test description"}},
 			{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Hello"}}}},
@@ -164,11 +164,11 @@ func (OpaqueModule) Parse(context.Context, format.Inspection, format.Claim) (for
 	}, nil
 }
 
-func ReaderDeclaration(id, kind string) format.Declaration {
+func ReaderDeclaration(id, workType string) format.Declaration {
 	return format.Declaration{
-		ID: id, Kind: kind, Direction: format.Direction{Read: true},
+		ID: id, Type: workType, Direction: format.Direction{Read: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []format.Container{format.JSON},
+			Type: format.RecognitionSignature, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{"payload": format.ValueBoolean},
 		}},
 		Limits: format.ContentLimits{

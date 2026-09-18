@@ -46,7 +46,7 @@ func RedactWithdrawn(version *Version) {
 func (v Snapshot) HoldPrompts(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	asOwner bool,
 ) (bool, error) {
 	if err := private.RestoreRecordedPrompts(v.ProtectedPayloads, v.Blocks); err != nil {
@@ -55,12 +55,12 @@ func (v Snapshot) HoldPrompts(
 	if asOwner {
 		return false, nil
 	}
-	return private.ApplyRecordedPolicy(ctx, tx, assetID, &v.ID, v.Blocks)
+	return private.ApplyRecordedPolicy(ctx, tx, workID, &v.ID, v.Blocks)
 }
 
 type Snapshot struct {
 	Version
-	Kind              string
+	Type              string
 	Origin            string
 	SourceRevisionID  *uuid.UUID
 	Metadata          VersionMetadata
@@ -76,13 +76,13 @@ type VersionMetadata struct {
 	IsNSFW         *bool      `json:"is_nsfw"`
 	CreditedAuthor string     `json:"credited_author"`
 	Nickname       string     `json:"nickname"`
-	AssetVersion   string     `json:"asset_version"`
+	WorkVersion    string     `json:"work_version"`
 	Cover          *uuid.UUID `json:"cover_media_id"`
 }
 
 type VersionPreserved struct {
 	ID        uuid.UUID `json:"id"`
-	Owner     string    `json:"owner_kind"`
+	Owner     string    `json:"owner_type"`
 	OwnerID   uuid.UUID `json:"owner_id"`
 	Namespace string    `json:"namespace"`
 	Payload   string    `json:"payload"`
@@ -90,13 +90,13 @@ type VersionPreserved struct {
 
 type snapshotPayload struct {
 	VersionMetadata
-	Kind      string             `json:"kind"`
+	Type      string             `json:"type"`
 	Origin    string             `json:"origin_format"`
 	Blocks    []block.Block      `json:"blocks"`
 	Preserved []VersionPreserved `json:"preserved_data"`
 }
 
-func ReadVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) (Snapshot, error) {
+func ReadVersion(ctx context.Context, tx pgx.Tx, workID uuid.UUID, number int) (Snapshot, error) {
 	var recorded Snapshot
 	var stored []byte
 	var sourceRevision pgtype.UUID
@@ -104,8 +104,8 @@ func ReadVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) 
 		select id, number, recorded_at, initial_recorded, version_label, summary, notes,
 		       notes_edited_at, withdrawn_at, coalesce(withdrawal_explanation, ''),
 		       source_revision_id, payload, protected_payloads
-		  from public.asset_snapshots where asset_id = $1 and number = $2
-	`, assetID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
+		  from public.work_snapshots where work_id = $1 and number = $2
+	`, workID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes,
 		&recorded.NotesEditedAt, &recorded.WithdrawnAt, &recorded.WithdrawalExplanation,
 		&sourceRevision, &stored, &recorded.ProtectedPayloads)
@@ -119,7 +119,7 @@ func ReadVersion(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, number int) 
 	if err := json.Unmarshal(stored, &payload); err != nil {
 		return Snapshot{}, fmt.Errorf("read version %d: %w", number, err)
 	}
-	recorded.Kind = payload.Kind
+	recorded.Type = payload.Type
 	recorded.Origin = payload.Origin
 	recorded.SourceRevisionID = uuidOrNil(sourceRevision)
 	recorded.Metadata = payload.VersionMetadata

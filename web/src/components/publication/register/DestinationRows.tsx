@@ -40,7 +40,7 @@ import {
 import type {
   AddedPublicationDestination,
   PublicationDestination,
-  PublicationDestinationKind,
+  PublicationDestinationType,
   PublicationEvent,
 } from "@/lib/api/query";
 import {
@@ -164,7 +164,7 @@ export function DestinationStep({
   onRotate: () => void;
   onSaved: (saved: PublicationDestination) => void;
 }) {
-  const [kind, setKind] = useState<PublicationDestinationKind>(
+  const [kind, setKind] = useState<PublicationDestinationType>(
     existing?.kind ?? "discord",
   );
   const [name, setName] = useState(existing?.name ?? "");
@@ -417,7 +417,7 @@ export function DestinationStep({
   );
 }
 
-function hint(kind: PublicationDestinationKind, editing: boolean): string {
+function hint(kind: PublicationDestinationType, editing: boolean): string {
   if (kind === "discord") {
     return editing
       ? "Illarin masks the address after you save it. Leave it empty to keep the channel this destination already announces in."
@@ -429,7 +429,7 @@ function hint(kind: PublicationDestinationKind, editing: boolean): string {
 }
 
 function addressHint(
-  kind: PublicationDestinationKind,
+  kind: PublicationDestinationType,
   existing: PublicationDestination | null,
 ): string {
   if (existing) return `Now ${existing.address}. Leave this empty to keep it.`;

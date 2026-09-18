@@ -16,7 +16,7 @@ type writerModule struct {
 
 func (m writerModule) ID() string               { return m.declaration.ID }
 func (m writerModule) Declaration() Declaration { return m.declaration }
-func (writerModule) Write(context.Context, ExportAsset) (Artifact, error) {
+func (writerModule) Write(context.Context, ExportWork) (Artifact, error) {
 	return Artifact{}, nil
 }
 
@@ -29,7 +29,7 @@ func writerDeclaration(id string, grades map[block.Role]SupportGrade) Declaratio
 		}
 	}
 	return Declaration{
-		ID: id, Label: id, Kind: "character", Direction: Direction{Write: true},
+		ID: id, Label: id, Type: "character", Direction: Direction{Write: true},
 		Roles:         roles,
 		Limits:        ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
 		ConsumedKeys:  []string{"payload"},
@@ -94,21 +94,21 @@ func TestAnUntestedOriginOffersNoTarget(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, writerDeclaration("preset_lumiverse", fullCharacterGrades()))
 	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Origin: "chara_card_v2", Elements: filledCharacter(),
+		Type: "character", Origin: "chara_card_v2", Elements: filledCharacter(),
 	})
 	if len(targets) != 0 {
 		t.Fatalf("targets = %+v, want none for an untested origin", targets)
 	}
 }
 
-func TestAnAssetBuiltFromNothingIsOfferedEveryWriterTestedAgainstIllarin(t *testing.T) {
+func TestAnWorkBuiltFromNothingIsOfferedEveryWriterTestedAgainstIllarin(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t,
 		writerDeclaration("chara_card_v2", fullCharacterGrades()),
 		writerDeclaration("chara_card_v3", fullCharacterGrades()),
 	)
 	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(),
+		Type: "character", Elements: filledCharacter(),
 	})
 	if len(targets) != 2 {
 		t.Fatalf("targets = %+v, want both writers", targets)
@@ -124,7 +124,7 @@ func TestATargetThatDropsARequiredRoleIsNotOffered(t *testing.T) {
 		writerDeclaration("chara_card_v3", fullCharacterGrades()),
 	)
 	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(),
+		Type: "character", Elements: filledCharacter(),
 	})
 	if _, offered := targetNamed(targets, "chara_card_v2"); offered {
 		t.Error("a target that drops every greeting was offered")
@@ -140,7 +140,7 @@ func TestEmptyInAndEmptyOutIsNoLossAndBlocksNothing(t *testing.T) {
 	grades[block.RoleGreetings] = SupportNone
 	registry := registryOf(t, writerDeclaration("chara_card_v2", grades))
 	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind:     "character",
+		Type:     "character",
 		Elements: []block.Element{described(block.RoleDescription, "Keeps the archive.")},
 	})
 	if len(targets) != 1 {
@@ -169,7 +169,7 @@ func TestATargetDroppingEveryOptionalRoleIsStillOffered(t *testing.T) {
 	}
 	registry := registryOf(t, writerDeclaration("chara_card_v2", grades))
 	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(optional...),
+		Type: "character", Elements: filledCharacter(optional...),
 	})
 	if len(targets) != 1 {
 		t.Fatalf("targets = %+v, want the target offered with its losses stated", targets)
@@ -204,7 +204,7 @@ func TestAPartialGradeFiresOnlyWhereItsConditionHolds(t *testing.T) {
 	registry := registryOf(t, declaration)
 
 	plain := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(),
+		Type: "character", Elements: filledCharacter(),
 	})
 	if losses := plain[0].Losses(); len(losses) != 0 {
 		t.Errorf("losses = %+v, want none where the condition does not hold", losses)
@@ -215,7 +215,7 @@ func TestAPartialGradeFiresOnlyWhereItsConditionHolds(t *testing.T) {
 	set.Texts[0].Name = "First meeting"
 	named.Content = set
 	withName := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character",
+		Type: "character",
 		Elements: []block.Element{
 			described(block.RoleDescription, "Keeps the archive."), named,
 		},
@@ -241,7 +241,7 @@ func TestADestinationNoteRidesOnACarriedVerdict(t *testing.T) {
 	}
 	registry := registryOf(t, declaration)
 	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind:     "character",
+		Type:     "character",
 		Elements: filledCharacter(described(block.RoleCreatorNotes, "Built over a weekend.")),
 	})
 	var found RoleLoss
@@ -272,7 +272,7 @@ func TestTheRecommendationPrefersReachOverCarryingTheMost(t *testing.T) {
 		Content: block.ImageSet{Images: []block.ImageItem{{ID: uuid.New(), MediaID: uuid.New()}}},
 	}
 	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(gallery),
+		Type: "character", Elements: filledCharacter(gallery),
 	})
 	recommended, lossiest := "", ""
 	for _, target := range targets {
@@ -298,7 +298,7 @@ func TestACrossPlatformTargetIsRefusedWithoutAnAllowance(t *testing.T) {
 	declaration.TestedOrigins = append(declaration.TestedOrigins, "chara_card_v2")
 	registry := registryOf(t, declaration)
 	subject := CapabilitySubject{
-		Kind: "character", Origin: "chara_card_v2", Elements: filledCharacter(),
+		Type: "character", Origin: "chara_card_v2", Elements: filledCharacter(),
 	}
 	if targets := registry.OfferedTargets(subject); len(targets) != 0 {
 		t.Fatalf("targets = %+v, want a cross-platform target withheld", targets)
@@ -377,7 +377,7 @@ func TestTheRecommendationPrefersTheFormatWhoseContentActuallyArrives(t *testing
 		Content: block.ImageSet{Images: []block.ImageItem{{ID: uuid.New(), MediaID: uuid.New()}}},
 	}
 	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(gallery),
+		Type: "character", Elements: filledCharacter(gallery),
 	})
 	for _, target := range targets {
 		if target.Recommended && target.Format != "charx" {

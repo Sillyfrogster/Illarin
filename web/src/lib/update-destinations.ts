@@ -1,13 +1,13 @@
-import type { AssetUpdateDestination } from "@/lib/api/asset-destinations";
+import type { WorkUpdateDestination } from "@/lib/api/asset-destinations";
 import { readableDate } from "@/lib/dates";
 
-export function destinationRotating(one: AssetUpdateDestination): boolean {
+export function destinationRotating(one: WorkUpdateDestination): boolean {
   return Boolean(
     one.previousSecretUntil && new Date(one.previousSecretUntil) > new Date(),
   );
 }
 
-export function destinationStanding(one: AssetUpdateDestination): string {
+export function destinationStanding(one: WorkUpdateDestination): string {
   if (destinationRotating(one) && one.previousSecretUntil) {
     return `Both signing secrets are accepted until ${readableDate(one.previousSecretUntil)}.`;
   }
@@ -25,7 +25,7 @@ export function destinationStanding(one: AssetUpdateDestination): string {
   return `Answered the challenge on ${readableDate(one.verifiedAt)}.`;
 }
 
-export function destinationWhere(one: AssetUpdateDestination): string {
+export function destinationWhere(one: WorkUpdateDestination): string {
   if (one.kind === "discord") return "Discord channel";
   return one.host;
 }

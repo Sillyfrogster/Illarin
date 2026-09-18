@@ -1,5 +1,5 @@
 import { RichText } from "@/components/ui/RichText";
-import type { AssetElement } from "@/lib/api/query";
+import type { WorkElement } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import type { CollectionItem } from "@/lib/collection";
 import { readEntries } from "@/lib/lorebook-entry";
@@ -27,7 +27,7 @@ import {
 
 /** collectionItems lists whatever an element holds that answers to a name. */
 export function collectionItems(
-  element: AssetElement,
+  element: WorkElement,
   isOwner: boolean,
 ): CollectionItem[] {
   const { content } = element;

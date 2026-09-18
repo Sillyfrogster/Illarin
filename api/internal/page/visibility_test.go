@@ -12,37 +12,37 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestUploadAcceptsDiscoveryAndDefaultsToListed(t *testing.T) {
+func TestUploadAcceptsVisibilityAndDefaultsToListed(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
-		name      string
-		discovery work.Discovery
-		want      string
+		name       string
+		visibility work.Visibility
+		want       string
 	}{
 		{name: "omitted", want: "listed"},
-		{name: "explicit unlisted", discovery: work.DiscoveryUnlisted, want: "unlisted"},
+		{name: "explicit unlisted", visibility: work.VisibilityUnlisted, want: "unlisted"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-			assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, test.discovery)
+			router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+			workID := apitest.UploadVisibilityTestWork(t, router, session, works, test.visibility)
 
-			page := apitest.FetchAssetPage(t, router, "/v1/assets/"+assetID)
-			if page.Discovery != test.want {
-				t.Fatalf("discovery = %q, want %q", page.Discovery, test.want)
+			page := apitest.FetchWorkPage(t, router, "/v1/assets/"+workID)
+			if page.Visibility != test.want {
+				t.Fatalf("discovery = %q, want %q", page.Visibility, test.want)
 			}
 		})
 	}
 }
 
-func TestCreatorChangesAssetDiscovery(t *testing.T) {
+func TestCreatorChangesWorkVisibility(t *testing.T) {
 	t.Parallel()
-	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
+	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
 		t,
 		http.MethodPut,
-		"/v1/assets/"+assetID+"/discovery",
+		"/v1/assets/"+workID+"/discovery",
 		`{"discovery":"unlisted"}`,
 		session,
 	))
@@ -50,20 +50,20 @@ func TestCreatorChangesAssetDiscovery(t *testing.T) {
 		t.Fatalf("change discovery status = %d, want 204: %s", changed.Code, changed.Body.String())
 	}
 
-	page := apitest.FetchAssetPage(t, router, "/v1/assets/"+assetID)
-	if page.Discovery != "unlisted" {
-		t.Fatalf("discovery = %q, want unlisted", page.Discovery)
+	page := apitest.FetchWorkPage(t, router, "/v1/assets/"+workID)
+	if page.Visibility != "unlisted" {
+		t.Fatalf("discovery = %q, want unlisted", page.Visibility)
 	}
 }
 
-func TestChangingDiscoveryRequiresTheCreator(t *testing.T) {
+func TestChangingVisibilityRequiresTheCreator(t *testing.T) {
 	t.Parallel()
-	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
+	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	changed := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodPut,
-		"/v1/assets/"+assetID+"/discovery",
+		"/v1/assets/"+workID+"/discovery",
 		nil,
 	))
 	if changed.Code != http.StatusUnauthorized {
@@ -71,10 +71,10 @@ func TestChangingDiscoveryRequiresTheCreator(t *testing.T) {
 	}
 }
 
-func TestWithheldAssetDiscoveryIsFrozen(t *testing.T) {
+func TestWithheldWorkVisibilityIsFrozen(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
+	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 	var ownerID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = 'verified.creator'`,
@@ -82,17 +82,17 @@ func TestWithheldAssetDiscoveryIsFrozen(t *testing.T) {
 		t.Fatalf("read creator: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(), `
-		update assets
+		update works
 		   set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
 		 where id = $1
-	`, assetID, ownerID); err != nil {
+	`, workID, ownerID); err != nil {
 		t.Fatalf("withhold asset: %v", err)
 	}
 
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
 		t,
 		http.MethodPut,
-		"/v1/assets/"+assetID+"/discovery",
+		"/v1/assets/"+workID+"/discovery",
 		`{"discovery":"unlisted"}`,
 		session,
 	))

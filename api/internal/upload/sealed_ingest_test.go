@@ -19,7 +19,7 @@ type promptListResponse struct {
 	} `json:"fragments"`
 }
 
-func promptListFromPage(t *testing.T, page apitest.StartedAsset) promptListResponse {
+func promptListFromPage(t *testing.T, page apitest.StartedWork) promptListResponse {
 	t.Helper()
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
 	if len(core.Elements) != 1 {
@@ -34,13 +34,13 @@ func promptListFromPage(t *testing.T, page apitest.StartedAsset) promptListRespo
 
 func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.T) {
 	t.Parallel()
-	router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+	router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
-	finished := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(apitest.KeyedSealedPreset))
-	assetID := apitest.AssetIDFromIngest(t, finished)
+	finished := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedSealedPreset))
+	workID := apitest.WorkIDFromIngest(t, finished)
 
-	owner := apitest.FetchStartedAsset(t, router, session, assetID)
+	owner := apitest.FetchStartedWork(t, router, session, workID)
 	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
 		t.Fatalf("owner policy = linked install only %t, apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
@@ -50,14 +50,14 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 		t.Fatalf("owner prompts = %+v", ownerPrompts)
 	}
 
-	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
 	if readerResponse.Code != http.StatusOK {
 		t.Fatalf("reader page = %d: %s", readerResponse.Code, readerResponse.Body.String())
 	}
 	if strings.Contains(readerResponse.Body.String(), "Exact private prompt.") {
 		t.Fatal("the reader response contains the protected text")
 	}
-	var reader apitest.StartedAsset
+	var reader apitest.StartedWork
 	if err := json.Unmarshal(readerResponse.Body.Bytes(), &reader); err != nil {
 		t.Fatalf("decode reader page: %v", err)
 	}
@@ -69,11 +69,11 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 
 func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
 	t.Parallel()
-	router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+	router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
-	created := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(apitest.KeyedSealedPreset))
-	assetID := apitest.AssetIDFromIngest(t, created)
+	created := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedSealedPreset))
+	workID := apitest.WorkIDFromIngest(t, created)
 
 	placeholder := []byte(`{
 		"schemaVersion": 1,
@@ -89,18 +89,18 @@ func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
 		}]
 	}`)
 	accepted := apitest.Send(t, router, apitest.Authorized(
-		apitest.RevisionRequest(t, assetID, "keyed-revision.json", placeholder), session,
+		apitest.RevisionRequest(t, workID, "keyed-revision.json", placeholder), session,
 	))
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("revision upload = %d: %s", accepted.Code, accepted.Body.String())
 	}
-	if processed, err := apitest.Uploads(assets).ProcessNextIngest(t.Context()); err != nil || !processed {
+	if processed, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil || !processed {
 		t.Fatalf("process revision = %t, %v; want true, nil", processed, err)
 	}
-	apitest.AcceptReplacementPreview(t, router, session, assetID, accepted.Header().Get("Location"))
-	apitest.PollIngestAsset(t, router, session, accepted.Header().Get("Location"))
+	apitest.AcceptReplacementPreview(t, router, session, workID, accepted.Header().Get("Location"))
+	apitest.PollIngestWork(t, router, session, accepted.Header().Get("Location"))
 
-	owner := apitest.FetchStartedAsset(t, router, session, assetID)
+	owner := apitest.FetchStartedWork(t, router, session, workID)
 	prompts := promptListFromPage(t, owner).Fragments
 	if len(prompts) != 1 || prompts[0].Name != "Private renamed" ||
 		prompts[0].Text != "Exact private prompt." || !prompts[0].Protected {
@@ -116,7 +116,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			name = "sealed after publication"
 		}
 		t.Run(name, func(t *testing.T) {
-			router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+			router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 			ordinary := strings.ReplaceAll(apitest.KeyedSealedPreset, `,"sealed":true,"sealedKey":"dialogue.frame"`, "")
 			initial := apitest.KeyedSealedPreset
 			if sealedAfterPublication {
@@ -124,38 +124,38 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			}
 			metadata := apitest.ExampleMetadata("Replacement protection")
 			metadata["filename"] = "keyed.json"
-			created := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(initial))
-			assetID := apitest.AssetIDFromIngest(t, created)
+			created := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(initial))
+			workID := apitest.WorkIDFromIngest(t, created)
 			if sealedAfterPublication {
-				page := apitest.FetchStartedAsset(t, router, session, assetID)
+				page := apitest.FetchStartedWork(t, router, session, workID)
 				core := apitest.BlockNamed(t, page.Blocks, "preset_core")
 				body := apitest.SealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
-				if response := apitest.SaveBlock(t, router, session, assetID, core.ID, body); response.Code != http.StatusOK {
+				if response := apitest.SaveBlock(t, router, session, workID, core.ID, body); response.Code != http.StatusOK {
 					t.Fatalf("seal published text: %d %s", response.Code, response.Body.String())
 				}
 			}
-			before := apitest.FetchStartedAsset(t, router, session, assetID)
+			before := apitest.FetchStartedWork(t, router, session, workID)
 			replacement := strings.ReplaceAll(ordinary, "Keyed sealed preset", "Replacement preset")
-			staged := apitest.Send(t, router, apitest.Authorized(apitest.RevisionRequest(t, assetID, "replacement.json", []byte(replacement)), session))
+			staged := apitest.Send(t, router, apitest.Authorized(apitest.RevisionRequest(t, workID, "replacement.json", []byte(replacement)), session))
 			if staged.Code != http.StatusAccepted {
 				t.Fatalf("stage replacement: %d %s", staged.Code, staged.Body.String())
 			}
-			if processed, err := apitest.Uploads(assets).ProcessNextIngest(t.Context()); err != nil || !processed {
+			if processed, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil || !processed {
 				t.Fatalf("process replacement: %t %v", processed, err)
 			}
 			operationID := strings.TrimPrefix(staged.Header().Get("Location"), "/v1/ingests/")
-			path := "/v1/assets/" + assetID + "/revisions/" + operationID + "/accept"
+			path := "/v1/assets/" + workID + "/revisions/" + operationID + "/accept"
 			request := apitest.AuthorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{}}`, session)
 			apitest.WithReviewedVersion(t, router, request)
 			refused := apitest.Send(t, router, request)
 			if refused.Code != http.StatusConflict || !strings.Contains(refused.Body.String(), `"code":"sealed_exposure"`) || !strings.Contains(refused.Body.String(), "Private") {
 				t.Fatalf("unconfirmed replacement: %d %s", refused.Code, refused.Body.String())
 			}
-			after := apitest.FetchStartedAsset(t, router, session, assetID)
+			after := apitest.FetchStartedWork(t, router, session, workID)
 			if !after.LinkedInstallOnly || !reflect.DeepEqual(after.Blocks, before.Blocks) {
 				t.Fatal("refused replacement changed the working copy or its protection")
 			}
-			reader := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+			reader := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
 			if reader.Code != http.StatusOK || strings.Contains(reader.Body.String(), "Exact private prompt.") {
 				t.Fatalf("reader after refusal: %d %s", reader.Code, reader.Body.String())
 			}
@@ -165,11 +165,11 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			if confirmed.Code != http.StatusOK {
 				t.Fatalf("confirmed replacement: %d %s", confirmed.Code, confirmed.Body.String())
 			}
-			if apitest.FetchStartedAsset(t, router, session, assetID).LinkedInstallOnly {
+			if apitest.FetchStartedWork(t, router, session, workID).LinkedInstallOnly {
 				t.Fatal("confirmed replacement kept the old protection")
 			}
 			if sealedAfterPublication {
-				reader = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+				reader = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
 				if !strings.Contains(reader.Body.String(), "Exact private prompt.") {
 					t.Fatal("confirmed removal did not restore access to previously public text")
 				}
@@ -219,7 +219,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+			router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 			metadata := apitest.ExampleMetadata("Refused preset")
 			metadata["filename"] = "refused.json"
 			accepted := apitest.Send(t, router, apitest.Authorized(
@@ -228,7 +228,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 			if accepted.Code != http.StatusAccepted {
 				t.Fatalf("upload = %d: %s", accepted.Code, accepted.Body.String())
 			}
-			if processed, err := apitest.Uploads(assets).ProcessNextIngest(t.Context()); err != nil || !processed {
+			if processed, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil || !processed {
 				t.Fatalf("process ingest = %t, %v; want true, nil", processed, err)
 			}
 			poll := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(
@@ -236,7 +236,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 			), session))
 			var operation struct {
 				Status  string `json:"status"`
-				Asset   any    `json:"asset"`
+				Work    any    `json:"asset"`
 				Failure *struct {
 					Reason string `json:"reason"`
 				} `json:"failure"`
@@ -244,7 +244,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 			if err := json.Unmarshal(poll.Body.Bytes(), &operation); err != nil {
 				t.Fatalf("decode failed ingest: %v", err)
 			}
-			if operation.Status != "failed" || operation.Asset != nil || operation.Failure == nil ||
+			if operation.Status != "failed" || operation.Work != nil || operation.Failure == nil ||
 				operation.Failure.Reason != test.wantReason {
 				t.Fatalf("operation = %#v, want an unsaved %s failure", operation, test.wantReason)
 			}
@@ -254,10 +254,10 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 
 func TestAnOrdinaryLumiversePresetStillIngestsAsPublicContent(t *testing.T) {
 	t.Parallel()
-	router, session, assets, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+	router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
-	finished := apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(`{
+	finished := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(`{
 		"schemaVersion":1,
 		"name":"Ordinary preset",
 		"blocks":[
@@ -272,13 +272,13 @@ func TestAnOrdinaryLumiversePresetStillIngestsAsPublicContent(t *testing.T) {
 			}
 		]
 	}`))
-	assetID := apitest.AssetIDFromIngest(t, finished)
+	workID := apitest.WorkIDFromIngest(t, finished)
 
-	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
 	if readerResponse.Code != http.StatusOK {
 		t.Fatalf("reader page = %d: %s", readerResponse.Code, readerResponse.Body.String())
 	}
-	var reader apitest.StartedAsset
+	var reader apitest.StartedWork
 	if err := json.Unmarshal(readerResponse.Body.Bytes(), &reader); err != nil {
 		t.Fatalf("decode reader page: %v", err)
 	}

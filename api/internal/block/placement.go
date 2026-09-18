@@ -7,10 +7,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func Place(kind string, tagged []Element) ([]Block, error) {
-	definitions, ok := Catalog(kind)
+func Place(workType string, tagged []Element) ([]Block, error) {
+	definitions, ok := Definitions(workType)
 	if !ok {
-		return nil, fmt.Errorf("no block catalog for kind %q", kind)
+		return nil, fmt.Errorf("no block catalog for type %q", workType)
 	}
 
 	placed := make([]bool, len(tagged))
@@ -46,7 +46,7 @@ func Place(kind string, tagged []Element) ([]Block, error) {
 	for i, element := range tagged {
 		if !placed[i] {
 			return nil, fmt.Errorf(
-				"kind %q has nowhere to put a %s element", kind, element.Role,
+				"kind %q has nowhere to put a %s element", workType, element.Role,
 			)
 		}
 	}
@@ -115,8 +115,8 @@ func (d Definition) readFromUpload() bool {
 	})
 }
 
-func (b Block) Pinned(role Role, kind string) bool {
-	definition, ok := b.Definition.Definition(kind)
+func (b Block) Pinned(role Role, workType string) bool {
+	definition, ok := b.Definition.Definition(workType)
 	if !ok {
 		return false
 	}
@@ -125,8 +125,8 @@ func (b Block) Pinned(role Role, kind string) bool {
 }
 
 // Locked says whether the element is read from an upload and never edited on Illarin.
-func (b Block) Locked(role Role, kind string) bool {
-	definition, ok := b.Definition.Definition(kind)
+func (b Block) Locked(role Role, workType string) bool {
+	definition, ok := b.Definition.Definition(workType)
 	if !ok {
 		return false
 	}

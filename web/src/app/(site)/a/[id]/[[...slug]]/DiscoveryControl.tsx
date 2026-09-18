@@ -4,7 +4,7 @@ import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { AssetDetail } from "@/lib/api/query";
+import type { WorkDetail } from "@/lib/api/query";
 import { saveAssetDiscovery } from "@/lib/api/query";
 
 export function DiscoveryControl({
@@ -13,7 +13,7 @@ export function DiscoveryControl({
   frozen,
 }: {
   assetId: string;
-  initialDiscovery: AssetDetail["discovery"];
+  initialDiscovery: WorkDetail["discovery"];
   frozen: boolean;
 }) {
   const router = useRouter();

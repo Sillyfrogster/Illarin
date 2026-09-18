@@ -853,15 +853,15 @@ func TestEveryStructureSurvivesTheRoundTripThroughStorage(t *testing.T) {
 	if !bytes.Equal(stored, public) {
 		t.Errorf("the published body differs from the working copy:\n%s\n%s", stored, public)
 	}
-	kinds := map[string]bool{}
+	types := map[string]bool{}
 	for _, block := range written.Document.Content {
-		kinds[fmt.Sprint(block["type"])] = true
+		types[fmt.Sprint(block["type"])] = true
 	}
 	for _, want := range []string{
 		"paragraph", "heading", "bulletList", "taskList", "quote",
 		"codeBlock", "table", "callout", "divider",
 	} {
-		if !kinds[want] {
+		if !types[want] {
 			t.Errorf("the stored body lost its %s", want)
 		}
 	}

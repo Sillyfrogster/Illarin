@@ -71,8 +71,8 @@ func (s *Sweeper) preparePurge(
 		return uuid.Nil, fmt.Errorf("break purged ingest references: %w", err)
 	}
 	for _, statement := range []string{
-		`update asset_media set blob_id = null where blob_id = $1`,
-		`update asset_revisions set blob_id = null where blob_id = $1`,
+		`update work_media set blob_id = null where blob_id = $1`,
+		`update work_revisions set blob_id = null where blob_id = $1`,
 	} {
 		if _, err := tx.Exec(ctx, statement, blobID); err != nil {
 			return uuid.Nil, fmt.Errorf("break purged record references: %w", err)

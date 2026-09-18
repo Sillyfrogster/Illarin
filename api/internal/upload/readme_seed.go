@@ -103,7 +103,7 @@ func (s *Service) readmePictures(
 func (s *Service) seededPicture(
 	ctx context.Context, file format.Inspection, image uint32, role work.MediaRole,
 ) (work.PreparedMedia, bool, error) {
-	prepared, err := s.assets.PrepareExtractedMedia(ctx, file, []format.Media{{Role: role, ImageID: image}})
+	prepared, err := s.works.PrepareExtractedMedia(ctx, file, []format.Media{{Role: role, ImageID: image}})
 	if errors.Is(err, mediaproc.ErrImageTooLarge) {
 		return work.PreparedMedia{}, false, nil
 	}

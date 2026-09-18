@@ -64,7 +64,7 @@ type Cell struct {
 }
 
 type Callout struct {
-	Kind   string
+	Type   string
 	Blocks []Block
 }
 

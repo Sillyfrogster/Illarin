@@ -14,8 +14,8 @@ const (
 	OriginV1      = "v1"
 )
 
-type ExportAsset struct {
-	Kind      string
+type ExportWork struct {
+	Type      string
 	Header    Header
 	Elements  []block.Element
 	Cover     *ExportMedia
@@ -30,7 +30,7 @@ type ExportMedia struct {
 	URL       string
 }
 
-func (a ExportAsset) Element(role block.Role) (block.Element, bool) {
+func (a ExportWork) Element(role block.Role) (block.Element, bool) {
 	for _, element := range a.Elements {
 		if element.Role == role && element.Content != nil && !element.Content.Empty() {
 			return element, true
@@ -39,7 +39,7 @@ func (a ExportAsset) Element(role block.Role) (block.Element, bool) {
 	return block.Element{}, false
 }
 
-func (a ExportAsset) Content(role block.Role) (block.Content, bool) {
+func (a ExportWork) Content(role block.Role) (block.Content, bool) {
 	element, ok := a.Element(role)
 	if !ok {
 		return nil, false
@@ -47,7 +47,7 @@ func (a ExportAsset) Content(role block.Role) (block.Content, bool) {
 	return element.Content, true
 }
 
-func (a ExportAsset) Text(role block.Role) string {
+func (a ExportWork) Text(role block.Role) string {
 	content, ok := a.Content(role)
 	if !ok {
 		return ""
@@ -67,7 +67,7 @@ type Artifact struct {
 
 type Writer interface {
 	Module
-	Write(context.Context, ExportAsset) (Artifact, error)
+	Write(context.Context, ExportWork) (Artifact, error)
 }
 
 // TravelsWithOrigin says whether data preserved from origin goes into target's export, even when origin has no module left.

@@ -43,13 +43,13 @@ type seededBlock struct {
 
 func TestAReadmeSeedsTheNewPageWithBlocksTheCreatorOwns(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
-	assetID := apitest.UploadExtension(t, r, session, assets, apitest.ExtensionZip(t, map[string]string{
+	r, session, works, _ := harness.NewExtensionRouter(t)
+	workID := apitest.UploadExtension(t, r, session, works, apitest.ExtensionZip(t, map[string]string{
 		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}", "README.md": seededReadme,
 		"art/banner.png": pictureFile(t, 20), "art/settings.png": pictureFile(t, 200),
 	}))
 
-	page := readSeededPage(t, r, session, assetID+"?workingCopy=true")
+	page := readSeededPage(t, r, session, workID+"?workingCopy=true")
 	if got, want := arrangement(page), []string{
 		"custom_block About", "extension_permissions Permissions", "extension_source Version and source",
 		"custom_block Install", "custom_block Usage",
@@ -76,7 +76,7 @@ func TestAReadmeSeedsTheNewPageWithBlocksTheCreatorOwns(t *testing.T) {
 	if usage := proseText(t, page.Blocks[4]); usage != "Type `/quiet`." {
 		t.Errorf("usage = %q, want the stylesheet left out", usage)
 	}
-	vault := readVault(t, r, session, assetID)
+	vault := readVault(t, r, session, workID)
 	if len(vault) != 2 || vault[0].Name != "Settings" || vault[0].BlockID != install.ID || vault[0].Media == nil ||
 		vault[0].Media.ID != page.Media[1].ID || vault[0].Media.ThumbURL == "" {
 		t.Fatalf("vault = %+v, want the settings picture waiting for the install block", vault)
@@ -89,16 +89,16 @@ func TestAReadmeSeedsTheNewPageWithBlocksTheCreatorOwns(t *testing.T) {
 
 func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewExtensionRouter(t)
-	assetID := apitest.UploadExtension(t, r, session, assets, apitest.ExtensionZip(t, map[string]string{
+	r, session, works, pool := harness.NewExtensionRouter(t)
+	workID := apitest.UploadExtension(t, r, session, works, apitest.ExtensionZip(t, map[string]string{
 		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}", "README.md": seededReadme,
 		"art/banner.png": pictureFile(t, 20), "art/settings.png": pictureFile(t, 200),
 	}))
-	vault := readVault(t, r, session, assetID)
+	vault := readVault(t, r, session, workID)
 	settings, wide := vault[0], vault[1]
 
 	placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+assetID+"/vault/"+settings.ID+"/place", nil), session))
+		http.MethodPost, "/v1/assets/"+workID+"/vault/"+settings.ID+"/place", nil), session))
 	if placed.Code != http.StatusOK {
 		t.Fatalf("place the settings picture = %d: %s", placed.Code, placed.Body.String())
 	}
@@ -112,11 +112,11 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	}
 
 	refused := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+assetID+"/vault/"+wide.ID+"/place", nil), session))
+		http.MethodPost, "/v1/assets/"+workID+"/vault/"+wide.ID+"/place", nil), session))
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("place a remote picture without a copy = %d: %s", refused.Code, refused.Body.String())
 	}
-	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(t, assetID, "gallery", []byte(pictureFile(t, 90))), session))
+	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(t, workID, "gallery", []byte(pictureFile(t, 90))), session))
 	if uploaded.Code != http.StatusCreated {
 		t.Fatalf("upload a copy = %d: %s", uploaded.Code, uploaded.Body.String())
 	}
@@ -126,21 +126,21 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	if err := json.Unmarshal(uploaded.Body.Bytes(), &copyMedia); err != nil {
 		t.Fatalf("decode the copy: %v", err)
 	}
-	withCopy := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/vault/"+wide.ID+"/place",
+	withCopy := httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/vault/"+wide.ID+"/place",
 		strings.NewReader(fmt.Sprintf(`{"mediaId":%q}`, copyMedia.ID)))
 	withCopy.Header.Set("Content-Type", "application/json")
 	if placed := apitest.Send(t, r, apitest.Authorized(withCopy, session)); placed.Code != http.StatusOK {
 		t.Fatalf("place the copy = %d: %s", placed.Code, placed.Body.String())
 	}
-	page := readSeededPage(t, r, session, assetID+"?workingCopy=true")
+	page := readSeededPage(t, r, session, workID+"?workingCopy=true")
 	if ids := imageIDs(t, blockTitledIn(t, page.Blocks, "Usage")); len(ids) != 1 || ids[0] != copyMedia.ID {
 		t.Errorf("usage after placing the copy = %v, want the uploaded picture", ids)
 	}
-	if left := readVault(t, r, session, assetID); len(left) != 0 {
+	if left := readVault(t, r, session, workID); len(left) != 0 {
 		t.Errorf("vault after placing both = %+v, want it empty", left)
 	}
 
-	second := apitest.UploadExtension(t, r, session, assets, apitest.ExtensionZip(t, map[string]string{
+	second := apitest.UploadExtension(t, r, session, works, apitest.ExtensionZip(t, map[string]string{
 		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}",
 		"README.md":   "# Quiet Toolbox\n\n## Screenshots\n\n![One](art/one.png)\n\n![Two](art/two.png)\n\n## Install\n\nClone it.\n",
 		"art/one.png": pictureFile(t, 20), "art/two.png": pictureFile(t, 200),
@@ -165,7 +165,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 		t.Errorf("screenshots = %v, want both pictures in the one block", ids)
 	}
 
-	third := apitest.UploadExtension(t, r, session, assets, apitest.ExtensionZip(t, map[string]string{
+	third := apitest.UploadExtension(t, r, session, works, apitest.ExtensionZip(t, map[string]string{
 		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}", "README.md": seededReadme,
 		"art/banner.png": pictureFile(t, 20), "art/settings.png": pictureFile(t, 200),
 	}))
@@ -177,7 +177,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	}
 	var kept int
 	if err := pool.QueryRow(context.Background(),
-		`select count(*) from asset_media where id = $1`, waiting.Media.ID).Scan(&kept); err != nil || kept != 0 {
+		`select count(*) from work_media where id = $1`, waiting.Media.ID).Scan(&kept); err != nil || kept != 0 {
 		t.Errorf("discarded media rows = %d, %v; want the copy gone", kept, err)
 	}
 	if page := readSeededPage(t, r, session, third+"?workingCopy=true"); len(page.Media) != 1 {
@@ -196,9 +196,9 @@ type vaultPicture struct {
 	} `json:"media"`
 }
 
-func readVault(t *testing.T, r http.Handler, session *http.Cookie, assetID string) []vaultPicture {
+func readVault(t *testing.T, r http.Handler, session *http.Cookie, workID string) []vaultPicture {
 	t.Helper()
-	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"/vault", nil), session))
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID+"/vault", nil), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the vault = %d: %s", response.Code, response.Body.String())
 	}
@@ -213,42 +213,42 @@ func readVault(t *testing.T, r http.Handler, session *http.Cookie, assetID strin
 
 func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
-	assetID := apitest.PublishExtension(t, r, session, assets, "Quiet Toolbox", apitest.ExtensionZip(t, map[string]string{
+	r, session, works, _ := harness.NewExtensionRouter(t)
+	workID := apitest.PublishExtension(t, r, session, works, "Quiet Toolbox", apitest.ExtensionZip(t, map[string]string{
 		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "one", "README.md": seededReadme,
 		"art/banner.png": pictureFile(t, 20), "art/settings.png": pictureFile(t, 200),
 	}))
-	started := apitest.FetchStartedAsset(t, r, session, assetID)
+	started := apitest.FetchStartedWork(t, r, session, workID)
 	install := blockTitled(t, started.Blocks, "Install")
 	edited := apitest.EditableBlock(install)
 	edited.Title = &install.Title
 	edited.Elements[0].Content = json.RawMessage(`{"text":"Clone it, then restart."}`)
-	if saved := apitest.SaveBlock(t, r, session, assetID, install.ID, edited); saved.Code >= http.StatusMultipleChoices {
+	if saved := apitest.SaveBlock(t, r, session, workID, install.ID, edited); saved.Code >= http.StatusMultipleChoices {
 		t.Fatalf("edit the seeded install text = %d: %s", saved.Code, saved.Body.String())
 	}
-	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Clearer install"}`); update.Code != http.StatusOK {
+	if update := apitest.PublishWorkUpdate(t, r, session, workID, `{"summary":"Clearer install"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the edit = %d: %s", update.Code, update.Body.String())
 	}
-	before := readSeededPage(t, r, nil, assetID)
+	before := readSeededPage(t, r, nil, workID)
 
 	manifest := strings.Replace(apitest.ToolboxManifest, `"version": "1.0.0"`, `"version": "1.1.0"`, 1)
 	second := apitest.ExtensionZip(t, map[string]string{
 		"spindle.json": manifest, "dist/frontend.js": "two",
 		"README.md": "# Quiet Toolbox\n\n## Changelog\n\nNew in 1.1.", "art/settings.png": pictureFile(t, 90),
 	})
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, assetID, "toolbox.zip", second), session))
+	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "toolbox.zip", second), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement = %d: %s", revision.Code, revision.Body.String())
 	}
-	if _, err := apitest.Uploads(assets).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
-	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Version 1.1"}`); update.Code != http.StatusOK {
+	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
+	if update := apitest.PublishWorkUpdate(t, r, session, workID, `{"summary":"Version 1.1"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
 
-	after := readSeededPage(t, r, nil, assetID)
+	after := readSeededPage(t, r, nil, workID)
 	if got, want := arrangement(after), arrangement(before); strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("blocks after the replacement = %q, want the page as the creator left it: %q", got, want)
 	}

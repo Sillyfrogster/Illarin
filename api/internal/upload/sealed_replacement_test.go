@@ -41,7 +41,7 @@ func (module sealingModule) Parse(context.Context, format.Inspection, format.Cla
 	return *module.parsed, nil
 }
 
-func (sealingModule) Write(context.Context, format.ExportAsset) (format.Artifact, error) {
+func (sealingModule) Write(context.Context, format.ExportWork) (format.Artifact, error) {
 	return format.Artifact{MediaType: "text/plain", Extension: ".txt"}, nil
 }
 
@@ -60,7 +60,7 @@ func sealingRemainder(fragmentID uuid.UUID, sourceID string) format.Remainder {
 
 func promptListParsed(fragment block.PromptFragment, sourceID string) format.Parsed {
 	return format.Parsed{
-		Kind: "preset", Format: "sealing", Header: format.Header{Name: "Sample preset"},
+		Type: "preset", Format: "sealing", Header: format.Header{Name: "Sample preset"},
 		Elements: []block.Element{{
 			Type: block.TypePromptList, Role: block.RolePromptFragments,
 			Content: block.PromptList{Fragments: []block.PromptFragment{fragment}},
@@ -69,7 +69,7 @@ func promptListParsed(fragment block.PromptFragment, sourceID string) format.Par
 	}
 }
 
-func TestASealedPlaceholderTakesTheWordingTheAssetAlreadyHolds(t *testing.T) {
+func TestASealedPlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 	t.Parallel()
 	held := block.NewItemID()
 	parsed := promptListParsed(block.PromptFragment{
@@ -104,7 +104,7 @@ func TestASealedPlaceholderTakesTheWordingTheAssetAlreadyHolds(t *testing.T) {
 		t.Fatalf("AcceptReplacement: %v", err)
 	}
 
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 		t.Fatalf("AcceptReplacement: %v", err)
 	}
 
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,12 +161,12 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 	}
 }
 
-func stageReplacementFile(t *testing.T, svc *Service, owner, assetID uuid.UUID) Operation {
+func stageReplacementFile(t *testing.T, svc *Service, owner, workID uuid.UUID) Operation {
 	t.Helper()
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: owner, AssetID: assetID, Filename: "loom.json",
+		OwnerID: owner, WorkID: workID, Filename: "loom.json",
 		File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
-	}, currentCandidate(t, svc, assetID))
+	}, currentCandidate(t, svc, workID))
 	if err != nil {
 		t.Fatalf("AcceptRevision: %v", err)
 	}

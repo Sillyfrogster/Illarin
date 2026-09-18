@@ -236,37 +236,37 @@ func (s *Service) Current(ctx context.Context, token string) (*api.Account, erro
 	return &account, nil
 }
 
-func (s *Service) NSFWVisibility(ctx context.Context, token string) (NSFWVisibility, error) {
+func (s *Service) NSFWPreference(ctx context.Context, token string) (NSFWPreference, error) {
 	hash, ok := credentialHash(token)
 	if !ok {
 		return NSFWBlurred, nil
 	}
-	visibility, err := db.New(s.pool).NSFWVisibilityBySessionHash(ctx, hash)
+	preference, err := db.New(s.pool).NSFWPreferenceBySessionHash(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return NSFWBlurred, nil
 	}
 	if err != nil {
 		return "", fmt.Errorf("read content preference: %w", err)
 	}
-	return NSFWVisibility(visibility), nil
+	return NSFWPreference(preference), nil
 }
 
-func (s *Service) SetNSFWVisibility(
+func (s *Service) SetNSFWPreference(
 	ctx context.Context,
 	token string,
-	visibility NSFWVisibility,
+	preference NSFWPreference,
 ) error {
-	if visibility != NSFWHidden && visibility != NSFWBlurred && visibility != NSFWShown {
+	if preference != NSFWHidden && preference != NSFWBlurred && preference != NSFWShown {
 		return FieldError{Field: "visibility", Message: "Choose hidden, blurred or shown."}
 	}
 	hash, ok := credentialHash(token)
 	if !ok {
 		return ErrUnauthorized
 	}
-	changed, err := db.New(s.pool).SetNSFWVisibilityBySessionHash(
+	changed, err := db.New(s.pool).SetNSFWPreferenceBySessionHash(
 		ctx,
-		db.SetNSFWVisibilityBySessionHashParams{
-			NsfwVisibility: string(visibility),
+		db.SetNSFWPreferenceBySessionHashParams{
+			NsfwPreference: string(preference),
 			TokenHash:      hash,
 		},
 	)

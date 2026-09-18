@@ -156,8 +156,8 @@ func TestARoundTripThroughSillyTavernComesBackTheSame(t *testing.T) {
 	parsed := parse(t, worldInfo)
 	table := onlyEntryTable(t, parsed.Elements)
 
-	artifact, err := SillyTavernModule{}.Write(context.Background(), format.ExportAsset{
-		Kind: Kind,
+	artifact, err := SillyTavernModule{}.Write(context.Background(), format.ExportWork{
+		Type: Type,
 		Elements: []block.Element{{
 			Role: block.RoleLorebookEntries, Type: block.TypeEntryTable, Content: table,
 		}},

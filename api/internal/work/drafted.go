@@ -22,28 +22,28 @@ type versionDigest struct {
 	whole   string
 }
 
-func (s *Service) publishedDigest(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (versionDigest, error) {
-	if _, err := tx.Exec(ctx, `set local search_path = asset_public, public`); err != nil {
+func (s *Service) publishedDigest(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (versionDigest, error) {
+	if _, err := tx.Exec(ctx, `set local search_path = work_public, public`); err != nil {
 		return versionDigest{}, err
 	}
-	measured, err := s.assetDigest(ctx, tx, assetID)
+	measured, err := s.workDigest(ctx, tx, workID)
 	if _, reset := tx.Exec(ctx, `set local search_path = public`); reset != nil {
 		return versionDigest{}, reset
 	}
 	return measured, err
 }
 
-func (s *Service) assetDigest(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (versionDigest, error) {
-	content, err := s.contentFingerprint(ctx, tx, assetID)
+func (s *Service) workDigest(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (versionDigest, error) {
+	content, err := s.contentFingerprint(ctx, tx, workID)
 	if err != nil {
 		return versionDigest{}, err
 	}
 	whole := sha256.New()
 	fmt.Fprintf(whole, "content\x00%s\n", content)
-	if err := digestCatalog(ctx, tx, assetID, whole); err != nil {
+	if err := digestDetails(ctx, tx, workID, whole); err != nil {
 		return versionDigest{}, err
 	}
-	blocks, err := block.Read(ctx, tx, assetID)
+	blocks, err := block.Read(ctx, tx, workID)
 	if err != nil {
 		return versionDigest{}, err
 	}
@@ -68,31 +68,31 @@ func (s *Service) assetDigest(ctx context.Context, tx pgx.Tx, assetID uuid.UUID)
 	return versionDigest{content: content, whole: hex.EncodeToString(whole.Sum(nil))}, nil
 }
 
-func digestCatalog(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, into hash.Hash) error {
+func digestDetails(ctx context.Context, tx pgx.Tx, workID uuid.UUID, into hash.Hash) error {
 	var name, blurb string
 	var tags []string
 	var isNSFW *bool
 	var cover pgtype.UUID
 	err := tx.QueryRow(ctx, `
 		select name, blurb, tags, is_nsfw,
-		       (select blob_id from asset_media where id = assets.cover_media_id)
-		  from assets where id = $1
-	`, assetID).Scan(&name, &blurb, &tags, &isNSFW, &cover)
+		       (select blob_id from work_media where id = works.cover_media_id)
+		  from works where id = $1
+	`, workID).Scan(&name, &blurb, &tags, &isNSFW, &cover)
 	if err != nil {
 		return fmt.Errorf("read the catalog fields to compare: %w", err)
 	}
-	adult := "unanswered"
+	nsfw := "unanswered"
 	if isNSFW != nil {
-		adult = strconv.FormatBool(*isNSFW)
+		nsfw = strconv.FormatBool(*isNSFW)
 	}
 	fmt.Fprintf(into, "catalog\x00%s\x00%s\x00%s\x00%s\x00%s\n",
-		name, blurb, strings.Join(tags, "\x00"), adult, uuidFromPgtype(cover))
+		name, blurb, strings.Join(tags, "\x00"), nsfw, uuidFromPgtype(cover))
 	return nil
 }
 
 // UnpublishedChanges says whether a published work has drafted changes it has not published
-func (s *Service) UnpublishedChanges(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (bool, error) {
-	drafted, err := s.DraftedChanges(ctx, tx, assetID)
+func (s *Service) UnpublishedChanges(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (bool, error) {
+	drafted, err := s.DraftedChanges(ctx, tx, workID)
 	return drafted.Any, err
 }
 
@@ -102,12 +102,12 @@ type Drafted struct {
 	Content bool
 }
 
-func (s *Service) DraftedChanges(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (Drafted, error) {
-	published, err := s.publishedDigest(ctx, tx, assetID)
+func (s *Service) DraftedChanges(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (Drafted, error) {
+	published, err := s.publishedDigest(ctx, tx, workID)
 	if err != nil {
 		return Drafted{}, err
 	}
-	reviewed, err := s.assetDigest(ctx, tx, assetID)
+	reviewed, err := s.workDigest(ctx, tx, workID)
 	if err != nil {
 		return Drafted{}, err
 	}

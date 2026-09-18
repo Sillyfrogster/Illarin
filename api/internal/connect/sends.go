@@ -14,8 +14,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Catalog interface {
-	DeliverableAsset(ctx context.Context, q db.DBTX, assetID uuid.UUID) (Deliverable, error)
+type Works interface {
+	DeliverableWork(ctx context.Context, q db.DBTX, workID uuid.UUID) (Deliverable, error)
 	SignedURL(path string) string
 	ValidSignature(path, expires, signature string) bool
 }
@@ -72,7 +72,7 @@ const (
 
 type Sends struct {
 	pool      *pgxpool.Pool
-	catalog   Catalog
+	works     Works
 	instances Instances
 	settings  Settings
 	waiting   *hub
@@ -81,12 +81,12 @@ type Sends struct {
 
 func NewSends(
 	pool *pgxpool.Pool,
-	catalog Catalog,
+	works Works,
 	instances Instances,
 	settings Settings,
 ) *Sends {
 	return &Sends{
-		pool: pool, catalog: catalog, instances: instances, settings: settings,
+		pool: pool, works: works, instances: instances, settings: settings,
 		waiting: newHub(settings.ConcurrentHolds), now: time.Now,
 	}
 }
@@ -95,7 +95,7 @@ func (s *Sends) Queue(
 	ctx context.Context,
 	userID uuid.UUID,
 	instanceID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) (Delivery, error) {
 	if err := s.instances.Throttle(
 		ctx, actionQueue, userID.String(), queueLimit, time.Hour,
@@ -109,12 +109,12 @@ func (s *Sends) Queue(
 	if err != nil {
 		return Delivery{}, err
 	}
-	if !instance.Grants(ScopeAssetReceive) {
+	if !instance.Grants(ScopeWorkReceive) {
 		return Delivery{}, ErrMissingScope
 	}
-	sendable, err := s.catalog.DeliverableAsset(ctx, s.pool, assetID)
+	sendable, err := s.works.DeliverableWork(ctx, s.pool, workID)
 	if errors.Is(err, ErrNotDeliverable) {
-		return Delivery{}, ErrAssetNotSendable
+		return Delivery{}, ErrWorkNotSendable
 	}
 	if err != nil {
 		return Delivery{}, err
@@ -138,18 +138,18 @@ func (s *Sends) Queue(
 	}
 	row, err := queries.QueueDelivery(ctx, db.QueueDeliveryParams{
 		ID: uuidValue(uuid.New()), InstanceID: uuidValue(instanceID),
-		AssetID:   uuidValue(assetID),
+		WorkID:    uuidValue(workID),
 		ExpiresAt: timestamptz(s.now().Add(s.settings.Retention)),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return s.liveDelivery(ctx, instanceID, assetID)
+		return s.liveDelivery(ctx, instanceID, workID)
 	}
 	if err != nil {
 		return Delivery{}, fmt.Errorf("queue a delivery: %w", err)
 	}
 	s.waiting.signal(instanceID)
 	return deliveryFrom(
-		row.ID, row.InstanceID, row.AssetID, row.State, row.SettledReason,
+		row.ID, row.InstanceID, row.WorkID, row.State, row.SettledReason,
 		row.QueuedAt, row.SettledAt, row.ExpiresAt, row.UpdatesInstall,
 	), nil
 }
@@ -157,10 +157,10 @@ func (s *Sends) Queue(
 func (s *Sends) liveDelivery(
 	ctx context.Context,
 	instanceID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) (Delivery, error) {
-	row, err := db.New(s.pool).LiveDeliveryForAsset(ctx, db.LiveDeliveryForAssetParams{
-		InstanceID: uuidValue(instanceID), AssetID: uuidValue(assetID),
+	row, err := db.New(s.pool).LiveDeliveryForWork(ctx, db.LiveDeliveryForWorkParams{
+		InstanceID: uuidValue(instanceID), WorkID: uuidValue(workID),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Delivery{}, ErrDeliveryNotFound
@@ -169,7 +169,7 @@ func (s *Sends) liveDelivery(
 		return Delivery{}, fmt.Errorf("read the waiting delivery: %w", err)
 	}
 	return deliveryFrom(
-		row.ID, row.InstanceID, row.AssetID, row.State, row.SettledReason,
+		row.ID, row.InstanceID, row.WorkID, row.State, row.SettledReason,
 		row.QueuedAt, row.SettledAt, row.ExpiresAt, row.UpdatesInstall,
 	), nil
 }
@@ -187,33 +187,33 @@ func (s *Sends) Discard(ctx context.Context, userID, deliveryID uuid.UUID) error
 	return nil
 }
 
-func (s *Sends) AssetInstances(
+func (s *Sends) WorkInstances(
 	ctx context.Context,
 	userID uuid.UUID,
-	assetID uuid.UUID,
-) (AssetInstances, error) {
+	workID uuid.UUID,
+) (WorkInstances, error) {
 	queries := db.New(s.pool)
-	generation, err := queries.SendableAssetGeneration(ctx, uuidValue(assetID))
+	generation, err := queries.SendableWorkGeneration(ctx, uuidValue(workID))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return AssetInstances{}, ErrAssetNotFound
+		return WorkInstances{}, ErrWorkNotFound
 	}
 	if err != nil {
-		return AssetInstances{}, fmt.Errorf("read the asset to send: %w", err)
+		return WorkInstances{}, fmt.Errorf("read the work to send: %w", err)
 	}
-	sendable, err := s.catalog.DeliverableAsset(ctx, s.pool, assetID)
+	sendable, err := s.works.DeliverableWork(ctx, s.pool, workID)
 	if errors.Is(err, ErrNotDeliverable) {
-		return AssetInstances{}, ErrAssetNotFound
+		return WorkInstances{}, ErrWorkNotFound
 	}
 	if err != nil {
-		return AssetInstances{}, fmt.Errorf("read available delivery formats: %w", err)
+		return WorkInstances{}, fmt.Errorf("read available delivery formats: %w", err)
 	}
-	rows, err := queries.AssetInstanceStates(ctx, db.AssetInstanceStatesParams{
-		AssetID: uuidValue(assetID), UserID: uuidValue(userID),
+	rows, err := queries.WorkInstanceStates(ctx, db.WorkInstanceStatesParams{
+		WorkID: uuidValue(workID), UserID: uuidValue(userID),
 	})
 	if err != nil {
-		return AssetInstances{}, fmt.Errorf("read instance state for an asset: %w", err)
+		return WorkInstances{}, fmt.Errorf("read instance state for a work: %w", err)
 	}
-	found := AssetInstances{ContentGeneration: int(generation), Items: []InstanceState{}}
+	found := WorkInstances{ContentGeneration: int(generation), Items: []InstanceState{}}
 	for _, row := range rows {
 		_, _, canReceive := chooseTarget(
 			row.AcceptedTargets, sendable.Targets, sendable.HasOriginal,
@@ -223,13 +223,13 @@ func (s *Sends) AssetInstances(
 			ApplicationName: row.ApplicationName,
 			InstanceName:    row.InstanceName,
 			LastSeenAt:      optionalTime(row.LastSeenAt),
-			CanReceive: holdsScope(row.Scopes, ScopeAssetReceive) &&
+			CanReceive: holdsScope(row.Scopes, ScopeWorkReceive) &&
 				installs(row.Capabilities, sendable) && canReceive,
 			ReportsLibrary: holdsScope(row.Scopes, ScopeLibrarySync),
 		}
 		if row.DeliveryID.Valid {
 			waiting := deliveryFrom(
-				row.DeliveryID, row.ID, uuidValue(assetID), row.DeliveryState,
+				row.DeliveryID, row.ID, uuidValue(workID), row.DeliveryState,
 				row.SettledReason, row.QueuedAt, row.SettledAt, row.ExpiresAt,
 				row.UpdatesInstall,
 			)
@@ -245,20 +245,20 @@ func (s *Sends) AssetInstances(
 	return found, nil
 }
 
-// UpdatableInstances names the account's instances that hold an older copy of an asset and can receive it.
+// UpdatableInstances names the account's instances that hold an older copy of a work and can receive it.
 func (s *Sends) UpdatableInstances(
 	ctx context.Context,
 	userID uuid.UUID,
-	assetIDs []uuid.UUID,
+	workIDs []uuid.UUID,
 ) (map[uuid.UUID][]InstanceState, error) {
-	behind, err := s.assetsInstalledBehind(ctx, userID, assetIDs)
+	behind, err := s.worksInstalledBehind(ctx, userID, workIDs)
 	if err != nil {
 		return nil, err
 	}
 	offered := make(map[uuid.UUID][]InstanceState, len(behind))
-	for _, assetID := range behind {
-		found, err := s.AssetInstances(ctx, userID, assetID)
-		if errors.Is(err, ErrAssetNotFound) {
+	for _, workID := range behind {
+		found, err := s.WorkInstances(ctx, userID, workID)
+		if errors.Is(err, ErrWorkNotFound) {
 			continue
 		}
 		if err != nil {
@@ -266,49 +266,49 @@ func (s *Sends) UpdatableInstances(
 		}
 		for _, state := range found.Items {
 			if state.UpdateAvailable && state.CanReceive {
-				offered[assetID] = append(offered[assetID], state)
+				offered[workID] = append(offered[workID], state)
 			}
 		}
 	}
 	return offered, nil
 }
 
-// assetsInstalledBehind keeps only the assets one of the account's instances holds an older copy of.
-func (s *Sends) assetsInstalledBehind(
+// worksInstalledBehind keeps only the works one of the account's instances holds an older copy of.
+func (s *Sends) worksInstalledBehind(
 	ctx context.Context,
 	userID uuid.UUID,
-	assetIDs []uuid.UUID,
+	workIDs []uuid.UUID,
 ) ([]uuid.UUID, error) {
-	if len(assetIDs) == 0 {
+	if len(workIDs) == 0 {
 		return nil, nil
 	}
 	rows, err := s.pool.Query(ctx, `
-		select distinct entry.asset_id
+		select distinct entry.work_id
 		  from instance_library_entries entry
 		  join linked_instances instance on instance.id = entry.instance_id
-		  join assets subject on subject.id = entry.asset_id
+		  join works subject on subject.id = entry.work_id
 		 where instance.user_id = $1
 		   and instance.revoked_at is null
-		   and entry.asset_id = any($2::uuid[])
+		   and entry.work_id = any($2::uuid[])
 		   and entry.content_generation < subject.content_generation
 		   and subject.deleted_at is null
 		   and subject.withheld_at is null
 		   and subject.lifecycle = 'published'
-	`, userID, assetIDs)
+	`, userID, workIDs)
 	if err != nil {
-		return nil, fmt.Errorf("find the assets an instance holds an older copy of: %w", err)
+		return nil, fmt.Errorf("find the works an instance holds an older copy of: %w", err)
 	}
 	defer rows.Close()
-	behind := make([]uuid.UUID, 0, len(assetIDs))
+	behind := make([]uuid.UUID, 0, len(workIDs))
 	for rows.Next() {
-		var assetID uuid.UUID
-		if err := rows.Scan(&assetID); err != nil {
-			return nil, fmt.Errorf("read an asset an instance holds an older copy of: %w", err)
+		var workID uuid.UUID
+		if err := rows.Scan(&workID); err != nil {
+			return nil, fmt.Errorf("read a work an instance holds an older copy of: %w", err)
 		}
-		behind = append(behind, assetID)
+		behind = append(behind, workID)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("find the assets an instance holds an older copy of: %w", err)
+		return nil, fmt.Errorf("find the works an instance holds an older copy of: %w", err)
 	}
 	return behind, nil
 }
@@ -325,7 +325,7 @@ func holdsScope(scopes []string, wanted Scope) bool {
 func deliveryFrom(
 	id pgtype.UUID,
 	instanceID pgtype.UUID,
-	assetID pgtype.UUID,
+	workID pgtype.UUID,
 	state string,
 	reason pgtype.Text,
 	queuedAt pgtype.Timestamptz,
@@ -335,7 +335,7 @@ func deliveryFrom(
 ) Delivery {
 	return Delivery{
 		ID: uuid.UUID(id.Bytes), InstanceID: uuid.UUID(instanceID.Bytes),
-		AssetID: uuid.UUID(assetID.Bytes), State: State(state),
+		WorkID: uuid.UUID(workID.Bytes), State: State(state),
 		Reason: Reason(reason.String), QueuedAt: queuedAt.Time,
 		SettledAt: optionalTime(settledAt), ExpiresAt: expiresAt.Time,
 		UpdatesInstall: updatesInstall,

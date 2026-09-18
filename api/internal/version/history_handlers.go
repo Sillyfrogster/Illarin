@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *Handlers) ListAssetUpdates(c *gin.Context) {
+func (h *Handlers) ListWorkUpdates(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -36,7 +36,7 @@ func (h *Handlers) ListAssetUpdates(c *gin.Context) {
 	c.JSON(http.StatusOK, RecordedVersionList{Items: items})
 }
 
-func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
+func (h *Handlers) RestoreWorkVersion(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -73,7 +73,7 @@ func (h *Handlers) RestoreAssetVersion(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context) {
+func (h *Handlers) CorrectWorkVersionNotes(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -86,7 +86,7 @@ func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request AssetVersionNotesRequest
+	var request WorkVersionNotesRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Send the corrected summary and notes.")
 		return
@@ -100,7 +100,7 @@ func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "The summary or notes are too long.")
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
-	case errors.Is(err, work.ErrAssetFrozen):
+	case errors.Is(err, work.ErrWorkFrozen):
 		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not correct the notes.")
@@ -109,7 +109,7 @@ func (h *Handlers) CorrectAssetVersionNotes(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) WithdrawAssetVersion(c *gin.Context) {
+func (h *Handlers) WithdrawWorkVersion(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -122,7 +122,7 @@ func (h *Handlers) WithdrawAssetVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request AssetVersionWithdrawalRequest
+	var request WorkVersionWithdrawalRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Send a public withdrawal explanation.")
 		return
@@ -137,7 +137,7 @@ func (h *Handlers) WithdrawAssetVersion(c *gin.Context) {
 		api.Refuse(c, http.StatusConflict, "Publish a replacement before withdrawing the current version.")
 	case errors.Is(err, ErrVersionAlreadyWithdrawn):
 		api.Refuse(c, http.StatusConflict, "This version is already withdrawn.")
-	case errors.Is(err, work.ErrAssetFrozen):
+	case errors.Is(err, work.ErrWorkFrozen):
 		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
@@ -148,13 +148,13 @@ func (h *Handlers) WithdrawAssetVersion(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) CompareAssetVersions(c *gin.Context) {
+func (h *Handlers) CompareWorkVersions(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
 	q := api.ReadQuery(c)
-	params := CompareAssetVersionsParams{
+	params := CompareWorkVersionsParams{
 		From: api.QueryNumber(q, "from"),
 		To:   api.QueryNumber(q, "to"),
 	}
@@ -165,13 +165,13 @@ func (h *Handlers) CompareAssetVersions(c *gin.Context) {
 	if !ok {
 		return
 	}
-	visibility, ok := page.ReaderVisibility(c, h.accounts, nil)
+	preference, ok := page.ReaderNSFWPreference(c, h.accounts, nil)
 	if !ok {
 		return
 	}
 	compared, err := h.versions.CompareVersions(
 		c.Request.Context(), id, viewerID,
-		versionNumber(params.From), versionNumber(params.To), visibility,
+		versionNumber(params.From), versionNumber(params.To), preference,
 	)
 	switch {
 	case errors.Is(err, work.ErrNotFound):
@@ -298,7 +298,7 @@ func ToChangeGroups(groups []ChangeGroup) []VersionChangeGroup {
 }
 
 func toAPIChange(change Change) VersionChange {
-	served := VersionChange{Kind: VersionChangeKind(change.Kind), Name: change.Name}
+	served := VersionChange{Type: VersionChangeType(change.Type), Name: change.Name}
 	if change.Note != "" {
 		note := change.Note
 		served.Note = &note

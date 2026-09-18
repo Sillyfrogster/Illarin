@@ -15,10 +15,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.T) {
+func TestReplacementPreviewLeavesThePublishedWorkAloneUntilAccepted(t *testing.T) {
 	t.Parallel()
 	parsed := format.Parsed{
-		Kind: "character", Format: "replacing",
+		Type: "character", Format: "replacing",
 		Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{{
 			Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"},
@@ -35,7 +35,7 @@ func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.
 	parsed.Elements[0].Content = block.Prose{Text: "After"}
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: owner, AssetID: created.ID, Filename: "wren.json",
+		OwnerID: owner, WorkID: created.ID, Filename: "wren.json",
 		File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
 	}, candidate)
 	if err != nil {
@@ -51,7 +51,7 @@ func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.
 	if preview.Status != IngestPreview || preview.Preview == nil {
 		t.Fatalf("preview = %+v", preview)
 	}
-	public, err := works(svc).Detail(context.Background(), created.ID, nil, work.ContentShown)
+	public, err := works(svc).Detail(context.Background(), created.ID, nil, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.
 	if accepted.Status != IngestSuccess {
 		t.Fatalf("accepted replacement = %+v", accepted)
 	}
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestReplacementPreviewLeavesThePublishedAssetAloneUntilAccepted(t *testing.
 func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 	t.Parallel()
 	parsed := format.Parsed{
-		Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
+		Type: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}}},
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
@@ -85,7 +85,7 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: owner, AssetID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true}`),
+		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true}`),
 	}, candidate)
 	if err != nil {
 		t.Fatal(err)
@@ -93,9 +93,9 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
 	}
-	adult := false
+	nsfw := false
 	if err := works(svc).SetIdentity(context.Background(), page.Identity{
-		OwnerID: owner, AssetID: created.ID, Name: "Newer", IsNSFW: &adult,
+		OwnerID: owner, WorkID: created.ID, Name: "Newer", IsNSFW: &nsfw,
 	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T) {
 	t.Parallel()
 	parsed := format.Parsed{
-		Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
+		Type: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{
 			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}},
 			{Type: block.TypeProse, Role: block.RolePersonality, Content: block.Prose{Text: "Patient"}},
@@ -121,7 +121,7 @@ func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T
 	parsed.Elements = parsed.Elements[:1]
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: owner, AssetID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
+		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
 	}, candidate)
 	if err != nil {
 		t.Fatal(err)
@@ -146,7 +146,7 @@ func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T
 	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, currentCandidate(t, svc, created.ID), decisions, false); err != nil {
 		t.Fatal(err)
 	}
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func hasRole(elements []block.Element, role block.Role) bool {
 func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
 	t.Parallel()
 	parsed := format.Parsed{
-		Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
+		Type: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}}},
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
@@ -176,7 +176,7 @@ func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
 	parsed.Elements[0].Content = block.Prose{Text: "After"}
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: owner, AssetID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
+		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
 	}, candidate)
 	if err != nil {
 		t.Fatal(err)
@@ -191,7 +191,7 @@ func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
 	if err != nil || cancelled.Status != IngestCancelled {
 		t.Fatalf("cancelled operation = %+v, error = %v", cancelled, err)
 	}
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
+	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,11 +245,11 @@ func TestReplacementPreviewReportsAConflictingImageReplacement(t *testing.T) {
 
 func TestReplacementPreviewReportsConflictingOpaqueData(t *testing.T) {
 	t.Parallel()
-	current := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: uuid.New(), Namespace: "extension", Payload: []byte(`{"local":true}`)}}
-	public := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"published":true}`)}}
-	incoming := []format.Remainder{{Owner: format.OwnerAsset, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"file":true}`)}}
+	current := []format.Remainder{{Owner: format.OwnerWork, OwnerID: uuid.New(), Namespace: "extension", Payload: []byte(`{"local":true}`)}}
+	public := []format.Remainder{{Owner: format.OwnerWork, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"published":true}`)}}
+	incoming := []format.Remainder{{Owner: format.OwnerWork, OwnerID: current[0].OwnerID, Namespace: "extension", Payload: []byte(`{"file":true}`)}}
 	changes := version.ComparePreserved(asVersionPreserved(current), asVersionPreserved(incoming))
-	if len(changes) != 1 || changes[0].Kind != version.ChangeEdited || changes[0].Name != "extension" {
+	if len(changes) != 1 || changes[0].Type != version.ChangeEdited || changes[0].Name != "extension" {
 		t.Fatalf("opaque replacement = %+v", changes)
 	}
 	conflicts := replacementConflicts(nil, nil, nil, current, public, incoming, nil, nil, nil)
@@ -261,14 +261,14 @@ func TestReplacementPreviewReportsConflictingOpaqueData(t *testing.T) {
 func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
 	t.Parallel()
 	old := namedReplacementModule{id: "old_character", parsed: format.Parsed{
-		Kind: "character", Format: "old_character", Header: format.Header{Name: "Wren"},
+		Type: "character", Format: "old_character", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{
 			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}},
 			{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Hello"}}}},
 		},
 	}}
 	updated := namedReplacementModule{id: "new_character", parsed: format.Parsed{
-		Kind: "character", Format: "new_character", Header: format.Header{Name: "Wren"},
+		Type: "character", Format: "new_character", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{
 			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "After"}},
 			{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Hello"}}}},
@@ -285,7 +285,7 @@ func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
 	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"spec":"old_character"}`))
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: owner, AssetID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"spec":"new_character"}`),
+		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"spec":"new_character"}`),
 	}, candidate)
 	if err != nil {
 		t.Fatal(err)
@@ -301,22 +301,22 @@ func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	var origin string
-	if err := pool.QueryRow(context.Background(), `select origin_format from assets where id = $1`, created.ID).Scan(&origin); err != nil || origin != "new_character" {
+	if err := pool.QueryRow(context.Background(), `select origin_format from works where id = $1`, created.ID).Scan(&origin); err != nil || origin != "new_character" {
 		t.Fatalf("replacement origin = %q, error = %v", origin, err)
 	}
 }
 
-func TestReplacementPreviewsEveryBuildableKind(t *testing.T) {
+func TestReplacementPreviewsEveryBuildableType(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []string{"character", "lorebook", "preset", "theme", "pack"} {
-		t.Run(kind, func(t *testing.T) {
-			module := kindModule{id: "preview_" + kind, kind: kind}
+	for _, workType := range []string{"character", "lorebook", "preset", "theme", "pack"} {
+		t.Run(workType, func(t *testing.T) {
+			module := typeModule{id: "preview_" + workType, workType: workType}
 			svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, module))
-			owner := revisionOwner(t, svc, "preview."+kind)
-			created := ingestOne(t, svc, owner, "asset.json", []byte(`{"spec":"preview_`+kind+`"}`))
+			owner := revisionOwner(t, svc, "preview."+workType)
+			created := ingestOne(t, svc, owner, "asset.json", []byte(`{"spec":"preview_`+workType+`"}`))
 			operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
-				OwnerID: owner, AssetID: created.ID, Filename: "asset.json",
-				File: bytes.NewBufferString(`{"spec":"preview_` + kind + `"}`),
+				OwnerID: owner, WorkID: created.ID, Filename: "asset.json",
+				File: bytes.NewBufferString(`{"spec":"preview_` + workType + `"}`),
 			}, currentCandidate(t, svc, created.ID))
 			if err != nil {
 				t.Fatal(err)
@@ -362,6 +362,6 @@ func (m namedReplacementModule) Parse(context.Context, format.Inspection, format
 	return m.parsed, nil
 }
 
-func (m namedReplacementModule) Write(context.Context, format.ExportAsset) (format.Artifact, error) {
+func (m namedReplacementModule) Write(context.Context, format.ExportWork) (format.Artifact, error) {
 	return format.Artifact{MediaType: "text/plain", Extension: ".txt"}, nil
 }

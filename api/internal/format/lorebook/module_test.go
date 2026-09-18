@@ -44,12 +44,12 @@ const twoEntries = `{
 	]
 }`
 
-func TestTheModuleReadsAndWritesTheLorebookKind(t *testing.T) {
+func TestTheModuleReadsAndWritesTheLorebookType(t *testing.T) {
 	t.Parallel()
 	declaration := Module{}.Declaration()
-	if declaration.Kind != Kind || declaration.ID != ID {
+	if declaration.Type != Type || declaration.ID != ID {
 		t.Errorf("declaration identity = %q/%q, want %q/%q",
-			declaration.ID, declaration.Kind, ID, Kind)
+			declaration.ID, declaration.Type, ID, Type)
 	}
 	if !declaration.Direction.Read || !declaration.Direction.Write {
 		t.Errorf("direction = %+v, want read and write", declaration.Direction)
@@ -58,7 +58,7 @@ func TestTheModuleReadsAndWritesTheLorebookKind(t *testing.T) {
 		t.Fatalf("declaration: %v", err)
 	}
 	if len(declaration.Recognition) != 1 ||
-		declaration.Recognition[0].Kind != format.RecognitionSignature {
+		declaration.Recognition[0].Type != format.RecognitionSignature {
 		t.Errorf("recognition = %+v, want one structural signature", declaration.Recognition)
 	}
 	if len(declaration.Slots) != 0 || len(declaration.Boilerplate) != 0 {
@@ -122,8 +122,8 @@ func TestReadingABookFillsTheEntryRoleAndKeepsTheRest(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, twoEntries)
 
-	if parsed.Kind != Kind || parsed.Format != ID {
-		t.Fatalf("parsed kind %q format %q, want %q and %q", parsed.Kind, parsed.Format, Kind, ID)
+	if parsed.Type != Type || parsed.Format != ID {
+		t.Fatalf("parsed kind %q format %q, want %q and %q", parsed.Type, parsed.Format, Type, ID)
 	}
 	if parsed.Header.Name != "Zenless lore" {
 		t.Errorf("name = %q, want the book's own", parsed.Header.Name)
@@ -145,13 +145,13 @@ func TestReadingABookFillsTheEntryRoleAndKeepsTheRest(t *testing.T) {
 		t.Errorf("second entry = %+v, want switched off and case sensitive", second)
 	}
 
-	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, bookNamespace)
+	body := preservedPayload(t, parsed.Remainder, format.OwnerWork, bookNamespace)
 	for _, key := range []string{"description", "scan_depth", "token_budget"} {
 		if _, held := body[key]; !held {
 			t.Errorf("the book's %s was not preserved", key)
 		}
 	}
-	if _, held := preserved(parsed.Remainder, format.OwnerAsset, "risuai"); !held {
+	if _, held := preserved(parsed.Remainder, format.OwnerWork, "risuai"); !held {
 		t.Error("the extensions namespace was not preserved as its own namespace")
 	}
 	entry := preservedPayload(t, parsed.Remainder, format.OwnerItem, entryNamespace)
@@ -218,8 +218,8 @@ func TestEntriesThatAreNotAListRefuseTheImport(t *testing.T) {
 func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, twoEntries)
-	written, err := Module{}.Write(context.Background(), format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements,
+	written, err := Module{}.Write(context.Background(), format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements,
 		Preserved: parsed.Remainder,
 	})
 	if err != nil {
@@ -273,7 +273,7 @@ func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 	t.Parallel()
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: Kind, Origin: ID,
+		Type: Type, Origin: ID,
 		Elements: []block.Element{
 			{
 				ID: uuid.New(), Type: block.TypeEntryTable, Role: block.RoleLorebookEntries,
@@ -303,7 +303,7 @@ func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 func TestNoCardWriterIsOfferedForABook(t *testing.T) {
 	t.Parallel()
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: "character", Origin: ID,
+		Type: "character", Origin: ID,
 	})
 	if len(targets) != 0 {
 		t.Fatalf("offered %+v for a lorebook origin under the character kind, want none", targets)
@@ -313,7 +313,7 @@ func TestNoCardWriterIsOfferedForABook(t *testing.T) {
 func TestAnImportedBookIsPlacedIntoTheLorebookCatalog(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, twoEntries)
-	blocks, err := block.Place(parsed.Kind, parsed.Elements)
+	blocks, err := block.Place(parsed.Type, parsed.Elements)
 	if err != nil {
 		t.Fatalf("place: %v", err)
 	}
@@ -328,7 +328,7 @@ func TestAnImportedBookIsPlacedIntoTheLorebookCatalog(t *testing.T) {
 	if len(placed.Elements) != 1 || placed.Elements[0].Role != block.RoleLorebookEntries {
 		t.Fatalf("elements = %+v, want the entry table alone", placed.Elements)
 	}
-	if !placed.Pinned(block.RoleLorebookEntries, Kind) {
+	if !placed.Pinned(block.RoleLorebookEntries, Type) {
 		t.Error("the entries can be taken off the page a lorebook is")
 	}
 }

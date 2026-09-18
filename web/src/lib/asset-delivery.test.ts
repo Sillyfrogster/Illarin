@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import type {
-  AssetBlock,
-  AssetElement,
-  AssetImage,
-  AssetInstance,
   DownloadTarget,
+  WorkBlock,
+  WorkElement,
+  WorkImage,
+  WorkInstance,
 } from "@/lib/api/query";
 import {
   appLabel,
@@ -44,7 +44,7 @@ function role(
   };
 }
 
-function instance(over: Partial<AssetInstance> = {}): AssetInstance {
+function instance(over: Partial<WorkInstance> = {}): WorkInstance {
   return {
     instanceId: "i1",
     applicationName: "Lumiverse",
@@ -244,7 +244,7 @@ test("a delivery that failed says why in words a reader can act on", () => {
 
 function galleryBlock(
   images: { mediaId: string; name?: string; omitFromDownloads?: boolean }[],
-): AssetBlock {
+): WorkBlock {
   return {
     id: "block-gallery",
     definition: "gallery",
@@ -263,16 +263,12 @@ function galleryBlock(
         slot: "main",
         isEmpty: images.length === 0,
         content: { images },
-      } as AssetElement,
+      } as WorkElement,
     ],
-  } as AssetBlock;
+  } as WorkBlock;
 }
 
-function image(
-  id: string,
-  bytes: number,
-  role: AssetImage["role"],
-): AssetImage {
+function image(id: string, bytes: number, role: WorkImage["role"]): WorkImage {
   return {
     id,
     role,

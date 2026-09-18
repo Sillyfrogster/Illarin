@@ -33,7 +33,7 @@ type restrictionStack struct {
 	pool      *pgxpool.Pool
 	outbox    *apitest.VerificationOutbox
 	authority *http.Cookie
-	assets    *work.Service
+	works     *work.Service
 	admin     *http.Cookie
 	owner     *http.Cookie
 	ownerID   uuid.UUID
@@ -57,7 +57,7 @@ func newRestrictionStack(t *testing.T) restrictionStack {
 	owner := apitest.VerifiedSignUp(t, router, outbox, "owner@example.com", ownerHandle)
 	return restrictionStack{
 		router: router, pool: pool, outbox: outbox, authority: authority,
-		assets:  handlers.Assets,
+		works:   handlers.Works,
 		admin:   admin,
 		owner:   owner,
 		ownerID: accountID(t, pool, ownerHandle),
@@ -150,7 +150,7 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
-	apitest.CreateProfileAsset(t, stack.assets, stack.ownerID, "Fen weather", false, work.DiscoveryListed)
+	apitest.CreateProfileWork(t, stack.works, stack.ownerID, "Fen weather", false, work.VisibilityListed)
 
 	restricted := stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 	if restricted.Code != http.StatusOK {
@@ -277,8 +277,8 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	t.Parallel()
 	stack := newRestrictionStack(t)
 	stack.fillProfile(t)
-	published := apitest.CreateProfileAsset(
-		t, stack.assets, stack.ownerID, "Fen weather", false, work.DiscoveryListed,
+	published := apitest.CreateProfileWork(
+		t, stack.works, stack.ownerID, "Fen weather", false, work.VisibilityListed,
 	)
 	before := accountFactsOf(apitest.SessionState(t, stack.router, stack.owner))
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
@@ -312,9 +312,9 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	if role := stack.role(t); role != "user" {
 		t.Fatalf("restriction changed the account role to %q", role)
 	}
-	stack.expectAssetUntouched(t, published)
-	if apitest.CreateProfileAsset(
-		t, stack.assets, stack.ownerID, "Still working", false, work.DiscoveryListed,
+	stack.expectWorkUntouched(t, published)
+	if apitest.CreateProfileWork(
+		t, stack.works, stack.ownerID, "Still working", false, work.VisibilityListed,
 	) == uuid.Nil {
 		t.Fatal("a restricted owner could not publish")
 	}
@@ -352,20 +352,20 @@ func (s restrictionStack) role(t *testing.T) string {
 	return role
 }
 
-func (s restrictionStack) expectAssetUntouched(t *testing.T, assetID uuid.UUID) {
+func (s restrictionStack) expectWorkUntouched(t *testing.T, workID uuid.UUID) {
 	t.Helper()
 	var owner uuid.UUID
-	var discovery string
+	var visibility string
 	var withheld bool
 	err := s.pool.QueryRow(context.Background(), `
-		select owner_id, discovery, withheld_at is not null from assets where id = $1
-	`, assetID).Scan(&owner, &discovery, &withheld)
+		select owner_id, visibility, withheld_at is not null from works where id = $1
+	`, workID).Scan(&owner, &visibility, &withheld)
 	if err != nil {
 		t.Fatalf("read asset state: %v", err)
 	}
-	if owner != s.ownerID || discovery != "listed" || withheld {
+	if owner != s.ownerID || visibility != "listed" || withheld {
 		t.Fatalf("restriction changed the asset: owner %s, discovery %q, withheld %v",
-			owner, discovery, withheld)
+			owner, visibility, withheld)
 	}
 }
 

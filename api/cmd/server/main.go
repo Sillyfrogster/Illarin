@@ -82,14 +82,14 @@ func run() error {
 	uploads := upload.NewService(pool, svc)
 	recomputed, err := summary.RecomputeStaleFormats(runtimeContext, pool, registry)
 	if err != nil {
-		return fmt.Errorf("export projections: %w", err)
+		return fmt.Errorf("export summaries: %w", err)
 	}
 	if recomputed > 0 {
 		log.Printf("recomputed the export projection for %d assets", recomputed)
 	}
 	remeasured, err := summary.RecomputeStaleFilters(runtimeContext, pool, registry)
 	if err != nil {
-		return fmt.Errorf("facet projections: %w", err)
+		return fmt.Errorf("facet summaries: %w", err)
 	}
 	if remeasured > 0 {
 		log.Printf("recomputed the facet projection for %d assets", remeasured)
@@ -155,7 +155,7 @@ func run() error {
 	publications := blog.NewService(pool, images, publishing)
 	updateDestinations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	versions := version.NewService(pool, svc)
-	versions.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)
+	versions.OnUpdatePublished(updateDestinations.Announce, version.TellFollowers)
 	links := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := connect.NewSends(pool, svc, links, connect.DefaultSettings())
 	notifications := notify.NewService(pool)
@@ -212,8 +212,8 @@ func run() error {
 	r := gin.New()
 	r.Use(api.Recovery(log.Default()))
 	running := services{
-		Assets:             svc,
-		Works:              page.NewService(pool, svc),
+		Works:              svc,
+		Pages:              page.NewService(pool, svc),
 		Blocks:             edit.NewService(pool, svc),
 		Versions:           versions,
 		Uploads:            uploads,

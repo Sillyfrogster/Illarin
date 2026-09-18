@@ -84,7 +84,7 @@ func archivedMembers(ctx context.Context, file format.Inspection) ([]format.Rema
 		}
 		budget -= entry.UncompressedSize
 		kept = append(kept, format.Remainder{
-			Owner:     format.OwnerAsset,
+			Owner:     format.OwnerWork,
 			Namespace: MemberNamespace + entry.Name,
 			Payload:   payload,
 		})
@@ -147,7 +147,7 @@ func ArchivedMemberName(namespace string) (string, bool) {
 	return name, true
 }
 
-type cardAsset struct {
+type cardFile struct {
 	Type string `json:"type"`
 	URI  string `json:"uri"`
 	Name string `json:"name"`
@@ -156,15 +156,15 @@ type cardAsset struct {
 
 // archivedImages routes every bundled image, naming the ones the card names.
 func archivedImages(read card, file format.Inspection) []format.Media {
-	var assets []cardAsset
+	var files []cardFile
 	if raw, ok := read.fields["assets"]; ok {
-		_ = json.Unmarshal(raw, &assets)
+		_ = json.Unmarshal(raw, &files)
 	}
 	named := make(map[uint32]bool)
 	found := make([]format.Media, 0, len(file.Images))
 	hasAvatar := false
-	for _, asset := range assets {
-		path, embedded := strings.CutPrefix(asset.URI, embeddedPrefix)
+	for _, entry := range files {
+		path, embedded := strings.CutPrefix(entry.URI, embeddedPrefix)
 		if !embedded {
 			continue
 		}
@@ -173,7 +173,7 @@ func archivedImages(read card, file format.Inspection) []format.Media {
 			continue
 		}
 		named[image] = true
-		role, wanted := assetRole(asset, hasAvatar)
+		role, wanted := cardFileRole(entry, hasAvatar)
 		if !wanted {
 			continue
 		}
@@ -181,7 +181,7 @@ func archivedImages(read card, file format.Inspection) []format.Media {
 			hasAvatar = true
 		}
 		found = append(found, format.Media{
-			Role: role, ImageID: image, ElementRole: elementRole(role), Name: asset.Name,
+			Role: role, ImageID: image, ElementRole: elementRole(role), Name: entry.Name,
 		})
 	}
 	for _, image := range file.Images {
@@ -226,10 +226,10 @@ func elementRole(role media.Role) block.Role {
 	}
 }
 
-func assetRole(asset cardAsset, hasAvatar bool) (media.Role, bool) {
-	switch asset.Type {
+func cardFileRole(file cardFile, hasAvatar bool) (media.Role, bool) {
+	switch file.Type {
 	case "icon":
-		if !hasAvatar && asset.Name == "main" {
+		if !hasAvatar && file.Name == "main" {
 			return media.Avatar, true
 		}
 		return media.AvatarAlt, true

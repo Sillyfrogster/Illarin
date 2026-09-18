@@ -20,22 +20,22 @@ func (s *Service) Withhold(ctx context.Context, id, actorID uuid.UUID, reason st
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin withholding an asset: %w", err)
+		return fmt.Errorf("begin withholding a work: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	withheld, err := db.New(tx).WithholdAsset(ctx, db.WithholdAssetParams{
+	withheld, err := db.New(tx).WithholdWork(ctx, db.WithholdWorkParams{
 		ID:             uuidToPgtype(id),
 		WithheldBy:     uuidToPgtype(actorID),
 		WithheldReason: textToPgtype(reason),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrAssetNotFound
+		return ErrWorkNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("withhold asset: %w", err)
+		return fmt.Errorf("withhold work: %w", err)
 	}
-	if err := tellOwner(ctx, tx, id, withheld.OwnerID, notify.AssetWithheld, notify.Words{
-		AssetName: withheld.PublicName, Reason: reason,
+	if err := tellOwner(ctx, tx, id, withheld.OwnerID, notify.WorkWithheld, notify.Words{
+		WorkName: withheld.PublicName, Reason: reason,
 	}); err != nil {
 		return err
 	}
@@ -51,15 +51,15 @@ func (s *Service) ClearWithhold(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("begin clearing a withhold: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	cleared, err := db.New(tx).ClearAssetWithhold(ctx, uuidToPgtype(id))
+	cleared, err := db.New(tx).ClearWorkWithhold(ctx, uuidToPgtype(id))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrAssetNotFound
+		return ErrWorkNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("clear asset withhold: %w", err)
+		return fmt.Errorf("clear work withhold: %w", err)
 	}
-	if err := tellOwner(ctx, tx, id, cleared.OwnerID, notify.AssetRestored, notify.Words{
-		AssetName: cleared.PublicName,
+	if err := tellOwner(ctx, tx, id, cleared.OwnerID, notify.WorkRestored, notify.Words{
+		WorkName: cleared.PublicName,
 	}); err != nil {
 		return err
 	}
@@ -69,16 +69,16 @@ func (s *Service) ClearWithhold(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// tellOwner records a staff decision for the asset's owner and never names the staff member who made it.
+// tellOwner records a staff decision for the work's owner and never names the staff member who made it.
 func tellOwner(
-	ctx context.Context, tx pgx.Tx, assetID uuid.UUID, owner pgtype.UUID,
-	kind notify.Type, words notify.Words,
+	ctx context.Context, tx pgx.Tx, workID uuid.UUID, owner pgtype.UUID,
+	noticeType notify.Type, words notify.Words,
 ) error {
 	if !owner.Valid {
 		return nil
 	}
 	account := uuid.UUID(owner.Bytes)
 	return notify.Record(ctx, tx, notify.Event{
-		Type: kind, Account: &account, Asset: &assetID, Words: words,
+		Type: noticeType, Account: &account, Work: &workID, Words: words,
 	})
 }

@@ -15,7 +15,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { api } from "@/lib/api/client";
-import type { AssetInstance, AssetInstanceList } from "@/lib/api/query";
+import type { WorkInstance, WorkInstanceList } from "@/lib/api/query";
 import {
   formatChoices,
   installsOnInstance,
@@ -52,7 +52,7 @@ export function GetAsset({
     linkedInstallOnly,
   } = props;
   const { account } = useAuth();
-  const [instances, setInstances] = useState<AssetInstance[]>([]);
+  const [instances, setInstances] = useState<WorkInstance[]>([]);
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -61,7 +61,7 @@ export function GetAsset({
   const installs = installsOnInstance(kind);
 
   const read = useCallback(async () => {
-    const { data } = await api<AssetInstanceList>(
+    const { data } = await api<WorkInstanceList>(
       "GET",
       `/v1/assets/${assetId}/instances`,
       { cache: "no-store" },

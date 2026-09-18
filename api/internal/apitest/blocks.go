@@ -15,7 +15,7 @@ func AddBlock(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	definition string,
 	elementType string,
 ) *httptest.ResponseRecorder {
@@ -27,7 +27,7 @@ func AddBlock(
 		t.Fatalf("encode the block to add: %v", err)
 	}
 	request := httptest.NewRequest(
-		http.MethodPost, "/v1/assets/"+assetID+"/blocks", strings.NewReader(string(body)),
+		http.MethodPost, "/v1/assets/"+workID+"/blocks", strings.NewReader(string(body)),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
@@ -55,7 +55,7 @@ func ArrangeBlocks(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	blocks []ArrangedBlock,
 ) *httptest.ResponseRecorder {
 	t.Helper()
@@ -64,40 +64,40 @@ func ArrangeBlocks(
 		t.Fatalf("encode arrangement: %v", err)
 	}
 	request := httptest.NewRequest(
-		http.MethodPut, "/v1/assets/"+assetID+"/blocks", strings.NewReader(string(body)),
+		http.MethodPut, "/v1/assets/"+workID+"/blocks", strings.NewReader(string(body)),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
 }
 
-func FetchStartedAsset(
+func FetchStartedWork(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
-) StartedAsset {
+	workID string,
+) StartedWork {
 	t.Helper()
 	response := Send(t, r, Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"?workingCopy=true", nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID+"?workingCopy=true", nil), session,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read saved asset status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	var saved StartedAsset
+	var saved StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &saved); err != nil {
 		t.Fatalf("decode saved asset: %v", err)
 	}
 	return saved
 }
 
-func ProtectedCounts(t *testing.T, pool *pgxpool.Pool, assetID string) (int, int) {
+func ProtectedCounts(t *testing.T, pool *pgxpool.Pool, workID string) (int, int) {
 	t.Helper()
 	var payloads, policies int
 	err := pool.QueryRow(context.Background(), `
 		SELECT
-			(SELECT count(*) FROM protected_content WHERE asset_id = $1),
-			(SELECT count(*) FROM protected_delivery_apps WHERE asset_id = $1)
-	`, assetID).Scan(&payloads, &policies)
+			(SELECT count(*) FROM protected_content WHERE work_id = $1),
+			(SELECT count(*) FROM protected_delivery_apps WHERE work_id = $1)
+	`, workID).Scan(&payloads, &policies)
 	if err != nil {
 		t.Fatalf("count protected rows: %v", err)
 	}

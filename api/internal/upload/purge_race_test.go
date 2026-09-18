@@ -48,10 +48,10 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	var digest [32]byte
 	copy(digest[:], digestBytes)
 	prepared := preparedIngest{
-		Kind: "character", Format: "unknown", Name: "Race", Tags: []string{},
-		Discovery: work.DiscoveryListed, MediaType: "application/octet-stream",
+		Type: "character", Format: "unknown", Name: "Race", Tags: []string{},
+		Visibility: work.VisibilityListed, MediaType: "application/octet-stream",
 	}
-	prepared.Blocks, err = block.Place(prepared.Kind, nil)
+	prepared.Blocks, err = block.Place(prepared.Type, nil)
 	if err != nil {
 		t.Fatalf("place fixture: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	}()
 	go func() {
 		<-start
-		purged <- sweeper(service.assets).Purge(ctx, digest, "legal_order", actorID)
+		purged <- sweeper(service.works).Purge(ctx, digest, "legal_order", actorID)
 	}()
 	close(start)
 	if err := <-purged; err != nil {
@@ -77,7 +77,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 
 	var references int
 	if err := pool.QueryRow(ctx, `
-		select (select count(*) from asset_revisions where blob_id is not null)
+		select (select count(*) from work_revisions where blob_id is not null)
 		     + (select count(*) from ingest_operations where blob_id is not null)
 	`).Scan(&references); err != nil {
 		t.Fatalf("count surviving references: %v", err)

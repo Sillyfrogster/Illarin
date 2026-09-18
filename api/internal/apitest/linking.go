@@ -165,16 +165,16 @@ type LibraryResult struct {
 }
 
 type WithheldNotice struct {
-	AssetID    string    `json:"assetId"`
+	WorkID     string    `json:"assetId"`
 	Name       string    `json:"name"`
 	WithheldAt time.Time `json:"withheldAt"`
 }
 
-func ReportInstalled(t *testing.T, r http.Handler, token, applicationVersion string, assetIDs ...string) LibraryResult {
+func ReportInstalled(t *testing.T, r http.Handler, token, applicationVersion string, workIDs ...string) LibraryResult {
 	t.Helper()
-	entries := make([]map[string]any, 0, len(assetIDs))
-	for _, assetID := range assetIDs {
-		entries = append(entries, map[string]any{"assetId": assetID})
+	entries := make([]map[string]any, 0, len(workIDs))
+	for _, workID := range workIDs {
+		entries = append(entries, map[string]any{"assetId": workID})
 	}
 	body := map[string]any{"snapshot": false, "entries": entries}
 	if applicationVersion != "" {

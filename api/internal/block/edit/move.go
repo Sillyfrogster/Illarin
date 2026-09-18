@@ -26,13 +26,13 @@ func (s *Service) MoveBlockContent(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := candidate.Lock(ctx, tx, ownerID, workID)
+	workType, err := candidate.Lock(ctx, tx, ownerID, workID)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
 	var after []block.Block
-	if err := s.assets.ChangeContent(ctx, tx, workID, func() error {
-		after, err = s.moveContent(ctx, tx, kind, workID, blockID, destinationID)
+	if err := s.works.ChangeContent(ctx, tx, workID, func() error {
+		after, err = s.moveContent(ctx, tx, workType, workID, blockID, destinationID)
 		return err
 	}); err != nil {
 		return SavedBlocks{}, err
@@ -40,13 +40,13 @@ func (s *Service) MoveBlockContent(
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
 		return SavedBlocks{}, err
 	}
-	return SavedBlocks{Kind: kind, Blocks: after}, nil
+	return SavedBlocks{Type: workType, Blocks: after}, nil
 }
 
 func (s *Service) moveContent(
 	ctx context.Context,
 	tx pgx.Tx,
-	kind string,
+	workType string,
 	workID uuid.UUID,
 	blockID uuid.UUID,
 	destinationID uuid.UUID,
@@ -71,7 +71,7 @@ func (s *Service) moveContent(
 	if source == nil || destination == nil || source.ID == destination.ID {
 		return nil, work.ErrNotFound
 	}
-	if err := moveElements(kind, source, destination); err != nil {
+	if err := moveElements(workType, source, destination); err != nil {
 		return nil, err
 	}
 	after := make([]block.Block, 0, len(before)-1)
@@ -85,7 +85,7 @@ func (s *Service) moveContent(
 	if err := block.ValidateStructure(*destination); err != nil {
 		return nil, invalid(err)
 	}
-	if err := block.ValidateBuilderConstraints(kind, before, after); err != nil {
+	if err := block.ValidateBuilderConstraints(workType, before, after); err != nil {
 		return nil, invalid(err)
 	}
 	if err := private.SyncPromptFragments(ctx, tx, workID, after, nil); err != nil {
@@ -96,7 +96,7 @@ func (s *Service) moveContent(
 		return nil, fmt.Errorf("write moved elements: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		update asset_blocks set elements = $3 where id = $1 and asset_id = $2
+		update work_blocks set elements = $3 where id = $1 and work_id = $2
 	`, destination.ID, workID, elements); err != nil {
 		return nil, fmt.Errorf("save moved elements: %w", err)
 	}
@@ -109,13 +109,13 @@ func (s *Service) moveContent(
 	return after, s.writeSummary(ctx, tx, workID)
 }
 
-func moveElements(kind string, source, destination *block.Block) error {
-	definition, _ := source.Definition.Definition(kind)
+func moveElements(workType string, source, destination *block.Block) error {
+	definition, _ := source.Definition.Definition(workType)
 	if definition.Required {
 		return fmt.Errorf("%w: %s is required and cannot be removed", block.ErrInvalid, definition.Title)
 	}
 	for _, element := range source.Elements {
-		if source.Pinned(element.Role, kind) {
+		if source.Pinned(element.Role, workType) {
 			return fmt.Errorf("%w: %s is pinned and cannot move", block.ErrInvalid, element.Role.Label())
 		}
 	}

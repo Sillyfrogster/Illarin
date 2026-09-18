@@ -16,26 +16,26 @@ import (
 )
 
 type carriedImage struct {
-	kind string
-	name string
-	data []byte
+	workType string
+	name     string
+	data     []byte
 }
 
 func TestASavedGalleryImageTravelsInEveryFormatThatCarriesIt(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	first, second := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
-	giveGallery(t, r, session, assetID, map[string][]byte{
+	giveGallery(t, r, session, workID, map[string][]byte{
 		"At the door": first, "On the stair": second,
 	})
-	apitest.PublishCharacter(t, r, session, assetID)
+	apitest.PublishCharacter(t, r, session, workID)
 
-	for _, target := range apitest.DownloadMenu(t, r, nil, assetID) {
+	for _, target := range apitest.DownloadMenu(t, r, nil, workID) {
 		if roleVerdictNamed(t, target, "gallery").Verdict == "dropped" {
 			continue
 		}
-		carried := imagesInDownload(t, r, assetID, target.Format)
+		carried := imagesInDownload(t, r, workID, target.Format)
 		for name, wanted := range map[string][]byte{
 			"At the door": first, "On the stair": second,
 		} {
@@ -59,7 +59,7 @@ func carriesImage(carried []carriedImage, name string, wanted []byte) bool {
 func describe(carried []carriedImage) []string {
 	lines := make([]string, 0, len(carried))
 	for _, image := range carried {
-		lines = append(lines, image.kind+" "+image.name)
+		lines = append(lines, image.workType+" "+image.name)
 	}
 	return lines
 }
@@ -68,36 +68,36 @@ func giveGallery(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	named map[string][]byte,
 ) {
 	t.Helper()
 	items := make([]string, 0, len(named))
 	for name, file := range named {
 		items = append(items, `{"mediaId":"`+
-			apitest.UploadedImageID(t, r, session, assetID, "gallery", file)+`","name":"`+name+`"}`)
+			apitest.UploadedImageID(t, r, session, workID, "gallery", file)+`","name":"`+name+`"}`)
 	}
-	block := apitest.AddedBlock(t, apitest.AddBlock(t, r, session, assetID, "gallery", "image_set"))
+	block := apitest.AddedBlock(t, apitest.AddBlock(t, r, session, workID, "gallery", "image_set"))
 	body := apitest.EditableBlock(block)
 	body.Elements[0].Content = json.RawMessage(`{"images":[` + strings.Join(items, ",") + `]}`)
-	if saved := apitest.SaveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
+	if saved := apitest.SaveBlock(t, r, session, workID, block.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save the gallery: %d %s", saved.Code, saved.Body.String())
 	}
 }
 
-func imagesInDownload(t *testing.T, r http.Handler, assetID, target string) []carriedImage {
+func imagesInDownload(t *testing.T, r http.Handler, workID, target string) []carriedImage {
 	t.Helper()
-	return imagesInChosenDownload(t, r, assetID, target, nil)
+	return imagesInChosenDownload(t, r, workID, target, nil)
 }
 
 func imagesInChosenDownload(
 	t *testing.T,
 	r http.Handler,
-	assetID, target string,
+	workID, target string,
 	images *string,
 ) []carriedImage {
 	t.Helper()
-	address := "/download/" + assetID + "/" + target
+	address := "/download/" + workID + "/" + target
 	if images != nil {
 		address += "?images=" + *images
 	}
@@ -112,29 +112,29 @@ func imagesInChosenDownload(
 	return inlineCardImages(t, body)
 }
 
-type writtenAsset struct {
+type writtenWork struct {
 	Type string `json:"type"`
 	URI  string `json:"uri"`
 	Name string `json:"name"`
 }
 
-func writtenAssets(t *testing.T, card []byte) []writtenAsset {
+func writtenWorks(t *testing.T, card []byte) []writtenWork {
 	t.Helper()
 	var document struct {
 		Data struct {
-			Assets []writtenAsset `json:"assets"`
+			Works []writtenWork `json:"assets"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(card, &document); err != nil {
 		t.Fatalf("read the written card: %v", err)
 	}
-	return document.Data.Assets
+	return document.Data.Works
 }
 
 func inlineCardImages(t *testing.T, card []byte) []carriedImage {
 	t.Helper()
 	carried := make([]carriedImage, 0)
-	for _, record := range writtenAssets(t, card) {
+	for _, record := range writtenWorks(t, card) {
 		_, encoded, found := strings.Cut(record.URI, ";base64,")
 		if !found {
 			continue
@@ -143,7 +143,7 @@ func inlineCardImages(t *testing.T, card []byte) []carriedImage {
 		if err != nil {
 			t.Fatalf("read the %s data URI: %v", record.Type, err)
 		}
-		carried = append(carried, carriedImage{kind: record.Type, name: record.Name, data: data})
+		carried = append(carried, carriedImage{workType: record.Type, name: record.Name, data: data})
 	}
 	return carried
 }
@@ -173,13 +173,13 @@ func archivedCardImages(t *testing.T, archive []byte) []carriedImage {
 		files[entry.Name] = held.Bytes()
 	}
 	carried := make([]carriedImage, 0, len(files))
-	for _, record := range writtenAssets(t, card) {
+	for _, record := range writtenWorks(t, card) {
 		path, embedded := strings.CutPrefix(record.URI, "embeded://")
 		if !embedded {
 			continue
 		}
 		carried = append(carried, carriedImage{
-			kind: record.Type, name: record.Name, data: files[path],
+			workType: record.Type, name: record.Name, data: files[path],
 		})
 	}
 	return carried
@@ -187,16 +187,16 @@ func archivedCardImages(t *testing.T, archive []byte) []carriedImage {
 
 func TestTheCreatorChoosesWhichGalleryImagesTravelByDefault(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	kept, left := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
-	gallery := savedGallery(t, r, session, assetID, []galleryItem{
+	gallery := savedGallery(t, r, session, workID, []galleryItem{
 		{name: "Kept", file: kept},
 		{name: "Left out", file: left, omitted: true},
 	})
-	apitest.PublishCharacter(t, r, session, assetID)
+	apitest.PublishCharacter(t, r, session, workID)
 
-	carried := imagesInDownload(t, r, assetID, "charx")
+	carried := imagesInDownload(t, r, workID, "charx")
 	if !carriesImage(carried, "Kept", kept) {
 		t.Errorf("the image the creator kept is missing: %+v", describe(carried))
 	}
@@ -210,32 +210,32 @@ func TestTheCreatorChoosesWhichGalleryImagesTravelByDefault(t *testing.T) {
 
 func TestAReaderChoosesImagesForOneDownloadAndChangesNothingStored(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	kept, left := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
-	gallery := savedGallery(t, r, session, assetID, []galleryItem{
+	gallery := savedGallery(t, r, session, workID, []galleryItem{
 		{name: "Kept", file: kept},
 		{name: "Left out", file: left, omitted: true},
 	})
-	apitest.PublishCharacter(t, r, session, assetID)
+	apitest.PublishCharacter(t, r, session, workID)
 
 	wanted := gallery["Kept"] + "," + gallery["Left out"]
-	both := imagesInChosenDownload(t, r, assetID, "charx", &wanted)
+	both := imagesInChosenDownload(t, r, workID, "charx", &wanted)
 	if !carriesImage(both, "Kept", kept) || !carriesImage(both, "Left out", left) {
 		t.Errorf("a reader asking for both got %+v", describe(both))
 	}
 
 	nothing := ""
-	none := imagesInChosenDownload(t, r, assetID, "charx", &nothing)
+	none := imagesInChosenDownload(t, r, workID, "charx", &nothing)
 	if len(none) != 0 {
 		t.Errorf("a reader asking for no images got %+v", describe(none))
 	}
 
-	after := imagesInDownload(t, r, assetID, "charx")
+	after := imagesInDownload(t, r, workID, "charx")
 	if carriesImage(after, "Left out", left) {
 		t.Error("one reader's choice changed what the next download carries")
 	}
-	page := apitest.FetchStartedAsset(t, r, session, assetID)
+	page := apitest.FetchStartedWork(t, r, session, workID)
 	if !apitest.ContainsBytes(mustJSON(t, page.Blocks), []byte(`"omitFromDownloads":true`)) {
 		t.Error("the creator's own choice is no longer on the asset")
 	}
@@ -243,20 +243,20 @@ func TestAReaderChoosesImagesForOneDownloadAndChangesNothingStored(t *testing.T)
 
 func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewCharacterIngestRouterWithPool(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	gallery := savedGallery(t, r, session, assetID, []galleryItem{
+	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	gallery := savedGallery(t, r, session, workID, []galleryItem{
 		{name: "Kept", file: apitest.PNG(t, 64, 64)},
 	})
-	apitest.PublishCharacter(t, r, session, assetID)
+	apitest.PublishCharacter(t, r, session, workID)
 
 	chosen := gallery["Kept"]
-	imagesInChosenDownload(t, r, assetID, "charx", &chosen)
+	imagesInChosenDownload(t, r, workID, "charx", &chosen)
 
 	rows, err := pool.Query(context.Background(), `
 		select export_target, authorization_class
-		  from download_events where asset_id = $1
-	`, assetID)
+		  from download_events where work_id = $1
+	`, workID)
 	if err != nil {
 		t.Fatalf("read the download log: %v", err)
 	}
@@ -296,22 +296,22 @@ func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 
 func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewCharacterIngestRouterWithPool(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	gallery := savedGallery(t, r, session, assetID, []galleryItem{
+	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	gallery := savedGallery(t, r, session, workID, []galleryItem{
 		{name: "Huge", file: apitest.PNG(t, 64, 64)},
 		{name: "Small", file: apitest.PNG(t, 48, 48)},
 	})
-	apitest.PublishCharacter(t, r, session, assetID)
+	apitest.PublishCharacter(t, r, session, workID)
 	if _, err := pool.Exec(context.Background(), `
 		update blobs set byte_size = $2
-		 where id = (select blob_id from asset_media where id = $1)
+		 where id = (select blob_id from work_media where id = $1)
 	`, gallery["Huge"], int64(download.MaxExportBytes)+1); err != nil {
 		t.Fatalf("make one image oversized: %v", err)
 	}
 
 	refused := apitest.Send(t, r, httptest.NewRequest(
-		http.MethodGet, "/download/"+assetID+"/charx", nil,
+		http.MethodGet, "/download/"+workID+"/charx", nil,
 	))
 	if refused.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("status = %d, want the whole selection refused: %s",
@@ -322,7 +322,7 @@ func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 	}
 
 	small := gallery["Small"]
-	smaller := imagesInChosenDownload(t, r, assetID, "charx", &small)
+	smaller := imagesInChosenDownload(t, r, workID, "charx", &small)
 	if len(smaller) != 1 {
 		t.Fatalf("a smaller choice carried %+v", describe(smaller))
 	}
@@ -330,16 +330,16 @@ func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 
 func TestAnExpressionImageIsNotOfferedTheGallerysDownloadChoice(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	mediaID := apitest.UploadedImageID(t, r, session, assetID, "expression", apitest.PNG(t, 64, 64))
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	mediaID := apitest.UploadedImageID(t, r, session, workID, "expression", apitest.PNG(t, 64, 64))
 
-	block := apitest.AddedBlock(t, apitest.AddBlock(t, r, session, assetID, "expressions", "image_set"))
+	block := apitest.AddedBlock(t, apitest.AddBlock(t, r, session, workID, "expressions", "image_set"))
 	body := apitest.EditableBlock(block)
 	body.Elements[0].Content = json.RawMessage(
 		`{"images":[{"mediaId":"` + mediaID + `","name":"happy","omitFromDownloads":true}]}`,
 	)
-	saved := apitest.SaveBlock(t, r, session, assetID, block.ID, body)
+	saved := apitest.SaveBlock(t, r, session, workID, block.ID, body)
 	if saved.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want the choice refused where it has no meaning: %s",
 			saved.Code, saved.Body.String())
@@ -348,15 +348,15 @@ func TestAnExpressionImageIsNotOfferedTheGallerysDownloadChoice(t *testing.T) {
 
 func TestTheOwnerAndAReaderAreToldTheSameAboutTheGallery(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	savedGallery(t, r, session, assetID, []galleryItem{
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	savedGallery(t, r, session, workID, []galleryItem{
 		{name: "Kept", file: apitest.PNG(t, 64, 64)},
 		{name: "Left out", file: apitest.PNG(t, 48, 48), omitted: true},
 	})
-	apitest.PublishCharacter(t, r, session, assetID)
+	apitest.PublishCharacter(t, r, session, workID)
 
-	owner, reader := apitest.FetchAsset(t, r, session, assetID), apitest.FetchAsset(t, r, nil, assetID)
+	owner, reader := apitest.FetchWork(t, r, session, workID), apitest.FetchWork(t, r, nil, workID)
 	if string(mustJSON(t, owner.Downloads)) != string(mustJSON(t, reader.Downloads)) {
 		t.Errorf("the owner reads %s and a reader reads %s",
 			mustJSON(t, owner.Downloads), mustJSON(t, reader.Downloads))
@@ -376,14 +376,14 @@ func savedGallery(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	wanted []galleryItem,
 ) map[string]string {
 	t.Helper()
 	byName := make(map[string]string, len(wanted))
 	items := make([]string, 0, len(wanted))
 	for _, one := range wanted {
-		mediaID := apitest.UploadedImageID(t, r, session, assetID, "gallery", one.file)
+		mediaID := apitest.UploadedImageID(t, r, session, workID, "gallery", one.file)
 		byName[one.name] = mediaID
 		choice := ""
 		if one.omitted {
@@ -391,10 +391,10 @@ func savedGallery(
 		}
 		items = append(items, `{"mediaId":"`+mediaID+`","name":"`+one.name+`"`+choice+`}`)
 	}
-	block := apitest.AddedBlock(t, apitest.AddBlock(t, r, session, assetID, "gallery", "image_set"))
+	block := apitest.AddedBlock(t, apitest.AddBlock(t, r, session, workID, "gallery", "image_set"))
 	body := apitest.EditableBlock(block)
 	body.Elements[0].Content = json.RawMessage(`{"images":[` + strings.Join(items, ",") + `]}`)
-	if saved := apitest.SaveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
+	if saved := apitest.SaveBlock(t, r, session, workID, block.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save the gallery: %d %s", saved.Code, saved.Body.String())
 	}
 	return byName

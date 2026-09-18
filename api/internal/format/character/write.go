@@ -21,10 +21,10 @@ import (
 )
 
 const (
-	v2SpecVersion   = "2.0"
-	v3SpecVersion   = "3.0"
-	dialogueStart   = "<START>"
-	defaultAssetURI = "ccdefault:"
+	v2SpecVersion  = "2.0"
+	v3SpecVersion  = "3.0"
+	dialogueStart  = "<START>"
+	defaultFileURI = "ccdefault:"
 )
 
 var v3OnlyKeys = []string{
@@ -32,25 +32,25 @@ var v3OnlyKeys = []string{
 	"modification_date", "source", "creator_notes_multilingual",
 }
 
-func (CCv2Module) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	return writeCard(asset, V2)
+func (CCv2Module) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+	return writeCard(work, V2)
 }
 
-func (CCv3Module) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	return writeCard(asset, V3)
+func (CCv3Module) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+	return writeCard(work, V3)
 }
 
-func (CharXModule) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	return writeCharX(asset)
+func (CharXModule) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+	return writeCharX(work)
 }
 
-func writeCard(asset format.ExportAsset, formatID string) (format.Artifact, error) {
-	picture := embeddablePicture(asset)
-	body, entries := cardFields(asset, formatID)
+func writeCard(work format.ExportWork, formatID string) (format.Artifact, error) {
+	picture := embeddablePicture(work)
+	body, entries := cardFields(work, formatID)
 	if formatID != V2 {
-		body["assets"] = inlineAssets(asset, picture != nil)
+		body["assets"] = inlineFiles(work, picture != nil)
 	}
-	if err := RestorePreserved(body, entries, asset.Preserved); err != nil {
+	if err := RestorePreserved(body, entries, work.Preserved); err != nil {
 		return format.Artifact{}, err
 	}
 	if formatID == V2 {
@@ -117,11 +117,11 @@ func withLegacyFields(card []byte, body map[string]json.RawMessage) ([]byte, err
 	return written, nil
 }
 
-func writeCharX(asset format.ExportAsset) (format.Artifact, error) {
-	body, entries := cardFields(asset, CharX)
-	files, records := archivedAssets(asset)
+func writeCharX(work format.ExportWork) (format.Artifact, error) {
+	body, entries := cardFields(work, CharX)
+	files, records := archivedFiles(work)
 	body["assets"] = records
-	if err := RestorePreserved(body, entries, asset.Preserved); err != nil {
+	if err := RestorePreserved(body, entries, work.Preserved); err != nil {
 		return format.Artifact{}, err
 	}
 	card, err := marshalCard(V3, body)
@@ -134,7 +134,7 @@ func writeCharX(asset format.ExportAsset) (format.Artifact, error) {
 	if err := writeArchiveFile(archive, cardEntry, card); err != nil {
 		return format.Artifact{}, err
 	}
-	for _, file := range slices.Concat(files, archivedMemberFiles(asset.Preserved, files)) {
+	for _, file := range slices.Concat(files, archivedMemberFiles(work.Preserved, files)) {
 		if err := writeArchiveFile(archive, file.path, file.data); err != nil {
 			return format.Artifact{}, err
 		}
@@ -208,43 +208,43 @@ func chunkName(formatID string) string {
 }
 
 func cardFields(
-	asset format.ExportAsset,
+	work format.ExportWork,
 	formatID string,
 ) (map[string]json.RawMessage, []block.Entry) {
-	greetings := textItems(asset, block.RoleGreetings)
+	greetings := textItems(work, block.RoleGreetings)
 	first := ""
 	if len(greetings) > 0 {
 		first = greetings[0].Text
 	}
 	body := map[string]json.RawMessage{
-		"name":                      keys.Must(asset.Header.Name),
-		"description":               keys.Must(asset.Text(block.RoleDescription)),
-		"personality":               keys.Must(asset.Text(block.RolePersonality)),
-		"scenario":                  keys.Must(asset.Text(block.RoleScenario)),
+		"name":                      keys.Must(work.Header.Name),
+		"description":               keys.Must(work.Text(block.RoleDescription)),
+		"personality":               keys.Must(work.Text(block.RolePersonality)),
+		"scenario":                  keys.Must(work.Text(block.RoleScenario)),
 		"first_mes":                 keys.Must(first),
 		"alternate_greetings":       keys.Must(textsOf(greetings[min(1, len(greetings)):])),
-		"mes_example":               keys.Must(dialogueText(asset)),
-		"system_prompt":             keys.Must(asset.Text(block.RoleSystemPrompt)),
-		"post_history_instructions": keys.Must(asset.Text(block.RolePostHistoryInstructions)),
-		"creator_notes":             keys.Must(asset.Text(block.RoleCreatorNotes)),
-		"creator":                   keys.Must(asset.Header.CreditedAuthor),
-		"character_version":         keys.Must(asset.Header.AssetVersion),
+		"mes_example":               keys.Must(dialogueText(work)),
+		"system_prompt":             keys.Must(work.Text(block.RoleSystemPrompt)),
+		"post_history_instructions": keys.Must(work.Text(block.RolePostHistoryInstructions)),
+		"creator_notes":             keys.Must(work.Text(block.RoleCreatorNotes)),
+		"creator":                   keys.Must(work.Header.CreditedAuthor),
+		"character_version":         keys.Must(work.Header.WorkVersion),
 	}
 	if formatID != V2 {
-		body["nickname"] = keys.Must(asset.Header.Nickname)
+		body["nickname"] = keys.Must(work.Header.Nickname)
 		body["group_only_greetings"] = keys.Must(
-			textsOf(textItems(asset, block.RoleGroupGreetings)),
+			textsOf(textItems(work, block.RoleGroupGreetings)),
 		)
 	}
-	entries := bookEntries(asset)
+	entries := bookEntries(work)
 	if len(entries) > 0 {
 		body[bookKey] = writtenBook(entries)
 	}
 	return body, entries
 }
 
-func textItems(asset format.ExportAsset, role block.Role) []block.TextItem {
-	content, ok := asset.Content(role)
+func textItems(work format.ExportWork, role block.Role) []block.TextItem {
+	content, ok := work.Content(role)
 	if !ok {
 		return nil
 	}
@@ -263,8 +263,8 @@ func textsOf(items []block.TextItem) []string {
 	return texts
 }
 
-func dialogueText(asset format.ExportAsset) string {
-	content, ok := asset.Content(block.RoleExampleDialogue)
+func dialogueText(work format.ExportWork) string {
+	content, ok := work.Content(block.RoleExampleDialogue)
 	if !ok {
 		return ""
 	}
@@ -284,8 +284,8 @@ func dialogueText(asset format.ExportAsset) string {
 	return strings.Join(lines, "\n")
 }
 
-func bookEntries(asset format.ExportAsset) []block.Entry {
-	content, ok := asset.Content(block.RoleLorebookEntries)
+func bookEntries(work format.ExportWork) []block.Entry {
+	content, ok := work.Content(block.RoleLorebookEntries)
 	if !ok {
 		return nil
 	}
@@ -300,7 +300,7 @@ func writtenBook(entries []block.Entry) json.RawMessage {
 	return keys.Must(map[string]any{"entries": book.Write(entries)})
 }
 
-type cardAssetRecord struct {
+type cardFileRecord struct {
 	Type string `json:"type"`
 	URI  string `json:"uri"`
 	Name string `json:"name"`
@@ -312,40 +312,40 @@ type archivedFile struct {
 	data []byte
 }
 
-func inlineAssets(asset format.ExportAsset, embedded bool) json.RawMessage {
-	records := make([]cardAssetRecord, 0)
-	for _, picture := range exportedPictures(asset) {
+func inlineFiles(work format.ExportWork, embedded bool) json.RawMessage {
+	records := make([]cardFileRecord, 0)
+	for _, picture := range exportedPictures(work) {
 		uri := dataURI(picture.media.MediaType, picture.media.Data)
-		if picture.assetType == iconAssetType && embedded {
-			uri = defaultAssetURI
+		if picture.workType == iconFileType && embedded {
+			uri = defaultFileURI
 		}
-		records = append(records, cardAssetRecord{
-			Type: picture.assetType, URI: uri, Name: picture.name,
+		records = append(records, cardFileRecord{
+			Type: picture.workType, URI: uri, Name: picture.name,
 			Ext: mediaExtension(picture.media.MediaType),
 		})
 	}
 	return keys.Must(records)
 }
 
-func archivedAssets(asset format.ExportAsset) ([]archivedFile, json.RawMessage) {
+func archivedFiles(work format.ExportWork) ([]archivedFile, json.RawMessage) {
 	files := make([]archivedFile, 0)
-	records := make([]cardAssetRecord, 0)
+	records := make([]cardFileRecord, 0)
 	taken := make(map[string]bool)
-	for index, picture := range exportedPictures(asset) {
+	for index, picture := range exportedPictures(work) {
 		extension := mediaExtension(picture.media.MediaType)
 		entry := path.Join(
-			archiveFolder(picture.assetType), fmt.Sprintf("%d.%s", index+1, extension),
+			archiveFolder(picture.workType), fmt.Sprintf("%d.%s", index+1, extension),
 		)
-		if picture.assetType == iconAssetType && index == 0 {
-			entry = path.Join(archiveFolder(iconAssetType), "main."+extension)
+		if picture.workType == iconFileType && index == 0 {
+			entry = path.Join(archiveFolder(iconFileType), "main."+extension)
 		}
 		if taken[entry] {
 			continue
 		}
 		taken[entry] = true
 		files = append(files, archivedFile{path: entry, data: picture.media.Data})
-		records = append(records, cardAssetRecord{
-			Type: picture.assetType, URI: embeddedPrefix + entry,
+		records = append(records, cardFileRecord{
+			Type: picture.workType, URI: embeddedPrefix + entry,
 			Name: picture.name, Ext: extension,
 		})
 	}
@@ -353,19 +353,19 @@ func archivedAssets(asset format.ExportAsset) ([]archivedFile, json.RawMessage) 
 }
 
 const (
-	iconAssetType       = "icon"
-	emotionAssetType    = "emotion"
-	galleryAssetType    = "x_gallery"
-	mainIconAssetName   = "main"
+	iconFileType        = "icon"
+	emotionFileType     = "emotion"
+	galleryFileType     = "x_gallery"
+	mainIconFileName    = "main"
 	fallbackPictureName = "image"
 )
 
 // archiveFolder puts each picture where the apps that read a CharX look for it.
-func archiveFolder(assetType string) string {
-	switch assetType {
-	case iconAssetType:
+func archiveFolder(workType string) string {
+	switch workType {
+	case iconFileType:
 		return "assets/icon/image"
-	case emotionAssetType:
+	case emotionFileType:
 		return "assets/emotion/image"
 	default:
 		return "assets/other/image"
@@ -373,26 +373,26 @@ func archiveFolder(assetType string) string {
 }
 
 type exportedPicture struct {
-	assetType string
-	name      string
-	media     format.ExportMedia
+	workType string
+	name     string
+	media    format.ExportMedia
 }
 
-func exportedPictures(asset format.ExportAsset) []exportedPicture {
+func exportedPictures(work format.ExportWork) []exportedPicture {
 	pictures := make([]exportedPicture, 0)
-	if asset.Cover != nil {
+	if work.Cover != nil {
 		pictures = append(pictures, exportedPicture{
-			assetType: iconAssetType, name: mainIconAssetName, media: *asset.Cover,
+			workType: iconFileType, name: mainIconFileName, media: *work.Cover,
 		})
 	}
 	for _, role := range []struct {
-		role      block.Role
-		assetType string
+		role     block.Role
+		workType string
 	}{
-		{block.RoleExpressions, emotionAssetType},
-		{block.RoleGallery, galleryAssetType},
+		{block.RoleExpressions, emotionFileType},
+		{block.RoleGallery, galleryFileType},
 	} {
-		for _, element := range asset.Elements {
+		for _, element := range work.Elements {
 			if element.Role != role.role {
 				continue
 			}
@@ -401,14 +401,14 @@ func exportedPictures(asset format.ExportAsset) []exportedPicture {
 				continue
 			}
 			for index, image := range set.Images {
-				found, held := asset.Images[image.MediaID]
+				found, held := work.Images[image.MediaID]
 				if !held {
 					continue
 				}
 				pictures = append(pictures, exportedPicture{
-					assetType: role.assetType,
-					name:      pictureName(image.Name, index),
-					media:     found,
+					workType: role.workType,
+					name:     pictureName(image.Name, index),
+					media:    found,
 				})
 			}
 		}
@@ -423,11 +423,11 @@ func pictureName(name string, index int) string {
 	return fmt.Sprintf("%s-%d", fallbackPictureName, index+1)
 }
 
-func embeddablePicture(asset format.ExportAsset) *format.ExportMedia {
-	if asset.Cover == nil || !bytes.HasPrefix(asset.Cover.Data, pngSignature) {
+func embeddablePicture(work format.ExportWork) *format.ExportMedia {
+	if work.Cover == nil || !bytes.HasPrefix(work.Cover.Data, pngSignature) {
 		return nil
 	}
-	return asset.Cover
+	return work.Cover
 }
 
 func dataURI(mediaType string, data []byte) string {
@@ -461,13 +461,13 @@ type cardCopy struct {
 
 func embedCardsInPNG(source []byte, copies []cardCopy) ([]byte, error) {
 	if !bytes.HasPrefix(source, pngSignature) {
-		return nil, errors.New("the asset's picture is not a PNG")
+		return nil, errors.New("the work's picture is not a PNG")
 	}
 	var output bytes.Buffer
 	output.Write(source[:8])
 	inserted := false
-	err := visitPNGChunks(source, func(kind string, data, raw []byte) error {
-		if kind == "IEND" && !inserted {
+	err := visitPNGChunks(source, func(chunkType string, data, raw []byte) error {
+		if chunkType == "IEND" && !inserted {
 			for _, copied := range copies {
 				encoded := base64.StdEncoding.EncodeToString(copied.card)
 				output.Write(makePNGChunk("tEXt", slices.Concat(
@@ -476,7 +476,7 @@ func embedCardsInPNG(source []byte, copies []cardCopy) ([]byte, error) {
 			}
 			inserted = true
 		}
-		if !isCardChunk(kind, data) {
+		if !isCardChunk(chunkType, data) {
 			output.Write(raw)
 		}
 		return nil
@@ -485,29 +485,29 @@ func embedCardsInPNG(source []byte, copies []cardCopy) ([]byte, error) {
 		return nil, err
 	}
 	if !inserted {
-		return nil, errors.New("the asset's picture has no IEND chunk")
+		return nil, errors.New("the work's picture has no IEND chunk")
 	}
 	return output.Bytes(), nil
 }
 
-func isCardChunk(kind string, data []byte) bool {
-	if kind != "tEXt" {
+func isCardChunk(chunkType string, data []byte) bool {
+	if chunkType != "tEXt" {
 		return false
 	}
 	keyword, _, found := bytes.Cut(data, []byte{0})
 	return found && (string(keyword) == "chara" || string(keyword) == "ccv3")
 }
 
-func makePNGChunk(kind string, data []byte) []byte {
+func makePNGChunk(chunkType string, data []byte) []byte {
 	chunk := make([]byte, 12+len(data))
 	binary.BigEndian.PutUint32(chunk[:4], uint32(len(data)))
-	copy(chunk[4:8], kind)
+	copy(chunk[4:8], chunkType)
 	copy(chunk[8:], data)
 	binary.BigEndian.PutUint32(chunk[8+len(data):], crc32.ChecksumIEEE(chunk[4:8+len(data)]))
 	return chunk
 }
 
-func visitPNGChunks(source []byte, visit func(kind string, data, raw []byte) error) error {
+func visitPNGChunks(source []byte, visit func(chunkType string, data, raw []byte) error) error {
 	if !bytes.HasPrefix(source, pngSignature) {
 		return errors.New("file is not a PNG")
 	}

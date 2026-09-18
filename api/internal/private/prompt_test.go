@@ -34,12 +34,12 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	if got := apitest.SaveIdentity(t, router, session, started.ID, `{"name":"Linked preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	unsupported := apitest.LinkDeviceInstance(t, router, session, "Other app", "tablet", []string{apitest.ReceiveScope})
 	apitest.DeclareTargets(t, router, unsupported.AccessToken, []string{"portable-card-v1"})
-	for _, state := range apitest.AssetInstances(t, router, session, started.ID).Items {
+	for _, state := range apitest.WorkInstances(t, router, session, started.ID).Items {
 		if state.InstanceID == unsupported.Instance.ID && state.CanReceive {
 			t.Fatal("an instance without an allowed target was offered sealed content")
 		}
@@ -108,7 +108,7 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 	if got := apitest.SaveIdentity(t, router, session, started.ID, `{"name":"Reader-safe preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
@@ -157,7 +157,7 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 	}
 }
 
-func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *testing.T) {
+func TestProtectedWorksRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *testing.T) {
 	t.Parallel()
 	router, session, pool := harness.NewLinkingRouter(t)
 	started := apitest.StartPreset(t, router, session, "lumiverse")
@@ -178,7 +178,7 @@ func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *tes
 	if got := apitest.SaveIdentity(t, router, session, started.ID, `{"name":"No ordinary exports","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
@@ -204,7 +204,7 @@ func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *tes
 
 	var events int
 	if err := pool.QueryRow(t.Context(),
-		`select count(*) from download_events where asset_id = $1`, started.ID,
+		`select count(*) from download_events where work_id = $1`, started.ID,
 	).Scan(&events); err != nil {
 		t.Fatalf("count refused download events: %v", err)
 	}
@@ -215,19 +215,19 @@ func TestProtectedAssetsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *tes
 
 func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) {
 	t.Parallel()
-	router, ownerSession, assets, pool := harness.NewVerifiedIngestRouterWithPool(
+	router, ownerSession, works, pool := harness.NewVerifiedIngestRouterWithPool(
 		t, apitest.LumiverseRegistry(t),
 	)
 	metadata := apitest.ExampleMetadata("Protected original")
 	metadata["filename"] = "protected-original.json"
-	finished := apitest.UploadAndFinish(t, router, ownerSession, assets, metadata, []byte(apitest.KeyedSealedPreset))
-	assetID := apitest.AssetIDFromIngest(t, finished)
+	finished := apitest.UploadAndFinish(t, router, ownerSession, works, metadata, []byte(apitest.KeyedSealedPreset))
+	workID := apitest.WorkIDFromIngest(t, finished)
 	readerSession := apitest.SignUp(t, router, "original-reader@example.com", "original.reader")
 
 	for name, request := range map[string]*http.Request{
-		"signed out": httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil),
+		"signed out": httptest.NewRequest(http.MethodGet, "/download/"+workID, nil),
 		"non-owner": apitest.Authorized(
-			httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil), readerSession,
+			httptest.NewRequest(http.MethodGet, "/download/"+workID, nil), readerSession,
 		),
 	} {
 		response := apitest.Send(t, router, request)
@@ -239,7 +239,7 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 	}
 
 	owner := apitest.Send(t, router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil), ownerSession,
+		httptest.NewRequest(http.MethodGet, "/download/"+workID, nil), ownerSession,
 	))
 	if owner.Code != http.StatusOK || owner.Header().Get("X-Accel-Redirect") == "" || owner.Body.Len() != 0 {
 		t.Fatalf("owner recovery response = %d, headers %v, body %s",
@@ -250,8 +250,8 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 	var class string
 	if err := pool.QueryRow(t.Context(), `
 		select count(*), coalesce(max(authorization_class), '')
-		  from download_events where asset_id = $1
-	`, assetID).Scan(&events, &class); err != nil {
+		  from download_events where work_id = $1
+	`, workID).Scan(&events, &class); err != nil {
 		t.Fatalf("read protected source events: %v", err)
 	}
 	if events != 1 || class != "owner" {
@@ -261,7 +261,7 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 
 func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testing.T) {
 	t.Parallel()
-	_, router, session, assets, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
+	_, router, session, works, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "preset_core")
 	core := apitest.EditableBlock(coreBlock)
@@ -287,18 +287,18 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("replacement upload status = %d, want 202: %s", accepted.Code, accepted.Body.String())
 	}
-	if processed, err := apitest.Uploads(assets).ProcessNextIngest(t.Context()); err != nil || !processed {
+	if processed, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil || !processed {
 		t.Fatalf("process replacement = %t, %v; want true, nil", processed, err)
 	}
 	apitest.AcceptReplacementPreview(t, router, session, started.ID, accepted.Header().Get("Location"), true)
-	updated := apitest.PollIngestAsset(t, router, session, accepted.Header().Get("Location"))
+	updated := apitest.PollIngestWork(t, router, session, accepted.Header().Get("Location"))
 	if updated.ID != started.ID {
 		t.Fatalf("replacement asset = %s, want %s", updated.ID, started.ID)
 	}
 	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after replacement: %d payloads and %d policy rows, want none", payloads, policies)
 	}
-	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
 		t.Fatalf("replacement kept protected delivery policy: linked install only %t, apps %v",
 			owner.LinkedInstallOnly, owner.AllowedApps)

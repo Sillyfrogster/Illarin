@@ -39,44 +39,44 @@ const CardWithThirdPartyNamespaces = `{
 	}
 }`
 
-func GiveExpressions(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
+func GiveExpressions(t *testing.T, r http.Handler, session *http.Cookie, workID string) {
 	t.Helper()
-	GivePictures(t, r, session, assetID, "expression", "expressions")
+	GivePictures(t, r, session, workID, "expression", "expressions")
 }
 
 func GivePictures(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID, mediaRole, definition string,
+	workID, mediaRole, definition string,
 ) {
 	t.Helper()
-	mediaID := UploadedImageID(t, r, session, assetID, mediaRole, PNG(t, 64, 64))
-	block := AddedBlock(t, AddBlock(t, r, session, assetID, definition, "image_set"))
+	mediaID := UploadedImageID(t, r, session, workID, mediaRole, PNG(t, 64, 64))
+	block := AddedBlock(t, AddBlock(t, r, session, workID, definition, "image_set"))
 	body := EditableBlock(block)
 	body.Elements[0].Content = json.RawMessage(
 		`{"images":[{"mediaId":"` + mediaID + `","name":"happy"}]}`,
 	)
-	if saved := SaveBlock(t, r, session, assetID, block.ID, body); saved.Code != http.StatusOK {
+	if saved := SaveBlock(t, r, session, workID, block.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save the %s block: %d %s", definition, saved.Code, saved.Body.String())
 	}
 }
 
-func PublishCharacter(t *testing.T, r http.Handler, session *http.Cookie, assetID string) {
+func PublishCharacter(t *testing.T, r http.Handler, session *http.Cookie, workID string) {
 	t.Helper()
-	if got := SaveIdentity(t, r, session, assetID,
+	if got := SaveIdentity(t, r, session, workID,
 		`{"name":"Ana","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity: %d %s", got.Code, got.Body.String())
 	}
-	if got := PublishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+	if got := PublishWork(t, r, session, workID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
 }
 
 func (h Harness) NewCharacterIngestRouter(t *testing.T) (*gin.Engine, *http.Cookie, *work.Service) {
 	t.Helper()
-	router, session, assets, _ := h.NewCharacterIngestRouterWithPool(t)
-	return router, session, assets
+	router, session, works, _ := h.NewCharacterIngestRouterWithPool(t)
+	return router, session, works
 }
 
 func (h Harness) NewCharacterIngestRouterWithPool(
@@ -92,12 +92,12 @@ func (h Harness) NewCharacterIngestRouterWithPool(
 	return h.NewVerifiedIngestRouterWithPool(t, registry)
 }
 
-func ProjectionComputedAt(t *testing.T, pool *pgxpool.Pool, assetID string) time.Time {
+func SummaryComputedAt(t *testing.T, pool *pgxpool.Pool, workID string) time.Time {
 	t.Helper()
 	var computedAt time.Time
 	if err := pool.QueryRow(context.Background(), `
-		select export_computed_at from asset_projections where asset_id = $1
-	`, assetID).Scan(&computedAt); err != nil {
+		select export_computed_at from work_summaries where work_id = $1
+	`, workID).Scan(&computedAt); err != nil {
 		t.Fatalf("read the export projection: %v", err)
 	}
 	return computedAt
@@ -111,14 +111,14 @@ func UploadedCharacterID(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assets *work.Service,
+	works *work.Service,
 	card string,
 ) string {
 	t.Helper()
 	metadata := ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
 	metadata["_keepDraft"] = true
-	return AssetIDFromIngest(t, UploadAndFinish(t, r, session, assets, metadata, []byte(card)))
+	return WorkIDFromIngest(t, UploadAndFinish(t, r, session, works, metadata, []byte(card)))
 }
 
 func NamespacesOf(t *testing.T, raw json.RawMessage) map[string]json.RawMessage {

@@ -416,7 +416,7 @@ var shared = []Definition{
 	},
 }
 
-var catalogs = map[string][]Definition{
+var definitions = map[string][]Definition{
 	"character": character,
 	"lorebook":  lorebook,
 	"preset":    preset,
@@ -425,24 +425,24 @@ var catalogs = map[string][]Definition{
 	"extension": extension,
 }
 
-func Catalog(kind string) ([]Definition, bool) {
-	own, ok := catalogs[kind]
+func Definitions(workType string) ([]Definition, bool) {
+	own, ok := definitions[workType]
 	if !ok {
 		return nil, false
 	}
 	return slices.Concat(own, shared), true
 }
 
-func Kinds() []string {
-	kinds := make([]string, 0, len(catalogs))
-	for kind := range catalogs {
-		kinds = append(kinds, kind)
+func Types() []string {
+	types := make([]string, 0, len(definitions))
+	for workType := range definitions {
+		types = append(types, workType)
 	}
-	return kinds
+	return types
 }
 
-func (id DefinitionID) Definition(kind string) (Definition, bool) {
-	definitions, ok := Catalog(kind)
+func (id DefinitionID) Definition(workType string) (Definition, bool) {
+	definitions, ok := Definitions(workType)
 	if !ok {
 		return Definition{}, false
 	}

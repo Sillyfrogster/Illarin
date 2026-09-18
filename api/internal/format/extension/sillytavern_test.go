@@ -28,7 +28,7 @@ const tavernManifest = `{
 func TestSillyTavernDeclaresAWriterThatKeepsTheUpload(t *testing.T) {
 	t.Parallel()
 	declaration := SillyTavern{}.Declaration()
-	if declaration.ID != SillyTavernID || declaration.Kind != Kind || !declaration.KeepsUpload {
+	if declaration.ID != SillyTavernID || declaration.Type != Type || !declaration.KeepsUpload {
 		t.Fatalf("declaration = %+v, want an extension writer that keeps the upload", declaration)
 	}
 	if err := format.ValidateDeclaration(declaration); err != nil {
@@ -42,11 +42,11 @@ func TestSillyTavernReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T)
 		"manifest.json": tavernManifest, "dist/index.js": "export {}",
 	}))
 
-	if parsed.Kind != Kind || parsed.Format != SillyTavernID {
-		t.Fatalf("parsed kind and format = %q %q", parsed.Kind, parsed.Format)
+	if parsed.Type != Type || parsed.Format != SillyTavernID {
+		t.Fatalf("parsed kind and format = %q %q", parsed.Type, parsed.Format)
 	}
 	want := format.Header{
-		Name: "Custom Sliders", AssetVersion: "1.0.0", CreditedAuthor: "A developer",
+		Name: "Custom Sliders", WorkVersion: "1.0.0", CreditedAuthor: "A developer",
 		Blurb: "Sliders for any request parameter.", Identifier: "Extension-CustomSliders",
 	}
 	if parsed.Header != want {
@@ -86,7 +86,7 @@ func TestSillyTavernLeavesOutWhatTheManifestDoesNotSay(t *testing.T) {
 		"manifest.json": `{"display_name":"Bare","js":"index.js","author":"A developer"}`,
 		"index.js":      "",
 	}))
-	if parsed.Header.Identifier != "" || parsed.Header.AssetVersion != "" {
+	if parsed.Header.Identifier != "" || parsed.Header.WorkVersion != "" {
 		t.Errorf("header = %+v, want no identifier or version", parsed.Header)
 	}
 	roles := map[block.Role]bool{}
@@ -217,7 +217,7 @@ func TestSillyTavernSaysWhereAMisplacedManifestIs(t *testing.T) {
 func TestSillyTavernWritesTheUploadedArchiveUnchanged(t *testing.T) {
 	t.Parallel()
 	upload := spindleZip(t, map[string]string{"manifest.json": tavernManifest, "dist/index.js": ""})
-	written, err := SillyTavern{}.Write(context.Background(), format.ExportAsset{Kind: Kind, Upload: upload})
+	written, err := SillyTavern{}.Write(context.Background(), format.ExportWork{Type: Type, Upload: upload})
 	if err != nil {
 		t.Fatalf("write: %v", err)
 	}

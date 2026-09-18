@@ -19,13 +19,13 @@ type sent struct {
 	ID         uuid.UUID  `json:"id"`
 	Type       string     `json:"type"`
 	OccurredAt time.Time  `json:"occurredAt"`
-	Asset      sentAsset  `json:"asset"`
+	Work       sentWork   `json:"asset"`
 	Update     sentUpdate `json:"update"`
 }
 
-type sentAsset struct {
+type sentWork struct {
 	ID   uuid.UUID `json:"id"`
-	Kind string    `json:"kind"`
+	Type string    `json:"kind"`
 	Name string    `json:"name"`
 	URL  string    `json:"url"`
 }
@@ -41,10 +41,10 @@ type sentUpdate struct {
 }
 
 type announced struct {
-	owner     uuid.UUID
-	name      string
-	kind      string
-	discovery string
+	owner           uuid.UUID
+	name            string
+	destinationType string
+	visibility      string
 }
 
 // Announce queues a published version for its chosen integrations
@@ -56,13 +56,13 @@ func (s *Service) Announce(
 ) error {
 	var held announced
 	err := tx.QueryRow(ctx, `
-		select owner_id, name, kind, discovery from assets where id = $1
-	`, published.AssetID).Scan(&held.owner, &held.name, &held.kind, &held.discovery)
+		select owner_id, name, type, visibility from works where id = $1
+	`, published.WorkID).Scan(&held.owner, &held.name, &held.destinationType, &held.visibility)
 	if err != nil {
-		return fmt.Errorf("read the asset being announced: %w", err)
+		return fmt.Errorf("read the work being announced: %w", err)
 	}
-	unlisted := held.discovery == string(work.DiscoveryUnlisted)
-	picked, err := s.pick(ctx, tx, held.owner, published.AssetID, unlisted, choice)
+	unlisted := held.visibility == string(work.VisibilityUnlisted)
+	picked, err := s.pick(ctx, tx, held.owner, published.WorkID, unlisted, choice)
 	if err != nil || len(picked) == 0 {
 		return err
 	}
@@ -70,35 +70,35 @@ func (s *Service) Announce(
 	occurred := s.now().UTC()
 	body, err := json.Marshal(sent{
 		ID: eventID, Type: EventUpdatePublished, OccurredAt: occurred,
-		Asset: sentAsset{
-			ID: published.AssetID, Kind: held.kind, Name: held.name,
-			URL: s.assetAddress(published.AssetID),
+		Work: sentWork{
+			ID: published.WorkID, Type: held.destinationType, Name: held.name,
+			URL: s.workAddress(published.WorkID),
 		},
 		Update: sentUpdate{
 			ID: published.ID, Number: published.Number, VersionLabel: published.VersionLabel,
 			Summary: published.Summary, RecordedAt: published.RecordedAt,
 			ContentChanged: published.ContentChanged,
-			HistoryURL:     s.historyAddress(published.AssetID, published.Number),
+			HistoryURL:     s.historyAddress(published.WorkID, published.Number),
 		},
 	})
 	if err != nil {
 		return fmt.Errorf("write the update announcement: %w", err)
 	}
 	_, err = tx.Exec(ctx, `
-		insert into asset_update_events
-		       (id, asset_id, snapshot_id, type, occurred_at, unlisted_consent, payload)
+		insert into work_update_events
+		       (id, work_id, snapshot_id, type, occurred_at, unlisted_consent, payload)
 		values ($1, $2, $3, $4, $5, $6, $7)
-	`, eventID, published.AssetID, published.ID, EventUpdatePublished, occurred,
+	`, eventID, published.WorkID, published.ID, EventUpdatePublished, occurred,
 		choice.AnnounceUnlisted, body)
 	if err != nil {
 		return fmt.Errorf("record the update announcement: %w", err)
 	}
 	for _, one := range picked {
 		_, err := tx.Exec(ctx, `
-			insert into asset_update_deliveries
-			       (id, event_id, destination_id, destination_name, destination_kind, due_at)
+			insert into work_update_deliveries
+			       (id, event_id, destination_id, destination_name, destination_type, due_at)
 			values ($1, $2, $3, $4, $5, $6)
-		`, uuid.New(), eventID, one.ID, one.Name, one.Kind, occurred)
+		`, uuid.New(), eventID, one.ID, one.Name, one.Type, occurred)
 		if err != nil {
 			return fmt.Errorf("keep the announcement work: %w", err)
 		}
@@ -109,13 +109,13 @@ func (s *Service) Announce(
 type picked struct {
 	ID   uuid.UUID
 	Name string
-	Kind string
+	Type string
 }
 
 func (s *Service) pick(
 	ctx context.Context,
 	tx pgx.Tx,
-	owner, assetID uuid.UUID,
+	owner, workID uuid.UUID,
 	unlisted bool,
 	choice version.UpdateAnnouncement,
 ) ([]picked, error) {
@@ -124,20 +124,20 @@ func (s *Service) pick(
 			return nil, nil
 		}
 		return collectPicked(tx.Query(ctx, `
-			select destination.id, destination.name, destination.kind
-			  from asset_update_destination_defaults chosen
-			  join asset_update_destinations destination on destination.id = chosen.destination_id
-			 where chosen.asset_id = $1 and destination.owner_id = $2 and destination.state = $3
+			select destination.id, destination.name, destination.type
+			  from work_update_destination_defaults chosen
+			  join work_update_destinations destination on destination.id = chosen.destination_id
+			 where chosen.work_id = $1 and destination.owner_id = $2 and destination.state = $3
 			 order by destination.name, destination.id
 			 for share of destination
-		`, assetID, owner, Active))
+		`, workID, owner, Active))
 	}
 	wanted := distinct(*choice.DestinationIDs)
 	if len(wanted) > 0 && unlisted && !choice.AnnounceUnlisted {
 		return nil, version.ErrUnlistedConsentRequired
 	}
 	found, err := collectPicked(tx.Query(ctx, `
-		select id, name, kind from asset_update_destinations
+		select id, name, type from work_update_destinations
 		 where owner_id = $1 and id = any($2::uuid[]) and state = $3
 		 order by name, id
 		 for share
@@ -148,21 +148,21 @@ func (s *Service) pick(
 	if len(found) != len(wanted) {
 		return nil, version.ErrUpdateDestinationIneligible
 	}
-	if err := remember(ctx, tx, assetID, wanted); err != nil {
+	if err := remember(ctx, tx, workID, wanted); err != nil {
 		return nil, err
 	}
 	return found, nil
 }
 
-func remember(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, ids []uuid.UUID) error {
-	_, err := tx.Exec(ctx, `delete from asset_update_destination_defaults where asset_id = $1`, assetID)
+func remember(ctx context.Context, tx pgx.Tx, workID uuid.UUID, ids []uuid.UUID) error {
+	_, err := tx.Exec(ctx, `delete from work_update_destination_defaults where work_id = $1`, workID)
 	if err != nil {
 		return fmt.Errorf("forget the remembered destinations: %w", err)
 	}
 	for _, id := range ids {
 		_, err := tx.Exec(ctx, `
-			insert into asset_update_destination_defaults (asset_id, destination_id) values ($1, $2)
-		`, assetID, id)
+			insert into work_update_destination_defaults (work_id, destination_id) values ($1, $2)
+		`, workID, id)
 		if err != nil {
 			return fmt.Errorf("remember a destination: %w", err)
 		}
@@ -191,7 +191,7 @@ func collectPicked(rows pgx.Rows, err error) ([]picked, error) {
 	found := make([]picked, 0, 4)
 	for rows.Next() {
 		var one picked
-		if err := rows.Scan(&one.ID, &one.Name, &one.Kind); err != nil {
+		if err := rows.Scan(&one.ID, &one.Name, &one.Type); err != nil {
 			return nil, fmt.Errorf("read one destination an update goes to: %w", err)
 		}
 		found = append(found, one)
@@ -202,10 +202,10 @@ func collectPicked(rows pgx.Rows, err error) ([]picked, error) {
 	return found, nil
 }
 
-func (s *Service) assetAddress(assetID uuid.UUID) string {
-	return s.site + "/a/" + assetID.String()
+func (s *Service) workAddress(workID uuid.UUID) string {
+	return s.site + "/a/" + workID.String()
 }
 
-func (s *Service) historyAddress(assetID uuid.UUID, number int) string {
-	return s.assetAddress(assetID) + "/history#version-" + strconv.Itoa(number)
+func (s *Service) historyAddress(workID uuid.UUID, number int) string {
+	return s.workAddress(workID) + "/history#version-" + strconv.Itoa(number)
 }

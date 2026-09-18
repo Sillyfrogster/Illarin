@@ -34,12 +34,12 @@ func losses(target apitest.DownloadTarget) []apitest.RoleVerdict {
 	return lost
 }
 
-func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
+func TestTheLossReportIsCheckedAgainstTheWorkAndNotTheFormat(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 
-	plain := apitest.DownloadMenu(t, r, session, assetID)
+	plain := apitest.DownloadMenu(t, r, session, workID)
 	if len(plain) != 3 {
 		t.Fatalf("menu = %+v, want all three character formats", plain)
 	}
@@ -47,9 +47,9 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 		t.Fatalf("CCv2 reported %+v for a card that has none of what it drops", lost)
 	}
 
-	apitest.GiveExpressions(t, r, session, assetID)
+	apitest.GiveExpressions(t, r, session, workID)
 
-	withImages := apitest.DownloadMenu(t, r, session, assetID)
+	withImages := apitest.DownloadMenu(t, r, session, workID)
 	lost := losses(targetLine(t, withImages, "chara_card_v2"))
 	if len(lost) != 1 || lost[0].Role != "expressions" || lost[0].Verdict != "dropped" {
 		t.Fatalf("CCv2 losses = %+v, want the expressions dropped", lost)
@@ -64,12 +64,12 @@ func TestTheLossReportIsCheckedAgainstTheAssetAndNotTheFormat(t *testing.T) {
 
 func TestTheRecommendationIsTheFormatWhoseImagesReachEveryApp(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	apitest.GiveExpressions(t, r, session, assetID)
-	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	apitest.GiveExpressions(t, r, session, workID)
+	apitest.GivePictures(t, r, session, workID, "gallery", "gallery")
 
-	menu := apitest.DownloadMenu(t, r, session, assetID)
+	menu := apitest.DownloadMenu(t, r, session, workID)
 	recommended := ""
 	for _, target := range menu {
 		if target.Recommended {
@@ -106,14 +106,14 @@ func roleVerdictNamed(t *testing.T, target apitest.DownloadTarget, role string) 
 
 func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	apitest.PublishCharacter(t, r, session, assetID)
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	apitest.PublishCharacter(t, r, session, workID)
 
 	seen := make(map[string]string)
 	for _, target := range []string{"chara_card_v2", "chara_card_v3", "charx"} {
 		download := apitest.Send(t, r, httptest.NewRequest(
-			http.MethodGet, "/download/"+assetID+"/"+target, nil,
+			http.MethodGet, "/download/"+workID+"/"+target, nil,
 		))
 		if download.Code != http.StatusOK {
 			t.Fatalf("%s status = %d: %s", target, download.Code, download.Body.String())
@@ -128,11 +128,11 @@ func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 
 func TestTheDownloadMenuReadsTheSameForItsOwnerAndAStranger(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	apitest.PublishCharacter(t, r, session, assetID)
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	apitest.PublishCharacter(t, r, session, workID)
 
-	owner, stranger := apitest.DownloadMenu(t, r, session, assetID), apitest.DownloadMenu(t, r, nil, assetID)
+	owner, stranger := apitest.DownloadMenu(t, r, session, workID), apitest.DownloadMenu(t, r, nil, workID)
 	if !json.Valid(mustJSON(t, owner)) || string(mustJSON(t, owner)) != string(mustJSON(t, stranger)) {
 		t.Fatalf("the owner reads %s and a reader reads %s",
 			mustJSON(t, owner), mustJSON(t, stranger))
@@ -141,10 +141,10 @@ func TestTheDownloadMenuReadsTheSameForItsOwnerAndAStranger(t *testing.T) {
 
 func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 
-	uploaded := apitest.FetchStartedAsset(t, r, session, assetID)
+	uploaded := apitest.FetchStartedWork(t, r, session, workID)
 	if uploaded.Original == nil {
 		t.Fatal("an uploaded card has no original upload group")
 	}
@@ -158,7 +158,7 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	}
 
 	built := apitest.StartCharacter(t, r, session)
-	fromNothing := apitest.FetchStartedAsset(t, r, session, built.ID)
+	fromNothing := apitest.FetchStartedWork(t, r, session, built.ID)
 	if fromNothing.Original != nil {
 		t.Fatalf("an asset built from nothing carries %+v", fromNothing.Original)
 	}
@@ -167,49 +167,49 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	}
 }
 
-func TestTheProjectionIsWrittenWithTheChangeAndPublishingComputesNothing(t *testing.T) {
+func TestTheSummaryIsWrittenWithTheChangeAndPublishingComputesNothing(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewCharacterIngestRouterWithPool(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
+	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 
-	before := apitest.ProjectionComputedAt(t, pool, assetID)
-	apitest.GiveExpressions(t, r, session, assetID)
-	afterEdit := apitest.ProjectionComputedAt(t, pool, assetID)
+	before := apitest.SummaryComputedAt(t, pool, workID)
+	apitest.GiveExpressions(t, r, session, workID)
+	afterEdit := apitest.SummaryComputedAt(t, pool, workID)
 	if !afterEdit.After(before) {
 		t.Fatal("editing a block left the export projection where it was")
 	}
 
-	apitest.PublishCharacter(t, r, session, assetID)
-	if afterPublish := apitest.ProjectionComputedAt(t, pool, assetID); !afterPublish.Equal(afterEdit) {
+	apitest.PublishCharacter(t, r, session, workID)
+	if afterPublish := apitest.SummaryComputedAt(t, pool, workID); !afterPublish.Equal(afterEdit) {
 		t.Fatal("publishing recomputed the export projection")
 	}
 }
 
 func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewCharacterIngestRouterWithPool(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	apitest.GiveExpressions(t, r, session, assetID)
-	apitest.PublishCharacter(t, r, session, assetID)
+	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	apitest.GiveExpressions(t, r, session, workID)
+	apitest.PublishCharacter(t, r, session, workID)
 
-	before := apitest.ProjectionComputedAt(t, pool, assetID)
-	page := apitest.FetchStartedAsset(t, r, session, assetID)
+	before := apitest.SummaryComputedAt(t, pool, workID)
+	page := apitest.FetchStartedWork(t, r, session, workID)
 	arrangement := make([]apitest.ArrangedBlock, 0, len(page.Blocks))
 	for _, holder := range page.Blocks {
 		arrangement = append(arrangement, apitest.ArrangedBlock{
 			ID: holder.ID, Hidden: holder.Definition == "expressions", Width: holder.Width,
 		})
 	}
-	arranged := apitest.ArrangeBlocks(t, r, session, assetID, arrangement)
+	arranged := apitest.ArrangeBlocks(t, r, session, workID, arrangement)
 	if arranged.Code != http.StatusOK {
 		t.Fatalf("hide the expressions: %d %s", arranged.Code, arranged.Body.String())
 	}
-	if after := apitest.ProjectionComputedAt(t, pool, assetID); !after.Equal(before) {
+	if after := apitest.SummaryComputedAt(t, pool, workID); !after.Equal(before) {
 		t.Fatal("hiding a block moved the export half of the projection")
 	}
 
-	export, err := download.NewService(assets.Pool(), assets).OpenExport(
-		context.Background(), uuid.MustParse(assetID), nil, "chara_card_v3", nil,
+	export, err := download.NewService(works.Pool(), works).OpenExport(
+		context.Background(), uuid.MustParse(workID), nil, "chara_card_v3", nil,
 	)
 	if err != nil {
 		t.Fatalf("export a card with a hidden block: %v", err)
@@ -221,11 +221,11 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 
 func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	apitest.GivePictures(t, r, session, workID, "gallery", "gallery")
 
-	offered := appTargetsFor(t, r, session, assetID)
+	offered := appTargetsFor(t, r, session, workID)
 	if len(offered) == 0 {
 		t.Fatal("no application was offered a format")
 	}
@@ -238,11 +238,11 @@ func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
 
 func TestAnAppIsNamedBesideTheDestinationItShows(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
-	assetID := apitest.UploadedCharacterID(t, r, session, assets, apitest.PlainCard)
-	apitest.GivePictures(t, r, session, assetID, "gallery", "gallery")
+	r, session, works := harness.NewCharacterIngestRouter(t)
+	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
+	apitest.GivePictures(t, r, session, workID, "gallery", "gallery")
 
-	menu := apitest.DownloadMenu(t, r, session, assetID)
+	menu := apitest.DownloadMenu(t, r, session, workID)
 	inline := roleVerdictNamed(t, targetLine(t, menu, "chara_card_v3"), "gallery")
 	if inline.Destination == "" {
 		t.Fatal("the inline gallery lost its destination note")
@@ -257,15 +257,15 @@ func TestAnAppIsNamedBesideTheDestinationItShows(t *testing.T) {
 }
 
 func appTargetsFor(
-	t *testing.T, r http.Handler, session *http.Cookie, assetID string,
+	t *testing.T, r http.Handler, session *http.Cookie, workID string,
 ) []apitest.AppTarget {
 	t.Helper()
-	request := apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil), session)
+	request := apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil), session)
 	response := apitest.Send(t, r, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
 	}
-	var page apitest.StartedAsset
+	var page apitest.StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode the asset: %v", err)
 	}

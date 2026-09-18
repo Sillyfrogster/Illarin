@@ -28,9 +28,9 @@ func Insert(ctx context.Context, q db.DBTX, workID uuid.UUID, blocks []Block) er
 		if b.Title != nil {
 			title = pgtype.Text{String: *b.Title, Valid: true}
 		}
-		params := db.InsertAssetBlockParams{
+		params := db.InsertWorkBlockParams{
 			ID:         pgtype.UUID{Bytes: b.ID, Valid: true},
-			AssetID:    pgtype.UUID{Bytes: workID, Valid: true},
+			WorkID:     pgtype.UUID{Bytes: workID, Valid: true},
 			Definition: string(b.Definition),
 			Title:      title,
 			Position:   int32(b.Position),
@@ -39,7 +39,7 @@ func Insert(ctx context.Context, q db.DBTX, workID uuid.UUID, blocks []Block) er
 			Width:      string(b.Width),
 			Elements:   elements,
 		}
-		if err := queries.InsertAssetBlock(ctx, params); err != nil {
+		if err := queries.InsertWorkBlock(ctx, params); err != nil {
 			return fmt.Errorf("insert %s block: %w", b.Definition, err)
 		}
 	}

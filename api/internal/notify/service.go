@@ -78,7 +78,7 @@ func (s *Service) fanOutBatch(ctx context.Context, now time.Time) (int, error) {
 type recorded struct {
 	Type       Type
 	Account    *uuid.UUID
-	Asset      *uuid.UUID
+	Work       *uuid.UUID
 	Words      []byte
 	RecordedAt time.Time
 }
@@ -94,7 +94,7 @@ func takeDueEvents(ctx context.Context, tx pgx.Tx, now time.Time) ([]recorded, e
 			 for update skip locked
 			 limit $2
 		 )
-		returning type, account_id, asset_id, words, recorded_at
+		returning type, account_id, work_id, words, recorded_at
 	`, now, fanOutBatch)
 	if err != nil {
 		return nil, fmt.Errorf("take notification events off the queue: %w", err)
@@ -104,7 +104,7 @@ func takeDueEvents(ctx context.Context, tx pgx.Tx, now time.Time) ([]recorded, e
 	for rows.Next() {
 		var event recorded
 		if err := rows.Scan(
-			&event.Type, &event.Account, &event.Asset, &event.Words, &event.RecordedAt,
+			&event.Type, &event.Account, &event.Work, &event.Words, &event.RecordedAt,
 		); err != nil {
 			return nil, fmt.Errorf("read a notification event: %w", err)
 		}
@@ -119,32 +119,32 @@ func takeDueEvents(ctx context.Context, tx pgx.Tx, now time.Time) ([]recorded, e
 // writeEntries gives one event to everyone it is for, folding repeated updates together.
 func writeEntries(ctx context.Context, tx pgx.Tx, event recorded) error {
 	if _, err := tx.Exec(ctx, `
-		insert into notifications (id, account_id, type, asset_id, words, created_at)
+		insert into notifications (id, account_id, type, work_id, words, created_at)
 		select gen_random_uuid(), hearer.account_id, $1, $2, $3, $4
 		  from (
 			select $5::uuid where $5::uuid is not null
 			union all
 			select account_id from (
-				select account_id from asset_watches
-				 where asset_id = $2 and state = 'watching'
+				select account_id from work_follows
+				 where work_id = $2 and state = 'watching'
 				union
 				select instance.user_id
 				  from instance_library_entries entry
 				  join linked_instances instance on instance.id = entry.instance_id
-				 where entry.asset_id = $2 and instance.revoked_at is null
+				 where entry.work_id = $2 and instance.revoked_at is null
 				except
-				select account_id from asset_watches
-				 where asset_id = $2 and state = 'stopped'
+				select account_id from work_follows
+				 where work_id = $2 and state = 'stopped'
 				except
-				select owner_id from assets where id = $2
+				select owner_id from works where id = $2
 			) watching
 			 where $5::uuid is null
 		  ) hearer (account_id)
-		on conflict (account_id, asset_id) where type = 'asset_updated' and read_at is null
+		on conflict (account_id, work_id) where type = 'asset_updated' and read_at is null
 		do update set words = excluded.words,
 		              created_at = excluded.created_at,
 		              update_count = notifications.update_count + 1
-	`, event.Type, event.Asset, event.Words, event.RecordedAt, event.Account); err != nil {
+	`, event.Type, event.Work, event.Words, event.RecordedAt, event.Account); err != nil {
 		return fmt.Errorf("write the inbox entries for a notification event: %w", err)
 	}
 	return nil

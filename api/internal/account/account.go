@@ -7,12 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type NSFWVisibility string
+type NSFWPreference string
 
 const (
-	NSFWHidden  NSFWVisibility = "hidden"
-	NSFWBlurred NSFWVisibility = "blurred"
-	NSFWShown   NSFWVisibility = "shown"
+	NSFWHidden  NSFWPreference = "hidden"
+	NSFWBlurred NSFWPreference = "blurred"
+	NSFWShown   NSFWPreference = "shown"
 )
 
 type SignUpInput struct {

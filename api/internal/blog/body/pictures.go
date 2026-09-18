@@ -40,11 +40,11 @@ func (r *reader) gallery(path string, fields map[string]json.RawMessage) (Block,
 	images := make([]Image, 0, len(entries))
 	for index, entry := range entries {
 		here := fmt.Sprintf("%s.content.%d", path, index)
-		item, kind, err := r.node(here, entry)
+		item, calloutType, err := r.node(here, entry)
 		if err != nil {
 			return nil, err
 		}
-		if kind != "galleryImage" {
+		if calloutType != "galleryImage" {
 			return nil, Problem{Path: here + ".type", Message: "A gallery holds gallery pictures."}
 		}
 		if err := onlyKeys(here, item, "type", "mediaId", "alt", "caption"); err != nil {

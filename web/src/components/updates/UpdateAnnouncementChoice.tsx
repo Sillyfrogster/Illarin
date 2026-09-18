@@ -4,8 +4,8 @@ import { Hash, Webhook } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  type AssetUpdateDestinationChoice,
   readAssetUpdateDestinationChoices,
+  type WorkUpdateDestinationChoice,
 } from "@/lib/api/asset-destinations";
 import { cn } from "@/lib/cn";
 
@@ -41,7 +41,7 @@ export function UpdateAnnouncementChoice({
   onChange: (choice: AnnouncementChoice) => void;
   unlisted: boolean;
 }) {
-  const [offered, setOffered] = useState<AssetUpdateDestinationChoice[] | null>(
+  const [offered, setOffered] = useState<WorkUpdateDestinationChoice[] | null>(
     null,
   );
   const [error, setError] = useState("");
@@ -49,7 +49,7 @@ export function UpdateAnnouncementChoice({
   report.current = onChange;
 
   const defaults = useCallback(
-    (destinations: AssetUpdateDestinationChoice[]) =>
+    (destinations: WorkUpdateDestinationChoice[]) =>
       unlisted
         ? []
         : destinations.filter((one) => one.byDefault).map((one) => one.id),

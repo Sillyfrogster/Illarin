@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestEveryAppIsOfferedTheFormatThatLandsMostOfTheAssetInIt(t *testing.T) {
+func TestEveryAppIsOfferedTheFormatThatLandsMostOfTheWorkInIt(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"), plainDeclaration("charx"))
 	targets := registry.OfferedTargets(galleryCharacter())
@@ -110,7 +110,7 @@ func plainDeclaration(id string) Declaration {
 }
 
 func galleryCharacter() CapabilitySubject {
-	return CapabilitySubject{Kind: "character", Elements: []block.Element{
+	return CapabilitySubject{Type: "character", Elements: []block.Element{
 		described(block.RoleDescription, "Keeps the archive."),
 		{
 			ID: uuid.New(), Type: block.TypeImageSet, Role: block.RoleGallery,

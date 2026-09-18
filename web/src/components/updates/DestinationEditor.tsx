@@ -13,13 +13,13 @@ import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import { RevealOnce } from "@/components/ui/reveal-once";
 import { TravellingHighlight } from "@/components/ui/travelling-highlight";
 import {
-  type AssetUpdateDestination,
   addUpdateDestination,
   changeUpdateDestination,
   disableUpdateDestination,
   removeUpdateDestination,
   rotateUpdateDestinationSecret,
   verifyUpdateDestination,
+  type WorkUpdateDestination,
 } from "@/lib/api/asset-destinations";
 import { cn } from "@/lib/cn";
 import {
@@ -34,14 +34,14 @@ export function DestinationEditor({
   onSaved,
   onRemoved,
 }: {
-  existing: AssetUpdateDestination | null;
+  existing: WorkUpdateDestination | null;
   busy: boolean;
   onBusy: (busy: boolean) => void;
-  onSaved: (destination: AssetUpdateDestination) => void;
+  onSaved: (destination: WorkUpdateDestination) => void;
   onRemoved: (id: string) => void;
 }) {
   const [current, setCurrent] = useState(existing);
-  const [kind, setKind] = useState<AssetUpdateDestination["kind"]>(
+  const [kind, setKind] = useState<WorkUpdateDestination["kind"]>(
     existing?.kind ?? "discord",
   );
   const [name, setName] = useState(existing?.name ?? "");
@@ -64,7 +64,7 @@ export function DestinationEditor({
     setWorking("");
   }
 
-  function receive(saved: AssetUpdateDestination) {
+  function receive(saved: WorkUpdateDestination) {
     setCurrent(saved);
     onSaved(saved);
   }
@@ -323,8 +323,8 @@ function KindChoice({
   kind,
   onChange,
 }: {
-  kind: AssetUpdateDestination["kind"];
-  onChange: (kind: AssetUpdateDestination["kind"]) => void;
+  kind: WorkUpdateDestination["kind"];
+  onChange: (kind: WorkUpdateDestination["kind"]) => void;
 }) {
   const [lit, setLit] = useState<string>(kind);
   return (

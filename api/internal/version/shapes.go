@@ -5,12 +5,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type AssetVersionNotesRequest struct {
+type WorkVersionNotesRequest struct {
 	Notes   *string `json:"notes,omitempty"`
 	Summary string  `json:"summary"`
 }
 
-type AssetVersionWithdrawalRequest struct {
+type WorkVersionWithdrawalRequest struct {
 	Explanation string `json:"explanation"`
 }
 
@@ -45,18 +45,18 @@ type VersionChange struct {
 	AfterImage   *string           `json:"afterImage,omitempty"`
 	Before       *string           `json:"before,omitempty"`
 	BeforeImage  *string           `json:"beforeImage,omitempty"`
-	Kind         VersionChangeKind `json:"kind"`
+	Type         VersionChangeType `json:"kind"`
 	Name         string            `json:"name"`
 	Note         *string           `json:"note,omitempty"`
 	PreviousName *string           `json:"previousName,omitempty"`
 }
 
-type VersionChangeKind string
+type VersionChangeType string
 
 const (
-	VersionChangeKindAddition VersionChangeKind = "addition"
-	VersionChangeKindChange   VersionChangeKind = "change"
-	VersionChangeKindRemoval  VersionChangeKind = "removal"
+	VersionChangeTypeAddition VersionChangeType = "addition"
+	VersionChangeTypeChange   VersionChangeType = "change"
+	VersionChangeTypeRemoval  VersionChangeType = "removal"
 )
 
 type VersionComparison struct {
@@ -67,7 +67,7 @@ type VersionComparison struct {
 	Unavailable     *string              `json:"unavailable,omitempty"`
 }
 
-type CompareAssetVersionsParams struct {
+type CompareWorkVersionsParams struct {
 	From *int `json:"from,omitempty"`
 	To   *int `json:"to,omitempty"`
 }

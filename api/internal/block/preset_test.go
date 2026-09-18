@@ -354,7 +354,7 @@ func TestThePresetCatalogCarriesItsFourOptionalBlocks(t *testing.T) {
 
 func TestAPresetListsTheSevenSharedBlocks(t *testing.T) {
 	t.Parallel()
-	definitions, ok := Catalog("preset")
+	definitions, ok := Definitions("preset")
 	if !ok {
 		t.Fatal("there is no preset catalog")
 	}

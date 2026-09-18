@@ -114,7 +114,7 @@ func (t Target) Notes() int {
 }
 
 type CapabilitySubject struct {
-	Kind                 string
+	Type                 string
 	Origin               string
 	Elements             []block.Element
 	AllowedCrossPlatform []string
@@ -127,21 +127,21 @@ func (s CapabilitySubject) origin() string {
 	return s.Origin
 }
 
-func (r *Registry) WritesKind(kind string) bool {
+func (r *Registry) WritesType(workType string) bool {
 	for _, module := range r.modules {
 		declaration := module.Declaration()
-		if declaration.Direction.Write && declaration.Kind == kind {
+		if declaration.Direction.Write && declaration.Type == workType {
 			return true
 		}
 	}
 	return false
 }
 
-// BuildsFromNothing says whether a kind can exist without an upload for its writer to hand back.
-func (r *Registry) BuildsFromNothing(kind string) bool {
+// BuildsFromNothing says whether a type can exist without an upload for its writer to hand back.
+func (r *Registry) BuildsFromNothing(workType string) bool {
 	for _, module := range r.modules {
 		declaration := module.Declaration()
-		if declaration.Direction.Write && declaration.Kind == kind && declaration.KeepsUpload {
+		if declaration.Direction.Write && declaration.Type == workType && declaration.KeepsUpload {
 			return false
 		}
 	}
@@ -158,7 +158,7 @@ func (r *Registry) OfferedTargets(subject CapabilitySubject) []Target {
 	offered := make([]Target, 0, len(ids))
 	for _, id := range ids {
 		declaration := r.modules[id].Declaration()
-		if !declaration.Direction.Write || declaration.Kind != subject.Kind {
+		if !declaration.Direction.Write || declaration.Type != subject.Type {
 			continue
 		}
 		if !slices.Contains(declaration.TestedOrigins, subject.origin()) {
@@ -184,7 +184,7 @@ func lossReport(declaration Declaration, subject CapabilitySubject) ([]RoleLoss,
 	if declaration.KeepsUpload {
 		return []RoleLoss{}, true
 	}
-	required := block.RequiredRoles(subject.Kind)
+	required := block.RequiredRoles(subject.Type)
 	report := make([]RoleLoss, 0, len(block.Roles()))
 	for _, role := range block.Roles() {
 		written := writtenContent(subject.Elements, role)
@@ -295,7 +295,7 @@ func (r *Registry) CapabilityStamp() string {
 			continue
 		}
 		fmt.Fprintf(digest, "module\x00%s\x00%s\x00%s\x00%v\x00%s\n",
-			declaration.ID, declaration.Kind, declaration.Label,
+			declaration.ID, declaration.Type, declaration.Label,
 			declaration.CrossPlatform, strings.Join(declaration.TestedOrigins, ","))
 		for _, role := range block.Roles() {
 			support := declaration.Roles[role].Write

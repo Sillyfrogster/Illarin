@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const Kind = "preset"
+const Type = "preset"
 
 func Modules() []format.Reader { return []format.Reader{LumiverseModule{}, SillyTavernModule{}} }
 
@@ -148,8 +148,8 @@ func orEmptyStrings(values []string) []string {
 	return values
 }
 
-func settings(asset format.ExportAsset, role block.Role) []block.Setting {
-	content, ok := asset.Content(role)
+func settings(work format.ExportWork, role block.Role) []block.Setting {
+	content, ok := work.Content(role)
 	if !ok {
 		return nil
 	}
@@ -160,8 +160,8 @@ func settings(asset format.ExportAsset, role block.Role) []block.Setting {
 	return group.Settings
 }
 
-func fragments(asset format.ExportAsset) block.PromptList {
-	content, ok := asset.Content(block.RolePromptFragments)
+func fragments(work format.ExportWork) block.PromptList {
+	content, ok := work.Content(block.RolePromptFragments)
 	if !ok {
 		return block.PromptList{}
 	}
@@ -172,8 +172,8 @@ func fragments(asset format.ExportAsset) block.PromptList {
 	return list
 }
 
-func variables(asset format.ExportAsset) []block.Variable {
-	content, ok := asset.Content(block.RolePromptVariables)
+func variables(work format.ExportWork) []block.Variable {
+	content, ok := work.Content(block.RolePromptVariables)
 	if !ok {
 		return nil
 	}
@@ -184,8 +184,8 @@ func variables(asset format.ExportAsset) []block.Variable {
 	return schema.Variables
 }
 
-func scripts(asset format.ExportAsset) []block.Script {
-	content, ok := asset.Content(block.RoleRegexScripts)
+func scripts(work format.ExportWork) []block.Script {
+	content, ok := work.Content(block.RoleRegexScripts)
 	if !ok {
 		return nil
 	}
@@ -196,8 +196,8 @@ func scripts(asset format.ExportAsset) []block.Script {
 	return list.Scripts
 }
 
-func nudges(asset format.ExportAsset) []block.TextItem {
-	content, ok := asset.Content(block.RolePromptNudges)
+func nudges(work format.ExportWork) []block.TextItem {
+	content, ok := work.Content(block.RolePromptNudges)
 	if !ok {
 		return nil
 	}

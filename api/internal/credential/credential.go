@@ -9,11 +9,11 @@ import (
 	"strings"
 )
 
-type Kind string
+type Type string
 
 const (
-	InstanceAccess  Kind = "ia1"
-	InstanceRefresh Kind = "ir1"
+	InstanceAccess  Type = "ia1"
+	InstanceRefresh Type = "ir1"
 )
 
 type Secret struct {
@@ -23,15 +23,15 @@ type Secret struct {
 }
 
 const (
-	kindLength   = 3
+	typeLength   = 3
 	alphabet     = "BCDFGHJKLMNPQRSTVWXZ23456789"
 	prefixLength = 8
 	bodyBytes    = 32
 	bodyLength   = 43
-	valueLength  = kindLength + 1 + prefixLength + 1 + bodyLength
+	valueLength  = typeLength + 1 + prefixLength + 1 + bodyLength
 )
 
-func Mint(kind Kind) (Secret, error) {
+func Mint(secretType Type) (Secret, error) {
 	prefix, err := newPrefix()
 	if err != nil {
 		return Secret{}, err
@@ -40,16 +40,16 @@ func Mint(kind Kind) (Secret, error) {
 	if _, err := rand.Read(body); err != nil {
 		return Secret{}, fmt.Errorf("make secret: %w", err)
 	}
-	value := string(kind) + "." + prefix + "." + base64.RawURLEncoding.EncodeToString(body)
+	value := string(secretType) + "." + prefix + "." + base64.RawURLEncoding.EncodeToString(body)
 	return Secret{Value: value, Prefix: prefix, Hash: hashOf(value)}, nil
 }
 
-func Read(value string, kind Kind) (Secret, bool) {
+func Read(value string, secretType Type) (Secret, bool) {
 	if len(value) != valueLength {
 		return Secret{}, false
 	}
 	parts := strings.Split(value, ".")
-	if len(parts) != 3 || parts[0] != string(kind) || len(parts[1]) != prefixLength {
+	if len(parts) != 3 || parts[0] != string(secretType) || len(parts[1]) != prefixLength {
 		return Secret{}, false
 	}
 	for _, letter := range parts[1] {

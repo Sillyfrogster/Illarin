@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) WatchAsset(c *gin.Context) {
+func (h *Handlers) FollowWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -17,11 +17,11 @@ func (h *Handlers) WatchAsset(c *gin.Context) {
 	if !ok {
 		return
 	}
-	watch, err := h.notifications.StartWatching(c.Request.Context(), current.ID, id)
-	answerWatch(c, watch, err)
+	follow, err := h.notifications.StartFollowing(c.Request.Context(), current.ID, id)
+	answerFollow(c, follow, err)
 }
 
-func (h *Handlers) StopWatchingAsset(c *gin.Context) {
+func (h *Handlers) StopFollowingWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -30,28 +30,28 @@ func (h *Handlers) StopWatchingAsset(c *gin.Context) {
 	if !ok {
 		return
 	}
-	watch, err := h.notifications.StopWatching(c.Request.Context(), current.ID, id)
-	answerWatch(c, watch, err)
+	follow, err := h.notifications.StopFollowing(c.Request.Context(), current.ID, id)
+	answerFollow(c, follow, err)
 }
 
-func answerWatch(c *gin.Context, watch Watch, err error) {
+func answerFollow(c *gin.Context, follow Follow, err error) {
 	switch {
-	case errors.Is(err, ErrNothingToWatch):
+	case errors.Is(err, ErrNothingToFollow):
 		api.Refuse(c, http.StatusNotFound, "no such asset")
-	case errors.Is(err, ErrOwnAsset):
+	case errors.Is(err, ErrOwnWork):
 		api.Refuse(c, http.StatusForbidden, "You cannot watch your own asset.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not change your watch on this asset. Try again.")
 	default:
-		c.JSON(http.StatusOK, ToAPIWatch(watch))
+		c.JSON(http.StatusOK, ToAPIFollow(follow))
 	}
 }
 
-// ToAPIWatch writes a watch as the site reads it
-func ToAPIWatch(watch Watch) AssetWatch {
-	installedOn := watch.InstalledOn
+// ToAPIFollow writes a follow as the site reads it
+func ToAPIFollow(follow Follow) WorkFollow {
+	installedOn := follow.InstalledOn
 	if installedOn == nil {
 		installedOn = []string{}
 	}
-	return AssetWatch{State: AssetWatchState(watch.State), InstalledOn: installedOn}
+	return WorkFollow{State: WorkFollowState(follow.State), InstalledOn: installedOn}
 }

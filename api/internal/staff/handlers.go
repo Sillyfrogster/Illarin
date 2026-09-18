@@ -22,8 +22,8 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodDelete, "/v1/profiles/:handle/restriction", d.JSON, h.RestoreProfile)
 	routes.Handle(http.MethodGet, "/v1/profiles/:handle/restriction", d.JSON, h.GetProfileRestriction)
 	routes.Handle(http.MethodPut, "/v1/profiles/:handle/restriction", d.JSON, h.RestrictProfile)
-	routes.Handle(http.MethodDelete, "/v1/assets/:id/withhold", d.JSON, h.ClearAssetWithhold)
-	routes.Handle(http.MethodPut, "/v1/assets/:id/withhold", d.JSON, h.WithholdAsset)
+	routes.Handle(http.MethodDelete, "/v1/assets/:id/withhold", d.JSON, h.ClearWorkWithhold)
+	routes.Handle(http.MethodPut, "/v1/assets/:id/withhold", d.JSON, h.WithholdWork)
 }
 
 func (h *Handlers) GetProfileRestriction(c *gin.Context) {
@@ -71,7 +71,7 @@ func (h *Handlers) RestoreProfile(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) WithholdAsset(c *gin.Context) {
+func (h *Handlers) WithholdWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -80,7 +80,7 @@ func (h *Handlers) WithholdAsset(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request WithholdAssetRequest
+	var request WithholdWorkRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the asset.")
 		return
@@ -89,7 +89,7 @@ func (h *Handlers) WithholdAsset(c *gin.Context) {
 	switch {
 	case errors.Is(err, ErrInvalidWithholdReason):
 		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the asset.")
-	case errors.Is(err, ErrAssetNotFound):
+	case errors.Is(err, ErrWorkNotFound):
 		api.Refuse(c, http.StatusNotFound, "no such asset")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not withhold the asset.")
@@ -98,7 +98,7 @@ func (h *Handlers) WithholdAsset(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) ClearAssetWithhold(c *gin.Context) {
+func (h *Handlers) ClearWorkWithhold(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -108,7 +108,7 @@ func (h *Handlers) ClearAssetWithhold(c *gin.Context) {
 	}
 	err := h.staff.ClearWithhold(c.Request.Context(), id)
 	switch {
-	case errors.Is(err, ErrAssetNotFound):
+	case errors.Is(err, ErrWorkNotFound):
 		api.Refuse(c, http.StatusNotFound, "no such asset")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not clear the withhold.")

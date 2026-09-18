@@ -80,7 +80,7 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not place the picture.")
 	default:
-		blocks, conversionErr := block.ToBlocks(saved.Kind, saved.Blocks)
+		blocks, conversionErr := block.ToBlocks(saved.Type, saved.Blocks)
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the page after placing the picture.")
 			return

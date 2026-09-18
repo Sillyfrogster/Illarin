@@ -28,7 +28,7 @@ func (s *Service) RotateSecret(
 	if err != nil {
 		return RotatedSecret{}, err
 	}
-	if current.Kind == KindDiscord {
+	if current.Type == TypeDiscord {
 		return RotatedSecret{}, ErrNotWebhook
 	}
 	secret, err := dispatch.MintSecret()

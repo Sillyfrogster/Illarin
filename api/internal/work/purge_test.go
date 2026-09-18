@@ -42,7 +42,7 @@ func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testi
 		t.Fatalf("insert accounts: %v", err)
 	}
 	created, err := apitest.Uploads(service).Create(ctx, upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: "durable.lumitheme",
+		OwnerID: ownerID, Type: "theme", Filename: "durable.lumitheme",
 		File: bytes.NewReader([]byte("durably purged bytes")), Name: "Durable purge",
 	})
 	if err != nil {
@@ -50,9 +50,9 @@ func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testi
 	}
 	var digestBytes []byte
 	if err := pool.QueryRow(ctx, `
-		select blob.sha256 from asset_revisions revision
+		select blob.sha256 from work_revisions revision
 		join blobs blob on blob.id = revision.blob_id
-		where revision.asset_id = $1
+		where revision.work_id = $1
 	`, created.ID).Scan(&digestBytes); err != nil {
 		t.Fatalf("read digest: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testi
 	}
 	var references int
 	if err := pool.QueryRow(ctx,
-		`select count(*) from asset_revisions where asset_id = $1 and blob_id is not null`, created.ID,
+		`select count(*) from work_revisions where work_id = $1 and blob_id is not null`, created.ID,
 	).Scan(&references); err != nil {
 		t.Fatalf("count references: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestPurgeDeletesSharedBytesBreaksReferencesAndRecordsATombstone(t *testing.
 	var digest []byte
 	for _, name := range []string{"First copy", "Second copy"} {
 		created, err := apitest.Uploads(service).Create(ctx, upload.CreateInput{
-			OwnerID: ownerID, Kind: "theme", Filename: name + ".lumitheme",
+			OwnerID: ownerID, Type: "theme", Filename: name + ".lumitheme",
 			File: bytes.NewReader([]byte("shared forbidden bytes")), Name: name,
 		})
 		if err != nil {
@@ -124,9 +124,9 @@ func TestPurgeDeletesSharedBytesBreaksReferencesAndRecordsATombstone(t *testing.
 		}
 		if err := pool.QueryRow(ctx, `
 			select blob.id, blob.sha256
-			  from asset_revisions revision
+			  from work_revisions revision
 			  join blobs blob on blob.id = revision.blob_id
-			 where revision.asset_id = $1
+			 where revision.work_id = $1
 		`, created.ID).Scan(&blobID, &digest); err != nil {
 			t.Fatalf("read %s blob: %v", name, err)
 		}
@@ -142,7 +142,7 @@ func TestPurgeDeletesSharedBytesBreaksReferencesAndRecordsATombstone(t *testing.
 	}
 	var liveReferences int
 	if err := pool.QueryRow(ctx,
-		`select count(*) from asset_revisions where blob_id is not null`,
+		`select count(*) from work_revisions where blob_id is not null`,
 	).Scan(&liveReferences); err != nil {
 		t.Fatalf("count revision references: %v", err)
 	}

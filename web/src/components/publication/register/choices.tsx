@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import type {
   PublicationCategory,
   PublicationDestination,
-  PublicationDestinationKind,
+  PublicationDestinationType,
   PublicationEvent,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
@@ -293,7 +293,7 @@ export function EventChoice({
 
 const KINDS: {
   icon: typeof Hash;
-  kind: PublicationDestinationKind;
+  kind: PublicationDestinationType;
   what: string;
   word: string;
 }[] = [
@@ -315,8 +315,8 @@ export function DestinationKind({
   chosen,
   onChosen,
 }: {
-  chosen: PublicationDestinationKind;
-  onChosen: (kind: PublicationDestinationKind) => void;
+  chosen: PublicationDestinationType;
+  onChosen: (kind: PublicationDestinationType) => void;
 }) {
   return (
     <Choice legend="Destination type">

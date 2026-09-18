@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) SetAssetDiscovery(c *gin.Context) {
+func (h *Handlers) SetWorkVisibility(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -18,20 +18,20 @@ func (h *Handlers) SetAssetDiscovery(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request AssetDiscoveryRequest
-	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil || !request.Discovery.Valid() {
+	var request WorkVisibilityRequest
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil || !request.Visibility.Valid() {
 		api.Refuse(c, http.StatusBadRequest, "Choose listed or unlisted.")
 		return
 	}
-	err := h.works.SetDiscovery(
-		c.Request.Context(), owner.ID, id, work.Discovery(request.Discovery),
+	err := h.works.SetVisibility(
+		c.Request.Context(), owner.ID, id, work.Visibility(request.Visibility),
 	)
 	switch {
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "no such asset")
-	case errors.Is(err, work.ErrAssetFrozen):
+	case errors.Is(err, work.ErrWorkFrozen):
 		api.Refuse(c, http.StatusConflict, "A withheld asset cannot be changed.")
-	case errors.Is(err, work.ErrAssetIsDraft):
+	case errors.Is(err, work.ErrWorkIsDraft):
 		api.Refuse(c, http.StatusConflict, "Discovery applies once the asset is published.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not save the catalog listing. Try again.")
@@ -40,7 +40,7 @@ func (h *Handlers) SetAssetDiscovery(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) PublishAsset(c *gin.Context) {
+func (h *Handlers) PublishWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -81,16 +81,16 @@ func (h *Handlers) PublishAsset(c *gin.Context) {
 		return
 	}
 
-	visibility, ok := ReaderVisibility(c, h.accounts, nil)
+	preference, ok := ReaderNSFWPreference(c, h.accounts, nil)
 	if !ok {
 		return
 	}
-	found, err := h.works.Detail(c.Request.Context(), id, &owner.ID, visibility)
+	found, err := h.works.Detail(c.Request.Context(), id, &owner.ID, preference)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the published asset.")
 		return
 	}
-	page, err := ToPage(found, visibility)
+	page, err := ToPage(found, preference)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the published asset.")
 		return

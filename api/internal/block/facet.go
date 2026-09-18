@@ -160,16 +160,16 @@ var packFacets = []Facet{
 	},
 }
 
-var facetCatalogs = map[string][]Facet{
+var facets = map[string][]Facet{
 	"character": characterFacets,
 	"preset":    presetFacets,
 	"pack":      packFacets,
 }
 
-func Facets(kind string) []Facet { return facetCatalogs[kind] }
+func Facets(workType string) []Facet { return facets[workType] }
 
-func FacetByKey(kind string, key string) (Facet, bool) {
-	for _, facet := range Facets(kind) {
+func FacetByKey(workType string, key string) (Facet, bool) {
+	for _, facet := range Facets(workType) {
 		if string(facet.Key) == key {
 			return facet, true
 		}
@@ -177,8 +177,8 @@ func FacetByKey(kind string, key string) (Facet, bool) {
 	return Facet{}, false
 }
 
-func MeasureFacets(kind string, elements []Element) map[FacetKey]int {
-	facets := Facets(kind)
+func MeasureFacets(workType string, elements []Element) map[FacetKey]int {
+	facets := Facets(workType)
 	counts := make(map[FacetKey]int, len(facets))
 	for _, facet := range facets {
 		total := 0
@@ -194,17 +194,17 @@ func MeasureFacets(kind string, elements []Element) map[FacetKey]int {
 }
 
 func FacetStamp() string {
-	kinds := make([]string, 0, len(facetCatalogs))
-	for kind := range facetCatalogs {
-		kinds = append(kinds, kind)
+	types := make([]string, 0, len(facets))
+	for workType := range facets {
+		types = append(types, workType)
 	}
-	slices.Sort(kinds)
+	slices.Sort(types)
 
 	digest := sha256.New()
-	for _, kind := range kinds {
-		for _, facet := range facetCatalogs[kind] {
+	for _, workType := range types {
+		for _, facet := range facets[workType] {
 			fmt.Fprintf(digest, "facet\x00%s\x00%s\x00%s\x00%s\n",
-				kind, facet.Key, facet.Label, facet.Role)
+				workType, facet.Key, facet.Label, facet.Role)
 			for _, bucket := range facet.Buckets {
 				fmt.Fprintf(digest, "bucket\x00%s\x00%d\x00%d\n",
 					bucket.Value, bucket.Min, bucket.Max)

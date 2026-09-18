@@ -13,11 +13,11 @@ import {
 } from "react";
 import {
   type AddableBlock,
-  type AssetBlock,
-  type AssetElement,
-  type AssetIdentityRequest,
   saveAssetBlock,
   saveAssetIdentity,
+  type WorkBlock,
+  type WorkElement,
+  type WorkIdentityRequest,
 } from "@/lib/api/query";
 import { useWorkingCopy, WORKING_COPY_STALE } from "@/lib/working-copy";
 import {
@@ -36,7 +36,7 @@ import {
   replaceElement,
 } from "./save";
 
-export type Identity = AssetIdentityRequest;
+export type Identity = WorkIdentityRequest;
 
 export type SaveState =
   | "saving"
@@ -62,7 +62,7 @@ type Workspace = {
   isDraft: boolean;
   editing: boolean;
   sweep: number;
-  blocks: AssetBlock[];
+  blocks: WorkBlock[];
   addableBlocks: AddableBlock[];
   arrangement: Arrangement;
   identity: Identity;
@@ -80,11 +80,11 @@ type Workspace = {
   stopEditing: () => void;
   setCursor: (cursor: string | null) => void;
   chooseItem: (elementId: string, key: string | null) => void;
-  setBlocks: (blocks: AssetBlock[]) => void;
-  writeBlock: (block: AssetBlock) => void;
-  applyServerBlocks: (blocks: AssetBlock[]) => void;
-  editBlockList: (change: (blocks: AssetBlock[]) => AssetBlock[]) => void;
-  writeElement: (blockId: string, element: AssetElement) => void;
+  setBlocks: (blocks: WorkBlock[]) => void;
+  writeBlock: (block: WorkBlock) => void;
+  applyServerBlocks: (blocks: WorkBlock[]) => void;
+  editBlockList: (change: (blocks: WorkBlock[]) => WorkBlock[]) => void;
+  writeElement: (blockId: string, element: WorkElement) => void;
   writeIdentity: (identity: Identity) => void;
   setAllowedApps: (apps: AllowedApp[]) => void;
   openPane: (pane: Pane) => void;
@@ -119,7 +119,7 @@ export function AssetWorkspace({
   assetId: string;
   isOwner: boolean;
   isDraft: boolean;
-  blocks: AssetBlock[];
+  blocks: WorkBlock[];
   identity: Identity;
   allowedApps: AllowedApp[];
   eligibleApps: AllowedApp[];
@@ -179,7 +179,7 @@ export function AssetWorkspace({
           ? "private"
           : "published";
 
-  const openSealedElement = useCallback((pages: AssetBlock[]) => {
+  const openSealedElement = useCallback((pages: WorkBlock[]) => {
     for (const block of pages) {
       const asking = block.elements.find((element) =>
         hasSealedPrompts([element]),
@@ -292,7 +292,7 @@ export function AssetWorkspace({
     ],
   );
 
-  const applyServerBlocks = useCallback((incoming: AssetBlock[]) => {
+  const applyServerBlocks = useCallback((incoming: WorkBlock[]) => {
     setDraft((current) => {
       const changed = new Set(changedBlockIds(current, savedBlocks.current));
       const held = new Map(current.map((block) => [block.id, block]));
@@ -320,7 +320,7 @@ export function AssetWorkspace({
   }, [identity.blurb, identity.isNsfw, identity.name]);
 
   const editBlockList = useCallback(
-    (change: (blocks: AssetBlock[]) => AssetBlock[]) => {
+    (change: (blocks: WorkBlock[]) => WorkBlock[]) => {
       setDraft(change);
       setSaved(change);
     },
@@ -446,10 +446,10 @@ export function AssetWorkspace({
 }
 
 function keepWriting(
-  server: AssetBlock,
-  draft: AssetBlock,
-  saved: AssetBlock | undefined,
-): AssetBlock {
+  server: WorkBlock,
+  draft: WorkBlock,
+  saved: WorkBlock | undefined,
+): WorkBlock {
   const known = new Set(
     [...draft.elements, ...(saved?.elements ?? [])].map((one) => one.id),
   );

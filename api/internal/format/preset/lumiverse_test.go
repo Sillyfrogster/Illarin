@@ -73,10 +73,10 @@ func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
 func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, lumiversePreset)
-	if parsed.Kind != Kind || parsed.Format != LumiverseID {
-		t.Fatalf("parsed kind %q format %q", parsed.Kind, parsed.Format)
+	if parsed.Type != Type || parsed.Format != LumiverseID {
+		t.Fatalf("parsed kind %q format %q", parsed.Type, parsed.Format)
 	}
-	if parsed.Header.Name != "Quiet Room" || parsed.Header.AssetVersion != "1.2" {
+	if parsed.Header.Name != "Quiet Room" || parsed.Header.WorkVersion != "1.2" {
 		t.Errorf("header = %+v, want the preset's own name and version", parsed.Header)
 	}
 	if parsed.Header.Blurb != "A calm narrator with a short leash." {
@@ -165,7 +165,7 @@ func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 		t.Errorf("script runs over %v and changes %v", script.Targets, script.Affects)
 	}
 
-	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, lumiverseNamespace)
+	body := preservedPayload(t, parsed.Remainder, format.OwnerWork, lumiverseNamespace)
 	for _, key := range []string{"id", "coverUrl", "isDefault", "modelProfiles", "customBody"} {
 		if _, held := body[key]; !held {
 			t.Errorf("the preset's %s was not preserved", key)
@@ -178,7 +178,7 @@ func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 	if _, held := samplerLeftovers["top_p"]; !held {
 		t.Error("a settings name this app does not read was dropped rather than preserved")
 	}
-	if _, held := preserved(parsed.Remainder, format.OwnerAsset, "risuai"); !held {
+	if _, held := preserved(parsed.Remainder, format.OwnerWork, "risuai"); !held {
 		t.Error("the extensions namespace was not preserved as its own namespace")
 	}
 }
@@ -223,10 +223,10 @@ func TestReadingLumiverseScriptsBundledOnlyUnderExtensions(t *testing.T) {
 		!reflect.DeepEqual(script.Affects, []block.ScriptEffect{block.EffectDisplay, block.EffectPrompt}) {
 		t.Errorf("script runs over %v and changes %v", script.Targets, script.Affects)
 	}
-	if _, held := preserved(parsed.Remainder, format.OwnerAsset, "another_extension"); !held {
+	if _, held := preserved(parsed.Remainder, format.OwnerWork, "another_extension"); !held {
 		t.Error("a neighbouring extension was dropped")
 	}
-	if _, held := preserved(parsed.Remainder, format.OwnerAsset, lvScripts); held {
+	if _, held := preserved(parsed.Remainder, format.OwnerWork, lvScripts); held {
 		t.Error("the bundled script list was preserved as opaque data instead of being read")
 	}
 
@@ -428,13 +428,13 @@ func TestASillyTavernOriginDoesNotOfferLumiverseForProtectedDelivery(t *testing.
 	t.Parallel()
 	parsed := parse(t, sillyTavernPreset)
 	offered := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: Kind, Origin: SillyTavernID, Elements: parsed.Elements,
+		Type: Type, Origin: SillyTavernID, Elements: parsed.Elements,
 	})
 	targets := make([]string, len(offered))
 	for i, target := range offered {
 		targets[i] = target.Format
 	}
-	if apps := private.EligibleApps(Kind, targets); len(apps) != 0 {
+	if apps := private.EligibleApps(Type, targets); len(apps) != 0 {
 		t.Fatalf("SillyTavern protected-delivery apps = %v, want none", apps)
 	}
 }
@@ -497,7 +497,7 @@ func TestADescriptionTooLongToBindStaysInTheFile(t *testing.T) {
 	if parsed.Header.Blurb != "" {
 		t.Errorf("blurb = %q, want none rather than a shortened one", parsed.Header.Blurb)
 	}
-	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, lumiverseNamespace)
+	body := preservedPayload(t, parsed.Remainder, format.OwnerWork, lumiverseNamespace)
 	if string(body["description"]) != string(mustEncode(t, long)) {
 		t.Error("the description was not kept whole in the file")
 	}

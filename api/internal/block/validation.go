@@ -142,7 +142,7 @@ func elementItems(content Content) []any {
 		for _, item := range value.Stylesheets {
 			items = append(items, item)
 		}
-		for _, item := range value.Assets {
+		for _, item := range value.Files {
 			items = append(items, item)
 		}
 	case RecordList:
@@ -239,16 +239,16 @@ func ValidateStructure(holder Block) error {
 	return nil
 }
 
-func ValidateBuilderConstraints(kind string, before []Block, after []Block) error {
+func ValidateBuilderConstraints(workType string, before []Block, after []Block) error {
 	beforeByID := make(map[uuid.UUID]Block, len(before))
 	for _, holder := range before {
 		beforeByID[holder.ID] = holder
 	}
 	seen := make(map[DefinitionID]struct{}, len(after))
 	for _, holder := range after {
-		definition, ok := holder.Definition.Definition(kind)
+		definition, ok := holder.Definition.Definition(workType)
 		if !ok {
-			return fmt.Errorf("%s is not part of the %s catalog", holder.Definition, kind)
+			return fmt.Errorf("%s is not part of the %s catalog", holder.Definition, workType)
 		}
 		if _, repeated := seen[holder.Definition]; repeated && !definition.Repeatable {
 			return fmt.Errorf(
@@ -343,12 +343,12 @@ func ValidateBuilderConstraints(kind string, before []Block, after []Block) erro
 		}
 	}
 	for _, originalBlock := range before {
-		definition, ok := originalBlock.Definition.Definition(kind)
+		definition, ok := originalBlock.Definition.Definition(workType)
 		if !ok {
 			continue
 		}
 		for _, original := range originalBlock.Elements {
-			if !originalBlock.Pinned(original.Role, kind) {
+			if !originalBlock.Pinned(original.Role, workType) {
 				continue
 			}
 			if pinnedElementPresent(after, originalBlock.ID, original) {
@@ -360,11 +360,11 @@ func ValidateBuilderConstraints(kind string, before []Block, after []Block) erro
 			)
 		}
 	}
-	return validateLockedContent(kind, before, after)
+	return validateLockedContent(workType, before, after)
 }
 
 // validateLockedContent keeps every locked element exactly as its upload wrote it.
-func validateLockedContent(kind string, before []Block, after []Block) error {
+func validateLockedContent(workType string, before []Block, after []Block) error {
 	written := make(map[uuid.UUID]Element)
 	for _, holder := range before {
 		for _, element := range holder.Elements {
@@ -373,7 +373,7 @@ func validateLockedContent(kind string, before []Block, after []Block) error {
 	}
 	for _, holder := range after {
 		for _, element := range holder.Elements {
-			if !holder.Locked(element.Role, kind) {
+			if !holder.Locked(element.Role, workType) {
 				continue
 			}
 			original, held := written[element.ID]

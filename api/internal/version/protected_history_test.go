@@ -37,10 +37,10 @@ type protectionMismatchBody struct {
 	} `json:"items"`
 }
 
-func compareVersions(t *testing.T, router *gin.Engine, assetID, query string, session *http.Cookie) *httptest.ResponseRecorder {
+func compareVersions(t *testing.T, router *gin.Engine, workID, query string, session *http.Cookie) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet,
-		"/v1/assets/"+assetID+"/updates/comparison"+query, nil)
+		"/v1/assets/"+workID+"/updates/comparison"+query, nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -56,7 +56,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID,
 		"Answer plainly.", firstSecret)
 
-	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID,
 		"Answer plainly and briefly.", secondSecret)
@@ -64,7 +64,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the prompts: %d %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAssetUpdate(t, router, session, started.ID,
+	if got := apitest.PublishWorkUpdate(t, router, session, started.ID,
 		`{"summary":"Tightened the house rule"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -110,9 +110,9 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 	if guessedVersion.Code != http.StatusNotFound {
 		t.Fatalf("guessed version = %d, want 404", guessedVersion.Code)
 	}
-	guessedAsset := compareVersions(t, router, uuid.NewString(), "", nil)
-	if guessedAsset.Code != http.StatusNotFound {
-		t.Fatalf("guessed asset = %d, want 404", guessedAsset.Code)
+	guessedWork := compareVersions(t, router, uuid.NewString(), "", nil)
+	if guessedWork.Code != http.StatusNotFound {
+		t.Fatalf("guessed asset = %d, want 404", guessedWork.Code)
 	}
 
 	source := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+started.ID, nil))
@@ -127,7 +127,7 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 		t.Fatalf("another account read the sealed prompts: %d %s", crossOwner.Code, crossOwner.Body.String())
 	}
 
-	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
 		string(core.Elements[0].Content), `"protected":true`, `"protected":false`))
@@ -157,20 +157,20 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 	const houseRule = "Answer plainly."
 	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, houseRule, secret)
 
-	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID, houseRule+" And briefly.", secret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the house rule: %d %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAssetUpdate(t, router, session, started.ID,
+	if got := apitest.PublishWorkUpdate(t, router, session, started.ID,
 		`{"summary":"Tightened the house rule"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
 
 	reimportedPublic, reimportedSealed := uuid.New(), uuid.New()
-	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = apitest.SealedPresetPrompts(
 		reimportedPublic, reimportedSealed, houseRule+" And briefly.", secret)
@@ -238,7 +238,7 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 		t.Fatal("settling the correspondence made the sealed prompt public")
 	}
 
-	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
 		string(core.Elements[0].Content), `"protected":true`, `"protected":false`))
@@ -258,13 +258,13 @@ func resolveCorrespondence(
 	t *testing.T,
 	router *gin.Engine,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	number int,
 	body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPut,
-		"/v1/assets/"+assetID+"/updates/"+strconv.Itoa(number)+"/protection", strings.NewReader(body))
+		"/v1/assets/"+workID+"/updates/"+strconv.Itoa(number)+"/protection", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	return apitest.Send(t, router, apitest.Authorized(request, session))
 }
@@ -279,20 +279,20 @@ func TestMediaRecordedInAnOlderVersionStaysPublic(t *testing.T) {
 	)); got.Code != http.StatusCreated {
 		t.Fatalf("upload the first cover: %d", got.Code)
 	}
-	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
-	recorded := apitest.FetchAssetPage(t, router, "/v1/assets/"+started.ID).Media[0]
+	recorded := apitest.FetchWorkPage(t, router, "/v1/assets/"+started.ID).Media[0]
 	if got := apitest.Send(t, router, apitest.Authorized(
 		apitest.MediaUploadRequest(t, started.ID, "avatar", apitest.PNG(t, 80, 120)), session,
 	)); got.Code != http.StatusCreated {
 		t.Fatalf("upload the replacement cover: %d", got.Code)
 	}
-	if got := apitest.PublishAssetUpdate(t, router, session, started.ID,
+	if got := apitest.PublishWorkUpdate(t, router, session, started.ID,
 		`{"summary":"Replaced the cover"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
-	current := apitest.FetchAssetPage(t, router, "/v1/assets/"+started.ID).Media[0]
+	current := apitest.FetchWorkPage(t, router, "/v1/assets/"+started.ID).Media[0]
 	if current.ID == recorded.ID {
 		t.Fatal("the update did not replace the cover")
 	}

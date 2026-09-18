@@ -36,10 +36,10 @@ func (s *Service) stageReplacement(ctx context.Context, job ingestJob, prepared 
 	if err := storage.LockBlobDigest(ctx, tx, job.BlobID); err != nil {
 		return err
 	}
-	if _, err := (&work.Candidate{Version: job.Target.Version}).Lock(ctx, tx, job.OwnerID, job.Target.AssetID); err != nil {
+	if _, err := (&work.Candidate{Version: job.Target.Version}).Lock(ctx, tx, job.OwnerID, job.Target.WorkID); err != nil {
 		return err
 	}
-	preview, err := s.replacementPreview(ctx, tx, job.Target.AssetID, prepared)
+	preview, err := s.replacementPreview(ctx, tx, job.Target.WorkID, prepared)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (s *Service) stageReplacement(ctx context.Context, job ingestJob, prepared 
 	if err != nil {
 		return fmt.Errorf("encode replacement preview: %w", err)
 	}
-	if err := s.assets.EnsureAccountStorage(ctx, tx, job.OwnerID, replacementBlobIDs(job, prepared)); err != nil {
+	if err := s.works.EnsureAccountStorage(ctx, tx, job.OwnerID, replacementBlobIDs(job, prepared)); err != nil {
 		return err
 	}
 	result, err := tx.Exec(ctx, `
@@ -77,24 +77,24 @@ func replacementBlobIDs(job ingestJob, prepared preparedIngest) []uuid.UUID {
 	return ids
 }
 
-func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, prepared preparedIngest) (Preview, error) {
-	working, err := block.Read(ctx, tx, assetID)
+func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, workID uuid.UUID, prepared preparedIngest) (Preview, error) {
+	working, err := block.Read(ctx, tx, workID)
 	if err != nil {
 		return Preview{}, err
 	}
-	if err := private.RestorePromptFragments(ctx, tx, assetID, working); err != nil {
+	if err := private.RestorePromptFragments(ctx, tx, workID, working); err != nil {
 		return Preview{}, err
 	}
-	public, err := work.ReadPublishedBlocks(ctx, tx, assetID)
+	public, err := work.ReadPublishedBlocks(ctx, tx, workID)
 	if err != nil {
 		return Preview{}, err
 	}
 	incoming := blocksWithSuppliedRoles(prepared.Blocks, prepared.SuppliedRoles)
-	carried, err := carriedPromptText(ctx, tx, assetID, working, prepared.Remainder)
+	carried, err := carriedPromptText(ctx, tx, workID, working, prepared.Remainder)
 	if err != nil {
 		return Preview{}, err
 	}
-	unfillable, err := private.UnfillablePrompts(ctx, tx, assetID, carried, prepared.Protected.Prompts)
+	unfillable, err := private.UnfillablePrompts(ctx, tx, workID, carried, prepared.Protected.Prompts)
 	if err != nil {
 		return Preview{}, err
 	}
@@ -103,15 +103,15 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 	arriving := mergeReplacementBlocks(working, prepared.Blocks, prepared.SuppliedRoles, nil)
 	fillSealedPrompts(arriving, carried, prepared.Protected.Prompts)
 
-	currentRemainder, err := readRemainder(ctx, tx, "asset_preserved_data", assetID)
+	currentRemainder, err := readRemainder(ctx, tx, "work_preserved_data", workID)
 	if err != nil {
 		return Preview{}, err
 	}
-	publicRemainder, err := readRemainder(ctx, tx, "asset_public.asset_preserved_data", assetID)
+	publicRemainder, err := readRemainder(ctx, tx, "work_public.work_preserved_data", workID)
 	if err != nil {
 		return Preview{}, err
 	}
-	currentImages, publicImages, err := replacementImages(ctx, tx, assetID)
+	currentImages, publicImages, err := replacementImages(ctx, tx, workID)
 	if err != nil {
 		return Preview{}, err
 	}
@@ -120,19 +120,19 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, assetID uui
 		incomingImages[index] = media.BlobID
 	}
 
-	names, err := stableItemNames(ctx, tx, assetID, prepared.Remainder)
+	names, err := stableItemNames(ctx, tx, workID, prepared.Remainder)
 	if err != nil {
 		return Preview{}, err
 	}
 	groups := version.CompareContentKeyed(working, arriving, names)
 	groups = version.AddGroup(groups, version.PresentationSubject, "Page",
-		version.ComparePresentation(prepared.Kind, working, arriving))
+		version.ComparePresentation(prepared.Type, working, arriving))
 	groups = version.AddGroup(groups, version.PreservedSubject, "Preserved data",
 		version.ComparePreserved(asVersionPreserved(currentRemainder), asVersionPreserved(prepared.Remainder)))
 	groups = version.AddGroup(groups, version.PicturesSubject, "Pictures",
 		comparePictureSets(currentImages, incomingImages))
-	if err := version.AddressPictures(ctx, tx, s.assets, version.ComparisonRequest{
-		AssetID: assetID, Visibility: work.ContentShown,
+	if err := version.AddressPictures(ctx, tx, s.works, version.ComparisonRequest{
+		WorkID: workID, NSFWPreference: work.NSFWShown,
 	}, groups); err != nil {
 		return Preview{}, err
 	}
@@ -251,12 +251,12 @@ func comparePictureSets(current, incoming []uuid.UUID) []version.Change {
 	changes := make([]version.Change, 0)
 	for _, id := range incoming {
 		if !held[id] {
-			changes = append(changes, version.Change{Kind: version.ChangeAdded, Name: "Picture", AfterMedia: &id})
+			changes = append(changes, version.Change{Type: version.ChangeAdded, Name: "Picture", AfterMedia: &id})
 		}
 	}
 	for _, id := range current {
 		if !arriving[id] {
-			changes = append(changes, version.Change{Kind: version.ChangeRemoved, Name: "Picture", BeforeMedia: &id})
+			changes = append(changes, version.Change{Type: version.ChangeRemoved, Name: "Picture", BeforeMedia: &id})
 		}
 	}
 	return changes
@@ -303,18 +303,18 @@ func replacementConflicts(
 	return conflicts
 }
 
-func replacementImages(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (current, public []uuid.UUID, err error) {
+func replacementImages(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (current, public []uuid.UUID, err error) {
 	for _, source := range []struct {
 		table string
 		into  *[]uuid.UUID
 	}{
-		{table: "asset_media", into: &current},
-		{table: "asset_public.asset_media", into: &public},
+		{table: "work_media", into: &current},
+		{table: "work_public.work_media", into: &public},
 	} {
 		rows, queryErr := tx.Query(ctx, fmt.Sprintf(`
 			select blob_id from %s
-			 where asset_id = $1 and is_extracted and blob_id is not null%s
-		`, source.table, map[bool]string{true: " and is_current", false: ""}[source.table == "asset_media"]), assetID)
+			 where work_id = $1 and is_extracted and blob_id is not null%s
+		`, source.table, map[bool]string{true: " and is_current", false: ""}[source.table == "work_media"]), workID)
 		if queryErr != nil {
 			return nil, nil, queryErr
 		}
@@ -496,7 +496,7 @@ func keepUnrepresentable(holder block.Block, decisions map[string]string) bool {
 func retainUnrepresentableRemainder(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	blocks []block.Block,
 	incoming []format.Remainder,
 	decisions map[string]string,
@@ -521,10 +521,10 @@ func retainUnrepresentableRemainder(
 		present[remainderKey(item.Owner, item.OwnerID, item.Namespace)] = struct{}{}
 	}
 	rows, err := tx.Query(ctx, `
-		select owner_kind, owner_id, namespace, payload
-		  from asset_preserved_data where asset_id = $1
-		 order by owner_kind, owner_id, namespace
-	`, assetID)
+		select owner_type, owner_id, namespace, payload
+		  from work_preserved_data where work_id = $1
+		 order by owner_type, owner_id, namespace
+	`, workID)
 	if err != nil {
 		return nil, err
 	}
@@ -563,12 +563,12 @@ func hasSemanticContent(holder block.Block) bool {
 	return false
 }
 
-func readRemainder(ctx context.Context, tx pgx.Tx, table string, assetID uuid.UUID) ([]format.Remainder, error) {
+func readRemainder(ctx context.Context, tx pgx.Tx, table string, workID uuid.UUID) ([]format.Remainder, error) {
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		select owner_kind, owner_id, namespace, payload
-		  from %s where asset_id = $1
-		 order by owner_kind, owner_id, namespace
-	`, table), assetID)
+		select owner_type, owner_id, namespace, payload
+		  from %s where work_id = $1
+		 order by owner_type, owner_id, namespace
+	`, table), workID)
 	if err != nil {
 		return nil, err
 	}
@@ -592,13 +592,13 @@ func readRemainder(ctx context.Context, tx pgx.Tx, table string, assetID uuid.UU
 	return current, nil
 }
 
-func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, operationID uuid.UUID, candidate *work.Candidate, decisions map[string]string, exposeProtected bool) (Operation, error) {
+func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operationID uuid.UUID, candidate *work.Candidate, decisions map[string]string, exposeProtected bool) (Operation, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Operation{}, err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := candidate.Lock(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := candidate.Lock(ctx, tx, ownerID, workID); err != nil {
 		return Operation{}, err
 	}
 	var status Status
@@ -606,14 +606,14 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, opera
 	var filename string
 	var stored []byte
 	err = tx.QueryRow(ctx, `
-		select status, target_asset_id, blob_id, filename, replacement_preview
+		select status, target_work_id, blob_id, filename, replacement_preview
 		  from ingest_operations
 		 where id = $1 and owner_id = $2 for update
 	`, operationID, ownerID).Scan(&status, &targetID, &blobID, &filename, &stored)
 	if err != nil {
 		return Operation{}, fmt.Errorf("read replacement preview: %w", err)
 	}
-	if status != IngestPreview || !targetID.Valid || uuidFromPgtype(targetID) != assetID || !blobID.Valid {
+	if status != IngestPreview || !targetID.Valid || uuidFromPgtype(targetID) != workID || !blobID.Valid {
 		return Operation{}, ErrIngestNotFound
 	}
 	var staged stagedReplacement
@@ -626,20 +626,20 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, opera
 	}
 	job := ingestJob{
 		ID: operationID, OwnerID: ownerID, BlobID: uuidFromPgtype(blobID), Filename: filename,
-		Target: &revisionTarget{AssetID: assetID, Kind: prepared.Kind, Version: candidate.Version},
+		Target: &revisionTarget{WorkID: workID, Type: prepared.Type, Version: candidate.Version},
 	}
 	if _, err := s.writeIngestResultWithDecisions(ctx, tx, job, prepared, decisions, exposeProtected); err != nil {
 		return Operation{}, err
 	}
 	if _, err := tx.Exec(ctx, `
 		update ingest_operations
-		   set status = 'success', asset_id = $2, blob_id = null, replacement_preview = null,
+		   set status = 'success', work_id = $2, blob_id = null, replacement_preview = null,
 		       updated_at = $3
 		 where id = $1
-	`, operationID, assetID, s.now()); err != nil {
+	`, operationID, workID, s.now()); err != nil {
 		return Operation{}, fmt.Errorf("accept replacement preview: %w", err)
 	}
-	if err := candidate.Commit(ctx, tx, assetID); err != nil {
+	if err := candidate.Commit(ctx, tx, workID); err != nil {
 		return Operation{}, err
 	}
 	accepted, err := s.GetIngest(ctx, ownerID, operationID)
@@ -649,29 +649,29 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, assetID, opera
 	return accepted, nil
 }
 
-func (s *Service) ReviewedReplacement(ctx context.Context, ownerID, assetID uuid.UUID) (Operation, error) {
+func (s *Service) ReviewedReplacement(ctx context.Context, ownerID, workID uuid.UUID) (Operation, error) {
 	var operationID uuid.UUID
 	err := s.pool.QueryRow(ctx, `
 		select id from ingest_operations
-		 where target_asset_id = $1 and owner_id = $2
+		 where target_work_id = $1 and owner_id = $2
 		   and status in ('pending', 'processing', 'preview')
 		 order by created_at desc limit 1
-	`, assetID, ownerID).Scan(&operationID)
+	`, workID, ownerID).Scan(&operationID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Operation{}, ErrIngestNotFound
 	}
 	if err != nil {
-		return Operation{}, fmt.Errorf("read the replacement waiting on this asset: %w", err)
+		return Operation{}, fmt.Errorf("read the replacement waiting on this work: %w", err)
 	}
 	return s.GetIngest(ctx, ownerID, operationID)
 }
 
-func (s *Service) CancelReplacement(ctx context.Context, ownerID, assetID, operationID uuid.UUID) error {
+func (s *Service) CancelReplacement(ctx context.Context, ownerID, workID, operationID uuid.UUID) error {
 	result, err := s.pool.Exec(ctx, `
 		update ingest_operations
 		   set status = 'cancelled', blob_id = null, replacement_preview = null, updated_at = $4
-		 where id = $1 and owner_id = $2 and target_asset_id = $3 and status = 'preview'
-	`, operationID, ownerID, assetID, s.now())
+		 where id = $1 and owner_id = $2 and target_work_id = $3 and status = 'preview'
+	`, operationID, ownerID, workID, s.now())
 	if err != nil {
 		return fmt.Errorf("cancel replacement preview: %w", err)
 	}

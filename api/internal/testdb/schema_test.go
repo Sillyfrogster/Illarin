@@ -16,11 +16,11 @@ func TestCoreTablesExist(t *testing.T) {
 	pool := Connect(t)
 
 	want := []string{
-		"assets",
-		"asset_revisions",
-		"asset_media",
-		"asset_blocks",
-		"asset_projections",
+		"works",
+		"work_revisions",
+		"work_media",
+		"work_blocks",
+		"work_summaries",
 		"blobs",
 		"blob_sweep_marks",
 		"blob_tombstones",
@@ -132,7 +132,7 @@ func TestDurableRecordsReferenceBlobs(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 
-	for _, table := range []string{"asset_revisions", "asset_media"} {
+	for _, table := range []string{"work_revisions", "work_media"} {
 		rows, err := pool.Query(context.Background(),
 			`select column_name
 			   from information_schema.columns
@@ -182,7 +182,7 @@ func TestBlockRowsCarryOnlyWhatTheCreatorDid(t *testing.T) {
 	rows, err := pool.Query(context.Background(),
 		`select column_name
 		   from information_schema.columns
-		  where table_schema = 'public' and table_name = 'asset_blocks'
+		  where table_schema = 'public' and table_name = 'work_blocks'
 		  order by ordinal_position`)
 	if err != nil {
 		t.Fatalf("read block columns: %v", err)
@@ -193,7 +193,7 @@ func TestBlockRowsCarryOnlyWhatTheCreatorDid(t *testing.T) {
 	}
 
 	want := []string{
-		"id", "asset_id", "definition", "title", "position", "hidden",
+		"id", "work_id", "definition", "title", "position", "hidden",
 		"layout", "width", "elements",
 	}
 	if !slices.Equal(columns, want) {
@@ -214,22 +214,22 @@ func TestBlockRowsCarryOnlyWhatTheCreatorDid(t *testing.T) {
 	}
 }
 
-func TestTwoBlocksOnOneAssetCannotShareAPosition(t *testing.T) {
+func TestTwoBlocksOnOneWorkCannotShareAPosition(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
-	assetID := uuid.New()
+	workID := uuid.New()
 	if _, err := pool.Exec(ctx,
-		`insert into assets (id, kind, name, lifecycle)
-		 values ($1, 'character', 'Ordered', 'draft')`, assetID); err != nil {
+		`insert into works (id, type, name, lifecycle)
+		 values ($1, 'character', 'Ordered', 'draft')`, workID); err != nil {
 		t.Fatalf("insert asset: %v", err)
 	}
 
 	insert := func(definition string) error {
 		_, err := pool.Exec(ctx,
-			`insert into asset_blocks (id, asset_id, definition, position, layout, width)
+			`insert into work_blocks (id, work_id, definition, position, layout, width)
 			 values (gen_random_uuid(), $1, $2, 0, 'single', 'full')`,
-			assetID, definition)
+			workID, definition)
 		return err
 	}
 	if err := insert("character_core"); err != nil {
@@ -240,55 +240,55 @@ func TestTwoBlocksOnOneAssetCannotShareAPosition(t *testing.T) {
 	}
 }
 
-func TestAssetKindIsClosedToKnownValues(t *testing.T) {
+func TestWorkTypeIsClosedToKnownValues(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
 
-	for _, kind := range []string{"character", "lorebook", "preset", "theme", "pack", "extension"} {
+	for _, workType := range []string{"character", "lorebook", "preset", "theme", "pack", "extension"} {
 		_, err := pool.Exec(ctx,
-			`insert into assets (id, kind, name, lifecycle)
+			`insert into works (id, type, name, lifecycle)
 			 values (gen_random_uuid(), $1, $2, 'published')`,
-			kind, kind)
+			workType, workType)
 		if err != nil {
-			t.Errorf("insert kind %q: %v", kind, err)
+			t.Errorf("insert kind %q: %v", workType, err)
 		}
 	}
 
 	_, err := pool.Exec(ctx,
-		`insert into assets (id, kind, name, lifecycle)
+		`insert into works (id, type, name, lifecycle)
 		 values (gen_random_uuid(), 'bundle', 'Bundle', 'published')`)
 	if err == nil {
 		t.Fatal("kind outside the catalog vocabulary was accepted")
 	}
 }
 
-func TestDiscoveryDefaultsToListedAndRejectsUnknownValues(t *testing.T) {
+func TestVisibilityDefaultsToListedAndRejectsUnknownValues(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
 
-	var discovery string
+	var visibility string
 	err := pool.QueryRow(ctx,
-		`insert into assets (id, kind, name, lifecycle)
+		`insert into works (id, type, name, lifecycle)
 		 values (gen_random_uuid(), 'character', 'Listed by default', 'published')
-		 returning discovery`).Scan(&discovery)
+		 returning visibility`).Scan(&visibility)
 	if err != nil {
 		t.Fatalf("insert asset: %v", err)
 	}
-	if discovery != "listed" {
-		t.Errorf("discovery = %q, want listed", discovery)
+	if visibility != "listed" {
+		t.Errorf("discovery = %q, want listed", visibility)
 	}
 
 	_, err = pool.Exec(ctx,
-		`insert into assets (id, kind, name, discovery, lifecycle)
+		`insert into works (id, type, name, visibility, lifecycle)
 		 values (gen_random_uuid(), 'theme', 'Quiet', 'unlisted', 'published')`)
 	if err != nil {
 		t.Errorf("insert unlisted asset: %v", err)
 	}
 
 	_, err = pool.Exec(ctx,
-		`insert into assets (id, kind, name, discovery, lifecycle)
+		`insert into works (id, type, name, visibility, lifecycle)
 		 values (gen_random_uuid(), 'theme', 'Unknown', 'private', 'published')`)
 	if err == nil {
 		t.Fatal("discovery outside listed and unlisted was accepted")
@@ -300,7 +300,7 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 	pool := Connect(t)
 	ctx := context.Background()
 
-	assetID := uuid.New()
+	workID := uuid.New()
 	actorID := uuid.New()
 	_, err := pool.Exec(ctx,
 		`insert into users (id, username) values ($1, 'withhold.actor')`, actorID)
@@ -308,16 +308,16 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 		t.Fatalf("insert withhold actor: %v", err)
 	}
 	_, err = pool.Exec(ctx,
-		`insert into assets (id, kind, name, lifecycle)
-		 values ($1, 'character', 'Held', 'published')`, assetID)
+		`insert into works (id, type, name, lifecycle)
+		 values ($1, 'character', 'Held', 'published')`, workID)
 	if err != nil {
 		t.Fatalf("insert asset: %v", err)
 	}
 
 	_, err = pool.Exec(ctx,
-		`update assets
+		`update works
 		    set withheld_at = now(), withheld_by = $2, withheld_reason = 'review'
-		  where id = $1`, assetID, actorID)
+		  where id = $1`, workID, actorID)
 	if err != nil {
 		t.Fatalf("set complete withhold: %v", err)
 	}
@@ -337,12 +337,12 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			id := uuid.New()
 			_, err := pool.Exec(ctx,
-				`insert into assets (id, kind, name, lifecycle)
+				`insert into works (id, type, name, lifecycle)
 				 values ($1, 'character', 'Partial', 'published')`, id)
 			if err != nil {
 				t.Fatalf("insert asset: %v", err)
 			}
-			_, err = pool.Exec(ctx, `update assets set `+test.set+` where id = $1`, id)
+			_, err = pool.Exec(ctx, `update works set `+test.set+` where id = $1`, id)
 			if err == nil {
 				t.Fatal("partial withhold was accepted")
 			}
@@ -354,35 +354,35 @@ func TestOriginAndRevisionFormatsHaveSeparateHomes(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 
-	assetColumns, err := tableColumns(pool, "assets")
+	workColumns, err := tableColumns(pool, "works")
 	if err != nil {
 		t.Fatalf("read asset columns: %v", err)
 	}
 	for _, column := range []string{"format", "format_version", "platform", "publication"} {
-		if slices.Contains(assetColumns, column) {
+		if slices.Contains(workColumns, column) {
 			t.Errorf("assets still has %s", column)
 		}
 	}
 	for _, column := range []string{
-		"kind", "discovery", "withheld_at", "withheld_by", "withheld_reason", "deleted_at", "origin_format",
+		"type", "visibility", "withheld_at", "withheld_by", "withheld_reason", "deleted_at", "origin_format",
 	} {
-		if !slices.Contains(assetColumns, column) {
+		if !slices.Contains(workColumns, column) {
 			t.Errorf("assets has no %s", column)
 		}
 	}
 
-	revisionColumns, err := tableColumns(pool, "asset_revisions")
+	revisionColumns, err := tableColumns(pool, "work_revisions")
 	if err != nil {
 		t.Fatalf("read revision columns: %v", err)
 	}
 	if !slices.Contains(revisionColumns, "format") {
-		t.Error("asset_revisions has no format")
+		t.Error("work_revisions has no format")
 	}
 	if slices.Contains(revisionColumns, "passthrough_platform") {
-		t.Error("asset_revisions still has passthrough_platform")
+		t.Error("work_revisions still has passthrough_platform")
 	}
 	if slices.Contains(revisionColumns, "format_version") {
-		t.Error("asset_revisions still has format_version")
+		t.Error("work_revisions still has format_version")
 	}
 }
 
@@ -401,19 +401,19 @@ func TestRevisionIdentityCanBackACompositeForeignKey(t *testing.T) {
 	_, err = pool.Exec(ctx,
 		`create table revision_reference_probe (
 		    revision_id uuid not null,
-		    asset_id uuid not null,
-		    foreign key (revision_id, asset_id)
-		        references asset_revisions (id, asset_id)
+		    work_id uuid not null,
+		    foreign key (revision_id, work_id)
+		        references work_revisions (id, work_id)
 		)`)
 	if err != nil {
-		t.Fatalf("asset_revisions (id, asset_id) cannot back a composite foreign key: %v", err)
+		t.Fatalf("work_revisions (id, work_id) cannot back a composite foreign key: %v", err)
 	}
 }
 
 func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	assetID, revisionID, _ := insertAssetRevision(t, pool)
+	workID, revisionID, _ := insertWorkRevision(t, pool)
 
 	columns, err := tableColumns(pool, "download_events")
 	if err != nil {
@@ -421,12 +421,12 @@ func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 	}
 	want := []string{
 		"id",
-		"asset_id",
+		"work_id",
 		"revision_id",
 		"export_target",
 		"handed_off_at",
 		"authorization_class",
-		"discovery",
+		"visibility",
 	}
 	if !slices.Equal(columns, want) {
 		t.Fatalf("download event columns = %v, want %v", columns, want)
@@ -434,9 +434,9 @@ func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 
 	_, err = pool.Exec(context.Background(), `
 		insert into download_events
-			(asset_id, revision_id, export_target, authorization_class, discovery)
+			(work_id, revision_id, export_target, authorization_class, visibility)
 		values ($1, $2, 'raw', 'anonymous', 'listed')
-	`, assetID, revisionID)
+	`, workID, revisionID)
 	if err != nil {
 		t.Fatalf("insert download event: %v", err)
 	}
@@ -445,20 +445,20 @@ func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 func TestDownloadEventMayOmitASourceRevision(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	assetID := uuid.New()
+	workID := uuid.New()
 	ctx := context.Background()
 
 	if _, err := pool.Exec(ctx, `
-		insert into assets (id, kind, name, lifecycle)
+		insert into works (id, type, name, lifecycle)
 		values ($1, 'character', 'Made here', 'published')
-	`, assetID); err != nil {
+	`, workID); err != nil {
 		t.Fatalf("insert asset without a source revision: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into download_events
-			(asset_id, revision_id, export_target, authorization_class, discovery)
+			(work_id, revision_id, export_target, authorization_class, visibility)
 		values ($1, null, 'chara_card_v3', 'anonymous', 'listed')
-	`, assetID); err != nil {
+	`, workID); err != nil {
 		t.Fatalf("insert download event without a source revision: %v", err)
 	}
 }
@@ -466,16 +466,16 @@ func TestDownloadEventMayOmitASourceRevision(t *testing.T) {
 func TestDownloadEventsAreImmutable(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	assetID, revisionID, _ := insertAssetRevision(t, pool)
+	workID, revisionID, _ := insertWorkRevision(t, pool)
 	ctx := context.Background()
 
 	var eventID int64
 	err := pool.QueryRow(ctx, `
 		insert into download_events
-			(asset_id, revision_id, export_target, authorization_class, discovery)
+			(work_id, revision_id, export_target, authorization_class, visibility)
 		values ($1, $2, 'raw', 'anonymous', 'listed')
 		returning id
-	`, assetID, revisionID).Scan(&eventID)
+	`, workID, revisionID).Scan(&eventID)
 	if err != nil {
 		t.Fatalf("insert download event: %v", err)
 	}
@@ -496,16 +496,16 @@ func TestDownloadEventsAreImmutable(t *testing.T) {
 func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	assetID, _, _ := insertAssetRevision(t, pool)
+	workID, _, _ := insertWorkRevision(t, pool)
 	ctx := context.Background()
 
 	var migratedAt time.Time
 	err := pool.QueryRow(ctx, `
 		insert into migration_legacy_counters
-			(asset_id, v1_downloads, v1_views, v1_updated_at)
+			(work_id, v1_downloads, v1_views, v1_updated_at)
 		values ($1, 420, 1300, now())
 		returning migrated_at
-	`, assetID).Scan(&migratedAt)
+	`, workID).Scan(&migratedAt)
 	if err != nil {
 		t.Fatalf("insert legacy counters: %v", err)
 	}
@@ -514,21 +514,21 @@ func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 	}
 
 	if _, err := pool.Exec(ctx, `
-		update migration_legacy_counters set v1_downloads = v1_downloads + 1 where asset_id = $1
-	`, assetID); err == nil {
+		update migration_legacy_counters set v1_downloads = v1_downloads + 1 where work_id = $1
+	`, workID); err == nil {
 		t.Fatal("a v1 download count was incremented")
 	}
 	if _, err := pool.Exec(ctx, `truncate migration_legacy_counters`); err == nil {
 		t.Fatal("the legacy counters were truncated")
 	}
 
-	if _, err := pool.Exec(ctx, `delete from assets where id = $1`, assetID); err != nil {
+	if _, err := pool.Exec(ctx, `delete from works where id = $1`, workID); err != nil {
 		t.Fatalf("delete the asset the record belongs to: %v", err)
 	}
 	var left int
 	if err := pool.QueryRow(ctx, `
-		select count(*) from migration_legacy_counters where asset_id = $1
-	`, assetID).Scan(&left); err != nil {
+		select count(*) from migration_legacy_counters where work_id = $1
+	`, workID).Scan(&left); err != nil {
 		t.Fatalf("count what the deletion left: %v", err)
 	}
 	if left != 0 {
@@ -536,27 +536,27 @@ func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 	}
 }
 
-func TestDownloadEventRevisionMustBelongToItsAsset(t *testing.T) {
+func TestDownloadEventRevisionMustBelongToItsWork(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	firstAssetID, firstRevisionID, _ := insertAssetRevision(t, pool)
-	secondAssetID, _, _ := insertAssetRevision(t, pool)
+	firstWorkID, firstRevisionID, _ := insertWorkRevision(t, pool)
+	secondWorkID, _, _ := insertWorkRevision(t, pool)
 
 	_, err := pool.Exec(context.Background(), `
 		insert into download_events
-			(asset_id, revision_id, export_target, authorization_class, discovery)
+			(work_id, revision_id, export_target, authorization_class, visibility)
 		values ($1, $2, 'raw', 'anonymous', 'listed')
-	`, secondAssetID, firstRevisionID)
+	`, secondWorkID, firstRevisionID)
 	if err == nil {
 		t.Fatalf("revision %s from asset %s was recorded for asset %s",
-			firstRevisionID, firstAssetID, secondAssetID)
+			firstRevisionID, firstWorkID, secondWorkID)
 	}
 }
 
 func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	assetID, revisionID, _ := insertAssetRevision(t, pool)
+	workID, revisionID, _ := insertWorkRevision(t, pool)
 	ctx := context.Background()
 
 	for _, authorizationClass := range []string{
@@ -564,9 +564,9 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 	} {
 		_, err := pool.Exec(ctx, `
 			insert into download_events
-				(asset_id, revision_id, export_target, authorization_class, discovery)
+				(work_id, revision_id, export_target, authorization_class, visibility)
 			values ($1, $2, 'raw', $3, 'listed')
-		`, assetID, revisionID, authorizationClass)
+		`, workID, revisionID, authorizationClass)
 		if err != nil {
 			t.Fatalf("insert %s download event: %v", authorizationClass, err)
 		}
@@ -580,9 +580,9 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			_, err := pool.Exec(ctx, `
 				insert into download_events
-					(asset_id, revision_id, export_target, authorization_class, discovery)
+					(work_id, revision_id, export_target, authorization_class, visibility)
 				values ($1, $2, $3, $4, $5)
-			`, assetID, revisionID, values[0], values[1], values[2])
+			`, workID, revisionID, values[0], values[1], values[2])
 			if err == nil {
 				t.Fatal("invalid download event was accepted")
 			}
@@ -590,17 +590,17 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 	}
 }
 
-func TestTheProjectionCarriesTwoIndependentHalves(t *testing.T) {
+func TestTheSummaryCarriesTwoIndependentHalves(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	assetID, _, _ := insertAssetRevision(t, pool)
+	workID, _, _ := insertWorkRevision(t, pool)
 
-	columns, err := tableColumns(pool, "asset_projections")
+	columns, err := tableColumns(pool, "work_summaries")
 	if err != nil {
 		t.Fatalf("read projection columns: %v", err)
 	}
 	want := []string{
-		"asset_id", "export", "export_stamp", "export_computed_at",
+		"work_id", "export", "export_stamp", "export_computed_at",
 		"facets", "facet_stamp", "facet_computed_at",
 	}
 	for _, column := range want {
@@ -610,34 +610,34 @@ func TestTheProjectionCarriesTwoIndependentHalves(t *testing.T) {
 	}
 
 	if _, err := pool.Exec(context.Background(),
-		`insert into asset_projections (asset_id, facets, facet_stamp) values ($1, $2, 'stamp')`,
-		assetID, `{"lorebook":3}`); err != nil {
+		`insert into work_summaries (work_id, facets, facet_stamp) values ($1, $2, 'stamp')`,
+		workID, `{"lorebook":3}`); err != nil {
 		t.Fatalf("write only the facet half: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(),
-		`insert into asset_projections (asset_id, facets, facet_stamp) values ($1, $2, 'stamp')`,
+		`insert into work_summaries (work_id, facets, facet_stamp) values ($1, $2, 'stamp')`,
 		uuid.New(), `{}`); err == nil {
 		t.Fatal("a projection without an asset was accepted")
 	}
 	if _, err := pool.Exec(context.Background(), `
-		update asset_projections set facets = '[]'::jsonb where asset_id = $1
-	`, assetID); err == nil {
+		update work_summaries set facets = '[]'::jsonb where work_id = $1
+	`, workID); err == nil {
 		t.Fatal("a facet half that is not an object was accepted")
 	}
 }
 
-func TestMediaBelongsToOneAsset(t *testing.T) {
+func TestMediaBelongsToOneWork(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	assetID, _, blobID := insertAssetRevision(t, pool)
+	workID, _, blobID := insertWorkRevision(t, pool)
 	ctx := context.Background()
 
-	columns, err := tableColumns(pool, "asset_media")
+	columns, err := tableColumns(pool, "work_media")
 	if err != nil {
 		t.Fatalf("read media columns: %v", err)
 	}
 	want := []string{
-		"id", "asset_id", "role", "width", "height", "created_at", "blob_id",
+		"id", "work_id", "role", "width", "height", "created_at", "blob_id",
 		"is_extracted", "is_current",
 	}
 	if !slices.Equal(columns, want) {
@@ -649,50 +649,50 @@ func TestMediaBelongsToOneAsset(t *testing.T) {
 	}
 	for _, role := range roles {
 		_, err = pool.Exec(ctx,
-			`insert into asset_media (id, asset_id, role, blob_id)
-			 values (gen_random_uuid(), $1, $2, $3)`, assetID, role, blobID)
+			`insert into work_media (id, work_id, role, blob_id)
+			 values (gen_random_uuid(), $1, $2, $3)`, workID, role, blobID)
 		if err != nil {
 			t.Fatalf("insert %s media: %v", role, err)
 		}
 	}
 
 	_, err = pool.Exec(ctx,
-		`insert into asset_media (id, role, blob_id)
+		`insert into work_media (id, role, blob_id)
 		 values (gen_random_uuid(), 'gallery', $1)`, blobID)
 	if err == nil {
 		t.Error("media without an asset was accepted")
 	}
 	_, err = pool.Exec(ctx,
-		`insert into asset_media (id, asset_id, role, blob_id)
+		`insert into work_media (id, work_id, role, blob_id)
 		 values (gen_random_uuid(), $1, 'gallery', $2)`, uuid.New(), blobID)
 	if err == nil {
 		t.Error("media for an unknown asset was accepted")
 	}
 	_, err = pool.Exec(ctx,
-		`insert into asset_media (id, asset_id, role, blob_id)
-		 values (gen_random_uuid(), $1, 'cover', $2)`, assetID, blobID)
+		`insert into work_media (id, work_id, role, blob_id)
+		 values (gen_random_uuid(), $1, 'cover', $2)`, workID, blobID)
 	if err == nil {
 		t.Error("media with a role outside the closed vocabulary was accepted")
 	}
 }
 
-func TestCoverIsAnOptionalAssetReference(t *testing.T) {
+func TestCoverIsAnOptionalWorkReference(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	assetID, _, blobID := insertAssetRevision(t, pool)
+	workID, _, blobID := insertWorkRevision(t, pool)
 	ctx := context.Background()
 
-	assetColumns, err := tableColumns(pool, "assets")
+	workColumns, err := tableColumns(pool, "works")
 	if err != nil {
 		t.Fatalf("read asset columns: %v", err)
 	}
-	if !slices.Contains(assetColumns, "cover_media_id") || slices.Contains(assetColumns, "preview_media_id") {
-		t.Fatalf("asset columns do not carry the cover directly: %v", assetColumns)
+	if !slices.Contains(workColumns, "cover_media_id") || slices.Contains(workColumns, "preview_media_id") {
+		t.Fatalf("asset columns do not carry the cover directly: %v", workColumns)
 	}
 
 	var coverID *uuid.UUID
 	if err := pool.QueryRow(ctx,
-		`select cover_media_id from assets where id = $1`, assetID,
+		`select cover_media_id from works where id = $1`, workID,
 	).Scan(&coverID); err != nil {
 		t.Fatalf("read empty cover: %v", err)
 	}
@@ -702,13 +702,13 @@ func TestCoverIsAnOptionalAssetReference(t *testing.T) {
 
 	mediaID := uuid.New()
 	if _, err := pool.Exec(ctx,
-		`insert into asset_media (id, asset_id, role, blob_id)
-		 values ($1, $2, 'avatar', $3)`, mediaID, assetID, blobID,
+		`insert into work_media (id, work_id, role, blob_id)
+		 values ($1, $2, 'avatar', $3)`, mediaID, workID, blobID,
 	); err != nil {
 		t.Fatalf("insert cover media: %v", err)
 	}
 	if _, err := pool.Exec(ctx,
-		`update assets set cover_media_id = $2 where id = $1`, assetID, mediaID,
+		`update works set cover_media_id = $2 where id = $1`, workID, mediaID,
 	); err != nil {
 		t.Fatalf("set cover: %v", err)
 	}
@@ -730,7 +730,7 @@ func TestBrowseIndexStartsWithCreationTimeAndCarriesTheCatalogPredicate(t *testi
 		  cross join lateral unnest(index.indkey) with ordinality key(attnum, ordinality)
 		   join pg_attribute attribute
 		     on attribute.attrelid = index.indrelid and attribute.attnum = key.attnum
-		  where index_class.relname = 'assets_browse_idx'
+		  where index_class.relname = 'works_browse_idx'
 		  group by index.indexrelid, index.indpred, index.indrelid`).Scan(&columns, &predicate, &definition)
 	if err != nil {
 		t.Fatalf("read browse index: %v", err)
@@ -741,7 +741,7 @@ func TestBrowseIndexStartsWithCreationTimeAndCarriesTheCatalogPredicate(t *testi
 	if !strings.Contains(definition, "(created_at DESC, id DESC)") {
 		t.Errorf("browse index ordering = %q, want creation time and id descending", definition)
 	}
-	for _, clause := range []string{"discovery = 'listed'", "withheld_at IS NULL", "deleted_at IS NULL"} {
+	for _, clause := range []string{"visibility = 'listed'", "withheld_at IS NULL", "deleted_at IS NULL"} {
 		if !strings.Contains(predicate, clause) {
 			t.Errorf("browse index predicate %q does not contain %q", predicate, clause)
 		}
@@ -760,9 +760,9 @@ func tableColumns(pool *pgxpool.Pool, table string) ([]string, error) {
 	return rowsToStrings(rows)
 }
 
-func insertAssetRevision(t *testing.T, pool *pgxpool.Pool) (uuid.UUID, uuid.UUID, uuid.UUID) {
+func insertWorkRevision(t *testing.T, pool *pgxpool.Pool) (uuid.UUID, uuid.UUID, uuid.UUID) {
 	t.Helper()
-	assetID := uuid.New()
+	workID := uuid.New()
 	revisionID := uuid.New()
 	blobID := uuid.New()
 	digest := make([]byte, 32)
@@ -773,18 +773,18 @@ func insertAssetRevision(t *testing.T, pool *pgxpool.Pool) (uuid.UUID, uuid.UUID
 		 values ($1, $2, 1, $3)`, blobID, digest, uuid.NewString())
 	if err == nil {
 		_, err = pool.Exec(ctx,
-			`insert into assets (id, kind, name, lifecycle)
-			 values ($1, 'character', 'Card', 'published')`, assetID)
+			`insert into works (id, type, name, lifecycle)
+			 values ($1, 'character', 'Card', 'published')`, workID)
 	}
 	if err == nil {
 		_, err = pool.Exec(ctx,
-			`insert into asset_revisions
-			     (id, asset_id, revision, blob_id, media_type, format)
+			`insert into work_revisions
+			     (id, work_id, revision, blob_id, media_type, format)
 			 values ($1, $2, 1, $3, 'application/json', 'chara_card_v3')`,
-			revisionID, assetID, blobID)
+			revisionID, workID, blobID)
 	}
 	if err != nil {
 		t.Fatalf("insert asset revision: %v", err)
 	}
-	return assetID, revisionID, blobID
+	return workID, revisionID, blobID
 }

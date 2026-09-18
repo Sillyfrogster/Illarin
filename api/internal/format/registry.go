@@ -85,11 +85,11 @@ func (r *Registry) ValidateDeclarations() error {
 
 func signaturesOverlap(first, second []Recognition) bool {
 	for _, a := range first {
-		if a.Kind != RecognitionSignature {
+		if a.Type != RecognitionSignature {
 			continue
 		}
 		for _, b := range second {
-			if b.Kind != RecognitionSignature || incompatibleContainers(a.Containers, b.Containers) {
+			if b.Type != RecognitionSignature || incompatibleContainers(a.Containers, b.Containers) {
 				continue
 			}
 			if shadows(a.Required, b.Required) || shadows(b.Required, a.Required) {
@@ -212,10 +212,10 @@ func (r *Registry) Resolve(file Inspection) (Resolution, bool, error) {
 
 func (r *Registry) unsupportedDiscriminator(file Inspection) error {
 	type observation struct {
-		kind    string
-		path    string
-		value   string
-		formats []string
+		workType string
+		path     string
+		value    string
+		formats  []string
 	}
 	observations := make(map[string]*observation)
 	ids := make([]string, 0, len(r.modules))
@@ -226,7 +226,7 @@ func (r *Registry) unsupportedDiscriminator(file Inspection) error {
 	for _, id := range ids {
 		declaration := r.modules[id].Declaration()
 		for _, recognition := range declaration.Recognition {
-			if recognition.Kind != RecognitionDiscriminator {
+			if recognition.Type != RecognitionDiscriminator {
 				continue
 			}
 			for _, payload := range file.Payloads {
@@ -246,10 +246,10 @@ func (r *Registry) unsupportedDiscriminator(file Inspection) error {
 					}
 					joined += part
 				}
-				key := declaration.Kind + "\x00" + joined + "\x00" + value
+				key := declaration.Type + "\x00" + joined + "\x00" + value
 				found := observations[key]
 				if found == nil {
-					found = &observation{kind: declaration.Kind, path: joined, value: value}
+					found = &observation{workType: declaration.Type, path: joined, value: value}
 					observations[key] = found
 				}
 				found.formats = append(found.formats, declaration.ID)
@@ -273,7 +273,7 @@ func (r *Registry) unsupportedDiscriminator(file Inspection) error {
 	}
 	return fmt.Errorf(
 		"formats for kind %q recognise discriminator %q but cannot read value %q: %w",
-		found.kind, found.path, found.value, ErrUnsupportedFormat,
+		found.workType, found.path, found.value, ErrUnsupportedFormat,
 	)
 }
 

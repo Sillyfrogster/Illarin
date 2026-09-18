@@ -435,21 +435,21 @@ func TestOnlyAVerifiedAccountCanUpload(t *testing.T) {
 
 	metadata := apitest.ExampleMetadata("Verified")
 	metadata["filename"] = "verified.lumitheme"
-	created := apitest.UploadAndFinish(t, r, unverified, handlers.Assets, metadata, []byte("file"))
-	var asset struct {
-		Asset *struct {
+	created := apitest.UploadAndFinish(t, r, unverified, handlers.Works, metadata, []byte("file"))
+	var work struct {
+		Work *struct {
 			ID string `json:"id"`
 		} `json:"asset"`
 	}
-	if err := json.Unmarshal(created.Body.Bytes(), &asset); err != nil {
+	if err := json.Unmarshal(created.Body.Bytes(), &work); err != nil {
 		t.Fatalf("decode asset: %v", err)
 	}
-	if asset.Asset == nil {
+	if work.Work == nil {
 		t.Fatal("completed ingest has no asset")
 	}
 
 	viewer := apitest.SignUp(t, r, "viewer@example.com", "plain.viewer")
-	download := httptest.NewRequest(http.MethodGet, "/download/"+asset.Asset.ID, nil)
+	download := httptest.NewRequest(http.MethodGet, "/download/"+work.Work.ID, nil)
 	download.AddCookie(viewer)
 	if viewed := apitest.Send(t, r, download); viewed.Code != http.StatusOK {
 		t.Errorf("unverified view status = %d, want 200. body: %s", viewed.Code, viewed.Body.String())

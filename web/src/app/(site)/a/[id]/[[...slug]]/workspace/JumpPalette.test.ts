@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { AssetBlock, AssetElement } from "@/lib/api/query";
+import type { WorkBlock, WorkElement } from "@/lib/api/query";
 import { destinationsIn } from "./JumpPalette";
 
-function element(id: string, label: string): AssetElement {
+function element(id: string, label: string): WorkElement {
   return {
     content: { text: "" },
     facts: [],
@@ -16,7 +16,7 @@ function element(id: string, label: string): AssetElement {
   };
 }
 
-const blocks: AssetBlock[] = [
+const blocks: WorkBlock[] = [
   {
     allowedLayouts: ["single"],
     definition: "character",

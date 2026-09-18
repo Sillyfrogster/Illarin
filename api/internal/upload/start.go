@@ -10,19 +10,19 @@ import (
 	"github.com/google/uuid"
 )
 
-var kindsAskedForAnApp = map[string]struct{}{"preset": {}, "theme": {}}
+var typesAskedForAnApp = map[string]struct{}{"preset": {}, "theme": {}}
 
-func KindAsksForAnApp(kind string) bool {
-	_, asked := kindsAskedForAnApp[kind]
+func TypeAsksForAnApp(workType string) bool {
+	_, asked := typesAskedForAnApp[workType]
 	return asked
 }
 
-func Apps(kind string) []string {
-	if !KindAsksForAnApp(kind) {
+func Apps(workType string) []string {
+	if !TypeAsksForAnApp(workType) {
 		return nil
 	}
 	var supported []string
-	switch kind {
+	switch workType {
 	case "preset":
 		for _, app := range preset.Apps() {
 			supported = append(supported, string(app))
@@ -35,14 +35,14 @@ func Apps(kind string) []string {
 	return supported
 }
 
-func seedElements(kind string, app string) ([]block.Element, error) {
-	if !KindAsksForAnApp(kind) {
+func seedElements(workType string, app string) ([]block.Element, error) {
+	if !TypeAsksForAnApp(workType) {
 		if app != "" {
 			return nil, ErrAppNotAnswered
 		}
 		return nil, nil
 	}
-	switch kind {
+	switch workType {
 	case "preset":
 		chosen := preset.App(app)
 		if !chosen.Known() {
@@ -62,24 +62,24 @@ func seedElements(kind string, app string) ([]block.Element, error) {
 func (s *Service) StartFromNothing(
 	ctx context.Context,
 	ownerID uuid.UUID,
-	kind string,
+	workType string,
 	app string,
 ) (uuid.UUID, error) {
-	if _, ok := block.Catalog(kind); !ok || !s.reg.BuildsFromNothing(kind) {
-		return uuid.Nil, ErrKindNotBuildable
+	if _, ok := block.Definitions(workType); !ok || !s.reg.BuildsFromNothing(workType) {
+		return uuid.Nil, ErrTypeNotBuildable
 	}
-	seeded, err := seedElements(kind, app)
+	seeded, err := seedElements(workType, app)
 	if err != nil {
 		return uuid.Nil, err
 	}
-	blocks, err := block.Place(kind, seeded)
+	blocks, err := block.Place(workType, seeded)
 	if err != nil {
-		return uuid.Nil, ErrKindNotBuildable
+		return uuid.Nil, ErrTypeNotBuildable
 	}
 
-	a := work.Asset{
-		ID: uuid.New(), Kind: kind, Tags: []string{},
-		Discovery: work.DiscoveryListed, Lifecycle: work.LifecycleDraft,
+	a := work.Work{
+		ID: uuid.New(), Type: workType, Tags: []string{},
+		Visibility: work.VisibilityListed, Lifecycle: work.LifecycleDraft,
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -88,7 +88,7 @@ func (s *Service) StartFromNothing(
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := work.InsertAsset(ctx, tx, a, ownerID, nil); err != nil {
+	if _, err := work.InsertWork(ctx, tx, a, ownerID, nil); err != nil {
 		return uuid.Nil, err
 	}
 	if err := block.Insert(ctx, tx, a.ID, blocks); err != nil {

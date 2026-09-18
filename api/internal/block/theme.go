@@ -34,9 +34,9 @@ func (s ColorSet) Empty() bool {
 }
 
 type StylesheetSet struct {
-	Global      string            `json:"global"`
-	Stylesheets []Stylesheet      `json:"stylesheets"`
-	Assets      []StylesheetAsset `json:"assets"`
+	Global      string           `json:"global"`
+	Stylesheets []Stylesheet     `json:"stylesheets"`
+	Files       []StylesheetFile `json:"assets"`
 }
 
 type Stylesheet struct {
@@ -46,7 +46,7 @@ type Stylesheet struct {
 	Enabled bool      `json:"enabled"`
 }
 
-type StylesheetAsset struct {
+type StylesheetFile struct {
 	ID        uuid.UUID `json:"id"`
 	Path      string    `json:"path"`
 	MediaType string    `json:"mediaType,omitempty"`
@@ -54,7 +54,7 @@ type StylesheetAsset struct {
 }
 
 func (s StylesheetSet) Empty() bool {
-	if s.Global != "" || len(s.Assets) > 0 {
+	if s.Global != "" || len(s.Files) > 0 {
 		return false
 	}
 	for _, sheet := range s.Stylesheets {
@@ -103,15 +103,15 @@ func decodeColorSet(raw json.RawMessage) (Content, error) {
 
 func decodeStylesheetSet(raw json.RawMessage) (Content, error) {
 	var incoming struct {
-		Global      *string            `json:"global"`
-		Stylesheets *[]Stylesheet      `json:"stylesheets"`
-		Assets      *[]StylesheetAsset `json:"assets"`
+		Global      *string           `json:"global"`
+		Stylesheets *[]Stylesheet     `json:"stylesheets"`
+		Files       *[]StylesheetFile `json:"assets"`
 	}
 	if err := decodeContentJSON(raw, &incoming); err != nil {
 		return nil, err
 	}
-	if incoming.Global == nil || incoming.Stylesheets == nil || incoming.Assets == nil {
-		return nil, fmt.Errorf("global, stylesheets and assets must be present")
+	if incoming.Global == nil || incoming.Stylesheets == nil || incoming.Files == nil {
+		return nil, fmt.Errorf("global, stylesheets and files must be present")
 	}
 	stylesheets := *incoming.Stylesheets
 	stylesheetNames := make(map[string]struct{}, len(stylesheets))
@@ -122,19 +122,19 @@ func decodeStylesheetSet(raw json.RawMessage) (Content, error) {
 		stylesheetNames[stylesheets[i].Name] = struct{}{}
 		stylesheets[i].ID = itemID(stylesheets[i].ID)
 	}
-	assets := *incoming.Assets
-	assetPaths := make(map[string]struct{}, len(assets))
-	for i := range assets {
-		if assets[i].Path == "" {
-			return nil, fmt.Errorf("asset %d must include a path", i+1)
+	files := *incoming.Files
+	filePaths := make(map[string]struct{}, len(files))
+	for i := range files {
+		if files[i].Path == "" {
+			return nil, fmt.Errorf("file %d must include a path", i+1)
 		}
-		if _, duplicate := assetPaths[assets[i].Path]; duplicate {
-			return nil, fmt.Errorf("asset %d repeats the path %q", i+1, assets[i].Path)
+		if _, duplicate := filePaths[files[i].Path]; duplicate {
+			return nil, fmt.Errorf("file %d repeats the path %q", i+1, files[i].Path)
 		}
-		assetPaths[assets[i].Path] = struct{}{}
-		assets[i].ID = itemID(assets[i].ID)
+		filePaths[files[i].Path] = struct{}{}
+		files[i].ID = itemID(files[i].ID)
 	}
 	return StylesheetSet{
-		Global: *incoming.Global, Stylesheets: stylesheets, Assets: assets,
+		Global: *incoming.Global, Stylesheets: stylesheets, Files: files,
 	}, nil
 }

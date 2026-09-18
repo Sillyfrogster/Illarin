@@ -10,10 +10,10 @@ import {
 import { Arrive } from "@/components/ui/arrive";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import type {
-  AssetBlock,
-  AssetElement,
-  AssetImage,
   BrowseKind,
+  WorkBlock,
+  WorkElement,
+  WorkImage,
 } from "@/lib/api/query";
 import { blockCounts } from "@/lib/asset-block-heading";
 import {
@@ -52,7 +52,7 @@ export function AssetBlocks({
   kind,
   shellClassName,
 }: {
-  images: AssetImage[];
+  images: WorkImage[];
   isOwner: boolean;
   kind: BrowseKind;
   shellClassName: string;
@@ -85,7 +85,7 @@ export function AssetBlocks({
     },
     [rowsRef],
   );
-  const packable: Array<AssetBlock & { empty?: boolean }> = writing
+  const packable: Array<WorkBlock & { empty?: boolean }> = writing
     ? blocks
     : publicBlocks.filter(rendersOnThePage);
   const placed = placeBlocks(packable, { availableWidth });
@@ -262,7 +262,7 @@ export function AssetBlocks({
   );
 }
 
-function BlockTitle({ block }: { block: AssetBlock }) {
+function BlockTitle({ block }: { block: WorkBlock }) {
   const workspace = useWorkspace();
   const cursor = `block:${block.id}:title`;
   return (
@@ -290,7 +290,7 @@ function BlockTitle({ block }: { block: AssetBlock }) {
   );
 }
 
-function BlockCounts({ elements }: { elements: AssetElement[] }) {
+function BlockCounts({ elements }: { elements: WorkElement[] }) {
   const counts = blockCounts(elements);
   if (!counts) return null;
   return <p className="basis-full text-label text-mute">{counts}</p>;

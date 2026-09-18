@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import type { AssetElement } from "@/lib/api/query";
+import type { WorkElement } from "@/lib/api/query";
 
 export function unsealedPrompts(
-  previous: AssetElement,
-  next: AssetElement,
+  previous: WorkElement,
+  next: WorkElement,
 ): string[] {
   if (
     previous.type !== "prompt_list" ||

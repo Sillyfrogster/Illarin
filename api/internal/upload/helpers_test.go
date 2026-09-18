@@ -44,11 +44,11 @@ func registryWithModule(t *testing.T, module format.Module) *format.Registry {
 	return registry
 }
 
-func testReaderDeclaration(id, kind string) format.Declaration {
+func testReaderDeclaration(id, workType string) format.Declaration {
 	return format.Declaration{
-		ID: id, Kind: kind, Direction: format.Direction{Read: true},
+		ID: id, Type: workType, Direction: format.Direction{Read: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []format.Container{format.JSON},
+			Type: format.RecognitionSignature, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{"payload": format.ValueBoolean},
 		}},
 		Limits: format.ContentLimits{
@@ -77,7 +77,7 @@ func (opaqueTestModule) Declaration() format.Declaration {
 	declaration := testReaderDeclaration("test_opaque", "character")
 	declaration.Label = "Test format"
 	declaration.Direction.Write = true
-	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderAssetVersion}
+	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderWorkVersion}
 	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
 	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
 		block.RoleDescription: {
@@ -91,7 +91,7 @@ func (opaqueTestModule) Declaration() format.Declaration {
 	}
 	return declaration
 }
-func (opaqueTestModule) Write(_ context.Context, written format.ExportAsset) (format.Artifact, error) {
+func (opaqueTestModule) Write(_ context.Context, written format.ExportWork) (format.Artifact, error) {
 	return format.Artifact{
 		Body:      []byte(written.Text(block.RoleDescription)),
 		MediaType: "text/plain", Extension: ".txt",
@@ -102,7 +102,7 @@ func (opaqueTestModule) Claim(file format.Inspection) (format.Claim, bool) {
 }
 func (opaqueTestModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return format.Parsed{
-		Kind: "character", Format: "test_opaque",
+		Type: "character", Format: "test_opaque",
 		Elements: []block.Element{
 			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Test description"}},
 			{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Hello"}}}},
@@ -133,7 +133,7 @@ func (replacingModule) Declaration() format.Declaration {
 	declaration := testReaderDeclaration("replacing", "character")
 	declaration.Label = "Replacing format"
 	declaration.Direction.Write = true
-	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderAssetVersion}
+	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderWorkVersion}
 	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
 	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
 		block.RoleDescription: {
@@ -146,14 +146,14 @@ func (replacingModule) Declaration() format.Declaration {
 func (module replacingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return *module.parsed, nil
 }
-func (replacingModule) Write(context.Context, format.ExportAsset) (format.Artifact, error) {
+func (replacingModule) Write(context.Context, format.ExportWork) (format.Artifact, error) {
 	return format.Artifact{MediaType: "text/plain", Extension: ".txt"}, nil
 }
 
 func currentCandidate(t *testing.T, svc *Service, id uuid.UUID) *work.Candidate {
 	t.Helper()
 	var candidate work.Candidate
-	if err := svc.pool.QueryRow(context.Background(), `select working_copy_version from assets where id = $1`, id).Scan(&candidate.Version); err != nil {
+	if err := svc.pool.QueryRow(context.Background(), `select working_copy_version from works where id = $1`, id).Scan(&candidate.Version); err != nil {
 		t.Fatal(err)
 	}
 	return &candidate
@@ -171,7 +171,7 @@ func blockFor(t *testing.T, blocks []block.Block, definition block.DefinitionID)
 }
 
 func works(s *Service) *page.Service {
-	return page.NewService(s.pool, s.assets)
+	return page.NewService(s.pool, s.works)
 }
 
 func testPNG(t *testing.T, width, height int, fill color.Color) []byte {

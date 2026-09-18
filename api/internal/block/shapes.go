@@ -6,73 +6,73 @@ import (
 	"github.com/google/uuid"
 )
 
-type AssetBlock struct {
-	AllowedLayouts []AssetBlockAllowedLayouts `json:"allowedLayouts"`
-	Definition     string                     `json:"definition"`
-	Elements       []AssetElement             `json:"elements"`
-	Hidden         bool                       `json:"hidden"`
-	Hideable       bool                       `json:"hideable"`
-	Id             uuid.UUID                  `json:"id"`
-	IsEmpty        bool                       `json:"isEmpty"`
-	Layout         AssetBlockLayout           `json:"layout"`
-	Position       int                        `json:"position"`
-	Required       bool                       `json:"required"`
-	Title          string                     `json:"title"`
-	TitleIsDefault bool                       `json:"titleIsDefault"`
-	Width          AssetBlockWidth            `json:"width"`
+type WorkBlock struct {
+	AllowedLayouts []WorkBlockAllowedLayouts `json:"allowedLayouts"`
+	Definition     string                    `json:"definition"`
+	Elements       []WorkElement             `json:"elements"`
+	Hidden         bool                      `json:"hidden"`
+	Hideable       bool                      `json:"hideable"`
+	Id             uuid.UUID                 `json:"id"`
+	IsEmpty        bool                      `json:"isEmpty"`
+	Layout         WorkBlockLayout           `json:"layout"`
+	Position       int                       `json:"position"`
+	Required       bool                      `json:"required"`
+	Title          string                    `json:"title"`
+	TitleIsDefault bool                      `json:"titleIsDefault"`
+	Width          WorkBlockWidth            `json:"width"`
 }
 
-type AssetBlockAllowedLayouts string
+type WorkBlockAllowedLayouts string
 
 const (
-	AssetBlockAllowedLayoutsDuo       AssetBlockAllowedLayouts = "duo"
-	AssetBlockAllowedLayoutsMainAside AssetBlockAllowedLayouts = "main-aside"
-	AssetBlockAllowedLayoutsSingle    AssetBlockAllowedLayouts = "single"
-	AssetBlockAllowedLayoutsStack2    AssetBlockAllowedLayouts = "stack-2"
-	AssetBlockAllowedLayoutsStack3    AssetBlockAllowedLayouts = "stack-3"
-	AssetBlockAllowedLayoutsTrio      AssetBlockAllowedLayouts = "trio"
+	WorkBlockAllowedLayoutsDuo       WorkBlockAllowedLayouts = "duo"
+	WorkBlockAllowedLayoutsMainAside WorkBlockAllowedLayouts = "main-aside"
+	WorkBlockAllowedLayoutsSingle    WorkBlockAllowedLayouts = "single"
+	WorkBlockAllowedLayoutsStack2    WorkBlockAllowedLayouts = "stack-2"
+	WorkBlockAllowedLayoutsStack3    WorkBlockAllowedLayouts = "stack-3"
+	WorkBlockAllowedLayoutsTrio      WorkBlockAllowedLayouts = "trio"
 )
 
-type AssetBlockLayout string
+type WorkBlockLayout string
 
 const (
-	AssetBlockLayoutDuo       AssetBlockLayout = "duo"
-	AssetBlockLayoutMainAside AssetBlockLayout = "main-aside"
-	AssetBlockLayoutSingle    AssetBlockLayout = "single"
-	AssetBlockLayoutStack2    AssetBlockLayout = "stack-2"
-	AssetBlockLayoutStack3    AssetBlockLayout = "stack-3"
-	AssetBlockLayoutTrio      AssetBlockLayout = "trio"
+	WorkBlockLayoutDuo       WorkBlockLayout = "duo"
+	WorkBlockLayoutMainAside WorkBlockLayout = "main-aside"
+	WorkBlockLayoutSingle    WorkBlockLayout = "single"
+	WorkBlockLayoutStack2    WorkBlockLayout = "stack-2"
+	WorkBlockLayoutStack3    WorkBlockLayout = "stack-3"
+	WorkBlockLayoutTrio      WorkBlockLayout = "trio"
 )
 
-type AssetBlockWidth string
+type WorkBlockWidth string
 
 const (
-	AssetBlockWidthFull      AssetBlockWidth = "full"
-	AssetBlockWidthHalf      AssetBlockWidth = "half"
-	AssetBlockWidthThird     AssetBlockWidth = "third"
-	AssetBlockWidthTwoThirds AssetBlockWidth = "two_thirds"
+	WorkBlockWidthFull      WorkBlockWidth = "full"
+	WorkBlockWidthHalf      WorkBlockWidth = "half"
+	WorkBlockWidthThird     WorkBlockWidth = "third"
+	WorkBlockWidthTwoThirds WorkBlockWidth = "two_thirds"
 )
 
-type AssetElement struct {
-	Content  json.RawMessage       `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
-	Display  *AssetElementDisplay  `json:"display,omitempty"`
-	Facts    []string              `json:"facts"`
-	Id       uuid.UUID             `json:"id"`
-	IsEmpty  bool                  `json:"isEmpty"`
-	ItemSize *AssetElementItemSize `json:"itemSize,omitempty"`
-	Label    string                `json:"label"`
-	Locked   bool                  `json:"locked"`
-	Pinned   bool                  `json:"pinned"`
-	Role     *string               `json:"role,omitempty"`
-	Slot     string                `json:"slot"`
-	Type     ElementType           `json:"type"`
+type WorkElement struct {
+	Content  json.RawMessage      `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
+	Display  *WorkElementDisplay  `json:"display,omitempty"`
+	Facts    []string             `json:"facts"`
+	Id       uuid.UUID            `json:"id"`
+	IsEmpty  bool                 `json:"isEmpty"`
+	ItemSize *WorkElementItemSize `json:"itemSize,omitempty"`
+	Label    string               `json:"label"`
+	Locked   bool                 `json:"locked"`
+	Pinned   bool                 `json:"pinned"`
+	Role     *string              `json:"role,omitempty"`
+	Slot     string               `json:"slot"`
+	Type     ElementType          `json:"type"`
 }
 
-type AssetElementDisplay string
+type WorkElementDisplay string
 
 const (
-	AssetElementDisplayRich     AssetElementDisplay = "rich"
-	AssetElementDisplayVerbatim AssetElementDisplay = "verbatim"
+	WorkElementDisplayRich     WorkElementDisplay = "rich"
+	WorkElementDisplayVerbatim WorkElementDisplay = "verbatim"
 )
 
 type ColorSetContent struct {
@@ -235,7 +235,7 @@ const (
 )
 
 type StylesheetSetContent struct {
-	Assets []struct {
+	Works []struct {
 		Data      []byte     `json:"data"`
 		Id        *uuid.UUID `json:"id,omitempty"`
 		MediaType *string    `json:"mediaType,omitempty"`
@@ -340,12 +340,12 @@ type LinkListContent struct {
 	} `json:"links"`
 }
 
-type AssetElementItemSize string
+type WorkElementItemSize string
 
 const (
-	AssetElementItemSizeLarge  AssetElementItemSize = "large"
-	AssetElementItemSizeMedium AssetElementItemSize = "medium"
-	AssetElementItemSizeSmall  AssetElementItemSize = "small"
+	WorkElementItemSizeLarge  WorkElementItemSize = "large"
+	WorkElementItemSizeMedium WorkElementItemSize = "medium"
+	WorkElementItemSizeSmall  WorkElementItemSize = "small"
 )
 
 type ElementType string

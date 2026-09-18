@@ -16,7 +16,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const Kind = "character"
+const Type = "character"
 
 const (
 	maxTags     = 32
@@ -31,14 +31,14 @@ var labels = map[string]string{
 
 func declaration(id string) format.Declaration {
 	recognition := []format.Recognition{{
-		Kind:       format.RecognitionDiscriminator,
+		Type:       format.RecognitionDiscriminator,
 		Containers: []format.Container{format.JSON, format.PNG, format.JPEG, format.WebP, format.GIF},
 		Path:       []string{"spec"}, Values: []string{id},
 	}}
 	if id == V2 {
 		recognition[0].SupersededBy = []string{V3}
 		recognition = append(recognition, format.Recognition{
-			Kind: format.RecognitionSignature, LegacyOnly: true,
+			Type: format.RecognitionSignature, LegacyOnly: true,
 			Containers: []format.Container{format.JSON, format.PNG, format.JPEG, format.WebP, format.GIF},
 			Required: map[string]format.ValueType{
 				"name": format.ValueString, "description": format.ValueString,
@@ -49,7 +49,7 @@ func declaration(id string) format.Declaration {
 	}
 	if id == CharX {
 		recognition = []format.Recognition{{
-			Kind: format.RecognitionDiscriminator, Containers: []format.Container{format.ZIP},
+			Type: format.RecognitionDiscriminator, Containers: []format.Container{format.ZIP},
 			Path: []string{"spec"}, Values: []string{V3},
 		}}
 	}
@@ -119,13 +119,13 @@ func declaration(id string) format.Declaration {
 		consumedKeys = append(consumedKeys, "group_only_greetings")
 	}
 	header := []format.HeaderField{
-		format.HeaderName, format.HeaderCreditedAuthor, format.HeaderAssetVersion,
+		format.HeaderName, format.HeaderCreditedAuthor, format.HeaderWorkVersion,
 	}
 	if id != V2 {
 		header = append(header, format.HeaderNickname)
 	}
 	return format.Declaration{
-		ID: id, Label: labels[id], Kind: Kind,
+		ID: id, Label: labels[id], Type: Type,
 		Direction:   format.Direction{Read: true, Write: true},
 		Recognition: recognition, Roles: roles, Header: header,
 		Limits: format.ContentLimits{
@@ -197,14 +197,14 @@ func (c card) parsed(formatID string, pictures []format.Media) (format.Parsed, e
 	book := c.lorebook()
 	elements := c.elements(formatID, book)
 	return format.Parsed{
-		Kind:      Kind,
+		Type:      Type,
 		Format:    formatID,
 		Tags:      c.tags(),
 		Media:     pictures,
 		CreatedAt: c.createdAt(),
 		Header: format.Header{
 			Name: c.name(), Blurb: c.blurb(),
-			AssetVersion:   c.text("character_version"),
+			WorkVersion:    c.text("character_version"),
 			CreditedAuthor: c.text("creator"), Nickname: c.text("nickname"),
 		},
 		Elements:  elements,
@@ -235,7 +235,7 @@ func (c card) remainder(
 	if len(body) > 0 {
 		payload, _ := json.Marshal(body)
 		remainder = append(remainder, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: cardNamespace, Payload: payload,
+			Owner: format.OwnerWork, Namespace: cardNamespace, Payload: payload,
 		})
 	}
 
@@ -245,7 +245,7 @@ func (c card) remainder(
 	}
 	for _, namespace := range slices.Sorted(maps.Keys(extensions)) {
 		remainder = append(remainder, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: namespace, Payload: extensions[namespace],
+			Owner: format.OwnerWork, Namespace: namespace, Payload: extensions[namespace],
 		})
 	}
 	return remainder

@@ -49,12 +49,12 @@ func (p preservation) remainder(
 	if len(source) > 0 {
 		payload, _ := json.Marshal(source)
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: p.body, Payload: payload,
+			Owner: format.OwnerWork, Namespace: p.body, Payload: payload,
 		})
 	}
 	for _, namespace := range slices.Sorted(maps.Keys(extensions)) {
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: namespace, Payload: extensions[namespace],
+			Owner: format.OwnerWork, Namespace: namespace, Payload: extensions[namespace],
 		})
 	}
 	for _, group := range items {
@@ -71,7 +71,7 @@ func (p preservation) remainder(
 
 func (p preservation) restoreExtensions(body map[string]json.RawMessage, held kept) {
 	extensions := keys.Object(body[p.extensions])
-	for namespace, payload := range held.asset {
+	for namespace, payload := range held.work {
 		if namespace == p.body {
 			continue
 		}
@@ -103,19 +103,19 @@ func scriptLeftovers(
 }
 
 type kept struct {
-	asset map[string]json.RawMessage
+	work  map[string]json.RawMessage
 	items map[string]map[uuid.UUID]map[string]json.RawMessage
 }
 
 func preservedBy(rows []format.Remainder) kept {
 	held := kept{
-		asset: make(map[string]json.RawMessage),
+		work:  make(map[string]json.RawMessage),
 		items: make(map[string]map[uuid.UUID]map[string]json.RawMessage),
 	}
 	for _, row := range rows {
 		switch row.Owner {
-		case format.OwnerAsset:
-			held.asset[row.Namespace] = row.Payload
+		case format.OwnerWork:
+			held.work[row.Namespace] = row.Payload
 		case format.OwnerItem:
 			if held.items[row.Namespace] == nil {
 				held.items[row.Namespace] = make(map[uuid.UUID]map[string]json.RawMessage)
@@ -131,7 +131,7 @@ func (k kept) item(namespace string, id uuid.UUID) map[string]json.RawMessage {
 }
 
 func (k kept) object(namespace string) map[string]json.RawMessage {
-	return keys.Object(k.asset[namespace])
+	return keys.Object(k.work[namespace])
 }
 
 func itemName(held kept, namespace string, id uuid.UUID, key string) string {

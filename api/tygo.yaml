@@ -30,7 +30,7 @@ packages:
       uuid.UUID: "string"
     include_files:
       - "inbox_shapes.go"
-      - "watch_shapes.go"
+      - "follow_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/block"
     output_path: "../web/src/lib/api/shapes/block.ts"
     enum_style: "union"
@@ -46,7 +46,7 @@ packages:
     preserve_comments: "none"
     frontmatter: |
       import type {
-        AssetElementItemSize,
+        WorkElementItemSize,
         ColorSetContent,
         DialogueSampleContent,
         ElementType,
@@ -66,7 +66,7 @@ packages:
     type_mappings:
       uuid.UUID: "string"
       json.RawMessage: "unknown"
-      block.AssetElementItemSize: "AssetElementItemSize"
+      block.WorkElementItemSize: "WorkElementItemSize"
       block.ElementType: "ElementType"
     include_files:
       - "save_shapes.go"
@@ -76,15 +76,15 @@ packages:
     enum_style: "union"
     preserve_comments: "none"
     frontmatter: |
-      import type { AssetBlock, ElementType } from "./block";
-      import type { AssetWatch } from "./notify";
+      import type { WorkBlock, ElementType } from "./block";
+      import type { WorkFollow } from "./notify";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
       json.RawMessage: "unknown"
-      block.AssetBlock: "AssetBlock"
+      block.WorkBlock: "WorkBlock"
       block.ElementType: "ElementType"
-      notify.AssetWatch: "AssetWatch"
+      notify.WorkFollow: "WorkFollow"
     include_files:
       - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/version"
@@ -119,18 +119,18 @@ packages:
     enum_style: "union"
     preserve_comments: "none"
     frontmatter: |
-      import type { AssetBlock } from "./block";
+      import type { WorkBlock } from "./block";
       import type {
         AppTarget,
-        AssetImage,
+        WorkImage,
         DownloadTarget,
         RecordedVersion,
       } from "./work";
     type_mappings:
       uuid.UUID: "string"
-      block.AssetBlock: "AssetBlock"
+      block.WorkBlock: "WorkBlock"
       page.AppTarget: "AppTarget"
-      page.AssetImage: "AssetImage"
+      page.WorkImage: "WorkImage"
       page.DownloadTarget: "DownloadTarget"
       page.RecordedVersion: "RecordedVersion"
     include_files:
@@ -151,18 +151,18 @@ packages:
     preserve_comments: "none"
     frontmatter: |
       import type { PublicationDestinationChoice as AnnouncementPublicationDestinationChoice } from "./announcements";
-      import type { PublicationDestinationKind as AnnouncementPublicationDestinationKind } from "./announcements";
+      import type { PublicationDestinationType as AnnouncementPublicationDestinationType } from "./announcements";
       import type { PublicationDestinationState as AnnouncementPublicationDestinationState } from "./announcements";
       import type { PublicationEvent as AnnouncementPublicationEvent } from "./announcements";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
       announcements.PublicationDestinationChoice: "AnnouncementPublicationDestinationChoice"
-      announcements.PublicationDestinationKind: "AnnouncementPublicationDestinationKind"
+      announcements.PublicationDestinationType: "AnnouncementPublicationDestinationType"
       announcements.PublicationDestinationState: "AnnouncementPublicationDestinationState"
       announcements.PublicationEvent: "AnnouncementPublicationEvent"
     include_files:
-      - "asset_destination_shapes.go"
+      - "work_destination_shapes.go"
       - "destination_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
     output_path: "../web/src/lib/api/shapes/announcements.ts"

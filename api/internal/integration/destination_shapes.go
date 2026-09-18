@@ -31,7 +31,7 @@ type PostDelivery struct {
 	EventId       uuid.UUID                  `json:"eventId"`
 	EventType     string                     `json:"eventType"`
 	Id            uuid.UUID                  `json:"id"`
-	Kind          PostDeliveryKind           `json:"kind"`
+	Type          PostDeliveryType           `json:"kind"`
 	Last          *PostDeliveryAttempt       `json:"last,omitempty"`
 	MessageId     string                     `json:"messageId"`
 	OccurredAt    time.Time                  `json:"occurredAt"`
@@ -45,12 +45,12 @@ type PostDelivery struct {
 	State         PostDeliveryState          `json:"state"`
 }
 
-type PostDeliveryKind string
+type PostDeliveryType string
 
 const (
-	PostDeliveryKindDiscord PostDeliveryKind = "discord"
-	PostDeliveryKindEmpty   PostDeliveryKind = ""
-	PostDeliveryKindWebhook PostDeliveryKind = "webhook"
+	PostDeliveryTypeDiscord PostDeliveryType = "discord"
+	PostDeliveryTypeEmpty   PostDeliveryType = ""
+	PostDeliveryTypeWebhook PostDeliveryType = "webhook"
 )
 
 type PostDeliveryAttempt struct {
@@ -126,7 +126,7 @@ type PublicationDestination struct {
 	Events              []PublicationEvent          `json:"events"`
 	Host                string                      `json:"host"`
 	Id                  uuid.UUID                   `json:"id"`
-	Kind                PublicationDestinationKind  `json:"kind"`
+	Type                PublicationDestinationType  `json:"kind"`
 	Name                string                      `json:"name"`
 	PreviousSecretUntil *time.Time                  `json:"previousSecretUntil,omitempty"`
 	SecretSetAt         time.Time                   `json:"secretSetAt"`
@@ -141,7 +141,7 @@ type PublicationDestinationChoiceList struct {
 	Inherited    bool                           `json:"inherited"`
 }
 
-type PublicationDestinationKind = announcements.PublicationDestinationKind
+type PublicationDestinationType = announcements.PublicationDestinationType
 
 type PublicationDestinationList struct {
 	Destinations []PublicationDestination `json:"destinations"`

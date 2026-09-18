@@ -1,4 +1,4 @@
-import type { AssetDetail } from "@/lib/api/query";
+import type { WorkDetail } from "@/lib/api/query";
 
 const NAMED_VERSION_LIMIT = 5;
 
@@ -6,7 +6,7 @@ const versionOrder = new Intl.Collator("en", { numeric: true });
 
 /** installedVersionsLine says which app versions readers have an extension installed on, naming the newest few. */
 export function installedVersionsLine(
-  page: Pick<AssetDetail, "appTargets" | "installedAppVersions">,
+  page: Pick<WorkDetail, "appTargets" | "installedAppVersions">,
 ): string | null {
   const app = page.appTargets[0]?.label;
   if (!app || page.installedAppVersions.length === 0) return null;

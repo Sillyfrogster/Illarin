@@ -23,30 +23,30 @@ type Source struct {
 // Source hands over the main file of a work
 func (s *Service) Source(
 	ctx context.Context,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	viewerID *uuid.UUID,
 ) (Source, error) {
-	tx, err := s.assets.BeginReadSnapshot(ctx)
+	tx, err := s.works.BeginReadSnapshot(ctx)
 	if err != nil {
 		return Source{}, err
 	}
 	defer tx.Rollback(ctx)
-	location, err := work.CurrentRevisionLocation(ctx, tx, assetID, viewerID)
+	location, err := work.CurrentRevisionLocation(ctx, tx, workID, viewerID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Source{}, work.ErrNotFound
 		}
 		return Source{}, fmt.Errorf("find current revision: %w", err)
 	}
-	apps, err := private.Apps(ctx, tx, assetID)
+	apps, err := private.Apps(ctx, tx, workID)
 	if err != nil {
 		return Source{}, err
 	}
-	blocks, err := block.Read(ctx, tx, assetID)
+	blocks, err := block.Read(ctx, tx, workID)
 	if err != nil {
 		return Source{}, err
 	}
-	if err := private.ApplyPublishedPolicy(ctx, tx, assetID, blocks); err != nil {
+	if err := private.ApplyPublishedPolicy(ctx, tx, workID, blocks); err != nil {
 		return Source{}, err
 	}
 	if (len(apps) > 0 || private.HasPromptFragments(blocks)) && (viewerID == nil || location.OwnerID == nil || *viewerID != *location.OwnerID) {
@@ -61,14 +61,14 @@ func (s *Service) Source(
 		InternalRedirect: redirect, MediaType: location.MediaType,
 		Inline: format.IsInlineMediaType(location.MediaType),
 		Event: newEvent(
-			location.AssetID, &revisionID, format.RawTarget,
+			location.WorkID, &revisionID, format.RawTarget,
 			location.OwnerID, viewerID,
 		),
 	}, nil
 }
 
-func (s *Service) SourceForLinkedInstance(ctx context.Context, assetID uuid.UUID) (Source, error) {
-	download, err := s.Source(ctx, assetID, nil)
+func (s *Service) SourceForLinkedInstance(ctx context.Context, workID uuid.UUID) (Source, error) {
+	download, err := s.Source(ctx, workID, nil)
 	if err != nil {
 		return Source{}, err
 	}

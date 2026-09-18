@@ -37,7 +37,7 @@ func TestAnAcceptedFormatIllarinDoesNotOfferSelectsNothing(t *testing.T) {
 	}
 }
 
-func TestAnAssetWithAnUploadedFileFallsBackToRaw(t *testing.T) {
+func TestAnWorkWithAnUploadedFileFallsBackToRaw(t *testing.T) {
 	t.Parallel()
 	chosen, _, found := chooseTarget([]string{"card_v3"}, offered("card_v2"), true)
 
@@ -112,7 +112,7 @@ func TestReleasingLeavesAWaitThatAlreadySupersededItRegistered(t *testing.T) {
 	}
 }
 
-func TestAnAssetThatNeedsNoCapabilityGoesToAnyInstance(t *testing.T) {
+func TestAnWorkThatNeedsNoCapabilityGoesToAnyInstance(t *testing.T) {
 	t.Parallel()
 	if !installs(nil, Deliverable{}) {
 		t.Fatal("an asset with no install capability was refused")

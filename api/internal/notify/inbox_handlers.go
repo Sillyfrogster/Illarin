@@ -148,32 +148,32 @@ func (h *Handlers) sendTargetsFor(
 	updated := make([]uuid.UUID, 0, len(entries))
 	seen := make(map[uuid.UUID]bool, len(entries))
 	for _, entry := range entries {
-		if entry.Type != AssetUpdated || entry.Asset == nil || seen[*entry.Asset] {
+		if entry.Type != WorkUpdated || entry.Work == nil || seen[*entry.Work] {
 			continue
 		}
-		seen[*entry.Asset] = true
-		updated = append(updated, *entry.Asset)
+		seen[*entry.Work] = true
+		updated = append(updated, *entry.Work)
 	}
 	holders, err := h.deliveries.UpdatableInstances(c.Request.Context(), account, updated)
 	if err != nil {
 		return nil, err
 	}
 	offered := make(map[uuid.UUID][]NotificationSendTarget, len(holders))
-	for assetID, instances := range holders {
+	for workID, instances := range holders {
 		for _, state := range instances {
-			offered[assetID] = append(offered[assetID], NotificationSendTarget{
+			offered[workID] = append(offered[workID], NotificationSendTarget{
 				InstanceId:      state.InstanceID,
 				InstanceName:    state.InstanceName,
 				ApplicationName: state.ApplicationName,
 				Waiting:         waitingToCollect(state),
 			})
 		}
-		slices.SortFunc(offered[assetID], byInstanceName)
+		slices.SortFunc(offered[workID], byInstanceName)
 	}
 	return offered, nil
 }
 
-// waitingToCollect says whether a delivery of the asset is already waiting for the instance.
+// waitingToCollect says whether a delivery of the work is already waiting for the instance.
 func waitingToCollect(state connect.InstanceState) bool {
 	if state.Delivery == nil {
 		return false
@@ -196,14 +196,14 @@ func toAPINotification(
 	shown := Notification{
 		Id: entry.ID, Type: NotificationType(entry.Type), CreatedAt: entry.CreatedAt, ReadAt: entry.ReadAt,
 	}
-	if entry.Asset != nil {
-		shown.Asset = &NotificationAsset{Id: *entry.Asset, Name: entry.Words.AssetName}
+	if entry.Work != nil {
+		shown.Work = &NotificationWork{Id: *entry.Work, Name: entry.Words.WorkName}
 	}
 	if entry.Words.Reason != "" {
 		reason := entry.Words.Reason
 		shown.Reason = &reason
 	}
-	if entry.Type == AssetUpdated {
+	if entry.Type == WorkUpdated {
 		shown.Update = &NotificationUpdate{
 			Number: entry.Words.UpdateNumber, Summary: entry.Words.Summary, Count: entry.Count,
 		}
@@ -211,10 +211,10 @@ func toAPINotification(
 			label := entry.Words.VersionLabel
 			shown.Update.VersionLabel = &label
 		}
-		if entry.Asset == nil {
+		if entry.Work == nil {
 			return shown
 		}
-		if offered := sends[*entry.Asset]; len(offered) > 0 {
+		if offered := sends[*entry.Work]; len(offered) > 0 {
 			shown.SendTargets = &offered
 		}
 	}

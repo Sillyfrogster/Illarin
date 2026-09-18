@@ -15,12 +15,12 @@ import (
 type Service struct {
 	pool            *pgxpool.Pool
 	reg             *format.Registry
-	assets          *work.Service
+	works           *work.Service
 	updateListeners []UpdateListener
 }
 
-func NewService(pool *pgxpool.Pool, assets *work.Service) *Service {
-	return &Service{pool: pool, reg: assets.Registry(), assets: assets}
+func NewService(pool *pgxpool.Pool, works *work.Service) *Service {
+	return &Service{pool: pool, reg: works.Registry(), works: works}
 }
 
 func (s *Service) writeSummary(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {

@@ -31,17 +31,17 @@ func (s *Service) AddBlock(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := candidate.Lock(ctx, tx, ownerID, workID)
+	workType, err := candidate.Lock(ctx, tx, ownerID, workID)
 	if err != nil {
 		return SavedBlock{}, err
 	}
 	var added block.Block
-	if err := s.assets.ChangeContent(ctx, tx, workID, func() error {
+	if err := s.works.ChangeContent(ctx, tx, workID, func() error {
 		page, err := block.Read(ctx, tx, workID)
 		if err != nil {
 			return err
 		}
-		added, err = block.NewBlock(kind, definition, elementType, page)
+		added, err = block.NewBlock(workType, definition, elementType, page)
 		if err != nil {
 			return invalid(err)
 		}
@@ -49,7 +49,7 @@ func (s *Service) AddBlock(
 			return invalid(err)
 		}
 		after := append(page, added)
-		if err := block.ValidateBuilderConstraints(kind, after, after); err != nil {
+		if err := block.ValidateBuilderConstraints(workType, after, after); err != nil {
 			return invalid(err)
 		}
 		if err := block.Insert(ctx, tx, workID, []block.Block{added}); err != nil {
@@ -62,7 +62,7 @@ func (s *Service) AddBlock(
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
 		return SavedBlock{}, err
 	}
-	return SavedBlock{Kind: kind, Block: added}, nil
+	return SavedBlock{Type: workType, Block: added}, nil
 }
 
 func (s *Service) ArrangeBlocks(
@@ -78,7 +78,7 @@ func (s *Service) ArrangeBlocks(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := candidate.Lock(ctx, tx, ownerID, workID)
+	workType, err := candidate.Lock(ctx, tx, ownerID, workID)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
@@ -86,15 +86,15 @@ func (s *Service) ArrangeBlocks(
 	if err != nil {
 		return SavedBlocks{}, err
 	}
-	after, err := arranged(kind, blocks, arrangement)
+	after, err := arranged(workType, blocks, arrangement)
 	if err != nil {
 		return SavedBlocks{}, err
 	}
 	for _, holder := range after {
 		if _, err := tx.Exec(ctx, `
-			update asset_blocks
+			update work_blocks
 			   set position = $3, hidden = $4, width = $5
-			 where id = $1 and asset_id = $2
+			 where id = $1 and work_id = $2
 		`, holder.ID, workID, holder.Position, holder.Hidden, holder.Width); err != nil {
 			return SavedBlocks{}, fmt.Errorf("save block arrangement: %w", err)
 		}
@@ -105,10 +105,10 @@ func (s *Service) ArrangeBlocks(
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
 		return SavedBlocks{}, err
 	}
-	return SavedBlocks{Kind: kind, Blocks: after}, nil
+	return SavedBlocks{Type: workType, Blocks: after}, nil
 }
 
-func arranged(kind string, blocks []block.Block, arrangement []BlockArrangement) ([]block.Block, error) {
+func arranged(workType string, blocks []block.Block, arrangement []BlockArrangement) ([]block.Block, error) {
 	if len(arrangement) != len(blocks) {
 		return nil, fmt.Errorf("%w: include every block once before saving the arrangement", block.ErrInvalid)
 	}
@@ -127,7 +127,7 @@ func arranged(kind string, blocks []block.Block, arrangement []BlockArrangement)
 			return nil, fmt.Errorf("%w: include each block once before saving the arrangement", block.ErrInvalid)
 		}
 		seen[choice.ID] = struct{}{}
-		definition, _ := holder.Definition.Definition(kind)
+		definition, _ := holder.Definition.Definition(workType)
 		if choice.Hidden && definition.Required && !definition.Hideable {
 			return nil, fmt.Errorf("%w: %s is always shown and cannot be hidden", block.ErrInvalid, definition.Title)
 		}
@@ -136,7 +136,7 @@ func arranged(kind string, blocks []block.Block, arrangement []BlockArrangement)
 		holder.Width = choice.Width
 		after[position] = holder
 	}
-	if err := block.ValidateBuilderConstraints(kind, blocks, after); err != nil {
+	if err := block.ValidateBuilderConstraints(workType, blocks, after); err != nil {
 		return nil, invalid(err)
 	}
 	return after, nil
@@ -155,11 +155,11 @@ func (s *Service) RemoveBlock(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := candidate.Lock(ctx, tx, ownerID, workID)
+	workType, err := candidate.Lock(ctx, tx, ownerID, workID)
 	if err != nil {
 		return err
 	}
-	if err := s.assets.ChangeContent(ctx, tx, workID, func() error {
+	if err := s.works.ChangeContent(ctx, tx, workID, func() error {
 		blocks, err := block.Read(ctx, tx, workID)
 		if err != nil {
 			return err
@@ -167,7 +167,7 @@ func (s *Service) RemoveBlock(
 		if err := private.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {
 			return err
 		}
-		remaining, err := withoutBlock(kind, blocks, blockID)
+		remaining, err := withoutBlock(workType, blocks, blockID)
 		if err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ func (s *Service) RemoveBlock(
 	return candidate.Commit(ctx, tx, workID)
 }
 
-func withoutBlock(kind string, blocks []block.Block, blockID uuid.UUID) ([]block.Block, error) {
+func withoutBlock(workType string, blocks []block.Block, blockID uuid.UUID) ([]block.Block, error) {
 	remaining := make([]block.Block, 0, len(blocks))
 	found := false
 	for _, holder := range blocks {
@@ -196,7 +196,7 @@ func withoutBlock(kind string, blocks []block.Block, blockID uuid.UUID) ([]block
 			continue
 		}
 		found = true
-		definition, _ := holder.Definition.Definition(kind)
+		definition, _ := holder.Definition.Definition(workType)
 		if definition.Required {
 			return nil, fmt.Errorf("%w: %s is required and cannot be removed", block.ErrInvalid, definition.Title)
 		}
@@ -204,7 +204,7 @@ func withoutBlock(kind string, blocks []block.Block, blockID uuid.UUID) ([]block
 	if !found {
 		return nil, work.ErrNotFound
 	}
-	if err := block.ValidateBuilderConstraints(kind, blocks, remaining); err != nil {
+	if err := block.ValidateBuilderConstraints(workType, blocks, remaining); err != nil {
 		return nil, invalid(err)
 	}
 	return remaining, nil

@@ -15,22 +15,22 @@ import (
 )
 
 type Service struct {
-	pool   *pgxpool.Pool
-	reg    *format.Registry
-	assets *work.Service
+	pool  *pgxpool.Pool
+	reg   *format.Registry
+	works *work.Service
 }
 
-func NewService(pool *pgxpool.Pool, assets *work.Service) *Service {
-	return &Service{pool: pool, reg: assets.Registry(), assets: assets}
+func NewService(pool *pgxpool.Pool, works *work.Service) *Service {
+	return &Service{pool: pool, reg: works.Registry(), works: works}
 }
 
 type SavedBlock struct {
-	Kind  string
+	Type  string
 	Block block.Block
 }
 
 type SavedBlocks struct {
-	Kind   string
+	Type   string
 	Blocks []block.Block
 }
 
@@ -56,12 +56,12 @@ func deleteBlockAndClosePositions(
 	blockID uuid.UUID,
 	remaining []block.Block,
 ) error {
-	if _, err := tx.Exec(ctx, `delete from asset_blocks where id = $1 and asset_id = $2`, blockID, workID); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_blocks where id = $1 and work_id = $2`, blockID, workID); err != nil {
 		return fmt.Errorf("remove block: %w", err)
 	}
 	for position := range remaining {
 		if _, err := tx.Exec(ctx, `
-			update asset_blocks set position = $3 where id = $1 and asset_id = $2
+			update work_blocks set position = $3 where id = $1 and work_id = $2
 		`, remaining[position].ID, workID, position); err != nil {
 			return fmt.Errorf("close block positions: %w", err)
 		}

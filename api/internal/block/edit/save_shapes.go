@@ -7,56 +7,56 @@ import (
 	"github.com/google/uuid"
 )
 
-type SaveAssetBlockRequest struct {
-	AllowedApps     *[]SaveAssetBlockRequestAllowedApps `json:"allowedApps,omitempty" tstype:"'lumiverse'[]"`
-	Elements        []SaveAssetElement                  `json:"elements"`
-	ExposeProtected *bool                               `json:"exposeProtected,omitempty"`
-	Layout          SaveAssetBlockRequestLayout         `json:"layout"`
-	Title           *string                             `json:"title" tstype:"string | null,required"`
-	Width           SaveAssetBlockRequestWidth          `json:"width"`
+type SaveWorkBlockRequest struct {
+	AllowedApps     *[]SaveWorkBlockRequestAllowedApps `json:"allowedApps,omitempty" tstype:"'lumiverse'[]"`
+	Elements        []SaveWorkElement                  `json:"elements"`
+	ExposeProtected *bool                              `json:"exposeProtected,omitempty"`
+	Layout          SaveWorkBlockRequestLayout         `json:"layout"`
+	Title           *string                            `json:"title" tstype:"string | null,required"`
+	Width           SaveWorkBlockRequestWidth          `json:"width"`
 }
 
-type SaveAssetBlockRequestAllowedApps string
+type SaveWorkBlockRequestAllowedApps string
 
 const (
-	SaveAssetBlockRequestAllowedAppsLumiverse SaveAssetBlockRequestAllowedApps = "lumiverse"
+	SaveWorkBlockRequestAllowedAppsLumiverse SaveWorkBlockRequestAllowedApps = "lumiverse"
 )
 
-type SaveAssetBlockRequestLayout string
+type SaveWorkBlockRequestLayout string
 
 const (
-	SaveAssetBlockRequestLayoutDuo       SaveAssetBlockRequestLayout = "duo"
-	SaveAssetBlockRequestLayoutMainAside SaveAssetBlockRequestLayout = "main-aside"
-	SaveAssetBlockRequestLayoutSingle    SaveAssetBlockRequestLayout = "single"
-	SaveAssetBlockRequestLayoutStack2    SaveAssetBlockRequestLayout = "stack-2"
-	SaveAssetBlockRequestLayoutStack3    SaveAssetBlockRequestLayout = "stack-3"
-	SaveAssetBlockRequestLayoutTrio      SaveAssetBlockRequestLayout = "trio"
+	SaveWorkBlockRequestLayoutDuo       SaveWorkBlockRequestLayout = "duo"
+	SaveWorkBlockRequestLayoutMainAside SaveWorkBlockRequestLayout = "main-aside"
+	SaveWorkBlockRequestLayoutSingle    SaveWorkBlockRequestLayout = "single"
+	SaveWorkBlockRequestLayoutStack2    SaveWorkBlockRequestLayout = "stack-2"
+	SaveWorkBlockRequestLayoutStack3    SaveWorkBlockRequestLayout = "stack-3"
+	SaveWorkBlockRequestLayoutTrio      SaveWorkBlockRequestLayout = "trio"
 )
 
-type SaveAssetBlockRequestWidth string
+type SaveWorkBlockRequestWidth string
 
 const (
-	SaveAssetBlockRequestWidthFull      SaveAssetBlockRequestWidth = "full"
-	SaveAssetBlockRequestWidthHalf      SaveAssetBlockRequestWidth = "half"
-	SaveAssetBlockRequestWidthThird     SaveAssetBlockRequestWidth = "third"
-	SaveAssetBlockRequestWidthTwoThirds SaveAssetBlockRequestWidth = "two_thirds"
+	SaveWorkBlockRequestWidthFull      SaveWorkBlockRequestWidth = "full"
+	SaveWorkBlockRequestWidthHalf      SaveWorkBlockRequestWidth = "half"
+	SaveWorkBlockRequestWidthThird     SaveWorkBlockRequestWidth = "third"
+	SaveWorkBlockRequestWidthTwoThirds SaveWorkBlockRequestWidth = "two_thirds"
 )
 
-type SaveAssetElement struct {
-	Content  json.RawMessage             `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
-	Display  *SaveAssetElementDisplay    `json:"display,omitempty"`
-	Id       uuid.UUID                   `json:"id"`
-	ItemSize *block.AssetElementItemSize `json:"itemSize,omitempty"`
-	Role     *string                     `json:"role,omitempty"`
-	Slot     string                      `json:"slot"`
-	Type     block.ElementType           `json:"type"`
+type SaveWorkElement struct {
+	Content  json.RawMessage            `json:"content" tstype:"ProseContent | TextSetContent | FieldListContent | DialogueSampleContent | ImageSetContent | LinkListContent | EntryTableContent | PromptListContent | VariableSchemaContent | SettingGroupContent | ScriptListContent | ColorSetContent | StylesheetSetContent | RecordListContent"`
+	Display  *SaveWorkElementDisplay    `json:"display,omitempty"`
+	Id       uuid.UUID                  `json:"id"`
+	ItemSize *block.WorkElementItemSize `json:"itemSize,omitempty"`
+	Role     *string                    `json:"role,omitempty"`
+	Slot     string                     `json:"slot"`
+	Type     block.ElementType          `json:"type"`
 }
 
-type SaveAssetElementDisplay string
+type SaveWorkElementDisplay string
 
 const (
-	SaveAssetElementDisplayRich     SaveAssetElementDisplay = "rich"
-	SaveAssetElementDisplayVerbatim SaveAssetElementDisplay = "verbatim"
+	SaveWorkElementDisplayRich     SaveWorkElementDisplay = "rich"
+	SaveWorkElementDisplayVerbatim SaveWorkElementDisplay = "verbatim"
 )
 
 type SealedExposureRefusal struct {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AssetBlock, AssetElement } from "@/lib/api/query";
+import type { WorkBlock, WorkElement } from "@/lib/api/query";
 import {
   blockSaveRequest,
   changedBlockIds,
@@ -12,9 +12,9 @@ import {
 
 function element(
   id: string,
-  type: AssetElement["type"],
-  content: AssetElement["content"],
-): AssetElement {
+  type: WorkElement["type"],
+  content: WorkElement["content"],
+): WorkElement {
   return {
     content,
     facts: [],
@@ -28,7 +28,7 @@ function element(
   };
 }
 
-function block(id: string, elements: AssetElement[]): AssetBlock {
+function block(id: string, elements: WorkElement[]): WorkBlock {
   return {
     allowedLayouts: ["single"],
     definition: "character",
@@ -78,7 +78,7 @@ describe("changedBlockIds", () => {
   test("ignores a block the server changed on its own", () => {
     const before = [block("one", [element("a", "prose", { text: "Same" })])];
     const after = [
-      { ...before[0], facts: undefined, isEmpty: true } as AssetBlock,
+      { ...before[0], facts: undefined, isEmpty: true } as WorkBlock,
     ];
 
     expect(changedBlockIds(after, before)).toEqual([]);

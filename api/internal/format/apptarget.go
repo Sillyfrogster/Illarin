@@ -12,7 +12,7 @@ type AppTarget struct {
 	Format string `json:"format"`
 }
 
-// AppTargets picks the offered format that lands most of the asset in each application.
+// AppTargets picks the offered format that lands most of the work in each application.
 func AppTargets(targets []Target, r *Registry) []AppTarget {
 	picked := make([]AppTarget, 0, len(Apps()))
 	for _, app := range Apps() {

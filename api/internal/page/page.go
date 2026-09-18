@@ -25,7 +25,7 @@ type Detail struct {
 	WorkingCopyVersion  *int64
 	UnpublishedChanges  *bool
 	ID                  uuid.UUID
-	Kind                string
+	Type                string
 	Name                string
 	Blurb               string
 	Tags                []DetailTag
@@ -33,7 +33,7 @@ type Detail struct {
 	Identifier          *string
 	Dependencies        []Dependency
 	IsNSFW              *bool
-	Discovery           work.Discovery
+	Visibility          work.Visibility
 	Lifecycle           work.Lifecycle
 	IsOwner             bool
 	Downloads           []format.Target
@@ -57,23 +57,23 @@ func (s *Service) Detail(
 	ctx context.Context,
 	id uuid.UUID,
 	viewerID *uuid.UUID,
-	visibility work.ContentVisibility,
+	preference work.NSFWPreference,
 ) (Detail, error) {
-	return s.detail(ctx, id, viewerID, visibility, false)
+	return s.detail(ctx, id, viewerID, preference, false)
 }
 
 // WorkingCopy reads the page its owner edits, drafted changes included
-func (s *Service) WorkingCopy(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility work.ContentVisibility) (Detail, error) {
+func (s *Service) WorkingCopy(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, preference work.NSFWPreference) (Detail, error) {
 	if viewerID == nil {
 		return Detail{}, work.ErrNotFound
 	}
-	return s.detail(ctx, id, viewerID, visibility, true)
+	return s.detail(ctx, id, viewerID, preference, true)
 }
 
-func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, visibility work.ContentVisibility, working bool) (Detail, error) {
-	tx, err := s.assets.BeginReadSnapshot(ctx)
+func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, preference work.NSFWPreference, working bool) (Detail, error) {
+	tx, err := s.works.BeginReadSnapshot(ctx)
 	if err != nil {
-		return Detail{}, fmt.Errorf("begin asset page snapshot: %w", err)
+		return Detail{}, fmt.Errorf("begin work page snapshot: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	if working {
@@ -83,39 +83,39 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	}
 
 	queries := db.New(tx)
-	row, err := queries.AssetPage(ctx, db.AssetPageParams{
+	row, err := queries.WorkPage(ctx, db.WorkPageParams{
 		ID: uuidToPgtype(id), ViewerID: uuidToNullable(viewerID),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Detail{}, work.ErrNotFound
 	}
 	if err != nil {
-		return Detail{}, fmt.Errorf("read asset page: %w", err)
+		return Detail{}, fmt.Errorf("read work page: %w", err)
 	}
 	if working && !row.IsOwner {
 		return Detail{}, work.ErrNotFound
 	}
 	found := Detail{
-		ID:        uuidFromPgtype(row.ID),
-		Kind:      row.Kind,
-		Name:      row.Name,
-		Blurb:     row.Blurb,
-		Tags:      detailTags(row.Tags),
-		Creator:   row.Creator,
-		IsNSFW:    boolFromPgtype(row.IsNsfw),
-		Discovery: work.Discovery(row.Discovery),
-		Lifecycle: work.Lifecycle(row.Lifecycle),
-		IsOwner:   row.IsOwner,
-		Original:  originalUpload(s.reg, row),
-		CreatedAt: timeFromPgtype(row.CreatedAt),
-		Media:     []work.DetailImage{},
+		ID:         uuidFromPgtype(row.ID),
+		Type:       row.Type,
+		Name:       row.Name,
+		Blurb:      row.Blurb,
+		Tags:       detailTags(row.Tags),
+		Creator:    row.Creator,
+		IsNSFW:     boolFromPgtype(row.IsNsfw),
+		Visibility: work.Visibility(row.Visibility),
+		Lifecycle:  work.Lifecycle(row.Lifecycle),
+		IsOwner:    row.IsOwner,
+		Original:   originalUpload(s.reg, row),
+		CreatedAt:  timeFromPgtype(row.CreatedAt),
+		Media:      []work.DetailImage{},
 	}
 	if row.Identifier != "" {
 		found.Identifier = &row.Identifier
 	}
 	if working || (found.IsOwner && found.Lifecycle == work.LifecycleDraft) {
 		var version int64
-		if err := tx.QueryRow(ctx, `select working_copy_version from public.assets where id = $1`, id).Scan(&version); err != nil {
+		if err := tx.QueryRow(ctx, `select working_copy_version from public.works where id = $1`, id).Scan(&version); err != nil {
 			return Detail{}, err
 		}
 		found.WorkingCopyVersion = &version
@@ -129,7 +129,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		return Detail{}, err
 	}
 	found.Dependencies, err = extensionDependencies(ctx, tx, dependencySubject{
-		assetID: id, kind: found.Kind, format: row.OriginalFormat.String, visibility: visibility,
+		workID: id, workType: found.Type, format: row.OriginalFormat.String, preference: preference,
 	}, found.Blocks)
 	if err != nil {
 		return Detail{}, err
@@ -139,7 +139,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		return Detail{}, err
 	}
 	if working && found.Lifecycle == work.LifecyclePublished {
-		unpublished, err := s.assets.UnpublishedChanges(ctx, tx, id)
+		unpublished, err := s.works.UnpublishedChanges(ctx, tx, id)
 		if err != nil {
 			return Detail{}, err
 		}
@@ -157,12 +157,12 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		}
 	}
 
-	images, err := queries.AssetPageMedia(ctx, uuidToPgtype(id))
+	images, err := queries.WorkPageMedia(ctx, uuidToPgtype(id))
 	if err != nil {
-		return Detail{}, fmt.Errorf("read asset page media: %w", err)
+		return Detail{}, fmt.Errorf("read work page media: %w", err)
 	}
 	flagged := found.IsNSFW != nil && *found.IsNSFW
-	blurred := flagged && visibility != work.ContentShown
+	blurred := flagged && preference != work.NSFWShown
 	draft := found.Lifecycle == work.LifecycleDraft
 	for _, image := range images {
 		mediaID := uuidFromPgtype(image.ID)
@@ -170,8 +170,8 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 			ID:        mediaID,
 			Role:      work.MediaRole(image.Role),
 			IsCover:   image.IsCover,
-			DetailURL: s.assets.ImageAddress(mediaID, "detail", blurred, draft || working),
-			ThumbURL:  s.assets.ImageAddress(mediaID, "thumb", blurred, draft || working),
+			DetailURL: s.works.ImageAddress(mediaID, "detail", blurred, draft || working),
+			ThumbURL:  s.works.ImageAddress(mediaID, "thumb", blurred, draft || working),
 			Width:     int(image.Width.Int32),
 			Height:    int(image.Height.Int32),
 			Bytes:     image.ByteSize,
@@ -182,9 +182,9 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 			return Detail{}, err
 		}
 		if draft {
-			found.Readiness = work.Readiness(found.Kind, found.Name, found.IsNSFW, found.Blocks)
+			found.Readiness = work.Readiness(found.Type, found.Name, found.IsNSFW, found.Blocks)
 		} else {
-			found.Readiness = work.PublishedShortfall(found.Kind, found.Name, found.IsNSFW, found.Blocks)
+			found.Readiness = work.PublishedShortfall(found.Type, found.Name, found.IsNSFW, found.Blocks)
 		}
 		if viewerID != nil {
 			sealed, err := private.SealedBlockCount(ctx, tx, *viewerID, id)
@@ -203,8 +203,8 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	for i, target := range found.Downloads {
 		offered[i] = target.Format
 	}
-	found.EligibleApps = private.EligibleApps(found.Kind, offered)
-	found.InstallCapabilities = format.InstallCapabilities(found.Kind, offered)
+	found.EligibleApps = private.EligibleApps(found.Type, offered)
+	found.InstallCapabilities = format.InstallCapabilities(found.Type, offered)
 	found.AppTargets = format.AppTargets(found.Downloads, s.reg)
 	if found.LinkedInstallOnly {
 		found.Downloads = []format.Target{}
@@ -215,7 +215,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	}
 	for _, image := range found.Media {
 		if image.IsCover {
-			preview := s.assets.ImageAddress(image.ID, "og", flagged, false)
+			preview := s.works.ImageAddress(image.ID, "og", flagged, false)
 			found.Preview = &preview
 			break
 		}
@@ -223,15 +223,15 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	return found, nil
 }
 
-func latestUpdate(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (*work.Version, error) {
+func latestUpdate(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (*work.Version, error) {
 	var recorded work.Version
 	err := tx.QueryRow(ctx, `
 		select s.id, s.number, s.recorded_at, s.initial_recorded,
 		       s.version_label, s.summary, s.notes
-		  from public.assets a
-		  join public.asset_snapshots s on s.id = a.published_snapshot_id
+		  from public.works a
+		  join public.work_snapshots s on s.id = a.published_snapshot_id
 		 where a.id = $1
-	`, assetID).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
+	`, workID).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -242,7 +242,7 @@ func latestUpdate(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) (*work.Vers
 	return &recorded, nil
 }
 
-func originalUpload(reg *format.Registry, row db.AssetPageRow) *work.OriginalUpload {
+func originalUpload(reg *format.Registry, row db.WorkPageRow) *work.OriginalUpload {
 	if !row.OriginalFormat.Valid {
 		return nil
 	}

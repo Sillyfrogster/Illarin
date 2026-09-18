@@ -33,11 +33,11 @@ func (r *reader) spans(path string, raw json.RawMessage) ([]Span, error) {
 }
 
 func (r *reader) span(path string, raw json.RawMessage) (Span, error) {
-	fields, kind, err := r.node(path, raw)
+	fields, calloutType, err := r.node(path, raw)
 	if err != nil {
 		return Span{}, err
 	}
-	if kind != "text" {
+	if calloutType != "text" {
 		return Span{}, Problem{Path: path + ".type", Message: "Only text runs go inside a paragraph."}
 	}
 	if err := onlyKeys(path, fields, "type", "text", "marks"); err != nil {
@@ -77,16 +77,16 @@ func readMarks(path string, raw json.RawMessage, span *Span) error {
 		if err := json.Unmarshal(entry, &fields); err != nil {
 			return Problem{Path: here, Message: "A mark has to be a JSON object."}
 		}
-		kind, err := readString(here+".type", fields, "type")
+		calloutType, err := readString(here+".type", fields, "type")
 		if err != nil {
 			return err
 		}
-		switch kind {
+		switch calloutType {
 		case markBold, markItalic, markStrike, markCode:
 			if err := onlyKeys(here, fields, "type"); err != nil {
 				return err
 			}
-			span.wear(kind)
+			span.wear(calloutType)
 		case markLink:
 			if err := onlyKeys(here, fields, "type", "href"); err != nil {
 				return err
@@ -100,7 +100,7 @@ func readMarks(path string, raw json.RawMessage, span *Span) error {
 			}
 			span.Link = address
 		default:
-			return Problem{Path: here + ".type", Message: fmt.Sprintf("%q is not a post mark.", kind)}
+			return Problem{Path: here + ".type", Message: fmt.Sprintf("%q is not a post mark.", calloutType)}
 		}
 	}
 	return nil

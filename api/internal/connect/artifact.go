@@ -19,7 +19,7 @@ func (s *Sends) Artifact(
 	signature string,
 ) (uuid.UUID, string, error) {
 	path := deliveryPathStart + deliveryID.String() + "/export"
-	if !s.catalog.ValidSignature(path, expires, signature) {
+	if !s.works.ValidSignature(path, expires, signature) {
 		return uuid.Nil, "", ErrArtifactNotFound
 	}
 	row, err := db.New(s.pool).DeliveryForArtifact(ctx, uuidValue(deliveryID))
@@ -29,5 +29,5 @@ func (s *Sends) Artifact(
 	if err != nil {
 		return uuid.Nil, "", fmt.Errorf("read a delivery artifact: %w", err)
 	}
-	return uuid.UUID(row.AssetID.Bytes), row.ChosenTarget.String, nil
+	return uuid.UUID(row.WorkID.Bytes), row.ChosenTarget.String, nil
 }

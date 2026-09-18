@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { shellClasses } from "@/components/layout/Shell";
-import { type AssetDetail, fetchAsset } from "@/lib/api/query";
+import { fetchAsset, type WorkDetail } from "@/lib/api/query";
 import { assetMetadata } from "@/lib/asset-metadata";
 import { assetHoldsNothing } from "@/lib/asset-page-content";
 import { assetRedirect, isAssetId } from "@/lib/asset-url";
@@ -16,7 +16,7 @@ import { AssetHeader } from "./AssetHeader";
 import { AssetWorkspace } from "./workspace/state";
 import { WorkspaceSurfaces } from "./workspace/WorkspaceSurfaces";
 
-const loadAsset = cache(async (id: string): Promise<AssetDetail | null> => {
+const loadAsset = cache(async (id: string): Promise<WorkDetail | null> => {
   if (!isAssetId(id)) return null;
   const cookie = (await cookies()).toString();
   return fetchAsset(id, cookie);

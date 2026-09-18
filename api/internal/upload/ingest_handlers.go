@@ -15,13 +15,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) CreateAsset(c *gin.Context) {
+func (h *Handlers) CreateWork(c *gin.Context) {
 	owner, ok := api.Verified(c, "uploading")
 	if !ok {
 		return
 	}
 	if c.ContentType() == "application/json" {
-		h.startAssetFromNothing(c, owner)
+		h.startWorkFromNothing(c, owner)
 		return
 	}
 	h.acceptUpload(c, owner)
@@ -71,7 +71,7 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner api.Account) {
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
-func (h *Handlers) AddAssetRevision(c *gin.Context) {
+func (h *Handlers) AddWorkRevision(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -104,7 +104,7 @@ func (h *Handlers) AddAssetRevision(c *gin.Context) {
 	candidate := &work.Candidate{Version: version}
 	operation, err := h.uploads.AcceptRevision(c.Request.Context(), RevisionInput{
 		OwnerID:  owner.ID,
-		AssetID:  id,
+		WorkID:   id,
 		Filename: file.FileName(),
 		File:     limitedFile,
 	}, candidate)
@@ -128,7 +128,7 @@ func (h *Handlers) AddAssetRevision(c *gin.Context) {
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
-func (h *Handlers) GetAssetReplacement(c *gin.Context) {
+func (h *Handlers) GetWorkReplacement(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -149,7 +149,7 @@ func (h *Handlers) GetAssetReplacement(c *gin.Context) {
 	c.JSON(http.StatusOK, toAPIIngest(operation))
 }
 
-func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
+func (h *Handlers) AcceptWorkRevision(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -208,7 +208,7 @@ func (h *Handlers) AcceptAssetRevision(c *gin.Context) {
 	c.JSON(http.StatusOK, toAPIIngest(operation))
 }
 
-func (h *Handlers) CancelAssetRevision(c *gin.Context) {
+func (h *Handlers) CancelWorkRevision(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -259,7 +259,7 @@ func toAPIIngest(operation Operation) gin.H {
 		"id":     operation.ID,
 		"status": operation.Status,
 		"url":    "/v1/ingests/" + operation.ID.String(),
-		"asset":  ingestAsset(operation.Asset),
+		"asset":  ingestWork(operation.Work),
 	}
 	if operation.Failure != nil {
 		response["failure"] = gin.H{
@@ -286,7 +286,7 @@ func nonNilStrings(values []string) []string {
 	return values
 }
 
-func ingestAsset(a *work.Asset) *Asset {
+func ingestWork(a *work.Work) *Work {
 	if a == nil {
 		return nil
 	}
@@ -294,10 +294,10 @@ func ingestAsset(a *work.Asset) *Asset {
 	return &converted
 }
 
-func toAPI(a work.Asset) Asset {
-	return Asset{
-		Id: a.ID, Kind: a.Kind, Format: a.Format,
+func toAPI(a work.Work) Work {
+	return Work{
+		Id: a.ID, Type: a.Type, Format: a.Format,
 		Name: a.Name, Blurb: a.Blurb, Tags: a.Tags, IsNsfw: a.IsNSFW,
-		Discovery: AssetDiscovery(a.Discovery), CreatedAt: a.CreatedAt,
+		Visibility: WorkVisibility(a.Visibility), CreatedAt: a.CreatedAt,
 	}
 }

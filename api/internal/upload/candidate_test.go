@@ -27,7 +27,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		_, err := svc.AcceptRevision(context.Background(), RevisionInput{
-			OwnerID: owner, AssetID: id, Filename: "candidate.json", File: reader,
+			OwnerID: owner, WorkID: id, Filename: "candidate.json", File: reader,
 		}, candidate)
 		done <- err
 	}()
@@ -39,7 +39,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(context.Background())
-	if _, err := tx.Exec(context.Background(), `update assets set withheld_at = now(), withheld_by = owner_id, withheld_reason = 'Review' where id = $1`, id); err != nil {
+	if _, err := tx.Exec(context.Background(), `update works set withheld_at = now(), withheld_by = owner_id, withheld_reason = 'Review' where id = $1`, id); err != nil {
 		t.Fatal(err)
 	}
 	if err := writer.Close(); err != nil {
@@ -48,21 +48,21 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	if err := tx.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if err := <-done; !errors.Is(err, work.ErrAssetFrozen) {
+	if err := <-done; !errors.Is(err, work.ErrWorkFrozen) {
 		t.Fatalf("revoked acceptance = %v, want frozen", err)
 	}
 	if err := staff.NewService(pool).ClearWithhold(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
 	_, err = svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: owner, AssetID: id, Filename: "candidate.json", File: bytes.NewBufferString(`{"candidate":"private"}`),
+		OwnerID: owner, WorkID: id, Filename: "candidate.json", File: bytes.NewBufferString(`{"candidate":"private"}`),
 	}, candidate)
 	var conflict *work.VersionConflict
 	if !errors.As(err, &conflict) {
 		t.Fatalf("acceptance after revocation cleared = %v, want stale", err)
 	}
 	var count int
-	if err := pool.QueryRow(context.Background(), `select count(*) from ingest_operations where target_asset_id = $1`, id).Scan(&count); err != nil {
+	if err := pool.QueryRow(context.Background(), `select count(*) from ingest_operations where target_work_id = $1`, id).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 	if count != 0 {
@@ -72,19 +72,19 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 
 func TestQueuedRevisionCannotOverwriteANewerWorkingCopy(t *testing.T) {
 	t.Parallel()
-	registry := registryWithModule(t, kindModule{id: "as_character", kind: "character"})
+	registry := registryWithModule(t, typeModule{id: "as_character", workType: "character"})
 	svc, _ := newTestServiceWithRegistry(t, registry)
 	owner := revisionOwner(t, svc, "queued.owner")
 	created := ingestOne(t, svc, owner, "card.json", []byte(`{"spec":"as_character"}`))
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: owner, AssetID: created.ID, Filename: "card.json", File: bytes.NewBufferString(`{"spec":"as_character"}`),
+		OwnerID: owner, WorkID: created.ID, Filename: "card.json", File: bytes.NewBufferString(`{"spec":"as_character"}`),
 	}, candidate)
 	if err != nil {
 		t.Fatal(err)
 	}
-	adult := false
-	if err := works(svc).SetIdentity(context.Background(), page.Identity{OwnerID: owner, AssetID: created.ID, Name: "Newer work", IsNSFW: &adult}, candidate); err != nil {
+	nsfw := false
+	if err := works(svc).SetIdentity(context.Background(), page.Identity{OwnerID: owner, WorkID: created.ID, Name: "Newer work", IsNSFW: &nsfw}, candidate); err != nil {
 		t.Fatal(err)
 	}
 	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
@@ -97,7 +97,7 @@ func TestQueuedRevisionCannotOverwriteANewerWorkingCopy(t *testing.T) {
 	if finished.Status != IngestFailed || finished.Failure == nil || finished.Failure.Reason != "working_copy_conflict" {
 		t.Fatalf("stale upload = %+v", finished)
 	}
-	page, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.ContentShown)
+	page, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}

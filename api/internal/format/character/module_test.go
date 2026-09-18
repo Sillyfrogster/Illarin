@@ -19,12 +19,12 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestEveryModuleDeclaresTheCharacterKind(t *testing.T) {
+func TestEveryModuleDeclaresTheCharacterType(t *testing.T) {
 	t.Parallel()
 	for _, module := range Modules() {
 		declaration := module.Declaration()
-		if declaration.Kind != Kind {
-			t.Errorf("module %q kind = %q, want %q", module.ID(), declaration.Kind, Kind)
+		if declaration.Type != Type {
+			t.Errorf("module %q kind = %q, want %q", module.ID(), declaration.Type, Type)
 		}
 		if !declaration.Direction.Read || !declaration.Direction.Write {
 			t.Errorf("module %q direction = %+v, want read and write", module.ID(), declaration.Direction)
@@ -95,7 +95,7 @@ func TestCharacterReaderReturnsHeaderFieldsAndRoleTaggedElements(t *testing.T) {
 
 	parsed := resolveAndParse(t, file)
 	if parsed.Header.Name != "Ana" || parsed.Header.Nickname != "Archivist" ||
-		parsed.Header.AssetVersion != "main" || parsed.Header.CreditedAuthor != "A. Writer" {
+		parsed.Header.WorkVersion != "main" || parsed.Header.CreditedAuthor != "A. Writer" {
 		t.Fatalf("header = %+v", parsed.Header)
 	}
 	want := map[block.Role]block.Content{
@@ -148,7 +148,7 @@ func elementContent(elements []block.Element, role block.Role) (block.Content, b
 	return nil, false
 }
 
-func TestKindComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
+func TestTypeComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
 		name   string
@@ -166,8 +166,8 @@ func TestKindComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
 			if parsed.Format != test.format {
 				t.Errorf("format = %q, want %q", parsed.Format, test.format)
 			}
-			if parsed.Kind != Kind {
-				t.Errorf("kind = %q, want %q", parsed.Kind, Kind)
+			if parsed.Type != Type {
+				t.Errorf("kind = %q, want %q", parsed.Type, Type)
 			}
 			if parsed.Header.Name != "Ana" {
 				t.Errorf("name = %q, want Ana", parsed.Header.Name)
@@ -185,8 +185,8 @@ func TestAnEmbeddedLorebookStaysPartOfTheCard(t *testing.T) {
 		]}}
 	}`)
 	parsed := resolveAndParse(t, withBook)
-	if parsed.Kind != Kind {
-		t.Fatalf("kind = %q, want the one character asset", parsed.Kind)
+	if parsed.Type != Type {
+		t.Fatalf("kind = %q, want the one character asset", parsed.Type)
 	}
 	entries := 0
 	for _, element := range parsed.Elements {
@@ -282,7 +282,7 @@ func TestCharXNamesEachArchivedPictureByWhatTheCardCallsIt(t *testing.T) {
 	}
 }
 
-func TestCCv2DoesNotConsumeV3OnlyGroupGreetingsOrAssets(t *testing.T) {
+func TestCCv2DoesNotConsumeV3OnlyGroupGreetingsOrWorks(t *testing.T) {
 	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v2","spec_version":"2.0",
@@ -619,7 +619,7 @@ func TestCharXLeavesAPersonaIconOutRatherThanCallingItGallery(t *testing.T) {
 	}
 }
 
-func TestACharXThatNamesNoAssetsIsReadFromItsArchiveLayout(t *testing.T) {
+func TestACharXThatNamesNoWorksIsReadFromItsArchiveLayout(t *testing.T) {
 	t.Parallel()
 	file := charxCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",

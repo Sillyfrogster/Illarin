@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) AddAssetBlock(c *gin.Context) {
+func (h *Handlers) AddWorkBlock(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -24,7 +24,7 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request AddAssetBlockRequest
+	var request AddWorkBlockRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Name the block to add and the element it starts with.")
 		return
@@ -44,7 +44,7 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not add the block.")
 	default:
-		blocks, conversionErr := block.ToBlocks(saved.Kind, []block.Block{saved.Block})
+		blocks, conversionErr := block.ToBlocks(saved.Type, []block.Block{saved.Block})
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the new block.")
 			return
@@ -53,7 +53,7 @@ func (h *Handlers) AddAssetBlock(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
+func (h *Handlers) ArrangeWorkBlocks(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -66,7 +66,7 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request ArrangeAssetBlocksRequest
+	var request ArrangeWorkBlocksRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Send every block once with its id, hidden state and width.")
 		return
@@ -90,7 +90,7 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not arrange the blocks.")
 	default:
-		blocks, conversionErr := block.ToBlocks(saved.Kind, saved.Blocks)
+		blocks, conversionErr := block.ToBlocks(saved.Type, saved.Blocks)
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the arranged blocks.")
 			return
@@ -99,7 +99,7 @@ func (h *Handlers) ArrangeAssetBlocks(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) RemoveAssetBlock(c *gin.Context) {
+func (h *Handlers) RemoveWorkBlock(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -133,7 +133,7 @@ func (h *Handlers) RemoveAssetBlock(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
+func (h *Handlers) MoveWorkBlockContent(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -150,7 +150,7 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request MoveAssetBlockContentRequest
+	var request MoveWorkBlockContentRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Choose the block that should keep this content.")
 		return
@@ -169,7 +169,7 @@ func (h *Handlers) MoveAssetBlockContent(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not move the block content.")
 	default:
-		blocks, conversionErr := block.ToBlocks(saved.Kind, saved.Blocks)
+		blocks, conversionErr := block.ToBlocks(saved.Type, saved.Blocks)
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the arranged blocks.")
 			return

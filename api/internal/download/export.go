@@ -18,9 +18,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-var ErrTargetNotOffered = errors.New("that download is not offered for this asset")
+var ErrTargetNotOffered = errors.New("that download is not offered for this work")
 
-var ErrLinkedInstallOnly = errors.New("this asset is linked-install-only")
+var ErrLinkedInstallOnly = errors.New("this work is linked-install-only")
 
 var ErrExportTooLarge = errors.New("that choice of images makes a file too large to produce")
 
@@ -47,8 +47,8 @@ type Export struct {
 }
 
 type exportSubject struct {
-	assetID    uuid.UUID
-	kind       string
+	workID     uuid.UUID
+	workType   string
 	name       string
 	origin     string
 	header     format.Header
@@ -63,26 +63,26 @@ type exportSubject struct {
 
 func (s *Service) OpenExport(
 	ctx context.Context,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	viewerID *uuid.UUID,
 	target string,
 	gallery *GallerySelection,
 ) (Export, error) {
-	tx, err := s.assets.BeginReadSnapshot(ctx)
+	tx, err := s.works.BeginReadSnapshot(ctx)
 	if err != nil {
 		return Export{}, fmt.Errorf("begin export snapshot: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
-	subject, err := s.exportSubject(ctx, tx, assetID, viewerID)
+	subject, err := s.exportSubject(ctx, tx, workID, viewerID)
 	if err != nil {
 		return Export{}, err
 	}
 	subject.gallery = gallery
-	if err := private.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
+	if err := private.ApplyPublishedPolicy(ctx, tx, workID, subject.blocks); err != nil {
 		return Export{}, err
 	}
-	apps, err := private.Apps(ctx, tx, assetID)
+	apps, err := private.Apps(ctx, tx, workID)
 	if err != nil {
 		return Export{}, err
 	}
@@ -122,7 +122,7 @@ func (subject exportSubject) export(
 		Filename: format.Filename(subject.name, subject.updateName(), label, written.Extension),
 	}
 	if subject.lifecycle == work.LifecyclePublished {
-		event := newEvent(subject.assetID, subject.revisionID, target, subject.ownerID, viewerID)
+		event := newEvent(subject.workID, subject.revisionID, target, subject.ownerID, viewerID)
 		export.Event = &event
 	}
 	return export
@@ -137,35 +137,35 @@ func (subject exportSubject) updateName() string {
 
 func (s *Service) OpenExportForLinkedInstance(
 	ctx context.Context,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	target string,
 ) (Export, error) {
-	tx, err := s.assets.BeginReadSnapshot(ctx)
+	tx, err := s.works.BeginReadSnapshot(ctx)
 	if err != nil {
 		return Export{}, fmt.Errorf("begin linked export snapshot: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
-	subject, err := s.exportSubject(ctx, tx, assetID, nil)
+	subject, err := s.exportSubject(ctx, tx, workID, nil)
 	if err != nil {
 		return Export{}, err
 	}
-	apps, err := private.Apps(ctx, tx, assetID)
+	apps, err := private.Apps(ctx, tx, workID)
 	if err != nil {
 		return Export{}, err
 	}
-	if len(apps) > 0 && !private.AllowsTarget(apps, subject.kind, target) {
+	if len(apps) > 0 && !private.AllowsTarget(apps, subject.workType, target) {
 		return Export{}, ErrTargetNotOffered
 	}
 	if len(apps) == 0 {
-		if err := private.ApplyPublishedPolicy(ctx, tx, assetID, subject.blocks); err != nil {
+		if err := private.ApplyPublishedPolicy(ctx, tx, workID, subject.blocks); err != nil {
 			return Export{}, err
 		}
 		if private.HasPromptFragments(subject.blocks) {
 			return Export{}, ErrLinkedInstallOnly
 		}
 	}
-	if err := private.RestorePromptFragments(ctx, tx, assetID, subject.blocks); err != nil {
+	if err := private.RestorePromptFragments(ctx, tx, workID, subject.blocks); err != nil {
 		return Export{}, err
 	}
 	if !offersTarget(s.reg.OfferedTargets(subject.capability()), target) {
@@ -200,8 +200,8 @@ func (s *Service) writeExport(
 	writer format.Writer,
 ) (format.Artifact, error) {
 	travelling := subject.travellingElements()
-	work := format.ExportAsset{
-		Kind: subject.kind, Header: subject.header, Elements: travelling,
+	work := format.ExportWork{
+		Type: subject.workType, Header: subject.header, Elements: travelling,
 	}
 	cover, images, err := s.exportImages(ctx, q, subject, travelling)
 	if err != nil {
@@ -235,8 +235,8 @@ func (s *Service) readUpload(ctx context.Context, q db.DBTX, subject exportSubje
 	}
 	var blobID uuid.UUID
 	if err := q.QueryRow(ctx,
-		`select blob_id from asset_revisions where id = $1 and asset_id = $2`,
-		*subject.revisionID, subject.assetID,
+		`select blob_id from work_revisions where id = $1 and work_id = $2`,
+		*subject.revisionID, subject.workID,
 	).Scan(&blobID); err != nil {
 		return nil, fmt.Errorf("find the upload to export: %w", err)
 	}
@@ -286,7 +286,7 @@ func (subject exportSubject) carries(image block.ImageItem) bool {
 
 func (subject exportSubject) capability() format.CapabilitySubject {
 	return format.CapabilitySubject{
-		Kind: subject.kind, Origin: subject.origin, Elements: subject.elements(),
+		Type: subject.workType, Origin: subject.origin, Elements: subject.elements(),
 	}
 }
 
@@ -302,38 +302,38 @@ func offersTarget(offered []format.Target, target string) bool {
 func (s *Service) exportSubject(
 	ctx context.Context,
 	q db.DBTX,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	viewerID *uuid.UUID,
 ) (exportSubject, error) {
 	var subject exportSubject
 	var origin pgtype.Text
 	var ownerID, revisionID, cover pgtype.UUID
 	err := q.QueryRow(ctx, `
-		select asset.kind, asset.name, asset.blurb, asset.origin_format, asset.lifecycle,
-		       asset.asset_version, asset.credited_author, asset.nickname,
-		       asset.owner_id, asset.current_revision_id, asset.cover_media_id
-		  from assets asset
-		 where asset.id = $1 and asset.deleted_at is null
-		   and (asset.lifecycle = 'published' or asset.owner_id = $2)
-		   and (asset.withheld_at is null or asset.owner_id = $2)
-	`, assetID, viewerID).Scan(
-		&subject.kind, &subject.name, &subject.header.Blurb, &origin, &subject.lifecycle,
-		&subject.header.AssetVersion, &subject.header.CreditedAuthor,
+		select work.type, work.name, work.blurb, work.origin_format, work.lifecycle,
+		       work.work_version, work.credited_author, work.nickname,
+		       work.owner_id, work.current_revision_id, work.cover_media_id
+		  from works work
+		 where work.id = $1 and work.deleted_at is null
+		   and (work.lifecycle = 'published' or work.owner_id = $2)
+		   and (work.withheld_at is null or work.owner_id = $2)
+	`, workID, viewerID).Scan(
+		&subject.workType, &subject.name, &subject.header.Blurb, &origin, &subject.lifecycle,
+		&subject.header.WorkVersion, &subject.header.CreditedAuthor,
 		&subject.header.Nickname, &ownerID, &revisionID, &cover,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return exportSubject{}, work.ErrNotFound
 	}
 	if err != nil {
-		return exportSubject{}, fmt.Errorf("read the asset to export: %w", err)
+		return exportSubject{}, fmt.Errorf("read the work to export: %w", err)
 	}
-	subject.assetID = assetID
+	subject.workID = workID
 	subject.header.Name = subject.name
 	subject.origin = origin.String
 	subject.cover = uuidOrNil(cover)
 	subject.ownerID = uuidOrNil(ownerID)
 	subject.revisionID = uuidOrNil(revisionID)
-	subject.blocks, err = block.Read(ctx, q, assetID)
+	subject.blocks, err = block.Read(ctx, q, workID)
 	if err != nil {
 		return exportSubject{}, err
 	}
@@ -357,11 +357,11 @@ func (s *Service) travellingPreservedData(
 		return recordedRemainder(*subject.recorded), nil
 	}
 	rows, err := q.Query(ctx, `
-		select owner_kind, owner_id, namespace, payload
-		  from asset_preserved_data
-		 where asset_id = $1
+		select owner_type, owner_id, namespace, payload
+		  from work_preserved_data
+		 where work_id = $1
 		 order by namespace, owner_id
-	`, subject.assetID)
+	`, subject.workID)
 	if err != nil {
 		return nil, fmt.Errorf("read preserved data: %w", err)
 	}
@@ -406,7 +406,7 @@ func (s *Service) exportImages(
 		return nil, map[uuid.UUID]format.ExportMedia{}, nil
 	}
 
-	rows, err := q.Query(ctx, subject.pictureQuery(), subject.assetID, wanted, subject.snapshotID())
+	rows, err := q.Query(ctx, subject.pictureQuery(), subject.workID, wanted, subject.snapshotID())
 	if err != nil {
 		return nil, nil, fmt.Errorf("list the pictures to export: %w", err)
 	}
@@ -436,7 +436,7 @@ func (s *Service) exportImages(
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: picture %s: %w", ErrExportImageUnreadable, mediaID, err)
 		}
-		picture.URL = s.assets.ExportMediaURL(mediaID, private)
+		picture.URL = s.works.ExportMediaURL(mediaID, private)
 		images[mediaID] = picture
 	}
 	var cover *format.ExportMedia
@@ -454,17 +454,17 @@ func (subject exportSubject) pictureQuery() string {
 	if subject.recorded == nil {
 		return `
 			select media.id, media.blob_id, blob.byte_size
-			  from asset_media media
+			  from work_media media
 			  join blobs blob on blob.id = media.blob_id
-			 where media.asset_id = $1 and media.is_current and media.id = any($2)
+			 where media.work_id = $1 and media.is_current and media.id = any($2)
 			   and $3::uuid is null`
 	}
 	return `
 		select media.id, media.blob_id, blob.byte_size
-		  from public.asset_media media
-		  join public.asset_snapshot_media kept on kept.media_id = media.id
+		  from public.work_media media
+		  join public.work_snapshot_media kept on kept.media_id = media.id
 		  join public.blobs blob on blob.id = media.blob_id
-		 where media.asset_id = $1 and media.id = any($2) and kept.snapshot_id = $3`
+		 where media.work_id = $1 and media.id = any($2) and kept.snapshot_id = $3`
 }
 
 func (subject exportSubject) snapshotID() *uuid.UUID {

@@ -15,11 +15,11 @@ import (
 
 func TestCanonicalScopesAcceptsEachKnownScopeOnce(t *testing.T) {
 	t.Parallel()
-	both, err := canonicalScopes([]Scope{ScopeLibrarySync, ScopeAssetReceive})
+	both, err := canonicalScopes([]Scope{ScopeLibrarySync, ScopeWorkReceive})
 	if err != nil {
 		t.Fatalf("both scopes: %v", err)
 	}
-	if len(both) != 2 || both[0] != ScopeAssetReceive || both[1] != ScopeLibrarySync {
+	if len(both) != 2 || both[0] != ScopeWorkReceive || both[1] != ScopeLibrarySync {
 		t.Errorf("canonical order = %v", both)
 	}
 
@@ -31,8 +31,8 @@ func TestCanonicalScopesAcceptsEachKnownScopeOnce(t *testing.T) {
 	for _, requested := range [][]Scope{
 		{},
 		{"asset:write"},
-		{ScopeAssetReceive, ScopeAssetReceive},
-		{ScopeAssetReceive, "asset:write"},
+		{ScopeWorkReceive, ScopeWorkReceive},
+		{ScopeWorkReceive, "asset:write"},
 	} {
 		if _, err := canonicalScopes(requested); !errors.Is(err, ErrInvalidScopes) {
 			t.Errorf("canonicalScopes(%v) error = %v, want a refusal", requested, err)
@@ -103,40 +103,40 @@ func TestOpaqueInputsAreRejectedBeforeDecodingUnboundedText(t *testing.T) {
 		t.Fatal("an oversized opaque code was accepted")
 	}
 
-	token, _, _, err := newCredential(refreshTokenKind)
+	token, _, _, err := newCredential(refreshTokenType)
 	if err != nil {
 		t.Fatalf("new credential: %v", err)
 	}
-	if _, ok := credentialHash(token+strings.Repeat("A", 1000), refreshTokenKind); ok {
+	if _, ok := credentialHash(token+strings.Repeat("A", 1000), refreshTokenType); ok {
 		t.Fatal("an oversized credential was accepted")
 	}
 }
 
-func TestCredentialsHaveSeparateKindsAndRejectMalformedValues(t *testing.T) {
+func TestCredentialsHaveSeparateTypesAndRejectMalformedValues(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []string{accessTokenKind, refreshTokenKind} {
-		token, prefix, hash, err := newCredential(kind)
+	for _, secretType := range []string{accessTokenType, refreshTokenType} {
+		token, prefix, hash, err := newCredential(secretType)
 		if err != nil {
-			t.Fatalf("new %s credential: %v", kind, err)
+			t.Fatalf("new %s credential: %v", secretType, err)
 		}
-		if !strings.HasPrefix(token, kind+"."+prefix+".") {
+		if !strings.HasPrefix(token, secretType+"."+prefix+".") {
 			t.Errorf("token %q does not carry kind and prefix", token)
 		}
-		got, ok := credentialHash(token, kind)
+		got, ok := credentialHash(token, secretType)
 		if !ok || string(got) != string(hash) {
 			t.Error("a fresh credential does not hash to what was stored")
 		}
-		other := accessTokenKind
-		if kind == accessTokenKind {
-			other = refreshTokenKind
+		other := accessTokenType
+		if secretType == accessTokenType {
+			other = refreshTokenType
 		}
 		if _, ok := credentialHash(token, other); ok {
-			t.Errorf("%s credential was accepted as %s", kind, other)
+			t.Errorf("%s credential was accepted as %s", secretType, other)
 		}
 	}
 
 	for _, malformed := range []string{"", "no-dot", "ia1.SHORT.abc", "ia1.BAD-CODE.not-base64"} {
-		if _, ok := credentialHash(malformed, accessTokenKind); ok {
+		if _, ok := credentialHash(malformed, accessTokenType); ok {
 			t.Errorf("credentialHash(%q) accepted a malformed value", malformed)
 		}
 	}
@@ -150,7 +150,7 @@ func TestAuthorizationAcceptsOnlyExactLoopbackCallbacksAndS256(t *testing.T) {
 	base := AuthorizationInput{
 		StartInput: StartInput{
 			Declaration: testDeclaration(),
-			Scopes:      []Scope{ScopeAssetReceive},
+			Scopes:      []Scope{ScopeWorkReceive},
 		},
 		RedirectURI:         "http://127.0.0.1:49152/link/callback",
 		State:               strings.Repeat("s", 43),
@@ -207,7 +207,7 @@ func TestAnInstanceIsRefusedAScopeItWasNotGranted(t *testing.T) {
 
 	started, err := service.Start(ctx, "127.0.0.1", StartInput{
 		Declaration: testDeclaration(),
-		Scopes:      []Scope{ScopeAssetReceive},
+		Scopes:      []Scope{ScopeWorkReceive},
 	})
 	if err != nil {
 		t.Fatalf("start: %v", err)
@@ -224,7 +224,7 @@ func TestAnInstanceIsRefusedAScopeItWasNotGranted(t *testing.T) {
 		t.Fatalf("poll: %v, linked %v", err, linked)
 	}
 
-	if _, err := service.Authenticate(ctx, grant.AccessToken, ScopeAssetReceive); err != nil {
+	if _, err := service.Authenticate(ctx, grant.AccessToken, ScopeWorkReceive); err != nil {
 		t.Errorf("granted scope refused: %v", err)
 	}
 	if _, err := service.Authenticate(ctx, grant.AccessToken, ScopeLibrarySync); !errors.Is(

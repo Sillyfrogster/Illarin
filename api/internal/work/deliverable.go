@@ -16,46 +16,46 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *Service) DeliverableAsset(
+func (s *Service) DeliverableWork(
 	ctx context.Context,
 	q db.DBTX,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) (connect.Deliverable, error) {
 	var found connect.Deliverable
 	var generation int32
 	var revisionID, coverID pgtype.UUID
 	err := q.QueryRow(ctx, `
-		select kind, name, content_generation, current_revision_id, cover_media_id
-		  from asset_public.assets
+		select type, name, content_generation, current_revision_id, cover_media_id
+		  from work_public.works
 		 where id = $1
 		   and deleted_at is null
 		   and withheld_at is null
 		   and lifecycle = 'published'
-	`, assetID).Scan(&found.Kind, &found.Name, &generation, &revisionID, &coverID)
+	`, workID).Scan(&found.Type, &found.Name, &generation, &revisionID, &coverID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return connect.Deliverable{}, connect.ErrNotDeliverable
 	}
 	if err != nil {
-		return connect.Deliverable{}, fmt.Errorf("read the asset to deliver: %w", err)
+		return connect.Deliverable{}, fmt.Errorf("read the work to deliver: %w", err)
 	}
 	found.ContentGeneration = int(generation)
 	found.HasOriginal = revisionID.Valid
 
-	offered, err := deliveryTargets(ctx, q, assetID)
+	offered, err := deliveryTargets(ctx, q, workID)
 	if err != nil {
 		return connect.Deliverable{}, err
 	}
 	found.Targets = offered
-	apps, err := private.Apps(ctx, q, assetID)
+	apps, err := private.Apps(ctx, q, workID)
 	if err != nil {
 		return connect.Deliverable{}, err
 	}
 	if len(apps) == 0 {
-		blocks, err := ReadPublishedBlocks(ctx, q, assetID)
+		blocks, err := ReadPublishedBlocks(ctx, q, workID)
 		if err != nil {
 			return connect.Deliverable{}, err
 		}
-		if err := private.ApplyPublishedPolicy(ctx, q, assetID, blocks); err != nil {
+		if err := private.ApplyPublishedPolicy(ctx, q, workID, blocks); err != nil {
 			return connect.Deliverable{}, err
 		}
 		if private.HasPromptFragments(blocks) {
@@ -66,17 +66,17 @@ func (s *Service) DeliverableAsset(
 		found.HasOriginal = false
 		filtered := make([]connect.DeliveryTarget, 0, len(found.Targets))
 		for _, target := range found.Targets {
-			if private.AllowsTarget(apps, found.Kind, target.Format) {
+			if private.AllowsTarget(apps, found.Type, target.Format) {
 				filtered = append(filtered, target)
 			}
 		}
 		found.Targets = filtered
 	}
-	found.Pictures, err = s.deliveryPictures(ctx, q, assetID, uuidOrNil(coverID))
+	found.Pictures, err = s.deliveryPictures(ctx, q, workID, uuidOrNil(coverID))
 	if err != nil {
 		return connect.Deliverable{}, err
 	}
-	found.InstallCapabilities = format.InstallCapabilities(found.Kind, targetFormats(found.Targets))
+	found.InstallCapabilities = format.InstallCapabilities(found.Type, targetFormats(found.Targets))
 	return found, nil
 }
 
@@ -91,21 +91,21 @@ func targetFormats(targets []connect.DeliveryTarget) []string {
 func deliveryTargets(
 	ctx context.Context,
 	q db.DBTX,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) ([]connect.DeliveryTarget, error) {
 	var stored []byte
 	err := q.QueryRow(ctx,
-		`select export from asset_public.asset_projections where asset_id = $1`, assetID,
+		`select export from work_public.work_summaries where work_id = $1`, workID,
 	).Scan(&stored)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return []connect.DeliveryTarget{}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read the export projection to deliver: %w", err)
+		return nil, fmt.Errorf("read the export summary to deliver: %w", err)
 	}
 	offered := make([]format.Target, 0)
 	if err := json.Unmarshal(stored, &offered); err != nil {
-		return nil, fmt.Errorf("read the stored export projection: %w", err)
+		return nil, fmt.Errorf("read the stored export summary: %w", err)
 	}
 	targets := make([]connect.DeliveryTarget, 0, len(offered))
 	for _, target := range offered {
@@ -117,22 +117,22 @@ func deliveryTargets(
 func (s *Service) deliveryPictures(
 	ctx context.Context,
 	q db.DBTX,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	coverID *uuid.UUID,
 ) ([]connect.DeliveryPicture, error) {
-	blocks, err := ReadPublishedBlocks(ctx, q, assetID)
+	blocks, err := ReadPublishedBlocks(ctx, q, workID)
 	if err != nil {
 		return nil, fmt.Errorf("read the blocks to deliver: %w", err)
 	}
 	withheld := galleryImagesLeftBehind(blocks)
 	rows, err := q.Query(ctx, `
 		select id, role
-		  from asset_public.asset_media
-		 where asset_id = $1
+		  from work_public.work_media
+		 where work_id = $1
 		   and is_current
 		   and blob_id is not null
 		 order by created_at desc, id desc
-	`, assetID)
+	`, workID)
 	if err != nil {
 		return nil, fmt.Errorf("list the pictures to deliver: %w", err)
 	}
@@ -180,10 +180,10 @@ func (s *Service) ValidSignature(path, expires, signature string) bool {
 	return s.signer.Valid(path, expires, signature, s.now())
 }
 
-func ReadPublishedBlocks(ctx context.Context, q db.DBTX, assetID uuid.UUID) ([]block.Block, error) {
+func ReadPublishedBlocks(ctx context.Context, q db.DBTX, workID uuid.UUID) ([]block.Block, error) {
 	var stored []byte
 	err := q.QueryRow(ctx, `select coalesce(jsonb_agg(to_jsonb(b) order by position), '[]'::jsonb)
-		from asset_public.asset_blocks b where asset_id = $1`, assetID).Scan(&stored)
+		from work_public.work_blocks b where work_id = $1`, workID).Scan(&stored)
 	if err != nil {
 		return nil, err
 	}

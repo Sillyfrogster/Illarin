@@ -2,7 +2,7 @@
 
 The Go code under `internal/` has one package for each thing the product has:
 `account`, `profile`, `notify` and so on. The package name says what the code
-is about, never what kind of code it is.
+is about, never what sort of code it is.
 
 A feature's handlers live in its package, next to the request and response
 structs they read and write. Each feature package registers its own routes on
@@ -56,7 +56,7 @@ Everything else is plumbing a feature reaches for:
   `format/modules` holds the registry and the rest is one package per format.
 - `media` — reading an image in and rendering its sizes.
 - `storage` — blobs, the image cache, cleanup, purge.
-- `summary` — the projections browse and the download page read.
+- `summary` — the summaries browse and the download page read.
 - `credential` — hashing and checking a secret.
 - `secrets` — the sealing key.
 - `jscode` — the check that an extension's JavaScript is safe to list.

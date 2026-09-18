@@ -114,10 +114,10 @@ func (LumiverseModule) ID() string { return LumiverseID }
 func (LumiverseModule) Declaration() format.Declaration {
 	named := slotsByApp[Lumiverse]
 	return format.Declaration{
-		ID: LumiverseID, Label: "Lumiverse preset", Kind: Kind,
+		ID: LumiverseID, Label: "Lumiverse preset", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind:       format.RecognitionDiscriminator,
+			Type:       format.RecognitionDiscriminator,
 			Containers: []format.Container{format.JSON},
 			Path:       []string{lvSchemaVersion},
 			Values:     []string{"1", "2"},
@@ -162,7 +162,7 @@ func (LumiverseModule) Declaration() format.Declaration {
 			},
 		},
 		Header: []format.HeaderField{
-			format.HeaderName, format.HeaderBlurb, format.HeaderAssetVersion,
+			format.HeaderName, format.HeaderBlurb, format.HeaderWorkVersion,
 		},
 		Slots: declaredSlots(Lumiverse),
 		Limits: format.ContentLimits{
@@ -267,8 +267,8 @@ func (m LumiverseModule) Parse(
 	keys.Take(source, lvVersion, &version)
 
 	return format.Parsed{
-		Kind: Kind, Format: LumiverseID,
-		Header:   format.Header{Name: name, Blurb: boundBlurb(source), AssetVersion: version},
+		Type: Type, Format: LumiverseID,
+		Header:   format.Header{Name: name, Blurb: boundBlurb(source), WorkVersion: version},
 		Elements: elements,
 		Remainder: lumiversePreservation.remainder(
 			source, read.leftovers,

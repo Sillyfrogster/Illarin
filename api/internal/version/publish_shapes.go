@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type AssetUpdate struct {
+type WorkUpdate struct {
 	ContentChanged    bool      `json:"contentChanged"`
 	ContentGeneration int       `json:"contentGeneration"`
 	Id                uuid.UUID `json:"id"`
@@ -17,7 +17,7 @@ type AssetUpdate struct {
 	VersionLabel      string    `json:"versionLabel"`
 }
 
-type AssetUpdateRequest struct {
+type WorkUpdateRequest struct {
 	AnnounceUnlisted *bool        `json:"announceUnlisted,omitempty"`
 	DestinationIds   *[]uuid.UUID `json:"destinationIds,omitempty"`
 	Notes            *string      `json:"notes,omitempty"`

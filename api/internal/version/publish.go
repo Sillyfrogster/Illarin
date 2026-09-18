@@ -28,7 +28,7 @@ var (
 
 type UpdateRequest struct {
 	OwnerID      uuid.UUID
-	AssetID      uuid.UUID
+	WorkID       uuid.UUID
 	Summary      string
 	Notes        string
 	VersionLabel string
@@ -58,27 +58,27 @@ func (s *Service) PublishUpdate(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := candidate.Lock(ctx, tx, in.OwnerID, in.AssetID)
+	workType, err := candidate.Lock(ctx, tx, in.OwnerID, in.WorkID)
 	if err != nil {
 		return Update{}, nil, err
 	}
 	var name, lifecycle string
 	var isNSFW *bool
 	err = tx.QueryRow(ctx, `
-		select name, is_nsfw, lifecycle from assets where id = $1
-	`, in.AssetID).Scan(&name, &isNSFW, &lifecycle)
+		select name, is_nsfw, lifecycle from works where id = $1
+	`, in.WorkID).Scan(&name, &isNSFW, &lifecycle)
 	if err != nil {
-		return Update{}, nil, fmt.Errorf("read the asset to update: %w", err)
+		return Update{}, nil, fmt.Errorf("read the work to update: %w", err)
 	}
 	if work.Lifecycle(lifecycle) != work.LifecyclePublished {
-		return Update{}, nil, work.ErrAssetIsDraft
+		return Update{}, nil, work.ErrWorkIsDraft
 	}
 
-	blocks, err := block.Read(ctx, tx, in.AssetID)
+	blocks, err := block.Read(ctx, tx, in.WorkID)
 	if err != nil {
 		return Update{}, nil, err
 	}
-	items, err := s.assets.CandidateReadiness(ctx, tx, in.AssetID, kind, name, isNSFW, blocks)
+	items, err := s.works.CandidateReadiness(ctx, tx, in.WorkID, workType, name, isNSFW, blocks)
 	if err != nil {
 		return Update{}, nil, err
 	}
@@ -86,7 +86,7 @@ func (s *Service) PublishUpdate(
 		return Update{}, items, work.ErrPublishFloor
 	}
 
-	drafted, err := s.assets.DraftedChanges(ctx, tx, in.AssetID)
+	drafted, err := s.works.DraftedChanges(ctx, tx, in.WorkID)
 	if err != nil {
 		return Update{}, nil, err
 	}
@@ -103,7 +103,7 @@ func (s *Service) PublishUpdate(
 			return Update{}, nil, err
 		}
 	}
-	if err := candidate.Commit(ctx, tx, in.AssetID); err != nil {
+	if err := candidate.Commit(ctx, tx, in.WorkID); err != nil {
 		return Update{}, nil, err
 	}
 	return recorded, items, nil
@@ -116,11 +116,11 @@ func (s *Service) recordUpdate(
 	contentChanged bool,
 ) (Update, error) {
 	_, err := tx.Exec(ctx, `
-		update assets
+		update works
 		   set content_generation = content_generation + case when $2 then 1 else 0 end,
 		       updated_at = now()
 		 where id = $1
-	`, in.AssetID, contentChanged)
+	`, in.WorkID, contentChanged)
 	if err != nil {
 		return Update{}, fmt.Errorf("move the content generation: %w", err)
 	}
@@ -129,8 +129,8 @@ func (s *Service) recordUpdate(
 		chosenLabel = &in.VersionLabel
 	}
 	var snapshotID pgtype.UUID
-	err = tx.QueryRow(ctx, `select record_asset_snapshot($1, false, $2, $3, $4)`,
-		in.AssetID, in.Summary, in.Notes, chosenLabel).Scan(&snapshotID)
+	err = tx.QueryRow(ctx, `select record_work_snapshot($1, false, $2, $3, $4)`,
+		in.WorkID, in.Summary, in.Notes, chosenLabel).Scan(&snapshotID)
 	if err != nil {
 		return Update{}, fmt.Errorf("record the update: %w", err)
 	}
@@ -138,11 +138,11 @@ func (s *Service) recordUpdate(
 		return Update{}, work.ErrNotFound
 	}
 	recorded := Update{
-		ID: snapshotID.Bytes, AssetID: in.AssetID, ContentChanged: contentChanged,
+		ID: snapshotID.Bytes, WorkID: in.WorkID, ContentChanged: contentChanged,
 	}
 	err = tx.QueryRow(ctx, `
 		select number, recorded_at, version_label, summary, notes, content_generation
-		  from asset_snapshots where id = $1
+		  from work_snapshots where id = $1
 	`, recorded.ID).Scan(&recorded.Number, &recorded.RecordedAt, &recorded.VersionLabel,
 		&recorded.Summary, &recorded.Notes, &recorded.ContentGeneration)
 	if err != nil {

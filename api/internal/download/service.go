@@ -8,12 +8,12 @@ import (
 )
 
 type Service struct {
-	pool   *pgxpool.Pool
-	reg    *format.Registry
-	store  storage.Store
-	assets *work.Service
+	pool  *pgxpool.Pool
+	reg   *format.Registry
+	store storage.Store
+	works *work.Service
 }
 
-func NewService(pool *pgxpool.Pool, assets *work.Service) *Service {
-	return &Service{pool: pool, reg: assets.Registry(), store: assets.Store(), assets: assets}
+func NewService(pool *pgxpool.Pool, works *work.Service) *Service {
+	return &Service{pool: pool, reg: works.Registry(), store: works.Store(), works: works}
 }

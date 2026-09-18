@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
+func (h *Handlers) PublishWorkUpdate(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -24,14 +24,14 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request AssetUpdateRequest
+	var request WorkUpdateRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Send a summary of what changed, and any notes with it.")
 		return
 	}
 	candidate := &work.Candidate{Version: workingCopyVersion}
 	recorded, items, err := h.versions.PublishUpdate(c.Request.Context(), UpdateRequest{
-		OwnerID: owner.ID, AssetID: id, Summary: request.Summary,
+		OwnerID: owner.ID, WorkID: id, Summary: request.Summary,
 		Notes: valueOrEmpty(request.Notes), VersionLabel: valueOrEmpty(request.VersionLabel),
 		Announcement: announcementChoice(request),
 	}, candidate)
@@ -60,14 +60,14 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 		c.JSON(http.StatusConflict, page.PublishRefusal{
 			Error: "Nothing has changed since the last update.", Code: &unchanged,
 		})
-	case errors.Is(err, work.ErrAssetIsDraft):
+	case errors.Is(err, work.ErrWorkIsDraft):
 		c.JSON(http.StatusConflict, page.PublishRefusal{Error: "Publish this draft before updating it."})
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such asset.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not publish the update.")
 	default:
-		c.JSON(http.StatusOK, AssetUpdate{
+		c.JSON(http.StatusOK, WorkUpdate{
 			Id: recorded.ID, Number: recorded.Number,
 			RecordedAt: recorded.RecordedAt, VersionLabel: recorded.VersionLabel,
 			Summary: recorded.Summary, Notes: recorded.Notes,
@@ -77,7 +77,7 @@ func (h *Handlers) PublishAssetUpdate(c *gin.Context) {
 	}
 }
 
-func announcementChoice(request AssetUpdateRequest) UpdateAnnouncement {
+func announcementChoice(request WorkUpdateRequest) UpdateAnnouncement {
 	choice := UpdateAnnouncement{Notify: request.Notify == nil || *request.Notify}
 	if request.DestinationIds != nil {
 		chosen := append([]uuid.UUID(nil), *request.DestinationIds...)

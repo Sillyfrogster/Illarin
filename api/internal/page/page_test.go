@@ -12,38 +12,38 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 )
 
-func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
+func TestWorkPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("The Quiet Archivist")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "archivist.lumitheme"
 	metadata["blurb"] = "She closes the book on a ribbon."
 	metadata["tags"] = []string{"Slow Burn", " Modern "}
-	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
 	cover := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
-		t, assetID, "avatar", apitest.PNG(t, 800, 1000),
+		t, workID, "avatar", apitest.PNG(t, 800, 1000),
 	), session))
 	if cover.Code != http.StatusCreated {
 		t.Fatalf("add cover status = %d, want 201: %s", cover.Code, cover.Body.String())
 	}
 	for _, role := range []string{"gallery", "expression"} {
 		added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
-			t, assetID, role, apitest.PNG(t, 400, 300),
+			t, workID, role, apitest.PNG(t, 400, 300),
 		), session))
 		if added.Code != http.StatusCreated {
 			t.Fatalf("add %s status = %d, want 201: %s", role, added.Code, added.Body.String())
 		}
 	}
 
-	if got := apitest.PublishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, workID); got.Code != http.StatusOK {
 		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
-	page := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID)
+	page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID)
 
-	if page.ID != assetID || page.Name != "The Quiet Archivist" || page.Kind != "character" {
+	if page.ID != workID || page.Name != "The Quiet Archivist" || page.Type != "character" {
 		t.Fatalf("asset page identity = %+v", page)
 	}
 	if page.Blurb != "She closes the book on a ribbon." {
@@ -85,39 +85,39 @@ func TestAssetPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	}
 }
 
-func TestAssetPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
+func TestWorkPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Coverless Gallery")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "coverless-gallery.lumitheme"
-	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
 	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
-		t, assetID, "gallery", apitest.PNG(t, 400, 300),
+		t, workID, "gallery", apitest.PNG(t, 400, 300),
 	), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add gallery status = %d, want 201: %s", added.Code, added.Body.String())
 	}
 
-	if got := apitest.PublishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, workID); got.Code != http.StatusOK {
 		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
-	page := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID)
+	page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID)
 	if len(page.Media) != 1 || page.Media[0].Role != "gallery" || page.Media[0].IsCover {
 		t.Fatalf("coverless gallery media = %+v", page.Media)
 	}
 }
 
-func TestAssetPageShowsNoTotals(t *testing.T) {
+func TestWorkPageShowsNoTotals(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Countless")
 	metadata["filename"] = "countless.lumitheme"
-	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
-	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
 	var body map[string]any
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode asset page: %v", err)
@@ -139,29 +139,29 @@ func TestAssetPageShowsNoTotals(t *testing.T) {
 	}
 }
 
-func TestAssetPageAnswersNormallyForAnUnlistedAsset(t *testing.T) {
+func TestWorkPageAnswersNormallyForAnUnlistedWork(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Kept Back")
 	metadata["filename"] = "kept-back.lumitheme"
 	metadata["discovery"] = "unlisted"
-	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
-	page := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID)
+	page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID)
 
-	if page.Discovery != "unlisted" {
-		t.Fatalf("discovery = %q, want unlisted", page.Discovery)
+	if page.Visibility != "unlisted" {
+		t.Fatalf("discovery = %q, want unlisted", page.Visibility)
 	}
 }
 
-func TestWithheldDeletedAndNeverExistedAssetsAnswerAlike(t *testing.T) {
+func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	withhold := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
-		t, r, session, assets, withFilename(apitest.ExampleMetadata("Withheld"), "withheld"), []byte("a"),
+	r, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	withhold := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(
+		t, r, session, works, withFilename(apitest.ExampleMetadata("Withheld"), "withheld"), []byte("a"),
 	))
-	deleted := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(
-		t, r, session, assets, withFilename(apitest.ExampleMetadata("Deleted"), "deleted"), []byte("b"),
+	deleted := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(
+		t, r, session, works, withFilename(apitest.ExampleMetadata("Deleted"), "deleted"), []byte("b"),
 	))
 	staff := "11111111-1111-1111-1111-111111111111"
 	if _, err := pool.Exec(context.Background(), `
@@ -170,14 +170,14 @@ func TestWithheldDeletedAndNeverExistedAssetsAnswerAlike(t *testing.T) {
 		t.Fatalf("seed staff account: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(), `
-		update assets
+		update works
 		   set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
 		 where id = $1
 	`, withhold, staff); err != nil {
 		t.Fatalf("withhold asset: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(),
-		`update assets set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deleted,
+		`update works set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deleted,
 	); err != nil {
 		t.Fatalf("delete asset: %v", err)
 	}
@@ -199,25 +199,25 @@ func TestWithheldDeletedAndNeverExistedAssetsAnswerAlike(t *testing.T) {
 
 func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("After Dark")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "after-dark.lumitheme"
 	metadata["isNsfw"] = true
-	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
-		t, assetID, "avatar", apitest.PNG(t, 600, 600),
+		t, workID, "avatar", apitest.PNG(t, 600, 600),
 	), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add media status = %d, want 201: %s", added.Code, added.Body.String())
 	}
 
-	if got := apitest.PublishAsset(t, r, session, assetID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, workID); got.Code != http.StatusOK {
 		t.Fatalf("publish media: %d %s", got.Code, got.Body.String())
 	}
 
 	for _, preference := range []string{"blurred", "hidden"} {
-		page := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID+"?nsfw="+preference)
+		page := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID+"?nsfw="+preference)
 		if len(page.Media) != 1 {
 			t.Fatalf("%s media = %+v", preference, page.Media)
 		}
@@ -235,7 +235,7 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 		}
 	}
 
-	shown := apitest.FetchAssetPage(t, r, "/v1/assets/"+assetID+"?nsfw=shown")
+	shown := apitest.FetchWorkPage(t, r, "/v1/assets/"+workID+"?nsfw=shown")
 	if !strings.HasSuffix(shown.Media[0].DetailURL, "/detail/2") {
 		t.Errorf("a shown reader got %q", shown.Media[0].DetailURL)
 	}

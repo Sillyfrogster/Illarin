@@ -49,7 +49,7 @@ func TestEveryLocalPresetSurvivesADownload(t *testing.T) {
 			if err := block.ValidateContentLimits(parsed.Elements); err != nil {
 				t.Fatalf("content limits: %v", err)
 			}
-			if _, err := block.Place(parsed.Kind, parsed.Elements); err != nil {
+			if _, err := block.Place(parsed.Type, parsed.Elements); err != nil {
 				t.Fatalf("place: %v", err)
 			}
 

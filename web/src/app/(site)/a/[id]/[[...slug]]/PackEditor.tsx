@@ -4,10 +4,10 @@ import { ImagePlus, UserRound, X } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
 import {
-  type AssetImage,
   addAssetImage,
   type LumiaRecord,
   type RecordListContent,
+  type WorkImage,
 } from "@/lib/api/query";
 import { useWorkingCopy } from "@/lib/working-copy";
 import { CollectionStep } from "./workspace/CollectionStep";
@@ -47,7 +47,7 @@ export function PackEditor({
   assetId: string;
   chosen: string | null;
   content: RecordListContent;
-  images: AssetImage[];
+  images: WorkImage[];
   onChange: (content: RecordListContent) => void;
   onChoose: (key: string | null) => void;
   onImageAdded: () => void;
@@ -123,7 +123,7 @@ function LumiaFields({
   record,
 }: {
   assetId: string;
-  images: AssetImage[];
+  images: WorkImage[];
   onChange: (changes: Partial<LumiaRecord>) => void;
   onImageAdded: () => void;
   pending: boolean;
@@ -232,7 +232,7 @@ function AvatarField({
   record,
 }: {
   assetId: string;
-  images: AssetImage[];
+  images: WorkImage[];
   onChange: (changes: Partial<LumiaRecord>) => void;
   onImageAdded: () => void;
   pending: boolean;

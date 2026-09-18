@@ -444,7 +444,7 @@ func toAPIDestination(found blog.Destination) PublicationDestination {
 	}
 	shown := PublicationDestination{
 		Id:                  found.ID,
-		Kind:                PublicationDestinationKind(found.Kind),
+		Type:                PublicationDestinationType(found.Type),
 		Name:                found.Name,
 		Host:                found.Host,
 		Address:             found.Address,
@@ -492,7 +492,7 @@ func toAPIDelivery(one blog.Delivery) PostDelivery {
 		PostTitle:   one.PostTitle,
 		RevisionId:  one.RevisionID,
 		Destination: one.Destination,
-		Kind:        PostDeliveryKind(one.Kind),
+		Type:        PostDeliveryType(one.Type),
 		MessageId:   one.MessageID,
 		Removed:     one.Removed,
 		State:       PostDeliveryState(one.State),
@@ -534,8 +534,8 @@ func toAPIAttempt(one blog.DeliveryAttempt) PostDeliveryAttempt {
 }
 
 const (
-	PublicationDestinationKindDiscord = announcements.PublicationDestinationKindDiscord
-	PublicationDestinationKindWebhook = announcements.PublicationDestinationKindWebhook
+	PublicationDestinationTypeDiscord = announcements.PublicationDestinationTypeDiscord
+	PublicationDestinationTypeWebhook = announcements.PublicationDestinationTypeWebhook
 )
 
 const (

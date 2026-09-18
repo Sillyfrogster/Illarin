@@ -16,7 +16,7 @@ import (
 )
 
 type DeliveryArtifact struct {
-	Kind    string  `json:"kind"`
+	Type    string  `json:"kind"`
 	URL     string  `json:"url"`
 	MediaID *string `json:"mediaId"`
 	Role    *string `json:"role"`
@@ -25,9 +25,9 @@ type DeliveryArtifact struct {
 
 type DeliveryWork struct {
 	ID                string             `json:"id"`
-	AssetID           string             `json:"assetId"`
+	WorkID            string             `json:"assetId"`
 	ContentGeneration int                `json:"contentGeneration"`
-	Kind              string             `json:"kind"`
+	Type              string             `json:"kind"`
 	Name              string             `json:"name"`
 	Format            string             `json:"format"`
 	Label             string             `json:"label"`
@@ -44,7 +44,7 @@ type DeliveryWorkList struct {
 type QueuedDelivery struct {
 	ID             string     `json:"id"`
 	InstanceID     string     `json:"instanceId"`
-	AssetID        string     `json:"assetId"`
+	WorkID         string     `json:"assetId"`
 	State          string     `json:"state"`
 	Reason         *string    `json:"reason"`
 	QueuedAt       time.Time  `json:"queuedAt"`
@@ -53,7 +53,7 @@ type QueuedDelivery struct {
 	UpdatesInstall bool       `json:"updatesInstall"`
 }
 
-type AssetInstance struct {
+type WorkInstance struct {
 	InstanceID          string          `json:"instanceId"`
 	ApplicationName     string          `json:"applicationName"`
 	InstanceName        string          `json:"instanceName"`
@@ -65,9 +65,9 @@ type AssetInstance struct {
 	UpdateAvailable     bool            `json:"updateAvailable"`
 }
 
-type AssetInstanceList struct {
-	ContentGeneration int             `json:"contentGeneration"`
-	Items             []AssetInstance `json:"items"`
+type WorkInstanceList struct {
+	ContentGeneration int            `json:"contentGeneration"`
+	Items             []WorkInstance `json:"items"`
 }
 
 func (h Harness) NewLinkingRouter(t *testing.T) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
@@ -139,12 +139,12 @@ func SendToInstance(
 	t *testing.T,
 	r *gin.Engine,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	instanceID string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return Send(t, r, BrowserRequest(
-		t, http.MethodPost, "/v1/assets/"+assetID+"/deliveries",
+		t, http.MethodPost, "/v1/assets/"+workID+"/deliveries",
 		map[string]string{"instanceId": instanceID}, session,
 	))
 }
@@ -158,19 +158,19 @@ func Collect(t *testing.T, r *gin.Engine, token string, acknowledge []string) *h
 		map[string]any{"acknowledge": acknowledge}))
 }
 
-func AssetInstances(
+func WorkInstances(
 	t *testing.T,
 	r *gin.Engine,
 	session *http.Cookie,
-	assetID string,
-) AssetInstanceList {
+	workID string,
+) WorkInstanceList {
 	t.Helper()
 	rec := Send(t, r, Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"/instances", nil), session))
+		httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID+"/instances", nil), session))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("asset instances status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
-	return DecodeResponse[AssetInstanceList](t, rec)
+	return DecodeResponse[WorkInstanceList](t, rec)
 }
 
 func FetchSigned(t *testing.T, r *gin.Engine, address string) *httptest.ResponseRecorder {

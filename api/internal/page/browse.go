@@ -15,7 +15,7 @@ import (
 )
 
 type ListFilter struct {
-	Kind        string
+	Type        string
 	Profile     *ProfileListingScope
 	Platform    *string
 	PlatformSet bool
@@ -52,7 +52,7 @@ type BrowseItem struct {
 	ID         uuid.UUID
 	Name       string
 	Creator    string
-	Kind       string
+	Type       string
 	IsNSFW     *bool
 	OwnerState string
 	Cover      *Cover
@@ -90,23 +90,23 @@ type FacetSelection struct {
 func (s *Service) Browse(
 	ctx context.Context,
 	f ListFilter,
-	visibility work.ContentVisibility,
+	preference work.NSFWPreference,
 ) (BrowsePage, error) {
 	if f.Limit <= 0 || f.Limit > 24 {
 		f.Limit = 24
 	}
-	if visibility != work.ContentHidden && visibility != work.ContentShown {
-		visibility = work.ContentBlurred
+	if preference != work.NSFWHidden && preference != work.NSFWShown {
+		preference = work.NSFWBlurred
 	}
-	tx, err := s.assets.BeginReadSnapshot(ctx)
+	tx, err := s.works.BeginReadSnapshot(ctx)
 	if err != nil {
 		return BrowsePage{}, err
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 	search := parseBrowseQuery(f.Query)
-	facetDefinitions := block.Facets(f.Kind)
-	chosen := declaredFacetSelections(f.Kind, f.Facets)
+	facetDefinitions := block.Facets(f.Type)
+	chosen := declaredFacetSelections(f.Type, f.Facets)
 	platform := ""
 	if f.Platform != nil {
 		platform = normalizeBrowseText(*f.Platform)
@@ -114,8 +114,8 @@ func (s *Service) Browse(
 	formats := formatsForPlatform(platform)
 	facetKeys, facetLows, facetHighs := facetRanges(chosen)
 	creatorID, ownProfile := profileListingValues(f.Profile)
-	params := db.BrowseAssetsParams{
-		Kind: f.Kind, NsfwVisibility: string(visibility),
+	params := db.BrowseWorksParams{
+		Type: f.Type, NsfwPreference: string(preference),
 		CreatorID:  uuidToNullable(creatorID),
 		OwnProfile: ownProfile,
 		SearchText: search.Text, Author: search.Author, Tags: search.Tags,
@@ -127,9 +127,9 @@ func (s *Service) Browse(
 		params.Before = timeToNullable(&f.Before.MadeAt)
 		params.BeforeID = uuidToPgtype(f.Before.ID)
 	}
-	rows, err := queries.BrowseAssets(ctx, params)
+	rows, err := queries.BrowseWorks(ctx, params)
 	if err != nil {
-		return BrowsePage{}, fmt.Errorf("browse assets: %w", err)
+		return BrowsePage{}, fmt.Errorf("browse works: %w", err)
 	}
 
 	page := BrowsePage{Items: make([]BrowseItem, 0, min(len(rows), f.Limit))}
@@ -137,7 +137,7 @@ func (s *Service) Browse(
 		draft := work.Lifecycle(row.Lifecycle) == work.LifecycleDraft
 		item := BrowseItem{
 			ID: uuidFromPgtype(row.ID), Name: row.Name, Creator: row.Creator,
-			Kind: row.Kind, IsNSFW: boolFromPgtype(row.IsNsfw),
+			Type: row.Type, IsNSFW: boolFromPgtype(row.IsNsfw),
 		}
 		if ownProfile {
 			switch {
@@ -149,16 +149,16 @@ func (s *Service) Browse(
 					Reason: row.WithheldReason.String,
 					At:     row.WithheldAt.Time,
 				}
-			case row.Discovery == "unlisted":
+			case row.Visibility == "unlisted":
 				item.OwnerState = "unlisted"
 			}
 		}
 		if row.CoverID.Valid && row.CoverWidth.Valid && row.CoverHeight.Valid {
 			flagged := item.IsNSFW != nil && *item.IsNSFW
 			item.Cover = &Cover{
-				URL: s.assets.ImageAddress(
+				URL: s.works.ImageAddress(
 					uuidFromPgtype(row.CoverID), "grid",
-					visibility != work.ContentShown && flagged, draft,
+					preference != work.NSFWShown && flagged, draft,
 				),
 				Width: int(row.CoverWidth.Int32), Height: int(row.CoverHeight.Int32),
 			}
@@ -170,30 +170,30 @@ func (s *Service) Browse(
 		page.Next = &Cursor{MadeAt: timeFromPgtype(last.CreatedAt), ID: uuidFromPgtype(last.ID)}
 	}
 
-	countParams := db.CountBrowseAssetsParams{
-		Kind: f.Kind, NsfwVisibility: string(visibility),
+	countParams := db.CountBrowseWorksParams{
+		Type: f.Type, NsfwPreference: string(preference),
 		CreatorID:  uuidToNullable(creatorID),
 		OwnProfile: ownProfile,
 		SearchText: search.Text, Author: search.Author, Tags: search.Tags,
 		Platform: platform, Formats: formats,
 		FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
 	}
-	count, err := queries.CountBrowseAssets(ctx, countParams)
+	count, err := queries.CountBrowseWorks(ctx, countParams)
 	if err != nil {
-		return BrowsePage{}, fmt.Errorf("count browse assets: %w", err)
+		return BrowsePage{}, fmt.Errorf("count browse works: %w", err)
 	}
 	page.Total = int(count)
-	if visibility == work.ContentHidden && !ownProfile {
-		suppressed, err := queries.CountSuppressedBrowseAssets(
-			ctx, db.CountSuppressedBrowseAssetsParams{
-				Kind: f.Kind, SearchText: search.Text, Author: search.Author, Tags: search.Tags,
+	if preference == work.NSFWHidden && !ownProfile {
+		suppressed, err := queries.CountSuppressedBrowseWorks(
+			ctx, db.CountSuppressedBrowseWorksParams{
+				Type: f.Type, SearchText: search.Text, Author: search.Author, Tags: search.Tags,
 				CreatorID: uuidToNullable(creatorID),
 				Platform:  platform, Formats: formats,
 				FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
 			},
 		)
 		if err != nil {
-			return BrowsePage{}, fmt.Errorf("count suppressed browse assets: %w", err)
+			return BrowsePage{}, fmt.Errorf("count suppressed browse works: %w", err)
 		}
 		page.Suppressed = int(suppressed)
 	}
@@ -208,7 +208,7 @@ func (s *Service) Browse(
 	if page.Total == 0 {
 		if page.Suppressed > 0 {
 			page.EmptyState = "suppressed"
-		} else if f.Kind == "" && search.Text == "" && search.Author == "" &&
+		} else if f.Type == "" && search.Text == "" && search.Author == "" &&
 			len(search.Tags) == 0 && f.Platform == nil && len(chosen) == 0 {
 			page.EmptyState = "catalog"
 		} else {
@@ -242,10 +242,10 @@ type chosenFacet struct {
 	bucket block.Bucket
 }
 
-func declaredFacetSelections(kind string, requested []FacetSelection) []chosenFacet {
+func declaredFacetSelections(workType string, requested []FacetSelection) []chosenFacet {
 	chosen := make([]chosenFacet, 0, len(requested))
 	for _, request := range requested {
-		facet, known := block.FacetByKey(kind, request.Key)
+		facet, known := block.FacetByKey(workType, request.Key)
 		if !known {
 			continue
 		}
@@ -278,7 +278,7 @@ func facetRanges(chosen []chosenFacet) (keys []string, lows, highs []int32) {
 func countedPlatforms(
 	ctx context.Context,
 	queries *db.Queries,
-	base db.CountBrowseAssetsParams,
+	base db.CountBrowseWorksParams,
 	selected string,
 ) ([]Option, error) {
 	apps := browsePlatforms()
@@ -287,7 +287,7 @@ func countedPlatforms(
 		params := base
 		params.Platform = app.ID
 		params.Formats = app.Reads
-		count, err := queries.CountBrowseAssets(ctx, params)
+		count, err := queries.CountBrowseWorks(ctx, params)
 		if err != nil {
 			return nil, fmt.Errorf("count platform %s: %w", app.ID, err)
 		}
@@ -302,7 +302,7 @@ func countedPlatforms(
 func countedFacets(
 	ctx context.Context,
 	queries *db.Queries,
-	base db.CountBrowseAssetsParams,
+	base db.CountBrowseWorksParams,
 	chosen []chosenFacet,
 	definitions []block.Facet,
 ) ([]Filter, error) {
@@ -324,7 +324,7 @@ func countedFacets(
 			keys, lows, highs := facetRanges(candidate)
 			params := base
 			params.FacetKeys, params.FacetLows, params.FacetHighs = keys, lows, highs
-			count, err := queries.CountBrowseAssets(ctx, params)
+			count, err := queries.CountBrowseWorks(ctx, params)
 			if err != nil {
 				return nil, fmt.Errorf("count facet %s=%s: %w", definition.Key, bucket.Value, err)
 			}

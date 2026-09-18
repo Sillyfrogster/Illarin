@@ -166,8 +166,8 @@ type RequestCode = string
 type Scope string
 
 const (
-	ScopeAssetReceive Scope = "asset:receive"
-	ScopeLibrarySync  Scope = "library:sync"
+	ScopeWorkReceive Scope = "asset:receive"
+	ScopeLibrarySync Scope = "library:sync"
 )
 
 type Scopes = []Scope

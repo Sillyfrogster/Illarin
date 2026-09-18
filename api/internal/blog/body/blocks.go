@@ -115,14 +115,14 @@ func (r *reader) callout(path string, fields map[string]json.RawMessage, depth i
 	if err := onlyKeys(path, fields, "type", "kind", "content"); err != nil {
 		return nil, err
 	}
-	kind, err := readString(path+".kind", fields, "kind")
+	calloutType, err := readString(path+".kind", fields, "kind")
 	if err != nil {
 		return nil, err
 	}
-	if !isCalloutKind(kind) {
+	if !isCalloutType(calloutType) {
 		return nil, Problem{
 			Path:    path + ".kind",
-			Message: fmt.Sprintf("A callout is one of: %s.", strings.Join(CalloutKinds, ", ")),
+			Message: fmt.Sprintf("A callout is one of: %s.", strings.Join(CalloutTypes, ", ")),
 		}
 	}
 	blocks, err := r.blocks(path+".content", fields["content"], "callout", depth+1)
@@ -132,7 +132,7 @@ func (r *reader) callout(path string, fields map[string]json.RawMessage, depth i
 	if len(blocks) == 0 {
 		return nil, Problem{Path: path + ".content", Message: "A callout needs content."}
 	}
-	return Callout{Kind: kind, Blocks: blocks}, nil
+	return Callout{Type: calloutType, Blocks: blocks}, nil
 }
 
 func (r *reader) codeBlock(path string, fields map[string]json.RawMessage) (Block, error) {
@@ -209,11 +209,11 @@ func (r *reader) table(path string, fields map[string]json.RawMessage, depth int
 }
 
 func (r *reader) tableRow(path string, raw json.RawMessage, depth int) (Row, error) {
-	fields, kind, err := r.node(path, raw)
+	fields, calloutType, err := r.node(path, raw)
 	if err != nil {
 		return Row{}, err
 	}
-	if kind != "tableRow" {
+	if calloutType != "tableRow" {
 		return Row{}, Problem{Path: path + ".type", Message: "A table holds table rows."}
 	}
 	entries, err := entryList(path, fields, "A table row holds a list of cells.")
@@ -239,11 +239,11 @@ func (r *reader) tableRow(path string, raw json.RawMessage, depth int) (Row, err
 }
 
 func (r *reader) tableCell(path string, raw json.RawMessage, depth int) (Cell, error) {
-	fields, kind, err := r.node(path, raw)
+	fields, calloutType, err := r.node(path, raw)
 	if err != nil {
 		return Cell{}, err
 	}
-	if kind != "tableCell" {
+	if calloutType != "tableCell" {
 		return Cell{}, Problem{Path: path + ".type", Message: "A table row holds table cells."}
 	}
 	if err := onlyKeys(path, fields, "type", "heading", "content"); err != nil {
@@ -291,11 +291,11 @@ func (r *reader) entry(
 	place string,
 	depth int,
 ) (map[string]json.RawMessage, []Block, error) {
-	fields, kind, err := r.node(path, raw)
+	fields, calloutType, err := r.node(path, raw)
 	if err != nil {
 		return nil, nil, err
 	}
-	if kind != place {
+	if calloutType != place {
 		return nil, nil, Problem{
 			Path:    path + ".type",
 			Message: fmt.Sprintf("This list holds %s entries.", place),

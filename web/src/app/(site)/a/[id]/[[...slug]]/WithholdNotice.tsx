@@ -1,10 +1,10 @@
 import { LockKeyhole } from "lucide-react";
-import type { AssetDetail } from "@/lib/api/query";
+import type { WorkDetail } from "@/lib/api/query";
 
 export function WithholdNotice({
   withhold,
 }: {
-  withhold: NonNullable<AssetDetail["withhold"]>;
+  withhold: NonNullable<WorkDetail["withhold"]>;
 }) {
   const recorded = new Date(withhold.at).toLocaleString("en-GB", {
     day: "numeric",

@@ -193,9 +193,9 @@ func (i *importer) quotation(node *ast.Blockquote) (Block, bool) {
 		}
 		return Quote{Blocks: blocks}, true
 	}
-	kind := strings.ToLower(marker)
-	if !isCalloutKind(kind) {
-		i.refuse(node, fmt.Sprintf("A callout is one of: %s.", strings.Join(CalloutKinds, ", ")))
+	calloutType := strings.ToLower(marker)
+	if !isCalloutType(calloutType) {
+		i.refuse(node, fmt.Sprintf("A callout is one of: %s.", strings.Join(CalloutTypes, ", ")))
 		return nil, false
 	}
 	blocks := i.aside(node, from)
@@ -203,7 +203,7 @@ func (i *importer) quotation(node *ast.Blockquote) (Block, bool) {
 		i.emptyRefusal(node, before, "A callout needs something in it.")
 		return nil, false
 	}
-	return Callout{Kind: kind, Blocks: blocks}, true
+	return Callout{Type: calloutType, Blocks: blocks}, true
 }
 
 func (i *importer) marker(node *ast.Blockquote) (string, ast.Node, bool) {

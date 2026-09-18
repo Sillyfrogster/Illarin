@@ -32,10 +32,10 @@ func (SillyTavern) Declaration() format.Declaration {
 		Write: format.RoleSupport{Grade: format.SupportFull},
 	}
 	return format.Declaration{
-		ID: SillyTavernID, Label: "SillyTavern extension", Kind: Kind,
+		ID: SillyTavernID, Label: "SillyTavern extension", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionEntry, Containers: []format.Container{format.ZIP},
+			Type: format.RecognitionEntry, Containers: []format.Container{format.ZIP},
 			Entry: sillyTavernManifest,
 		}},
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -99,7 +99,7 @@ func (SillyTavern) Parse(ctx context.Context, file format.Inspection, claim form
 		return format.Parsed{}, err
 	}
 	header := format.Header{
-		Name: manifest.DisplayName, AssetVersion: manifest.Version,
+		Name: manifest.DisplayName, WorkVersion: manifest.Version,
 		CreditedAuthor: manifest.Author, Identifier: repositoryFolder(manifest.Home),
 	}
 	if utf8.RuneCountInString(manifest.Description) <= format.MaxBlurbRunes {
@@ -110,7 +110,7 @@ func (SillyTavern) Parse(ctx context.Context, file format.Inspection, claim form
 		elements = append(elements, *adds)
 	}
 	return format.Parsed{
-		Kind: Kind, Format: SillyTavernID, Header: header, Elements: elements, Readme: readme,
+		Type: Type, Format: SillyTavernID, Header: header, Elements: elements, Readme: readme,
 	}, nil
 }
 
@@ -252,9 +252,9 @@ func dependencyTexts(names []string) block.TextSet {
 	return dependencies
 }
 
-func (SillyTavern) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	if len(asset.Upload) == 0 {
+func (SillyTavern) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+	if len(work.Upload) == 0 {
 		return format.Artifact{}, errors.New("write the SillyTavern extension: the uploaded archive is missing")
 	}
-	return format.Artifact{Body: asset.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
+	return format.Artifact{Body: work.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
 }

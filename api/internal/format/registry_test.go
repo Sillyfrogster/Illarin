@@ -10,11 +10,11 @@ import (
 
 type stubModule struct{ id string }
 
-func testReaderDeclaration(id, kind string) Declaration {
+func testReaderDeclaration(id, workType string) Declaration {
 	return Declaration{
-		ID: id, Kind: kind, Direction: Direction{Read: true},
+		ID: id, Type: workType, Direction: Direction{Read: true},
 		Recognition: []Recognition{{
-			Kind: RecognitionSignature, Containers: []Container{JSON},
+			Type: RecognitionSignature, Containers: []Container{JSON},
 			Required: map[string]ValueType{"payload": ValueBoolean},
 		}},
 		Limits:        ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
@@ -36,7 +36,7 @@ func (declaredDiscriminatorModule) ID() string { return "theme_lumiverse" }
 func (declaredDiscriminatorModule) Declaration() Declaration {
 	declaration := testReaderDeclaration("theme_lumiverse", "theme")
 	declaration.Recognition = []Recognition{{
-		Kind: RecognitionDiscriminator, Containers: []Container{JSON},
+		Type: RecognitionDiscriminator, Containers: []Container{JSON},
 		Path: []string{"format"}, Values: []string{"3"},
 	}}
 	return declaration
@@ -138,7 +138,7 @@ func TestValidationRequiresAFileLimitOfAModuleThatReadsArchives(t *testing.T) {
 	t.Parallel()
 	declaration := testReaderDeclaration("archived", "character")
 	declaration.Recognition = []Recognition{{
-		Kind: RecognitionEntry, Containers: []Container{ZIP}, Entry: "card.json",
+		Type: RecognitionEntry, Containers: []Container{ZIP}, Entry: "card.json",
 	}}
 	registry := NewRegistry()
 	if err := registry.Register(declarationModule{stubModule: stubModule{id: "archived"}, declaration: declaration}); err != nil {

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { KindMark } from "@/components/catalog/KindMark";
 import { Shell } from "@/components/layout/Shell";
 import { Button } from "@/components/ui/button";
-import { type DeletedAsset, restoreAsset } from "@/lib/api/query";
+import { type DeletedWork, restoreAsset } from "@/lib/api/query";
 import { assetDisplayName } from "@/lib/asset-name";
 import { remainingDeletionWindow } from "@/lib/deletion-window";
 import { KIND_LABELS } from "@/lib/kinds";
@@ -22,14 +22,14 @@ function restoreDeadline(value: string) {
 export function DeletedAssets({
   initialItems,
 }: {
-  initialItems: DeletedAsset[];
+  initialItems: DeletedWork[];
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [pending, setPending] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
-  async function restore(item: DeletedAsset) {
+  async function restore(item: DeletedWork) {
     if (pending) return;
     setPending(item.id);
     setMessage("");

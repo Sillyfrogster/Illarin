@@ -138,366 +138,6 @@ func (q *Queries) ApproveLinkAuthorization(ctx context.Context, arg ApproveLinkA
 	return i, err
 }
 
-const assetBlocks = `-- name: AssetBlocks :many
-select id, definition, title, position, hidden, layout, width, elements
-  from asset_blocks
- where asset_id = $1
- order by position
-`
-
-type AssetBlocksRow struct {
-	ID         pgtype.UUID
-	Definition string
-	Title      pgtype.Text
-	Position   int32
-	Hidden     bool
-	Layout     string
-	Width      string
-	Elements   []byte
-}
-
-func (q *Queries) AssetBlocks(ctx context.Context, assetID pgtype.UUID) ([]AssetBlocksRow, error) {
-	rows, err := q.db.Query(ctx, assetBlocks, assetID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AssetBlocksRow
-	for rows.Next() {
-		var i AssetBlocksRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Definition,
-			&i.Title,
-			&i.Position,
-			&i.Hidden,
-			&i.Layout,
-			&i.Width,
-			&i.Elements,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const assetByID = `-- name: AssetByID :one
-select a.id, a.kind, revision.format, a.origin_format,
-       a.asset_version, a.credited_author, a.nickname, a.lifecycle,
-       a.name, a.blurb, a.tags,
-       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
-       a.current_revision_id, a.created_at
-  from assets a
-  join asset_revisions revision on revision.id = a.current_revision_id
- where a.id = $1
-`
-
-type AssetByIDRow struct {
-	ID                pgtype.UUID
-	Kind              string
-	Format            string
-	OriginFormat      pgtype.Text
-	AssetVersion      string
-	CreditedAuthor    string
-	Nickname          string
-	Lifecycle         string
-	Name              string
-	Blurb             string
-	Tags              []string
-	IsNsfw            bool
-	Discovery         string
-	CurrentRevisionID pgtype.UUID
-	CreatedAt         pgtype.Timestamptz
-}
-
-func (q *Queries) AssetByID(ctx context.Context, id pgtype.UUID) (AssetByIDRow, error) {
-	row := q.db.QueryRow(ctx, assetByID, id)
-	var i AssetByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.Kind,
-		&i.Format,
-		&i.OriginFormat,
-		&i.AssetVersion,
-		&i.CreditedAuthor,
-		&i.Nickname,
-		&i.Lifecycle,
-		&i.Name,
-		&i.Blurb,
-		&i.Tags,
-		&i.IsNsfw,
-		&i.Discovery,
-		&i.CurrentRevisionID,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const assetDeletionState = `-- name: AssetDeletionState :one
-select withheld_at, deleted_at
-  from assets
- where id = $1 and owner_id = $2
-`
-
-type AssetDeletionStateParams struct {
-	ID      pgtype.UUID
-	OwnerID pgtype.UUID
-}
-
-type AssetDeletionStateRow struct {
-	WithheldAt pgtype.Timestamptz
-	DeletedAt  pgtype.Timestamptz
-}
-
-func (q *Queries) AssetDeletionState(ctx context.Context, arg AssetDeletionStateParams) (AssetDeletionStateRow, error) {
-	row := q.db.QueryRow(ctx, assetDeletionState, arg.ID, arg.OwnerID)
-	var i AssetDeletionStateRow
-	err := row.Scan(&i.WithheldAt, &i.DeletedAt)
-	return i, err
-}
-
-const assetInstanceStates = `-- name: AssetInstanceStates :many
-select instance.id, instance.application_name, instance.instance_name,
-       instance.last_seen_at, instance.scopes, instance.capabilities,
-       instance.accepted_targets,
-       delivery.id as delivery_id,
-       coalesce(delivery.state, '')::text as delivery_state,
-       delivery.settled_reason, delivery.queued_at, delivery.settled_at,
-       delivery.expires_at,
-       coalesce(delivery.updates_install, false)::boolean as updates_install,
-       entry.content_generation as installed_generation
-  from linked_instances as instance
-  left join lateral (
-      select waiting.id, waiting.state, waiting.settled_reason,
-             waiting.queued_at, waiting.settled_at, waiting.expires_at,
-             waiting.updates_install
-        from instance_deliveries as waiting
-       where waiting.instance_id = instance.id
-         and waiting.asset_id = $1
-       order by (waiting.state in ('queued', 'released')) desc,
-                waiting.queued_at desc
-       limit 1
-  ) as delivery on true
-  left join instance_library_entries as entry
-    on entry.instance_id = instance.id and entry.asset_id = $1
- where instance.user_id = $2 and instance.revoked_at is null
- order by coalesce(instance.last_seen_at, instance.linked_at) desc,
-          instance.linked_at desc
-`
-
-type AssetInstanceStatesParams struct {
-	AssetID pgtype.UUID
-	UserID  pgtype.UUID
-}
-
-type AssetInstanceStatesRow struct {
-	ID                  pgtype.UUID
-	ApplicationName     string
-	InstanceName        string
-	LastSeenAt          pgtype.Timestamptz
-	Scopes              []string
-	Capabilities        []string
-	AcceptedTargets     []string
-	DeliveryID          pgtype.UUID
-	DeliveryState       string
-	SettledReason       pgtype.Text
-	QueuedAt            pgtype.Timestamptz
-	SettledAt           pgtype.Timestamptz
-	ExpiresAt           pgtype.Timestamptz
-	UpdatesInstall      bool
-	InstalledGeneration pgtype.Int4
-}
-
-func (q *Queries) AssetInstanceStates(ctx context.Context, arg AssetInstanceStatesParams) ([]AssetInstanceStatesRow, error) {
-	rows, err := q.db.Query(ctx, assetInstanceStates, arg.AssetID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AssetInstanceStatesRow
-	for rows.Next() {
-		var i AssetInstanceStatesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ApplicationName,
-			&i.InstanceName,
-			&i.LastSeenAt,
-			&i.Scopes,
-			&i.Capabilities,
-			&i.AcceptedTargets,
-			&i.DeliveryID,
-			&i.DeliveryState,
-			&i.SettledReason,
-			&i.QueuedAt,
-			&i.SettledAt,
-			&i.ExpiresAt,
-			&i.UpdatesInstall,
-			&i.InstalledGeneration,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const assetPage = `-- name: AssetPage :one
-select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
-       a.lifecycle, a.created_at,
-       revision.format as original_format, revision.media_type as original_media_type,
-       revision.created_at as original_arrived_at,
-       coalesce(revision.identifier, '')::text as identifier,
-       coalesce(owner.username, 'unknown') as creator,
-       coalesce(a.owner_id = $2::uuid, false)::boolean as is_owner,
-       a.withheld_reason, a.withheld_at
-  from assets a
-  left join users owner on owner.id = a.owner_id
-  left join asset_revisions revision on revision.id = a.current_revision_id
- where a.id = $1
-   and a.deleted_at is null
-   and (a.lifecycle = 'published' or a.owner_id = $2::uuid)
-   and (a.withheld_at is null or a.owner_id = $2::uuid)
-`
-
-type AssetPageParams struct {
-	ID       pgtype.UUID
-	ViewerID pgtype.UUID
-}
-
-type AssetPageRow struct {
-	ID                pgtype.UUID
-	Kind              string
-	Name              string
-	Blurb             string
-	Tags              []string
-	IsNsfw            pgtype.Bool
-	Discovery         string
-	Lifecycle         string
-	CreatedAt         pgtype.Timestamptz
-	OriginalFormat    pgtype.Text
-	OriginalMediaType pgtype.Text
-	OriginalArrivedAt pgtype.Timestamptz
-	Identifier        string
-	Creator           string
-	IsOwner           bool
-	WithheldReason    pgtype.Text
-	WithheldAt        pgtype.Timestamptz
-}
-
-func (q *Queries) AssetPage(ctx context.Context, arg AssetPageParams) (AssetPageRow, error) {
-	row := q.db.QueryRow(ctx, assetPage, arg.ID, arg.ViewerID)
-	var i AssetPageRow
-	err := row.Scan(
-		&i.ID,
-		&i.Kind,
-		&i.Name,
-		&i.Blurb,
-		&i.Tags,
-		&i.IsNsfw,
-		&i.Discovery,
-		&i.Lifecycle,
-		&i.CreatedAt,
-		&i.OriginalFormat,
-		&i.OriginalMediaType,
-		&i.OriginalArrivedAt,
-		&i.Identifier,
-		&i.Creator,
-		&i.IsOwner,
-		&i.WithheldReason,
-		&i.WithheldAt,
-	)
-	return i, err
-}
-
-const assetPageMedia = `-- name: AssetPageMedia :many
-select media.id, media.role, media.width, media.height, blob.byte_size,
-       coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
-  from assets a
-  join asset_media media on media.asset_id = a.id
-  join blobs blob on blob.id = media.blob_id
- where a.id = $1
-   and media.is_current
-   and media.width is not null
-   and media.height is not null
-   and media.blob_id is not null
- order by (media.id = a.cover_media_id) desc,
-		  case media.role
-		    when 'avatar' then 1
-		    when 'avatar_alt' then 2
-		    when 'gallery' then 3
-		    when 'expression' then 4
-		    when 'pack_item' then 5
-		    else 6
-		  end,
-          media.created_at desc, media.id desc
-`
-
-type AssetPageMediaRow struct {
-	ID       pgtype.UUID
-	Role     string
-	Width    pgtype.Int4
-	Height   pgtype.Int4
-	ByteSize int64
-	IsCover  bool
-}
-
-func (q *Queries) AssetPageMedia(ctx context.Context, id pgtype.UUID) ([]AssetPageMediaRow, error) {
-	rows, err := q.db.Query(ctx, assetPageMedia, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AssetPageMediaRow
-	for rows.Next() {
-		var i AssetPageMediaRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Role,
-			&i.Width,
-			&i.Height,
-			&i.ByteSize,
-			&i.IsCover,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const assetStateForOwner = `-- name: AssetStateForOwner :one
-select withheld_at, lifecycle
-  from assets
- where id = $1 and owner_id = $2 and deleted_at is null
-`
-
-type AssetStateForOwnerParams struct {
-	ID      pgtype.UUID
-	OwnerID pgtype.UUID
-}
-
-type AssetStateForOwnerRow struct {
-	WithheldAt pgtype.Timestamptz
-	Lifecycle  string
-}
-
-func (q *Queries) AssetStateForOwner(ctx context.Context, arg AssetStateForOwnerParams) (AssetStateForOwnerRow, error) {
-	row := q.db.QueryRow(ctx, assetStateForOwner, arg.ID, arg.OwnerID)
-	var i AssetStateForOwnerRow
-	err := row.Scan(&i.WithheldAt, &i.Lifecycle)
-	return i, err
-}
-
 const blobLocation = `-- name: BlobLocation :one
 select storage_key, byte_size from blobs where id = $1
 `
@@ -514,16 +154,16 @@ func (q *Queries) BlobLocation(ctx context.Context, id pgtype.UUID) (BlobLocatio
 	return i, err
 }
 
-const browseAssets = `-- name: BrowseAssets :many
+const browseWorks = `-- name: BrowseWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.kind, a.is_nsfw, a.created_at, a.lifecycle,
+       a.type, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.discovery, a.withheld_at, a.withheld_reason
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+       a.visibility, a.withheld_at, a.withheld_reason
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
-  left join asset_media cover
-    on cover.id = a.cover_media_id and cover.asset_id = a.id
+  left join work_media cover
+    on cover.id = a.cover_media_id and cover.work_id = a.id
    and cover.is_current
    and cover.width is not null and cover.height is not null
    and cover.blob_id is not null
@@ -533,18 +173,18 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
    and a.deleted_at is null
    and (
        ($2::uuid is null
-        and a.discovery = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.withheld_at is null)
        or
        (a.owner_id = $2::uuid
         and ($1::boolean
-             or (a.discovery = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.withheld_at is null)))
    )
-   and ($3::text = '' or a.kind = $3::text)
+   and ($3::text = '' or a.type = $3::text)
    and ($1::boolean
         or $4::text <> 'hidden' or not a.is_nsfw)
    and ($5::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(target)
          where offered.target ->> 'format' = any($6::text[])
    ))
    and (cardinality($7::text[]) = 0 or not exists (
@@ -556,9 +196,9 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
    and ($10::text = ''
         or position($10::text in lower(a.name)) > 0
@@ -579,11 +219,11 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
  limit $15
 `
 
-type BrowseAssetsParams struct {
+type BrowseWorksParams struct {
 	OwnProfile     bool
 	CreatorID      pgtype.UUID
-	Kind           string
-	NsfwVisibility string
+	Type           string
+	NsfwPreference string
 	Platform       string
 	Formats        []string
 	FacetKeys      []string
@@ -597,28 +237,28 @@ type BrowseAssetsParams struct {
 	PageSize       int32
 }
 
-type BrowseAssetsRow struct {
+type BrowseWorksRow struct {
 	ID             pgtype.UUID
 	Name           string
 	Creator        string
-	Kind           string
+	Type           string
 	IsNsfw         pgtype.Bool
 	CreatedAt      pgtype.Timestamptz
 	Lifecycle      string
 	CoverID        pgtype.UUID
 	CoverWidth     pgtype.Int4
 	CoverHeight    pgtype.Int4
-	Discovery      string
+	Visibility     string
 	WithheldAt     pgtype.Timestamptz
 	WithheldReason pgtype.Text
 }
 
-func (q *Queries) BrowseAssets(ctx context.Context, arg BrowseAssetsParams) ([]BrowseAssetsRow, error) {
-	rows, err := q.db.Query(ctx, browseAssets,
+func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]BrowseWorksRow, error) {
+	rows, err := q.db.Query(ctx, browseWorks,
 		arg.OwnProfile,
 		arg.CreatorID,
-		arg.Kind,
-		arg.NsfwVisibility,
+		arg.Type,
+		arg.NsfwPreference,
 		arg.Platform,
 		arg.Formats,
 		arg.FacetKeys,
@@ -635,21 +275,21 @@ func (q *Queries) BrowseAssets(ctx context.Context, arg BrowseAssetsParams) ([]B
 		return nil, err
 	}
 	defer rows.Close()
-	var items []BrowseAssetsRow
+	var items []BrowseWorksRow
 	for rows.Next() {
-		var i BrowseAssetsRow
+		var i BrowseWorksRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Creator,
-			&i.Kind,
+			&i.Type,
 			&i.IsNsfw,
 			&i.CreatedAt,
 			&i.Lifecycle,
 			&i.CoverID,
 			&i.CoverWidth,
 			&i.CoverHeight,
-			&i.Discovery,
+			&i.Visibility,
 			&i.WithheldAt,
 			&i.WithheldReason,
 		); err != nil {
@@ -686,7 +326,7 @@ update instance_deliveries as delivery
        lease_expires_at = $1
   from candidates
  where delivery.id = candidates.id
-returning delivery.id, delivery.asset_id, delivery.queued_at,
+returning delivery.id, delivery.work_id, delivery.queued_at,
           delivery.lease_expires_at
 `
 
@@ -699,7 +339,7 @@ type ClaimDeliveriesParams struct {
 
 type ClaimDeliveriesRow struct {
 	ID             pgtype.UUID
-	AssetID        pgtype.UUID
+	WorkID         pgtype.UUID
 	QueuedAt       pgtype.Timestamptz
 	LeaseExpiresAt pgtype.Timestamptz
 }
@@ -720,7 +360,7 @@ func (q *Queries) ClaimDeliveries(ctx context.Context, arg ClaimDeliveriesParams
 		var i ClaimDeliveriesRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.AssetID,
+			&i.WorkID,
 			&i.QueuedAt,
 			&i.LeaseExpiresAt,
 		); err != nil {
@@ -732,31 +372,6 @@ func (q *Queries) ClaimDeliveries(ctx context.Context, arg ClaimDeliveriesParams
 		return nil, err
 	}
 	return items, nil
-}
-
-const clearAssetWithhold = `-- name: ClearAssetWithhold :one
-with cleared as (
-    update assets as asset
-       set withheld_at = null, withheld_by = null, withheld_reason = null,
-           updated_at = now()
-     where asset.id = $1 and asset.withheld_at is not null and asset.deleted_at is null
-    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
-)
-select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
-  from cleared
-  left join asset_snapshots snapshot on snapshot.id = cleared.published_snapshot_id
-`
-
-type ClearAssetWithholdRow struct {
-	OwnerID    pgtype.UUID
-	PublicName string
-}
-
-func (q *Queries) ClearAssetWithhold(ctx context.Context, id pgtype.UUID) (ClearAssetWithholdRow, error) {
-	row := q.db.QueryRow(ctx, clearAssetWithhold, id)
-	var i ClearAssetWithholdRow
-	err := row.Scan(&i.OwnerID, &i.PublicName)
-	return i, err
 }
 
 const clearPendingEmailCopies = `-- name: ClearPendingEmailCopies :exec
@@ -775,10 +390,35 @@ func (q *Queries) ClearPendingEmailCopies(ctx context.Context, arg ClearPendingE
 	return err
 }
 
-const countBrowseAssets = `-- name: CountBrowseAssets :one
+const clearWorkWithhold = `-- name: ClearWorkWithhold :one
+with cleared as (
+    update works as work
+       set withheld_at = null, withheld_by = null, withheld_reason = null,
+           updated_at = now()
+     where work.id = $1 and work.withheld_at is not null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_snapshot_id
+)
+select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
+  from cleared
+  left join work_snapshots snapshot on snapshot.id = cleared.published_snapshot_id
+`
+
+type ClearWorkWithholdRow struct {
+	OwnerID    pgtype.UUID
+	PublicName string
+}
+
+func (q *Queries) ClearWorkWithhold(ctx context.Context, id pgtype.UUID) (ClearWorkWithholdRow, error) {
+	row := q.db.QueryRow(ctx, clearWorkWithhold, id)
+	var i ClearWorkWithholdRow
+	err := row.Scan(&i.OwnerID, &i.PublicName)
+	return i, err
+}
+
+const countBrowseWorks = `-- name: CountBrowseWorks :one
 select count(*)
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
  where (a.lifecycle = 'published'
         or ($1::boolean
@@ -786,18 +426,18 @@ select count(*)
    and a.deleted_at is null
    and (
        ($2::uuid is null
-        and a.discovery = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.withheld_at is null)
        or
        (a.owner_id = $2::uuid
         and ($1::boolean
-             or (a.discovery = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.withheld_at is null)))
    )
-   and ($3::text = '' or a.kind = $3::text)
+   and ($3::text = '' or a.type = $3::text)
    and ($1::boolean
         or $4::text <> 'hidden' or not a.is_nsfw)
    and ($5::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(target)
          where offered.target ->> 'format' = any($6::text[])
    ))
    and (cardinality($7::text[]) = 0 or not exists (
@@ -809,9 +449,9 @@ select count(*)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
    and ($10::text = ''
         or position($10::text in lower(a.name)) > 0
@@ -827,11 +467,11 @@ select count(*)
    ))
 `
 
-type CountBrowseAssetsParams struct {
+type CountBrowseWorksParams struct {
 	OwnProfile     bool
 	CreatorID      pgtype.UUID
-	Kind           string
-	NsfwVisibility string
+	Type           string
+	NsfwPreference string
 	Platform       string
 	Formats        []string
 	FacetKeys      []string
@@ -842,12 +482,12 @@ type CountBrowseAssetsParams struct {
 	Tags           []string
 }
 
-func (q *Queries) CountBrowseAssets(ctx context.Context, arg CountBrowseAssetsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countBrowseAssets,
+func (q *Queries) CountBrowseWorks(ctx context.Context, arg CountBrowseWorksParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countBrowseWorks,
 		arg.OwnProfile,
 		arg.CreatorID,
-		arg.Kind,
-		arg.NsfwVisibility,
+		arg.Type,
+		arg.NsfwPreference,
 		arg.Platform,
 		arg.Formats,
 		arg.FacetKeys,
@@ -875,20 +515,20 @@ func (q *Queries) CountLiveDeliveries(ctx context.Context, instanceID pgtype.UUI
 	return column_1, err
 }
 
-const countSuppressedBrowseAssets = `-- name: CountSuppressedBrowseAssets :one
+const countSuppressedBrowseWorks = `-- name: CountSuppressedBrowseWorks :one
 select count(*)
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
  where a.lifecycle = 'published'
-   and a.discovery = 'listed'
+   and a.visibility = 'listed'
    and a.withheld_at is null
    and a.deleted_at is null
    and ($1::uuid is null or a.owner_id = $1::uuid)
-   and ($2::text = '' or a.kind = $2::text)
+   and ($2::text = '' or a.type = $2::text)
    and ($3::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(target)
          where offered.target ->> 'format' = any($4::text[])
    ))
    and (cardinality($5::text[]) = 0 or not exists (
@@ -900,9 +540,9 @@ select count(*)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
    and ($8::text = ''
         or position($8::text in lower(a.name)) > 0
@@ -919,9 +559,9 @@ select count(*)
    and a.is_nsfw
 `
 
-type CountSuppressedBrowseAssetsParams struct {
+type CountSuppressedBrowseWorksParams struct {
 	CreatorID  pgtype.UUID
-	Kind       string
+	Type       string
 	Platform   string
 	Formats    []string
 	FacetKeys  []string
@@ -932,10 +572,10 @@ type CountSuppressedBrowseAssetsParams struct {
 	Tags       []string
 }
 
-func (q *Queries) CountSuppressedBrowseAssets(ctx context.Context, arg CountSuppressedBrowseAssetsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countSuppressedBrowseAssets,
+func (q *Queries) CountSuppressedBrowseWorks(ctx context.Context, arg CountSuppressedBrowseWorksParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSuppressedBrowseWorks,
 		arg.CreatorID,
-		arg.Kind,
+		arg.Type,
 		arg.Platform,
 		arg.Formats,
 		arg.FacetKeys,
@@ -951,10 +591,10 @@ func (q *Queries) CountSuppressedBrowseAssets(ctx context.Context, arg CountSupp
 }
 
 const currentRevisionLocation = `-- name: CurrentRevisionLocation :one
-select a.id as asset_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
-  from assets a
-  left join public.asset_snapshots snapshot on snapshot.id = a.published_snapshot_id
-  join asset_revisions r on r.id = case when snapshot.id is null
+select a.id as work_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
+  from works a
+  left join public.work_snapshots snapshot on snapshot.id = a.published_snapshot_id
+  join work_revisions r on r.id = case when snapshot.id is null
       then a.current_revision_id else snapshot.source_revision_id end
  where a.id = $1
    and r.blob_id is not null
@@ -969,7 +609,7 @@ type CurrentRevisionLocationParams struct {
 }
 
 type CurrentRevisionLocationRow struct {
-	AssetID    pgtype.UUID
+	WorkID     pgtype.UUID
 	RevisionID pgtype.UUID
 	BlobID     pgtype.UUID
 	MediaType  string
@@ -980,7 +620,7 @@ func (q *Queries) CurrentRevisionLocation(ctx context.Context, arg CurrentRevisi
 	row := q.db.QueryRow(ctx, currentRevisionLocation, arg.ID, arg.ViewerID)
 	var i CurrentRevisionLocationRow
 	err := row.Scan(
-		&i.AssetID,
+		&i.WorkID,
 		&i.RevisionID,
 		&i.BlobID,
 		&i.MediaType,
@@ -1173,7 +813,7 @@ func (q *Queries) DeleteVerificationTokensForUser(ctx context.Context, userID pg
 }
 
 const deliveryForArtifact = `-- name: DeliveryForArtifact :one
-select delivery.asset_id, delivery.chosen_target, instance.id as instance_id
+select delivery.work_id, delivery.chosen_target, instance.id as instance_id
   from instance_deliveries as delivery
   join linked_instances as instance on instance.id = delivery.instance_id
  where delivery.id = $1
@@ -1186,7 +826,7 @@ select delivery.asset_id, delivery.chosen_target, instance.id as instance_id
 `
 
 type DeliveryForArtifactRow struct {
-	AssetID      pgtype.UUID
+	WorkID       pgtype.UUID
 	ChosenTarget pgtype.Text
 	InstanceID   pgtype.UUID
 }
@@ -1194,7 +834,7 @@ type DeliveryForArtifactRow struct {
 func (q *Queries) DeliveryForArtifact(ctx context.Context, deliveryID pgtype.UUID) (DeliveryForArtifactRow, error) {
 	row := q.db.QueryRow(ctx, deliveryForArtifact, deliveryID)
 	var i DeliveryForArtifactRow
-	err := row.Scan(&i.AssetID, &i.ChosenTarget, &i.InstanceID)
+	err := row.Scan(&i.WorkID, &i.ChosenTarget, &i.InstanceID)
 	return i, err
 }
 
@@ -1335,88 +975,6 @@ func (q *Queries) HandleUnavailable(ctx context.Context, username string) (bool,
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
-}
-
-const insertAsset = `-- name: InsertAsset :one
-insert into assets
-  (id, kind, owner_id, name, blurb, tags, is_nsfw, discovery, lifecycle,
-   asset_version, credited_author, nickname, origin_format, created_at)
-values ($1, $2, $3, $4, $5, $6, $12::boolean, $7, $8,
-        $9, $10, $11, $13::text,
-        coalesce($14::timestamptz, now()))
-returning created_at
-`
-
-type InsertAssetParams struct {
-	ID             pgtype.UUID
-	Kind           string
-	OwnerID        pgtype.UUID
-	Name           string
-	Blurb          string
-	Tags           []string
-	Discovery      string
-	Lifecycle      string
-	AssetVersion   string
-	CreditedAuthor string
-	Nickname       string
-	IsNsfw         pgtype.Bool
-	OriginFormat   pgtype.Text
-	CreatedAt      pgtype.Timestamptz
-}
-
-func (q *Queries) InsertAsset(ctx context.Context, arg InsertAssetParams) (pgtype.Timestamptz, error) {
-	row := q.db.QueryRow(ctx, insertAsset,
-		arg.ID,
-		arg.Kind,
-		arg.OwnerID,
-		arg.Name,
-		arg.Blurb,
-		arg.Tags,
-		arg.Discovery,
-		arg.Lifecycle,
-		arg.AssetVersion,
-		arg.CreditedAuthor,
-		arg.Nickname,
-		arg.IsNsfw,
-		arg.OriginFormat,
-		arg.CreatedAt,
-	)
-	var created_at pgtype.Timestamptz
-	err := row.Scan(&created_at)
-	return created_at, err
-}
-
-const insertAssetBlock = `-- name: InsertAssetBlock :exec
-insert into asset_blocks
-  (id, asset_id, definition, title, position, hidden, layout, width, elements)
-values ($1, $2, $3, $9::text, $4, $5, $6, $7, $8)
-`
-
-type InsertAssetBlockParams struct {
-	ID         pgtype.UUID
-	AssetID    pgtype.UUID
-	Definition string
-	Position   int32
-	Hidden     bool
-	Layout     string
-	Width      string
-	Elements   []byte
-	Title      pgtype.Text
-}
-
-func (q *Queries) InsertAssetBlock(ctx context.Context, arg InsertAssetBlockParams) error {
-	_, err := q.db.Exec(ctx, insertAssetBlock,
-		arg.ID,
-		arg.AssetID,
-		arg.Definition,
-		arg.Position,
-		arg.Hidden,
-		arg.Layout,
-		arg.Width,
-		arg.Elements,
-		arg.Title,
-	)
-	return err
 }
 
 const insertDeviceLinkRequest = `-- name: InsertDeviceLinkRequest :exec
@@ -1758,14 +1316,14 @@ func (q *Queries) InsertRetiredHandle(ctx context.Context, handle string) error 
 }
 
 const insertRevision = `-- name: InsertRevision :exec
-insert into asset_revisions
-  (id, asset_id, revision, blob_id, media_type, format, identifier)
+insert into work_revisions
+  (id, work_id, revision, blob_id, media_type, format, identifier)
 values ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type InsertRevisionParams struct {
 	ID         pgtype.UUID
-	AssetID    pgtype.UUID
+	WorkID     pgtype.UUID
 	Revision   int32
 	BlobID     pgtype.UUID
 	MediaType  string
@@ -1776,7 +1334,7 @@ type InsertRevisionParams struct {
 func (q *Queries) InsertRevision(ctx context.Context, arg InsertRevisionParams) error {
 	_, err := q.db.Exec(ctx, insertRevision,
 		arg.ID,
-		arg.AssetID,
+		arg.WorkID,
 		arg.Revision,
 		arg.BlobID,
 		arg.MediaType,
@@ -1839,6 +1397,88 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertU
 	return i, err
 }
 
+const insertWork = `-- name: InsertWork :one
+insert into works
+  (id, type, owner_id, name, blurb, tags, is_nsfw, visibility, lifecycle,
+   work_version, credited_author, nickname, origin_format, created_at)
+values ($1, $2, $3, $4, $5, $6, $12::boolean, $7, $8,
+        $9, $10, $11, $13::text,
+        coalesce($14::timestamptz, now()))
+returning created_at
+`
+
+type InsertWorkParams struct {
+	ID             pgtype.UUID
+	Type           string
+	OwnerID        pgtype.UUID
+	Name           string
+	Blurb          string
+	Tags           []string
+	Visibility     string
+	Lifecycle      string
+	WorkVersion    string
+	CreditedAuthor string
+	Nickname       string
+	IsNsfw         pgtype.Bool
+	OriginFormat   pgtype.Text
+	CreatedAt      pgtype.Timestamptz
+}
+
+func (q *Queries) InsertWork(ctx context.Context, arg InsertWorkParams) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, insertWork,
+		arg.ID,
+		arg.Type,
+		arg.OwnerID,
+		arg.Name,
+		arg.Blurb,
+		arg.Tags,
+		arg.Visibility,
+		arg.Lifecycle,
+		arg.WorkVersion,
+		arg.CreditedAuthor,
+		arg.Nickname,
+		arg.IsNsfw,
+		arg.OriginFormat,
+		arg.CreatedAt,
+	)
+	var created_at pgtype.Timestamptz
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
+const insertWorkBlock = `-- name: InsertWorkBlock :exec
+insert into work_blocks
+  (id, work_id, definition, title, position, hidden, layout, width, elements)
+values ($1, $2, $3, $9::text, $4, $5, $6, $7, $8)
+`
+
+type InsertWorkBlockParams struct {
+	ID         pgtype.UUID
+	WorkID     pgtype.UUID
+	Definition string
+	Position   int32
+	Hidden     bool
+	Layout     string
+	Width      string
+	Elements   []byte
+	Title      pgtype.Text
+}
+
+func (q *Queries) InsertWorkBlock(ctx context.Context, arg InsertWorkBlockParams) error {
+	_, err := q.db.Exec(ctx, insertWorkBlock,
+		arg.ID,
+		arg.WorkID,
+		arg.Definition,
+		arg.Position,
+		arg.Hidden,
+		arg.Layout,
+		arg.Width,
+		arg.Elements,
+		arg.Title,
+	)
+	return err
+}
+
 const installedApplicationVersions = `-- name: InstalledApplicationVersions :many
 select coalesce(instance.library_application_version,
                 instance.application_version)::text as application_version
@@ -1847,7 +1487,7 @@ select coalesce(instance.library_application_version,
     on instance.id = entry.instance_id
    and instance.revoked_at is null
    and instance.capabilities && $1::text[]
- where entry.asset_id = $2
+ where entry.work_id = $2
    and coalesce(instance.library_application_version, instance.application_version) is not null
  group by coalesce(instance.library_application_version, instance.application_version)
 having count(*) >= $3::bigint
@@ -1856,12 +1496,12 @@ having count(*) >= $3::bigint
 
 type InstalledApplicationVersionsParams struct {
 	Capabilities     []string
-	AssetID          pgtype.UUID
+	WorkID           pgtype.UUID
 	MinimumGroupSize int64
 }
 
 func (q *Queries) InstalledApplicationVersions(ctx context.Context, arg InstalledApplicationVersionsParams) ([]string, error) {
-	rows, err := q.db.Query(ctx, installedApplicationVersions, arg.Capabilities, arg.AssetID, arg.MinimumGroupSize)
+	rows, err := q.db.Query(ctx, installedApplicationVersions, arg.Capabilities, arg.WorkID, arg.MinimumGroupSize)
 	if err != nil {
 		return nil, err
 	}
@@ -1904,16 +1544,16 @@ const instanceLibraryCounts = `-- name: InstanceLibraryCounts :many
 select entry.instance_id,
        count(*)::bigint as installed,
        count(*) filter (
-           where asset.content_generation > entry.content_generation
+           where work.content_generation > entry.content_generation
        )::bigint as updates_available
   from instance_library_entries as entry
-  join assets as asset on asset.id = entry.asset_id
+  join works as work on work.id = entry.work_id
   join linked_instances as instance on instance.id = entry.instance_id
  where instance.user_id = $1
    and instance.revoked_at is null
-   and asset.deleted_at is null
-   and asset.withheld_at is null
-   and asset.lifecycle = 'published'
+   and work.deleted_at is null
+   and work.withheld_at is null
+   and work.lifecycle = 'published'
  group by entry.instance_id
 `
 
@@ -1943,136 +1583,42 @@ func (q *Queries) InstanceLibraryCounts(ctx context.Context, userID pgtype.UUID)
 	return items, nil
 }
 
-const listAssets = `-- name: ListAssets :many
-select a.id, a.kind, revision.format, a.origin_format,
-       a.asset_version, a.credited_author, a.nickname, a.lifecycle,
-       a.name, a.blurb, a.tags,
-       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
-       a.current_revision_id, a.created_at
-  from assets a
-  left join asset_revisions revision on revision.id = a.current_revision_id
- where a.lifecycle = 'published'
-   and a.discovery = 'listed'
-   and a.withheld_at is null
-   and a.deleted_at is null
-   and ($1 = '' or a.kind = $1)
-   and (not $2::boolean or revision.format is not distinct from $3)
-   and ($4::text[] is null or a.tags @> $4)
-   and ($6::timestamptz is null
-        or (a.created_at, a.id)
-           < ($6::timestamptz, $7::uuid))
- order by a.created_at desc, a.id desc
- limit $5
+const listDeletedWorks = `-- name: ListDeletedWorks :many
+select work.id, work.name, work.type, work.deleted_at, work.recoverable_until
+  from works work
+  join users owner on owner.id = work.owner_id
+ where work.owner_id = $1 and owner.username = $2
+   and work.deleted_at is not null and work.recoverable_until > $3
+ order by work.deleted_at desc, work.id desc
 `
 
-type ListAssetsParams struct {
-	Column1  interface{}
-	Column2  bool
-	Format   string
-	Column4  []string
-	Limit    int32
-	Before   pgtype.Timestamptz
-	BeforeID pgtype.UUID
-}
-
-type ListAssetsRow struct {
-	ID                pgtype.UUID
-	Kind              string
-	Format            pgtype.Text
-	OriginFormat      pgtype.Text
-	AssetVersion      string
-	CreditedAuthor    string
-	Nickname          string
-	Lifecycle         string
-	Name              string
-	Blurb             string
-	Tags              []string
-	IsNsfw            bool
-	Discovery         string
-	CurrentRevisionID pgtype.UUID
-	CreatedAt         pgtype.Timestamptz
-}
-
-func (q *Queries) ListAssets(ctx context.Context, arg ListAssetsParams) ([]ListAssetsRow, error) {
-	rows, err := q.db.Query(ctx, listAssets,
-		arg.Column1,
-		arg.Column2,
-		arg.Format,
-		arg.Column4,
-		arg.Limit,
-		arg.Before,
-		arg.BeforeID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAssetsRow
-	for rows.Next() {
-		var i ListAssetsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Kind,
-			&i.Format,
-			&i.OriginFormat,
-			&i.AssetVersion,
-			&i.CreditedAuthor,
-			&i.Nickname,
-			&i.Lifecycle,
-			&i.Name,
-			&i.Blurb,
-			&i.Tags,
-			&i.IsNsfw,
-			&i.Discovery,
-			&i.CurrentRevisionID,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listDeletedAssets = `-- name: ListDeletedAssets :many
-select asset.id, asset.name, asset.kind, asset.deleted_at, asset.recoverable_until
-  from assets asset
-  join users owner on owner.id = asset.owner_id
- where asset.owner_id = $1 and owner.username = $2
-   and asset.deleted_at is not null and asset.recoverable_until > $3
- order by asset.deleted_at desc, asset.id desc
-`
-
-type ListDeletedAssetsParams struct {
+type ListDeletedWorksParams struct {
 	OwnerID          pgtype.UUID
 	Username         string
 	RecoverableUntil pgtype.Timestamptz
 }
 
-type ListDeletedAssetsRow struct {
+type ListDeletedWorksRow struct {
 	ID               pgtype.UUID
 	Name             string
-	Kind             string
+	Type             string
 	DeletedAt        pgtype.Timestamptz
 	RecoverableUntil pgtype.Timestamptz
 }
 
-func (q *Queries) ListDeletedAssets(ctx context.Context, arg ListDeletedAssetsParams) ([]ListDeletedAssetsRow, error) {
-	rows, err := q.db.Query(ctx, listDeletedAssets, arg.OwnerID, arg.Username, arg.RecoverableUntil)
+func (q *Queries) ListDeletedWorks(ctx context.Context, arg ListDeletedWorksParams) ([]ListDeletedWorksRow, error) {
+	rows, err := q.db.Query(ctx, listDeletedWorks, arg.OwnerID, arg.Username, arg.RecoverableUntil)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListDeletedAssetsRow
+	var items []ListDeletedWorksRow
 	for rows.Next() {
-		var i ListDeletedAssetsRow
+		var i ListDeletedWorksRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Kind,
+			&i.Type,
 			&i.DeletedAt,
 			&i.RecoverableUntil,
 		); err != nil {
@@ -2143,24 +1689,118 @@ func (q *Queries) ListLinkedInstances(ctx context.Context, userID pgtype.UUID) (
 	return items, nil
 }
 
-const liveDeliveryForAsset = `-- name: LiveDeliveryForAsset :one
-select id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+const listWorks = `-- name: ListWorks :many
+select a.id, a.type, revision.format, a.origin_format,
+       a.work_version, a.credited_author, a.nickname, a.lifecycle,
+       a.name, a.blurb, a.tags,
+       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
+       a.current_revision_id, a.created_at
+  from works a
+  left join work_revisions revision on revision.id = a.current_revision_id
+ where a.lifecycle = 'published'
+   and a.visibility = 'listed'
+   and a.withheld_at is null
+   and a.deleted_at is null
+   and ($1 = '' or a.type = $1)
+   and (not $2::boolean or revision.format is not distinct from $3)
+   and ($4::text[] is null or a.tags @> $4)
+   and ($6::timestamptz is null
+        or (a.created_at, a.id)
+           < ($6::timestamptz, $7::uuid))
+ order by a.created_at desc, a.id desc
+ limit $5
+`
+
+type ListWorksParams struct {
+	Column1  interface{}
+	Column2  bool
+	Format   string
+	Column4  []string
+	Limit    int32
+	Before   pgtype.Timestamptz
+	BeforeID pgtype.UUID
+}
+
+type ListWorksRow struct {
+	ID                pgtype.UUID
+	Type              string
+	Format            pgtype.Text
+	OriginFormat      pgtype.Text
+	WorkVersion       string
+	CreditedAuthor    string
+	Nickname          string
+	Lifecycle         string
+	Name              string
+	Blurb             string
+	Tags              []string
+	IsNsfw            bool
+	Visibility        string
+	CurrentRevisionID pgtype.UUID
+	CreatedAt         pgtype.Timestamptz
+}
+
+func (q *Queries) ListWorks(ctx context.Context, arg ListWorksParams) ([]ListWorksRow, error) {
+	rows, err := q.db.Query(ctx, listWorks,
+		arg.Column1,
+		arg.Column2,
+		arg.Format,
+		arg.Column4,
+		arg.Limit,
+		arg.Before,
+		arg.BeforeID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWorksRow
+	for rows.Next() {
+		var i ListWorksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Type,
+			&i.Format,
+			&i.OriginFormat,
+			&i.WorkVersion,
+			&i.CreditedAuthor,
+			&i.Nickname,
+			&i.Lifecycle,
+			&i.Name,
+			&i.Blurb,
+			&i.Tags,
+			&i.IsNsfw,
+			&i.Visibility,
+			&i.CurrentRevisionID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const liveDeliveryForWork = `-- name: LiveDeliveryForWork :one
+select id, instance_id, work_id, state, settled_reason, queued_at, settled_at,
        expires_at, updates_install
   from instance_deliveries
  where instance_id = $1
-   and asset_id = $2
+   and work_id = $2
    and state in ('queued', 'released')
 `
 
-type LiveDeliveryForAssetParams struct {
+type LiveDeliveryForWorkParams struct {
 	InstanceID pgtype.UUID
-	AssetID    pgtype.UUID
+	WorkID     pgtype.UUID
 }
 
-type LiveDeliveryForAssetRow struct {
+type LiveDeliveryForWorkRow struct {
 	ID             pgtype.UUID
 	InstanceID     pgtype.UUID
-	AssetID        pgtype.UUID
+	WorkID         pgtype.UUID
 	State          string
 	SettledReason  pgtype.Text
 	QueuedAt       pgtype.Timestamptz
@@ -2169,13 +1809,13 @@ type LiveDeliveryForAssetRow struct {
 	UpdatesInstall bool
 }
 
-func (q *Queries) LiveDeliveryForAsset(ctx context.Context, arg LiveDeliveryForAssetParams) (LiveDeliveryForAssetRow, error) {
-	row := q.db.QueryRow(ctx, liveDeliveryForAsset, arg.InstanceID, arg.AssetID)
-	var i LiveDeliveryForAssetRow
+func (q *Queries) LiveDeliveryForWork(ctx context.Context, arg LiveDeliveryForWorkParams) (LiveDeliveryForWorkRow, error) {
+	row := q.db.QueryRow(ctx, liveDeliveryForWork, arg.InstanceID, arg.WorkID)
+	var i LiveDeliveryForWorkRow
 	err := row.Scan(
 		&i.ID,
 		&i.InstanceID,
-		&i.AssetID,
+		&i.WorkID,
 		&i.State,
 		&i.SettledReason,
 		&i.QueuedAt,
@@ -2489,18 +2129,18 @@ func (q *Queries) LockOAuthUser(ctx context.Context, userID pgtype.UUID) (int32,
 	return column_1, err
 }
 
-const nSFWVisibilityBySessionHash = `-- name: NSFWVisibilityBySessionHash :one
-select u.nsfw_visibility
+const nSFWPreferenceBySessionHash = `-- name: NSFWPreferenceBySessionHash :one
+select u.nsfw_preference
   from sessions session
   join users u on u.id = session.user_id
  where session.token_hash = $1 and session.expires_at > now()
 `
 
-func (q *Queries) NSFWVisibilityBySessionHash(ctx context.Context, tokenHash []byte) (string, error) {
-	row := q.db.QueryRow(ctx, nSFWVisibilityBySessionHash, tokenHash)
-	var nsfw_visibility string
-	err := row.Scan(&nsfw_visibility)
-	return nsfw_visibility, err
+func (q *Queries) NSFWPreferenceBySessionHash(ctx context.Context, tokenHash []byte) (string, error) {
+	row := q.db.QueryRow(ctx, nSFWPreferenceBySessionHash, tokenHash)
+	var nsfw_preference string
+	err := row.Scan(&nsfw_preference)
+	return nsfw_preference, err
 }
 
 const profileByHandle = `-- name: ProfileByHandle :one
@@ -2524,16 +2164,16 @@ func (q *Queries) ProfileByHandle(ctx context.Context, username string) (Profile
 const pruneLibraryToSnapshot = `-- name: PruneLibraryToSnapshot :execrows
 delete from instance_library_entries
  where instance_id = $1
-   and not (asset_id = any($2::uuid[]))
+   and not (work_id = any($2::uuid[]))
 `
 
 type PruneLibraryToSnapshotParams struct {
 	InstanceID pgtype.UUID
-	AssetIds   []pgtype.UUID
+	WorkIds    []pgtype.UUID
 }
 
 func (q *Queries) PruneLibraryToSnapshot(ctx context.Context, arg PruneLibraryToSnapshotParams) (int64, error) {
-	result, err := q.db.Exec(ctx, pruneLibraryToSnapshot, arg.InstanceID, arg.AssetIds)
+	result, err := q.db.Exec(ctx, pruneLibraryToSnapshot, arg.InstanceID, arg.WorkIds)
 	if err != nil {
 		return 0, err
 	}
@@ -2541,31 +2181,31 @@ func (q *Queries) PruneLibraryToSnapshot(ctx context.Context, arg PruneLibraryTo
 }
 
 const queueDelivery = `-- name: QueueDelivery :one
-insert into instance_deliveries (id, instance_id, asset_id, expires_at, updates_install)
+insert into instance_deliveries (id, instance_id, work_id, expires_at, updates_install)
 select $1, $2, $3,
        $4,
        exists (
            select 1
              from instance_library_entries as entry
             where entry.instance_id = $2
-              and entry.asset_id = $3
+              and entry.work_id = $3
        )
-on conflict (instance_id, asset_id) where state in ('queued', 'released') do nothing
-returning id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+on conflict (instance_id, work_id) where state in ('queued', 'released') do nothing
+returning id, instance_id, work_id, state, settled_reason, queued_at, settled_at,
           expires_at, updates_install
 `
 
 type QueueDeliveryParams struct {
 	ID         pgtype.UUID
 	InstanceID pgtype.UUID
-	AssetID    pgtype.UUID
+	WorkID     pgtype.UUID
 	ExpiresAt  pgtype.Timestamptz
 }
 
 type QueueDeliveryRow struct {
 	ID             pgtype.UUID
 	InstanceID     pgtype.UUID
-	AssetID        pgtype.UUID
+	WorkID         pgtype.UUID
 	State          string
 	SettledReason  pgtype.Text
 	QueuedAt       pgtype.Timestamptz
@@ -2578,14 +2218,14 @@ func (q *Queries) QueueDelivery(ctx context.Context, arg QueueDeliveryParams) (Q
 	row := q.db.QueryRow(ctx, queueDelivery,
 		arg.ID,
 		arg.InstanceID,
-		arg.AssetID,
+		arg.WorkID,
 		arg.ExpiresAt,
 	)
 	var i QueueDeliveryRow
 	err := row.Scan(
 		&i.ID,
 		&i.InstanceID,
-		&i.AssetID,
+		&i.WorkID,
 		&i.State,
 		&i.SettledReason,
 		&i.QueuedAt,
@@ -2677,16 +2317,16 @@ func (q *Queries) RedeemLinkAuthorization(ctx context.Context, authorizationCode
 const removeLibraryEntries = `-- name: RemoveLibraryEntries :execrows
 delete from instance_library_entries
  where instance_id = $1
-   and asset_id = any($2::uuid[])
+   and work_id = any($2::uuid[])
 `
 
 type RemoveLibraryEntriesParams struct {
 	InstanceID pgtype.UUID
-	AssetIds   []pgtype.UUID
+	WorkIds    []pgtype.UUID
 }
 
 func (q *Queries) RemoveLibraryEntries(ctx context.Context, arg RemoveLibraryEntriesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, removeLibraryEntries, arg.InstanceID, arg.AssetIds)
+	result, err := q.db.Exec(ctx, removeLibraryEntries, arg.InstanceID, arg.WorkIds)
 	if err != nil {
 		return 0, err
 	}
@@ -2711,51 +2351,51 @@ func (q *Queries) ReplacePassword(ctx context.Context, arg ReplacePasswordParams
 
 const reportLibraryEntries = `-- name: ReportLibraryEntries :execrows
 insert into instance_library_entries
-    (instance_id, asset_id, content_generation, reported_at)
-select $1, asset.id,
-       coalesce(nullif(reported.generation, 0), asset.content_generation), now()
+    (instance_id, work_id, content_generation, reported_at)
+select $1, work.id,
+       coalesce(nullif(reported.generation, 0), work.content_generation), now()
   from (
-      select unnest($2::uuid[]) as asset_id,
+      select unnest($2::uuid[]) as work_id,
              unnest($3::integer[]) as generation
   ) as reported
-  join assets as asset
-    on asset.id = reported.asset_id
-   and asset.deleted_at is null
-   and asset.lifecycle = 'published'
-on conflict (instance_id, asset_id) do update
+  join works as work
+    on work.id = reported.work_id
+   and work.deleted_at is null
+   and work.lifecycle = 'published'
+on conflict (instance_id, work_id) do update
    set content_generation = excluded.content_generation,
        reported_at = excluded.reported_at
 `
 
 type ReportLibraryEntriesParams struct {
 	InstanceID  pgtype.UUID
-	AssetIds    []pgtype.UUID
+	WorkIds     []pgtype.UUID
 	Generations []int32
 }
 
 func (q *Queries) ReportLibraryEntries(ctx context.Context, arg ReportLibraryEntriesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, reportLibraryEntries, arg.InstanceID, arg.AssetIds, arg.Generations)
+	result, err := q.db.Exec(ctx, reportLibraryEntries, arg.InstanceID, arg.WorkIds, arg.Generations)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const restoreAsset = `-- name: RestoreAsset :execrows
-update assets
+const restoreWork = `-- name: RestoreWork :execrows
+update works
    set deleted_at = null, recoverable_until = null, updated_at = $3
  where id = $1 and owner_id = $2
    and deleted_at is not null and recoverable_until > $3
 `
 
-type RestoreAssetParams struct {
+type RestoreWorkParams struct {
 	ID        pgtype.UUID
 	OwnerID   pgtype.UUID
 	UpdatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) RestoreAsset(ctx context.Context, arg RestoreAssetParams) (int64, error) {
-	result, err := q.db.Exec(ctx, restoreAsset, arg.ID, arg.OwnerID, arg.UpdatedAt)
+func (q *Queries) RestoreWork(ctx context.Context, arg RestoreWorkParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreWork, arg.ID, arg.OwnerID, arg.UpdatedAt)
 	if err != nil {
 		return 0, err
 	}
@@ -2964,45 +2604,24 @@ func (q *Queries) RotateInstanceRefreshToken(ctx context.Context, arg RotateInst
 	return instance_id, err
 }
 
-const sendableAssetGeneration = `-- name: SendableAssetGeneration :one
+const sendableWorkGeneration = `-- name: SendableWorkGeneration :one
 select content_generation
-  from assets
+  from works
  where id = $1
    and deleted_at is null
    and withheld_at is null
    and lifecycle = 'published'
 `
 
-func (q *Queries) SendableAssetGeneration(ctx context.Context, assetID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, sendableAssetGeneration, assetID)
+func (q *Queries) SendableWorkGeneration(ctx context.Context, workID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, sendableWorkGeneration, workID)
 	var content_generation int32
 	err := row.Scan(&content_generation)
 	return content_generation, err
 }
 
-const setAssetDiscovery = `-- name: SetAssetDiscovery :execrows
-update assets
-   set discovery = $3, updated_at = now()
- where id = $1 and owner_id = $2 and lifecycle = 'published'
-   and withheld_at is null and deleted_at is null
-`
-
-type SetAssetDiscoveryParams struct {
-	ID        pgtype.UUID
-	OwnerID   pgtype.UUID
-	Discovery string
-}
-
-func (q *Queries) SetAssetDiscovery(ctx context.Context, arg SetAssetDiscoveryParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setAssetDiscovery, arg.ID, arg.OwnerID, arg.Discovery)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
 const setCurrentRevision = `-- name: SetCurrentRevision :exec
-update assets set current_revision_id = $2, updated_at = now() where id = $1
+update works set current_revision_id = $2, updated_at = now() where id = $1
 `
 
 type SetCurrentRevisionParams struct {
@@ -3062,43 +2681,64 @@ func (q *Queries) SetFirstPassword(ctx context.Context, arg SetFirstPasswordPara
 	return i, err
 }
 
-const setNSFWVisibilityBySessionHash = `-- name: SetNSFWVisibilityBySessionHash :execrows
+const setNSFWPreferenceBySessionHash = `-- name: SetNSFWPreferenceBySessionHash :execrows
 update users u
-   set nsfw_visibility = $1, updated_at = now()
+   set nsfw_preference = $1, updated_at = now()
   from sessions session
  where session.user_id = u.id and session.token_hash = $2
    and session.expires_at > now()
 `
 
-type SetNSFWVisibilityBySessionHashParams struct {
-	NsfwVisibility string
+type SetNSFWPreferenceBySessionHashParams struct {
+	NsfwPreference string
 	TokenHash      []byte
 }
 
-func (q *Queries) SetNSFWVisibilityBySessionHash(ctx context.Context, arg SetNSFWVisibilityBySessionHashParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setNSFWVisibilityBySessionHash, arg.NsfwVisibility, arg.TokenHash)
+func (q *Queries) SetNSFWPreferenceBySessionHash(ctx context.Context, arg SetNSFWPreferenceBySessionHashParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setNSFWPreferenceBySessionHash, arg.NsfwPreference, arg.TokenHash)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const softDeleteAsset = `-- name: SoftDeleteAsset :execrows
-update assets
+const setWorkVisibility = `-- name: SetWorkVisibility :execrows
+update works
+   set visibility = $3, updated_at = now()
+ where id = $1 and owner_id = $2 and lifecycle = 'published'
+   and withheld_at is null and deleted_at is null
+`
+
+type SetWorkVisibilityParams struct {
+	ID         pgtype.UUID
+	OwnerID    pgtype.UUID
+	Visibility string
+}
+
+func (q *Queries) SetWorkVisibility(ctx context.Context, arg SetWorkVisibilityParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setWorkVisibility, arg.ID, arg.OwnerID, arg.Visibility)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const softDeleteWork = `-- name: SoftDeleteWork :execrows
+update works
    set deleted_at = $3, recoverable_until = $4, updated_at = $3
  where id = $1 and owner_id = $2
    and withheld_at is null and deleted_at is null
 `
 
-type SoftDeleteAssetParams struct {
+type SoftDeleteWorkParams struct {
 	ID               pgtype.UUID
 	OwnerID          pgtype.UUID
 	DeletedAt        pgtype.Timestamptz
 	RecoverableUntil pgtype.Timestamptz
 }
 
-func (q *Queries) SoftDeleteAsset(ctx context.Context, arg SoftDeleteAssetParams) (int64, error) {
-	result, err := q.db.Exec(ctx, softDeleteAsset,
+func (q *Queries) SoftDeleteWork(ctx context.Context, arg SoftDeleteWorkParams) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeleteWork,
 		arg.ID,
 		arg.OwnerID,
 		arg.DeletedAt,
@@ -3178,30 +2818,30 @@ func (q *Queries) TakePasswordReset(ctx context.Context, tokenHash []byte) (pgty
 
 const takeWithheldNotices = `-- name: TakeWithheldNotices :many
 update instance_library_entries as entry
-   set notified_withheld_at = asset.withheld_at
-  from asset_public.assets as asset
+   set notified_withheld_at = work.withheld_at
+  from work_public.works as work
  where entry.instance_id = $1
-   and asset.id = entry.asset_id
-   and asset.kind = any($2::text[])
-   and asset.withheld_at is not null
-   and asset.deleted_at is null
-   and entry.notified_withheld_at is distinct from asset.withheld_at
-returning entry.asset_id, asset.name::text as name, asset.withheld_at
+   and work.id = entry.work_id
+   and work.type = any($2::text[])
+   and work.withheld_at is not null
+   and work.deleted_at is null
+   and entry.notified_withheld_at is distinct from work.withheld_at
+returning entry.work_id, work.name::text as name, work.withheld_at
 `
 
 type TakeWithheldNoticesParams struct {
 	InstanceID pgtype.UUID
-	Kinds      []string
+	Types      []string
 }
 
 type TakeWithheldNoticesRow struct {
-	AssetID    pgtype.UUID
+	WorkID     pgtype.UUID
 	Name       string
 	WithheldAt pgtype.Timestamptz
 }
 
 func (q *Queries) TakeWithheldNotices(ctx context.Context, arg TakeWithheldNoticesParams) ([]TakeWithheldNoticesRow, error) {
-	rows, err := q.db.Query(ctx, takeWithheldNotices, arg.InstanceID, arg.Kinds)
+	rows, err := q.db.Query(ctx, takeWithheldNotices, arg.InstanceID, arg.Types)
 	if err != nil {
 		return nil, err
 	}
@@ -3209,7 +2849,7 @@ func (q *Queries) TakeWithheldNotices(ctx context.Context, arg TakeWithheldNotic
 	var items []TakeWithheldNoticesRow
 	for rows.Next() {
 		var i TakeWithheldNoticesRow
-		if err := rows.Scan(&i.AssetID, &i.Name, &i.WithheldAt); err != nil {
+		if err := rows.Scan(&i.WorkID, &i.Name, &i.WithheldAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -3783,39 +3423,399 @@ func (q *Queries) VerifyUserEmail(ctx context.Context, arg VerifyUserEmailParams
 	return i, err
 }
 
-const withholdAsset = `-- name: WithholdAsset :one
+const withholdWork = `-- name: WithholdWork :one
 with withheld as (
-    update assets as asset
+    update works as work
        set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
            updated_at = now()
-     where asset.id = $1 and asset.lifecycle = 'published'
-       and asset.withheld_at is null and asset.deleted_at is null
-    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
+     where work.id = $1 and work.lifecycle = 'published'
+       and work.withheld_at is null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_snapshot_id
 ), stopped as (
     update instance_deliveries as delivery
        set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
-     where delivery.asset_id in (select withheld.id from withheld)
+     where delivery.work_id in (select withheld.id from withheld)
        and delivery.state = 'queued'
 )
 select withheld.owner_id, coalesce(snapshot.payload ->> 'name', withheld.name)::text as public_name
   from withheld
-  left join asset_snapshots snapshot on snapshot.id = withheld.published_snapshot_id
+  left join work_snapshots snapshot on snapshot.id = withheld.published_snapshot_id
 `
 
-type WithholdAssetParams struct {
+type WithholdWorkParams struct {
 	ID             pgtype.UUID
 	WithheldBy     pgtype.UUID
 	WithheldReason pgtype.Text
 }
 
-type WithholdAssetRow struct {
+type WithholdWorkRow struct {
 	OwnerID    pgtype.UUID
 	PublicName string
 }
 
-func (q *Queries) WithholdAsset(ctx context.Context, arg WithholdAssetParams) (WithholdAssetRow, error) {
-	row := q.db.QueryRow(ctx, withholdAsset, arg.ID, arg.WithheldBy, arg.WithheldReason)
-	var i WithholdAssetRow
+func (q *Queries) WithholdWork(ctx context.Context, arg WithholdWorkParams) (WithholdWorkRow, error) {
+	row := q.db.QueryRow(ctx, withholdWork, arg.ID, arg.WithheldBy, arg.WithheldReason)
+	var i WithholdWorkRow
 	err := row.Scan(&i.OwnerID, &i.PublicName)
+	return i, err
+}
+
+const workBlocks = `-- name: WorkBlocks :many
+select id, definition, title, position, hidden, layout, width, elements
+  from work_blocks
+ where work_id = $1
+ order by position
+`
+
+type WorkBlocksRow struct {
+	ID         pgtype.UUID
+	Definition string
+	Title      pgtype.Text
+	Position   int32
+	Hidden     bool
+	Layout     string
+	Width      string
+	Elements   []byte
+}
+
+func (q *Queries) WorkBlocks(ctx context.Context, workID pgtype.UUID) ([]WorkBlocksRow, error) {
+	rows, err := q.db.Query(ctx, workBlocks, workID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WorkBlocksRow
+	for rows.Next() {
+		var i WorkBlocksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Definition,
+			&i.Title,
+			&i.Position,
+			&i.Hidden,
+			&i.Layout,
+			&i.Width,
+			&i.Elements,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const workByID = `-- name: WorkByID :one
+select a.id, a.type, revision.format, a.origin_format,
+       a.work_version, a.credited_author, a.nickname, a.lifecycle,
+       a.name, a.blurb, a.tags,
+       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
+       a.current_revision_id, a.created_at
+  from works a
+  join work_revisions revision on revision.id = a.current_revision_id
+ where a.id = $1
+`
+
+type WorkByIDRow struct {
+	ID                pgtype.UUID
+	Type              string
+	Format            string
+	OriginFormat      pgtype.Text
+	WorkVersion       string
+	CreditedAuthor    string
+	Nickname          string
+	Lifecycle         string
+	Name              string
+	Blurb             string
+	Tags              []string
+	IsNsfw            bool
+	Visibility        string
+	CurrentRevisionID pgtype.UUID
+	CreatedAt         pgtype.Timestamptz
+}
+
+func (q *Queries) WorkByID(ctx context.Context, id pgtype.UUID) (WorkByIDRow, error) {
+	row := q.db.QueryRow(ctx, workByID, id)
+	var i WorkByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.Format,
+		&i.OriginFormat,
+		&i.WorkVersion,
+		&i.CreditedAuthor,
+		&i.Nickname,
+		&i.Lifecycle,
+		&i.Name,
+		&i.Blurb,
+		&i.Tags,
+		&i.IsNsfw,
+		&i.Visibility,
+		&i.CurrentRevisionID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const workDeletionState = `-- name: WorkDeletionState :one
+select withheld_at, deleted_at
+  from works
+ where id = $1 and owner_id = $2
+`
+
+type WorkDeletionStateParams struct {
+	ID      pgtype.UUID
+	OwnerID pgtype.UUID
+}
+
+type WorkDeletionStateRow struct {
+	WithheldAt pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
+}
+
+func (q *Queries) WorkDeletionState(ctx context.Context, arg WorkDeletionStateParams) (WorkDeletionStateRow, error) {
+	row := q.db.QueryRow(ctx, workDeletionState, arg.ID, arg.OwnerID)
+	var i WorkDeletionStateRow
+	err := row.Scan(&i.WithheldAt, &i.DeletedAt)
+	return i, err
+}
+
+const workInstanceStates = `-- name: WorkInstanceStates :many
+select instance.id, instance.application_name, instance.instance_name,
+       instance.last_seen_at, instance.scopes, instance.capabilities,
+       instance.accepted_targets,
+       delivery.id as delivery_id,
+       coalesce(delivery.state, '')::text as delivery_state,
+       delivery.settled_reason, delivery.queued_at, delivery.settled_at,
+       delivery.expires_at,
+       coalesce(delivery.updates_install, false)::boolean as updates_install,
+       entry.content_generation as installed_generation
+  from linked_instances as instance
+  left join lateral (
+      select waiting.id, waiting.state, waiting.settled_reason,
+             waiting.queued_at, waiting.settled_at, waiting.expires_at,
+             waiting.updates_install
+        from instance_deliveries as waiting
+       where waiting.instance_id = instance.id
+         and waiting.work_id = $1
+       order by (waiting.state in ('queued', 'released')) desc,
+                waiting.queued_at desc
+       limit 1
+  ) as delivery on true
+  left join instance_library_entries as entry
+    on entry.instance_id = instance.id and entry.work_id = $1
+ where instance.user_id = $2 and instance.revoked_at is null
+ order by coalesce(instance.last_seen_at, instance.linked_at) desc,
+          instance.linked_at desc
+`
+
+type WorkInstanceStatesParams struct {
+	WorkID pgtype.UUID
+	UserID pgtype.UUID
+}
+
+type WorkInstanceStatesRow struct {
+	ID                  pgtype.UUID
+	ApplicationName     string
+	InstanceName        string
+	LastSeenAt          pgtype.Timestamptz
+	Scopes              []string
+	Capabilities        []string
+	AcceptedTargets     []string
+	DeliveryID          pgtype.UUID
+	DeliveryState       string
+	SettledReason       pgtype.Text
+	QueuedAt            pgtype.Timestamptz
+	SettledAt           pgtype.Timestamptz
+	ExpiresAt           pgtype.Timestamptz
+	UpdatesInstall      bool
+	InstalledGeneration pgtype.Int4
+}
+
+func (q *Queries) WorkInstanceStates(ctx context.Context, arg WorkInstanceStatesParams) ([]WorkInstanceStatesRow, error) {
+	rows, err := q.db.Query(ctx, workInstanceStates, arg.WorkID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WorkInstanceStatesRow
+	for rows.Next() {
+		var i WorkInstanceStatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ApplicationName,
+			&i.InstanceName,
+			&i.LastSeenAt,
+			&i.Scopes,
+			&i.Capabilities,
+			&i.AcceptedTargets,
+			&i.DeliveryID,
+			&i.DeliveryState,
+			&i.SettledReason,
+			&i.QueuedAt,
+			&i.SettledAt,
+			&i.ExpiresAt,
+			&i.UpdatesInstall,
+			&i.InstalledGeneration,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const workPage = `-- name: WorkPage :one
+select a.id, a.type, a.name, a.blurb, a.tags, a.is_nsfw, a.visibility,
+       a.lifecycle, a.created_at,
+       revision.format as original_format, revision.media_type as original_media_type,
+       revision.created_at as original_arrived_at,
+       coalesce(revision.identifier, '')::text as identifier,
+       coalesce(owner.username, 'unknown') as creator,
+       coalesce(a.owner_id = $2::uuid, false)::boolean as is_owner,
+       a.withheld_reason, a.withheld_at
+  from works a
+  left join users owner on owner.id = a.owner_id
+  left join work_revisions revision on revision.id = a.current_revision_id
+ where a.id = $1
+   and a.deleted_at is null
+   and (a.lifecycle = 'published' or a.owner_id = $2::uuid)
+   and (a.withheld_at is null or a.owner_id = $2::uuid)
+`
+
+type WorkPageParams struct {
+	ID       pgtype.UUID
+	ViewerID pgtype.UUID
+}
+
+type WorkPageRow struct {
+	ID                pgtype.UUID
+	Type              string
+	Name              string
+	Blurb             string
+	Tags              []string
+	IsNsfw            pgtype.Bool
+	Visibility        string
+	Lifecycle         string
+	CreatedAt         pgtype.Timestamptz
+	OriginalFormat    pgtype.Text
+	OriginalMediaType pgtype.Text
+	OriginalArrivedAt pgtype.Timestamptz
+	Identifier        string
+	Creator           string
+	IsOwner           bool
+	WithheldReason    pgtype.Text
+	WithheldAt        pgtype.Timestamptz
+}
+
+func (q *Queries) WorkPage(ctx context.Context, arg WorkPageParams) (WorkPageRow, error) {
+	row := q.db.QueryRow(ctx, workPage, arg.ID, arg.ViewerID)
+	var i WorkPageRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.Name,
+		&i.Blurb,
+		&i.Tags,
+		&i.IsNsfw,
+		&i.Visibility,
+		&i.Lifecycle,
+		&i.CreatedAt,
+		&i.OriginalFormat,
+		&i.OriginalMediaType,
+		&i.OriginalArrivedAt,
+		&i.Identifier,
+		&i.Creator,
+		&i.IsOwner,
+		&i.WithheldReason,
+		&i.WithheldAt,
+	)
+	return i, err
+}
+
+const workPageMedia = `-- name: WorkPageMedia :many
+select media.id, media.role, media.width, media.height, blob.byte_size,
+       coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
+  from works a
+  join work_media media on media.work_id = a.id
+  join blobs blob on blob.id = media.blob_id
+ where a.id = $1
+   and media.is_current
+   and media.width is not null
+   and media.height is not null
+   and media.blob_id is not null
+ order by (media.id = a.cover_media_id) desc,
+		  case media.role
+		    when 'avatar' then 1
+		    when 'avatar_alt' then 2
+		    when 'gallery' then 3
+		    when 'expression' then 4
+		    when 'pack_item' then 5
+		    else 6
+		  end,
+          media.created_at desc, media.id desc
+`
+
+type WorkPageMediaRow struct {
+	ID       pgtype.UUID
+	Role     string
+	Width    pgtype.Int4
+	Height   pgtype.Int4
+	ByteSize int64
+	IsCover  bool
+}
+
+func (q *Queries) WorkPageMedia(ctx context.Context, id pgtype.UUID) ([]WorkPageMediaRow, error) {
+	rows, err := q.db.Query(ctx, workPageMedia, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WorkPageMediaRow
+	for rows.Next() {
+		var i WorkPageMediaRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Role,
+			&i.Width,
+			&i.Height,
+			&i.ByteSize,
+			&i.IsCover,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const workStateForOwner = `-- name: WorkStateForOwner :one
+select withheld_at, lifecycle
+  from works
+ where id = $1 and owner_id = $2 and deleted_at is null
+`
+
+type WorkStateForOwnerParams struct {
+	ID      pgtype.UUID
+	OwnerID pgtype.UUID
+}
+
+type WorkStateForOwnerRow struct {
+	WithheldAt pgtype.Timestamptz
+	Lifecycle  string
+}
+
+func (q *Queries) WorkStateForOwner(ctx context.Context, arg WorkStateForOwnerParams) (WorkStateForOwnerRow, error) {
+	row := q.db.QueryRow(ctx, workStateForOwner, arg.ID, arg.OwnerID)
+	var i WorkStateForOwnerRow
+	err := row.Scan(&i.WithheldAt, &i.Lifecycle)
 	return i, err
 }

@@ -29,10 +29,10 @@ const (
 var (
 	ErrNoInstanceOfYours = errors.New("no live instance of yours has that id")
 	ErrMissingScope      = errors.New("that instance was not granted the scope this needs")
-	ErrAssetNotFound     = errors.New("no such asset")
-	ErrAssetNotSendable  = errors.New("only a published asset can be sent to an instance")
-	ErrNoTarget          = errors.New("that instance accepts no format this asset can be written in")
-	ErrCannotInstall     = errors.New("that instance does not install what this asset is")
+	ErrWorkNotFound      = errors.New("no such work")
+	ErrWorkNotSendable   = errors.New("only a published work can be sent to an instance")
+	ErrNoTarget          = errors.New("that instance accepts no format this work can be written in")
+	ErrCannotInstall     = errors.New("that instance does not install what this work is")
 	ErrQueueFull         = errors.New("that instance already has as many waiting deliveries as it may hold")
 	ErrDeliveryNotFound  = errors.New("no waiting delivery of yours has that id")
 	ErrTooManyCollectors = errors.New("too many instances are waiting for work at once")
@@ -45,7 +45,7 @@ var (
 type Delivery struct {
 	ID             uuid.UUID
 	InstanceID     uuid.UUID
-	AssetID        uuid.UUID
+	WorkID         uuid.UUID
 	State          State
 	Reason         Reason
 	QueuedAt       time.Time
@@ -56,9 +56,9 @@ type Delivery struct {
 
 type Work struct {
 	ID                uuid.UUID
-	AssetID           uuid.UUID
+	WorkID            uuid.UUID
 	ContentGeneration int
-	Kind              string
+	Type              string
 	Name              string
 	Format            string
 	Label             string
@@ -68,7 +68,7 @@ type Work struct {
 }
 
 type Artifact struct {
-	Kind    string
+	Type    string
 	URL     string
 	MediaID *uuid.UUID
 	Role    string
@@ -92,7 +92,7 @@ type InstanceState struct {
 	UpdateAvailable     bool
 }
 
-type AssetInstances struct {
+type WorkInstances struct {
 	ContentGeneration int
 	Items             []InstanceState
 }
@@ -110,7 +110,7 @@ type ReportedLibrary struct {
 }
 
 type ReportedEntry struct {
-	AssetID           uuid.UUID
+	WorkID            uuid.UUID
 	ContentGeneration *int
 }
 
@@ -122,7 +122,7 @@ type LibraryResult struct {
 }
 
 type WithheldWork struct {
-	AssetID    uuid.UUID
+	WorkID     uuid.UUID
 	Name       string
 	WithheldAt time.Time
 }
@@ -153,7 +153,7 @@ func chooseTarget(accepted []string, offered []DeliveryTarget, hasOriginal bool)
 
 const rawLabel = "The creator's own file"
 
-// installs says whether the instance declared one of the capabilities the asset needs, or the asset needs none.
+// installs says whether the instance declared one of the capabilities the work needs, or the work needs none.
 func installs(capabilities []string, sendable Deliverable) bool {
 	if len(sendable.InstallCapabilities) == 0 {
 		return true

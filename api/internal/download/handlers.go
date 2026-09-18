@@ -183,11 +183,11 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 		value := string(*params.Nsfw)
 		requested = &value
 	}
-	visibility, ok := page.ReaderVisibility(c, h.accounts, requested)
+	preference, ok := page.ReaderNSFWPreference(c, h.accounts, requested)
 	if !ok {
 		return
 	}
-	offered, err := h.downloads.RecordedDownloads(c.Request.Context(), id, viewerID, number, visibility)
+	offered, err := h.downloads.RecordedDownloads(c.Request.Context(), id, viewerID, number, preference)
 	if errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 		return
@@ -196,14 +196,14 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
 		return
 	}
-	blocks, err := block.ToBlocks(offered.Kind, offered.Blocks)
+	blocks, err := block.ToBlocks(offered.Type, offered.Blocks)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the version's downloads.")
 		return
 	}
 	c.JSON(http.StatusOK, RecordedVersionDownloads{
 		Version:           page.ToRecordedVersion(offered.Version),
-		Kind:              RecordedVersionDownloadsKind(offered.Kind),
+		Type:              RecordedVersionDownloadsType(offered.Type),
 		LinkedInstallOnly: offered.LinkedInstallOnly,
 		Downloads:         page.ToDownloads(offered.Downloads),
 		AppTargets:        page.ToAppTargets(offered.AppTargets),
@@ -213,9 +213,9 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 }
 
 // LinkedInstanceFile hands a connected app the file it was sent
-func (h *Handlers) LinkedInstanceFile(c *gin.Context, assetID uuid.UUID, target string) {
+func (h *Handlers) LinkedInstanceFile(c *gin.Context, workID uuid.UUID, target string) {
 	if target == format.RawTarget {
-		download, err := h.downloads.SourceForLinkedInstance(c.Request.Context(), assetID)
+		download, err := h.downloads.SourceForLinkedInstance(c.Request.Context(), workID)
 		if err != nil {
 			Refuse(c, err)
 			return
@@ -223,7 +223,7 @@ func (h *Handlers) LinkedInstanceFile(c *gin.Context, assetID uuid.UUID, target 
 		h.HandOffSource(c, download)
 		return
 	}
-	download, err := h.downloads.OpenExportForLinkedInstance(c.Request.Context(), assetID, target)
+	download, err := h.downloads.OpenExportForLinkedInstance(c.Request.Context(), workID, target)
 	if err != nil {
 		Refuse(c, err)
 		return

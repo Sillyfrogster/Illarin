@@ -31,7 +31,7 @@ const sampleManifest = `{
 func TestSpindleDeclaresAWriterThatKeepsTheUpload(t *testing.T) {
 	t.Parallel()
 	declaration := Spindle{}.Declaration()
-	if declaration.ID != SpindleID || declaration.Kind != Kind ||
+	if declaration.ID != SpindleID || declaration.Type != Type ||
 		!declaration.Direction.Read || !declaration.Direction.Write || !declaration.KeepsUpload {
 		t.Fatalf("declaration = %+v, want a reading writer that keeps the upload", declaration)
 	}
@@ -47,11 +47,11 @@ func TestSpindleReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T) {
 		"dist/frontend.js": "export default {}",
 	}))
 
-	if parsed.Kind != Kind || parsed.Format != SpindleID {
-		t.Fatalf("parsed kind and format = %q %q", parsed.Kind, parsed.Format)
+	if parsed.Type != Type || parsed.Format != SpindleID {
+		t.Fatalf("parsed kind and format = %q %q", parsed.Type, parsed.Format)
 	}
 	want := format.Header{
-		Name: "Quiet Toolbox", AssetVersion: "2.0.0", CreditedAuthor: "A developer",
+		Name: "Quiet Toolbox", WorkVersion: "2.0.0", CreditedAuthor: "A developer",
 		Blurb: "Small tools for a calmer chat.", Identifier: "quiet_toolbox",
 	}
 	if parsed.Header != want {
@@ -264,8 +264,8 @@ func TestSpindleSaysWhereAMisplacedManifestIs(t *testing.T) {
 func TestSpindleWritesTheUploadedArchiveUnchanged(t *testing.T) {
 	t.Parallel()
 	upload := spindleZip(t, map[string]string{"spindle.json": sampleManifest, "dist/frontend.js": ""})
-	written, err := Spindle{}.Write(context.Background(), format.ExportAsset{
-		Kind: Kind, Header: format.Header{Name: "A renamed listing"}, Upload: upload,
+	written, err := Spindle{}.Write(context.Background(), format.ExportWork{
+		Type: Type, Header: format.Header{Name: "A renamed listing"}, Upload: upload,
 	})
 	if err != nil {
 		t.Fatalf("write: %v", err)
@@ -275,7 +275,7 @@ func TestSpindleWritesTheUploadedArchiveUnchanged(t *testing.T) {
 		t.Fatalf("written = %d bytes %q %q, want the upload unchanged as a zip",
 			len(written.Body), written.MediaType, written.Extension)
 	}
-	if _, err := (Spindle{}).Write(context.Background(), format.ExportAsset{Kind: Kind}); err == nil {
+	if _, err := (Spindle{}).Write(context.Background(), format.ExportWork{Type: Type}); err == nil {
 		t.Fatal("writing with no upload succeeded")
 	}
 }

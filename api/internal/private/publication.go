@@ -16,22 +16,22 @@ type Querier interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }
 
-func ApplyPublishedPolicy(ctx context.Context, q Querier, assetID uuid.UUID, blocks []block.Block) error {
-	if err := restorePromptFragments(ctx, q, assetID, blocks, "asset_public.protected_content"); err != nil {
+func ApplyPublishedPolicy(ctx context.Context, q Querier, workID uuid.UUID, blocks []block.Block) error {
+	if err := restorePromptFragments(ctx, q, workID, blocks, "work_public.protected_content"); err != nil {
 		return err
 	}
-	_, err := ApplyRecordedPolicy(ctx, q, assetID, nil, blocks)
+	_, err := ApplyRecordedPolicy(ctx, q, workID, nil, blocks)
 	return err
 }
 
 func ApplyRecordedPolicy(
 	ctx context.Context,
 	q Querier,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	snapshotID *uuid.UUID,
 	blocks []block.Block,
 ) (bool, error) {
-	uncertain, err := markCurrentProtection(ctx, q, assetID, snapshotID, blocks)
+	uncertain, err := markCurrentProtection(ctx, q, workID, snapshotID, blocks)
 	if err != nil {
 		return false, err
 	}
@@ -46,15 +46,15 @@ func ApplyRecordedPolicy(
 func markCurrentProtection(
 	ctx context.Context,
 	q Querier,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	snapshotID *uuid.UUID,
 	blocks []block.Block,
 ) (bool, error) {
-	current, err := currentPrompts(ctx, q, assetID)
+	current, err := currentPrompts(ctx, q, workID)
 	if err != nil {
 		return false, err
 	}
-	settled, standsFor, err := correspondence(ctx, q, assetID, snapshotID)
+	settled, standsFor, err := correspondence(ctx, q, workID, snapshotID)
 	if err != nil {
 		return false, err
 	}
@@ -80,7 +80,7 @@ func markCurrentProtection(
 
 func RestoreRecordedPrompts(payloads []byte, blocks []block.Block) error {
 	var recorded []struct {
-		OwnerKind string          `json:"owner_kind"`
+		OwnerType string          `json:"owner_type"`
 		OwnerID   uuid.UUID       `json:"owner_id"`
 		Payload   json.RawMessage `json:"payload"`
 	}
@@ -89,7 +89,7 @@ func RestoreRecordedPrompts(payloads []byte, blocks []block.Block) error {
 	}
 	texts := map[uuid.UUID]string{}
 	for _, item := range recorded {
-		if item.OwnerKind != promptOwnerKind {
+		if item.OwnerType != promptOwnerType {
 			continue
 		}
 		var held struct {
@@ -112,7 +112,7 @@ func RestoreRecordedPrompts(payloads []byte, blocks []block.Block) error {
 func PrepareRestoration(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	snapshotID uuid.UUID,
 	payloads []byte,
 	blocks []block.Block,
@@ -120,7 +120,7 @@ func PrepareRestoration(
 	if err := RestoreRecordedPrompts(payloads, blocks); err != nil {
 		return err
 	}
-	if _, err := markCurrentProtection(ctx, tx, assetID, &snapshotID, blocks); err != nil {
+	if _, err := markCurrentProtection(ctx, tx, workID, &snapshotID, blocks); err != nil {
 		return err
 	}
 	sealed := map[uuid.UUID]promptValue{}
@@ -131,22 +131,22 @@ func PrepareRestoration(
 		}
 	})
 	if len(sealed) == 0 {
-		_, err := tx.Exec(ctx, `delete from protected_content where asset_id = $1`, assetID)
+		_, err := tx.Exec(ctx, `delete from protected_content where work_id = $1`, workID)
 		return err
 	}
-	return replacePromptPayloads(ctx, tx, assetID, sealed)
+	return replacePromptPayloads(ctx, tx, workID, sealed)
 }
 
 func UnsealedFragments(
 	ctx context.Context,
 	q Querier,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	blocks []block.Block,
 ) ([]string, error) {
 	rows, err := q.Query(ctx, `
 		select owner_id from protected_content
-		 where asset_id = $1 and owner_kind = $2 and payload_type = $3
-	`, assetID, promptOwnerKind, promptPayload)
+		 where work_id = $1 and owner_type = $2 and payload_type = $3
+	`, workID, promptOwnerType, promptPayload)
 	if err != nil {
 		return nil, fmt.Errorf("read sealed prompts: %w", err)
 	}
@@ -182,12 +182,12 @@ func PromptName(fragment block.PromptFragment) string {
 func UnsealedReplacement(
 	ctx context.Context,
 	q Querier,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	blocks []block.Block,
 	identities map[uuid.UUID]string,
 	imports []format.ProtectedPrompt,
 ) ([]string, error) {
-	current, err := currentPrompts(ctx, q, assetID)
+	current, err := currentPrompts(ctx, q, workID)
 	if err != nil {
 		return nil, err
 	}
@@ -220,8 +220,8 @@ func UnsealedReplacement(
 	}
 	rows, err := q.Query(ctx, `
 		select owner_id, coalesce(source_key, '') from protected_content
-		 where asset_id = $1 and owner_kind = $2 and payload_type = $3
-	`, assetID, promptOwnerKind, promptPayload)
+		 where work_id = $1 and owner_type = $2 and payload_type = $3
+	`, workID, promptOwnerType, promptPayload)
 	if err != nil {
 		return nil, fmt.Errorf("read replacement protection: %w", err)
 	}
@@ -248,8 +248,8 @@ func UnsealedReplacement(
 	return exposed, rows.Err()
 }
 
-func SealedPrompts(ctx context.Context, q Querier, assetID uuid.UUID) (map[uuid.UUID]string, error) {
-	current, err := currentPrompts(ctx, q, assetID)
+func SealedPrompts(ctx context.Context, q Querier, workID uuid.UUID) (map[uuid.UUID]string, error) {
+	current, err := currentPrompts(ctx, q, workID)
 	if err != nil {
 		return nil, err
 	}
@@ -267,9 +267,9 @@ type promptState struct {
 	name   string
 }
 
-func currentPrompts(ctx context.Context, q Querier, assetID uuid.UUID) (map[uuid.UUID]promptState, error) {
+func currentPrompts(ctx context.Context, q Querier, workID uuid.UUID) (map[uuid.UUID]promptState, error) {
 	rows, err := q.Query(ctx,
-		`select elements from public.asset_blocks where asset_id = $1`, assetID)
+		`select elements from public.work_blocks where work_id = $1`, workID)
 	if err != nil {
 		return nil, fmt.Errorf("read current prompt protection: %w", err)
 	}
@@ -302,15 +302,15 @@ func currentPrompts(ctx context.Context, q Querier, assetID uuid.UUID) (map[uuid
 func correspondence(
 	ctx context.Context,
 	q Querier,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	snapshotID *uuid.UUID,
 ) (map[uuid.UUID]bool, map[uuid.UUID]uuid.UUID, error) {
 	rows, err := q.Query(ctx, `
 		select match.current_fragment_id, match.recorded_fragment_id
-		  from asset_snapshot_prompt_matches match
-		  join public.assets owner on owner.id = $1
+		  from work_snapshot_prompt_matches match
+		  join public.works owner on owner.id = $1
 		 where match.snapshot_id = coalesce($2, owner.published_snapshot_id)
-	`, assetID, snapshotID)
+	`, workID, snapshotID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read recorded prompt correspondence: %w", err)
 	}

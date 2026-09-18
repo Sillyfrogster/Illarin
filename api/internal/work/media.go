@@ -33,7 +33,7 @@ const (
 
 type Media struct {
 	ID                uuid.UUID
-	AssetID           uuid.UUID
+	WorkID            uuid.UUID
 	Role              MediaRole
 	Width             int
 	Height            int
@@ -42,7 +42,7 @@ type Media struct {
 
 type AddMediaInput struct {
 	OwnerID uuid.UUID
-	AssetID uuid.UUID
+	WorkID  uuid.UUID
 	Role    MediaRole
 	File    io.Reader
 }
@@ -93,9 +93,9 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 	var withheldAt pgtype.Timestamptz
 	err := s.pool.QueryRow(ctx, `
 		select withheld_at
-		  from assets
+		  from works
 		 where id = $1 and owner_id = $2 and deleted_at is null
-	`, in.AssetID, in.OwnerID).Scan(&withheldAt)
+	`, in.WorkID, in.OwnerID).Scan(&withheldAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Media{}, ErrMediaNotFound
 	}
@@ -103,7 +103,7 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 		return Media{}, fmt.Errorf("check media owner: %w", err)
 	}
 	if withheldAt.Valid {
-		return Media{}, ErrAssetFrozen
+		return Media{}, ErrWorkFrozen
 	}
 
 	stored, prepared, err := s.media.Accept(ctx, in.File)
@@ -120,70 +120,70 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 	if err := s.EnsureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
 		return Media{}, err
 	}
-	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.AssetID); err != nil {
+	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.WorkID); err != nil {
 		return Media{}, err
 	}
-	fingerprint, err := s.contentFingerprint(ctx, tx, in.AssetID)
+	fingerprint, err := s.contentFingerprint(ctx, tx, in.WorkID)
 	if err != nil {
 		return Media{}, err
 	}
 	id := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into asset_media (id, asset_id, role, width, height, blob_id)
+		insert into work_media (id, work_id, role, width, height, blob_id)
 		values ($1, $2, $3, $4, $5, $6)
-	`, id, in.AssetID, in.Role, prepared.Width, prepared.Height, stored.ID)
+	`, id, in.WorkID, in.Role, prepared.Width, prepared.Height, stored.ID)
 	if err != nil {
 		return Media{}, fmt.Errorf("record media: %w", err)
 	}
 	switch in.Role {
 	case MediaAvatar:
-		if err := supersedeCoverMedia(ctx, tx, in.AssetID, id); err != nil {
+		if err := supersedeCoverMedia(ctx, tx, in.WorkID, id); err != nil {
 			return Media{}, err
 		}
-		if err := setCoverMedia(ctx, tx, in.AssetID, &id); err != nil {
+		if err := setCoverMedia(ctx, tx, in.WorkID, &id); err != nil {
 			return Media{}, err
 		}
 	case MediaAvatarAlt:
-		if err := setAlternateCoverMedia(ctx, tx, in.AssetID, id); err != nil {
+		if err := setAlternateCoverMedia(ctx, tx, in.WorkID, id); err != nil {
 			return Media{}, err
 		}
 	}
-	if err := s.moveContentGeneration(ctx, tx, in.AssetID, fingerprint); err != nil {
+	if err := s.moveContentGeneration(ctx, tx, in.WorkID, fingerprint); err != nil {
 		return Media{}, err
 	}
-	if err := candidate.Commit(ctx, tx, in.AssetID); err != nil {
+	if err := candidate.Commit(ctx, tx, in.WorkID); err != nil {
 		return Media{}, fmt.Errorf("commit media addition: %w", err)
 	}
 	return Media{
-		ID: id, AssetID: in.AssetID, Role: in.Role,
+		ID: id, WorkID: in.WorkID, Role: in.Role,
 		Width: prepared.Width, Height: prepared.Height,
 		DerivativeVersion: mediaproc.DerivativeVersion,
 	}, nil
 }
 
-func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uuid.UUID) ([]Media, error) {
-	var foundAssetID uuid.UUID
+func (s *Service) ListMedia(ctx context.Context, workID uuid.UUID, viewerID *uuid.UUID) ([]Media, error) {
+	var foundWorkID uuid.UUID
 	err := s.pool.QueryRow(ctx,
 		`select id
-		   from assets
+		   from works
 		  where id = $1 and deleted_at is null
 		    and (lifecycle = 'published' or owner_id = $2)
-		    and (withheld_at is null or owner_id = $2)`, assetID, viewerID,
-	).Scan(&foundAssetID)
+		    and (withheld_at is null or owner_id = $2)`, workID, viewerID,
+	).Scan(&foundWorkID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("find asset media: %w", err)
+		return nil, fmt.Errorf("find work media: %w", err)
 	}
 	rows, err := s.pool.Query(ctx, `
-		select id, asset_id, role, width, height
-		  from asset_public.asset_media
-		 where asset_id = $1 and is_current
+		select id, work_id, role, width, height
+		  from work_public.work_media
+		 where work_id = $1 and is_current
 		 order by created_at, id
-	`, foundAssetID)
+	`, foundWorkID)
 	if err != nil {
-		return nil, fmt.Errorf("list asset media: %w", err)
+		return nil, fmt.Errorf("list work media: %w", err)
 	}
 	defer rows.Close()
 	media := make([]Media, 0)
@@ -191,9 +191,9 @@ func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uu
 		var found Media
 		var width, height pgtype.Int4
 		if err := rows.Scan(
-			&found.ID, &found.AssetID, &found.Role, &width, &height,
+			&found.ID, &found.WorkID, &found.Role, &width, &height,
 		); err != nil {
-			return nil, fmt.Errorf("read asset media: %w", err)
+			return nil, fmt.Errorf("read work media: %w", err)
 		}
 		if !width.Valid || !height.Valid {
 			return nil, fmt.Errorf("media %s has no native dimensions", found.ID)
@@ -204,7 +204,7 @@ func (s *Service) ListMedia(ctx context.Context, assetID uuid.UUID, viewerID *uu
 		media = append(media, found)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("list asset media: %w", err)
+		return nil, fmt.Errorf("list work media: %w", err)
 	}
 	return media, nil
 }
@@ -286,18 +286,18 @@ func ElementsForExtractedMedia(media []PreparedMedia) []block.Element {
 	return elements
 }
 
-func insertAssetMedia(
+func insertWorkMedia(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	media []PreparedMedia,
 ) error {
 	for _, item := range media {
 		_, err := tx.Exec(ctx, `
-			insert into asset_media
-			  (id, asset_id, role, width, height, blob_id, is_extracted)
+			insert into work_media
+			  (id, work_id, role, width, height, blob_id, is_extracted)
 			values ($1, $2, $3, $4, $5, $6, $7)
-		`, item.ID, assetID, item.Role, item.Width, item.Height, item.BlobID, !item.Seeded)
+		`, item.ID, workID, item.Role, item.Width, item.Height, item.BlobID, !item.Seeded)
 		if err != nil {
 			return fmt.Errorf("record extracted media: %w", err)
 		}
@@ -306,24 +306,24 @@ func insertAssetMedia(
 }
 
 // supersedeCoverMedia retires the picture a new display picture replaces.
-func supersedeCoverMedia(ctx context.Context, tx pgx.Tx, assetID, keep uuid.UUID) error {
+func supersedeCoverMedia(ctx context.Context, tx pgx.Tx, workID, keep uuid.UUID) error {
 	if _, err := tx.Exec(ctx, `
-		update asset_media
+		update work_media
 		   set is_current = false
-		 where asset_id = $1 and id <> $2 and is_current
+		 where work_id = $1 and id <> $2 and is_current
 		   and role in ('avatar', 'avatar_alt')
-	`, assetID, keep); err != nil {
+	`, workID, keep); err != nil {
 		return fmt.Errorf("supersede cover media: %w", err)
 	}
 	return nil
 }
 
-func supersedeExtractedMedia(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
+func supersedeExtractedMedia(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
 	if _, err := tx.Exec(ctx, `
-		update asset_media
+		update work_media
 		   set is_current = false
-		 where asset_id = $1 and is_extracted and is_current
-	`, assetID); err != nil {
+		 where work_id = $1 and is_extracted and is_current
+	`, workID); err != nil {
 		return fmt.Errorf("supersede extracted media: %w", err)
 	}
 	return nil
@@ -352,18 +352,18 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 	var private, owner, draft bool
 	err := s.pool.QueryRow(ctx, `
 		select media.blob_id, blob.sha256,
-		       asset.lifecycle = 'draft' or not exists (
-		           select 1 from asset_snapshot_media recorded
-		           join asset_snapshots snapshot on snapshot.id = recorded.snapshot_id
-		           where recorded.asset_id = asset.id and recorded.media_id = media.id
+		       work.lifecycle = 'draft' or not exists (
+		           select 1 from work_snapshot_media recorded
+		           join work_snapshots snapshot on snapshot.id = recorded.snapshot_id
+		           where recorded.work_id = work.id and recorded.media_id = media.id
 		             and snapshot.withdrawn_at is null
-		       ), coalesce(asset.owner_id = $2, false), asset.lifecycle = 'draft'
-		  from asset_media media
-		  join assets asset on asset.id = media.asset_id
+		       ), coalesce(work.owner_id = $2, false), work.lifecycle = 'draft'
+		  from work_media media
+		  join works work on work.id = media.work_id
 		  join blobs blob on blob.id = media.blob_id
 		 where media.id = $1
-		   and asset.deleted_at is null
-		   and (asset.withheld_at is null or asset.owner_id = $2)
+		   and work.deleted_at is null
+		   and (work.withheld_at is null or work.owner_id = $2)
 	`, in.MediaID, in.ViewerID).Scan(&blobID, &digestBytes, &private, &owner, &draft)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MediaDownload{}, ErrMediaNotFound

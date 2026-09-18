@@ -5,28 +5,28 @@ import (
 	"github.com/google/uuid"
 )
 
-type AddAssetBlockRequest struct {
+type AddWorkBlockRequest struct {
 	Definition  string            `json:"definition"`
 	ElementType block.ElementType `json:"elementType"`
 }
 
-type ArrangeAssetBlocksRequest struct {
+type ArrangeWorkBlocksRequest struct {
 	Blocks []struct {
-		Hidden bool                                 `json:"hidden"`
-		Id     uuid.UUID                            `json:"id"`
-		Width  ArrangeAssetBlocksRequestBlocksWidth `json:"width"`
+		Hidden bool                                `json:"hidden"`
+		Id     uuid.UUID                           `json:"id"`
+		Width  ArrangeWorkBlocksRequestBlocksWidth `json:"width"`
 	} `json:"blocks"`
 }
 
-type ArrangeAssetBlocksRequestBlocksWidth string
+type ArrangeWorkBlocksRequestBlocksWidth string
 
 const (
-	ArrangeAssetBlocksRequestBlocksWidthFull      ArrangeAssetBlocksRequestBlocksWidth = "full"
-	ArrangeAssetBlocksRequestBlocksWidthHalf      ArrangeAssetBlocksRequestBlocksWidth = "half"
-	ArrangeAssetBlocksRequestBlocksWidthThird     ArrangeAssetBlocksRequestBlocksWidth = "third"
-	ArrangeAssetBlocksRequestBlocksWidthTwoThirds ArrangeAssetBlocksRequestBlocksWidth = "two_thirds"
+	ArrangeWorkBlocksRequestBlocksWidthFull      ArrangeWorkBlocksRequestBlocksWidth = "full"
+	ArrangeWorkBlocksRequestBlocksWidthHalf      ArrangeWorkBlocksRequestBlocksWidth = "half"
+	ArrangeWorkBlocksRequestBlocksWidthThird     ArrangeWorkBlocksRequestBlocksWidth = "third"
+	ArrangeWorkBlocksRequestBlocksWidthTwoThirds ArrangeWorkBlocksRequestBlocksWidth = "two_thirds"
 )
 
-type MoveAssetBlockContentRequest struct {
+type MoveWorkBlockContentRequest struct {
 	DestinationBlockId uuid.UUID `json:"destinationBlockId"`
 }

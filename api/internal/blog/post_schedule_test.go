@@ -447,7 +447,7 @@ func TestAScheduledEditionKeepsItsPicturesAfterTheWorkingCopyDropsThem(t *testin
 	if held != 1 {
 		t.Fatalf("the scheduled edition refers to %d pictures, want 1", held)
 	}
-	if _, err := sweeper(stack.handlers.Assets).Sweep(t.Context()); err != nil {
+	if _, err := sweeper(stack.handlers.Works).Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	var blob *string

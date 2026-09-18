@@ -16,7 +16,7 @@ func (s *Apps) Refresh(ctx context.Context, source, refreshToken string) (TokenG
 	if err := s.takeRate(ctx, "refresh", source, 600, time.Hour); err != nil {
 		return TokenGrant{}, err
 	}
-	oldHash, ok := credentialHash(refreshToken, refreshTokenKind)
+	oldHash, ok := credentialHash(refreshToken, refreshTokenType)
 	if !ok {
 		return TokenGrant{}, ErrInstanceCredential
 	}
@@ -97,11 +97,11 @@ func rotateRefreshGrant(
 	instance db.LockLinkedInstanceByRefreshTokenRow,
 	oldHash []byte,
 ) (TokenGrant, error) {
-	accessToken, _, accessHash, err := newCredential(accessTokenKind)
+	accessToken, _, accessHash, err := newCredential(accessTokenType)
 	if err != nil {
 		return TokenGrant{}, err
 	}
-	refreshToken, refreshPrefix, refreshHash, err := newCredential(refreshTokenKind)
+	refreshToken, refreshPrefix, refreshHash, err := newCredential(refreshTokenType)
 	if err != nil {
 		return TokenGrant{}, err
 	}
@@ -139,7 +139,7 @@ func rotateRefreshGrant(
 }
 
 func (s *Apps) Authenticate(ctx context.Context, token string, needs Scope) (Instance, error) {
-	hash, ok := credentialHash(token, accessTokenKind)
+	hash, ok := credentialHash(token, accessTokenType)
 	if !ok {
 		return Instance{}, ErrInstanceCredential
 	}
@@ -172,11 +172,11 @@ func issueGrant(
 	declaration Declaration,
 	scopes []Scope,
 ) (TokenGrant, error) {
-	accessToken, _, accessHash, err := newCredential(accessTokenKind)
+	accessToken, _, accessHash, err := newCredential(accessTokenType)
 	if err != nil {
 		return TokenGrant{}, err
 	}
-	refreshToken, refreshPrefix, refreshHash, err := newCredential(refreshTokenKind)
+	refreshToken, refreshPrefix, refreshHash, err := newCredential(refreshTokenType)
 	if err != nil {
 		return TokenGrant{}, err
 	}

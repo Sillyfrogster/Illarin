@@ -17,7 +17,7 @@ import (
 
 const (
 	ID   = "lorebook"
-	Kind = "lorebook"
+	Type = "lorebook"
 )
 
 const (
@@ -33,10 +33,10 @@ func (Module) ID() string { return ID }
 
 func (Module) Declaration() format.Declaration {
 	return format.Declaration{
-		ID: ID, Label: "Lorebook", Kind: Kind,
+		ID: ID, Label: "Lorebook", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind:       format.RecognitionSignature,
+			Type:       format.RecognitionSignature,
 			Containers: []format.Container{format.JSON},
 			Required:   map[string]format.ValueType{entriesKey: format.ValueArray},
 		}},
@@ -105,7 +105,7 @@ func (m Module) Parse(
 	}
 	seeded := blurb(source)
 	return format.Parsed{
-		Kind: Kind, Format: ID,
+		Type: Type, Format: ID,
 		Header:    format.Header{Name: strings.TrimSpace(name), Blurb: seeded},
 		Elements:  []block.Element{element},
 		Remainder: remainder(source, entries, entryFields),
@@ -136,12 +136,12 @@ func remainder(
 	if len(source) > 0 {
 		payload, _ := json.Marshal(source)
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: bookNamespace, Payload: payload,
+			Owner: format.OwnerWork, Namespace: bookNamespace, Payload: payload,
 		})
 	}
 	for _, namespace := range slices.Sorted(maps.Keys(extensions)) {
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: namespace, Payload: extensions[namespace],
+			Owner: format.OwnerWork, Namespace: namespace, Payload: extensions[namespace],
 		})
 	}
 	for _, entry := range entries {

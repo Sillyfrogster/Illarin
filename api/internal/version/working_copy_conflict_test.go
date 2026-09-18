@@ -71,7 +71,7 @@ func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) 
 			if conflict.Code != "working_copy_conflict" || conflict.CurrentVersion == nil || strconv.FormatInt(*conflict.CurrentVersion, 10) != responses[winner].Header().Get("X-Working-Copy-Version") {
 				t.Fatalf("conflict lacks the winning version: %+v", conflict)
 			}
-			page := apitest.FetchStartedAsset(t, r, session, started.ID)
+			page := apitest.FetchStartedWork(t, r, session, started.ID)
 			wantName := "First editor"
 			wantBlurb := "First pitch"
 			if winner == 1 {

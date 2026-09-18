@@ -48,10 +48,10 @@ func (SillyTavernModule) ID() string { return SillyTavernID }
 
 func (SillyTavernModule) Declaration() format.Declaration {
 	return format.Declaration{
-		ID: SillyTavernID, Label: "SillyTavern lorebook", Kind: Kind,
+		ID: SillyTavernID, Label: "SillyTavern lorebook", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind:       format.RecognitionSignature,
+			Type:       format.RecognitionSignature,
 			Containers: []format.Container{format.JSON},
 			Required:   map[string]format.ValueType{entriesKey: format.ValueObject},
 		}},
@@ -120,7 +120,7 @@ func (m SillyTavernModule) Parse(
 		Content: block.EntryTable{Entries: entries},
 	}
 	return format.Parsed{
-		Kind: Kind, Format: SillyTavernID,
+		Type: Type, Format: SillyTavernID,
 		Elements:  []block.Element{element},
 		Remainder: sillyTavernRemainder(source, entries, leftovers),
 	}, nil
@@ -196,7 +196,7 @@ func sillyTavernRemainder(
 	if len(source) > 0 {
 		payload, _ := json.Marshal(source)
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: bookNamespace, Payload: payload,
+			Owner: format.OwnerWork, Namespace: bookNamespace, Payload: payload,
 		})
 	}
 	for _, entry := range entries {
@@ -214,9 +214,9 @@ func sillyTavernRemainder(
 
 func (SillyTavernModule) Write(
 	_ context.Context,
-	asset format.ExportAsset,
+	work format.ExportWork,
 ) (format.Artifact, error) {
-	entries := bookEntries(asset)
+	entries := bookEntries(work)
 	written := make([]map[string]json.RawMessage, 0, len(entries))
 	for _, entry := range entries {
 		written = append(written, writeSillyTavernEntry(entry))
@@ -227,13 +227,13 @@ func (SillyTavernModule) Write(
 	for index, entry := range entries {
 		position[entry.ID] = index
 	}
-	for _, row := range asset.Preserved {
+	for _, row := range work.Preserved {
 		var fields map[string]json.RawMessage
 		if json.Unmarshal(row.Payload, &fields) != nil {
 			continue
 		}
 		switch {
-		case row.Owner == format.OwnerAsset && row.Namespace == bookNamespace:
+		case row.Owner == format.OwnerWork && row.Namespace == bookNamespace:
 			keys.MergeAbsent(body, fields)
 		case row.Owner == format.OwnerItem && row.Namespace == sillyTavernEntryNamespace:
 			index, kept := position[row.OwnerID]

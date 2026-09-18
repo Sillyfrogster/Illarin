@@ -53,10 +53,10 @@ func (s *Service) AddChannel(
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
 		insert into publication_destinations
-		       (id, kind, name, host, address, events, state, verified_at,
+		       (id, type, name, host, address, events, state, verified_at,
 		        guild_id, channel_id, webhook_name, role_id, role_name, created_by)
 		values ($1, $2, $3, $4, $5, $6, $7, now(), $8, $9, $10, $11, $12, $13)
-	`, id, KindDiscord, name, discordHost, sealed, []string{EventPublished}, DestinationActive,
+	`, id, TypeDiscord, name, discordHost, sealed, []string{EventPublished}, DestinationActive,
 		found.GuildID, found.ChannelID, found.Name, role.id, role.name, actor)
 	if err != nil {
 		return Destination{}, fmt.Errorf("record the Discord destination: %w", err)
@@ -83,7 +83,7 @@ func (s *Service) UpdateChannel(
 	if err != nil {
 		return Destination{}, err
 	}
-	if current.Kind != KindDiscord {
+	if current.Type != TypeDiscord {
 		return Destination{}, ErrNotDiscord
 	}
 	name := checkDestinationName(in.Name)

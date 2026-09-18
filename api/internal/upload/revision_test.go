@@ -25,7 +25,7 @@ func revisionOwner(t *testing.T, svc *Service, handle string) uuid.UUID {
 	return ownerID
 }
 
-func ingestOne(t *testing.T, svc *Service, ownerID uuid.UUID, filename string, file []byte) work.Asset {
+func ingestOne(t *testing.T, svc *Service, ownerID uuid.UUID, filename string, file []byte) work.Work {
 	t.Helper()
 	operation, err := svc.AcceptIngest(context.Background(), IngestInput{
 		OwnerID: ownerID, Filename: filename, File: bytes.NewReader(file),
@@ -40,13 +40,13 @@ func ingestOne(t *testing.T, svc *Service, ownerID uuid.UUID, filename string, f
 	if err != nil {
 		t.Fatalf("GetIngest: %v", err)
 	}
-	if operation.Asset == nil {
+	if operation.Work == nil {
 		t.Fatalf("ingest did not create an asset: %+v", operation)
 	}
-	return *operation.Asset
+	return *operation.Work
 }
 
-func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created work.Asset) {
+func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created work.Work) {
 	t.Helper()
 	name := created.Name
 	if name == "" {
@@ -54,7 +54,7 @@ func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created work
 	}
 	nsfw := false
 	if err := works(svc).SetIdentity(context.Background(), page.Identity{
-		OwnerID: ownerID, AssetID: created.ID, Name: name, Blurb: created.Blurb, IsNSFW: &nsfw,
+		OwnerID: ownerID, WorkID: created.ID, Name: name, Blurb: created.Blurb, IsNSFW: &nsfw,
 	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("SetIdentity imported asset: %v", err)
 	}
@@ -66,14 +66,14 @@ func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created work
 func addRevision(
 	t *testing.T,
 	svc *Service,
-	ownerID, assetID uuid.UUID,
+	ownerID, workID uuid.UUID,
 	filename string,
 	file []byte,
 ) Operation {
 	t.Helper()
 	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: ownerID, AssetID: assetID, Filename: filename, File: bytes.NewReader(file),
-	}, currentCandidate(t, svc, assetID))
+		OwnerID: ownerID, WorkID: workID, Filename: filename, File: bytes.NewReader(file),
+	}, currentCandidate(t, svc, workID))
 	if err != nil {
 		t.Fatalf("AcceptRevision: %v", err)
 	}
@@ -85,7 +85,7 @@ func addRevision(
 		t.Fatalf("GetIngest: %v", err)
 	}
 	if got.Status == IngestPreview {
-		got, err = svc.AcceptReplacement(context.Background(), ownerID, assetID, operation.ID, currentCandidate(t, svc, assetID), nil, false)
+		got, err = svc.AcceptReplacement(context.Background(), ownerID, workID, operation.ID, currentCandidate(t, svc, workID), nil, false)
 		if err != nil {
 			t.Fatalf("AcceptReplacement: %v", err)
 		}
@@ -96,7 +96,7 @@ func addRevision(
 func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.T) {
 	t.Parallel()
 	registry := registryWithModule(t, recognizedModule{parsed: format.Parsed{
-		Kind: "character", Format: "recognized", Header: format.Header{Name: "Seeded", Blurb: "Seeded blurb"},
+		Type: "character", Format: "recognized", Header: format.Header{Name: "Seeded", Blurb: "Seeded blurb"},
 		Elements: []block.Element{
 			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Description"}},
 			{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Hello"}}}},
@@ -108,29 +108,29 @@ func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.
 	publishImported(t, svc, ownerID, created)
 
 	operation := addRevision(t, svc, ownerID, created.ID, "card.json", []byte(`{"spec":"x","take":2}`))
-	if operation.Status != IngestSuccess || operation.Asset == nil {
+	if operation.Status != IngestSuccess || operation.Work == nil {
 		t.Fatalf("revision operation = %+v, want success", operation)
 	}
-	if operation.Asset.ID != created.ID {
-		t.Fatalf("revision made asset %s, want %s", operation.Asset.ID, created.ID)
+	if operation.Work.ID != created.ID {
+		t.Fatalf("revision made asset %s, want %s", operation.Work.ID, created.ID)
 	}
-	if operation.Asset.CurrentRevisionID == created.CurrentRevisionID {
+	if operation.Work.CurrentRevisionID == created.CurrentRevisionID {
 		t.Fatal("the asset still points at its first revision")
 	}
-	if operation.Asset.Name != created.Name || operation.Asset.Blurb != created.Blurb {
-		t.Fatalf("catalog metadata was re-seeded: %+v", operation.Asset)
+	if operation.Work.Name != created.Name || operation.Work.Blurb != created.Blurb {
+		t.Fatalf("the details were re-seeded: %+v", operation.Work)
 	}
 
 	var revisions int
 	if err := pool.QueryRow(context.Background(),
-		`select count(*) from asset_revisions where asset_id = $1`, created.ID).Scan(&revisions); err != nil {
+		`select count(*) from work_revisions where work_id = $1`, created.ID).Scan(&revisions); err != nil {
 		t.Fatalf("count revisions: %v", err)
 	}
 	if revisions != 2 {
 		t.Fatalf("revision count = %d, want 2", revisions)
 	}
 
-	source, err := svc.assets.OpenSource(context.Background(), created.ID)
+	source, err := svc.works.OpenSource(context.Background(), created.ID)
 	if err != nil {
 		t.Fatalf("OpenSource: %v", err)
 	}
@@ -144,12 +144,12 @@ func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.
 	}
 }
 
-func TestARevisionResolvingToADifferentKindIsRejected(t *testing.T) {
+func TestARevisionResolvingToADifferentTypeIsRejected(t *testing.T) {
 	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range []format.Module{
-		kindModule{id: "as_character", kind: "character"},
-		kindModule{id: "as_lorebook", kind: "lorebook"},
+		typeModule{id: "as_character", workType: "character"},
+		typeModule{id: "as_lorebook", workType: "lorebook"},
 	} {
 		if err := registry.Register(module); err != nil {
 			t.Fatalf("register: %v", err)
@@ -167,23 +167,23 @@ func TestARevisionResolvingToADifferentKindIsRejected(t *testing.T) {
 		t.Fatalf("revision failure = %+v, want wrong_kind", operation.Failure)
 	}
 
-	var kind string
+	var workType string
 	var currentRevisionID uuid.UUID
 	var revisions int
 	err := pool.QueryRow(context.Background(), `
-		select kind, current_revision_id,
-		       (select count(*) from asset_revisions where asset_id = assets.id)
-		  from assets where id = $1
-	`, created.ID).Scan(&kind, &currentRevisionID, &revisions)
+		select type, current_revision_id,
+		       (select count(*) from work_revisions where work_id = works.id)
+		  from works where id = $1
+	`, created.ID).Scan(&workType, &currentRevisionID, &revisions)
 	if err != nil {
 		t.Fatalf("read asset: %v", err)
 	}
-	if kind != "character" || currentRevisionID != created.CurrentRevisionID || revisions != 1 {
-		t.Fatalf("asset changed: kind %s, current %s, revisions %d", kind, currentRevisionID, revisions)
+	if workType != "character" || currentRevisionID != created.CurrentRevisionID || revisions != 1 {
+		t.Fatalf("asset changed: kind %s, current %s, revisions %d", workType, currentRevisionID, revisions)
 	}
 }
 
-func TestAReplacementFileBecomesTheAssetsOrigin(t *testing.T) {
+func TestAReplacementFileBecomesTheWorksOrigin(t *testing.T) {
 	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
@@ -206,7 +206,7 @@ func TestAReplacementFileBecomesTheAssetsOrigin(t *testing.T) {
 	}
 	var origin, version string
 	if err := pool.QueryRow(context.Background(), `
-		select origin_format, asset_version from assets where id = $1
+		select origin_format, work_version from works where id = $1
 	`, created.ID).Scan(&origin, &version); err != nil {
 		t.Fatalf("read origin: %v", err)
 	}
@@ -215,15 +215,15 @@ func TestAReplacementFileBecomesTheAssetsOrigin(t *testing.T) {
 	}
 }
 
-func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheAsset(t *testing.T) {
+func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheWork(t *testing.T) {
 	t.Parallel()
-	registry := registryWithModule(t, kindModule{id: "as_character", kind: "character"})
+	registry := registryWithModule(t, typeModule{id: "as_character", workType: "character"})
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := revisionOwner(t, svc, "unsupported.revision.owner")
 	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
 
 	operation := addRevision(t, svc, ownerID, created.ID, "mystery.bin", []byte("nothing claims this"))
-	if operation.Status != IngestFailed || operation.Asset != nil {
+	if operation.Status != IngestFailed || operation.Work != nil {
 		t.Fatalf("revision operation = %+v, want failed without an asset", operation)
 	}
 	if operation.Failure == nil || operation.Failure.Reason != string(format.FailureUnsupportedFormat) {
@@ -234,8 +234,8 @@ func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheAsset(t *testing.T) {
 	var revisions int
 	err := pool.QueryRow(context.Background(), `
 		select current_revision_id,
-		       (select count(*) from asset_revisions where asset_id = assets.id)
-		  from assets where id = $1
+		       (select count(*) from work_revisions where work_id = works.id)
+		  from works where id = $1
 	`, created.ID).Scan(&currentRevisionID, &revisions)
 	if err != nil {
 		t.Fatalf("read asset: %v", err)
@@ -245,15 +245,15 @@ func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheAsset(t *testing.T) {
 	}
 }
 
-func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
+func TestOnlyTheOwnerOfALiveWorkCanAddARevision(t *testing.T) {
 	t.Parallel()
-	registry := registryWithModule(t, kindModule{id: "as_character", kind: "character"})
+	registry := registryWithModule(t, typeModule{id: "as_character", workType: "character"})
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := revisionOwner(t, svc, "guard.owner")
 	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
 
 	_, err := svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: uuid.New(), AssetID: created.ID, Filename: "card.json",
+		OwnerID: uuid.New(), WorkID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
 	}, currentCandidate(t, svc, created.ID))
 	if !errors.Is(err, work.ErrNotFound) {
@@ -261,32 +261,32 @@ func TestOnlyTheOwnerOfALiveAssetCanAddARevision(t *testing.T) {
 	}
 
 	if _, err := pool.Exec(context.Background(), `
-		update assets set withheld_at = now(), withheld_by = $2, withheld_reason = 'held'
+		update works set withheld_at = now(), withheld_by = $2, withheld_reason = 'held'
 		 where id = $1
 	`, created.ID, ownerID); err != nil {
 		t.Fatalf("withhold asset: %v", err)
 	}
 	_, err = svc.AcceptRevision(context.Background(), RevisionInput{
-		OwnerID: ownerID, AssetID: created.ID, Filename: "card.json",
+		OwnerID: ownerID, WorkID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
 	}, currentCandidate(t, svc, created.ID))
-	if !errors.Is(err, work.ErrAssetFrozen) {
+	if !errors.Is(err, work.ErrWorkFrozen) {
 		t.Fatalf("withheld revision error = %v, want asset.ErrAssetFrozen", err)
 	}
 }
 
-func TestReimportedMediaFillsTheAsset(t *testing.T) {
+func TestReimportedMediaFillsTheWork(t *testing.T) {
 	t.Parallel()
 	registry := registryWithModule(t, recognizedModule{parsed: format.Parsed{
-		Kind: "character", Format: "recognized",
+		Type: "character", Format: "recognized",
 		Media: []format.Media{{Role: work.MediaAvatar, ImageID: 0}},
 	}})
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := revisionOwner(t, svc, "scoped.owner")
 	first := archiveWithImage(t, testPNG(t, 40, 20, color.White))
 	created := ingestOne(t, svc, ownerID, "card.charx", first)
-	added, err := svc.assets.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaGallery,
+	added, err := svc.works.AddMedia(context.Background(), work.AddMediaInput{
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaGallery,
 		File: bytes.NewReader(testPNG(t, 50, 25, color.Gray{Y: 128})),
 	}, currentCandidate(t, svc, created.ID))
 	if err != nil {
@@ -295,10 +295,10 @@ func TestReimportedMediaFillsTheAsset(t *testing.T) {
 
 	second := archiveWithImage(t, testPNG(t, 60, 30, color.Black))
 	operation := addRevision(t, svc, ownerID, created.ID, "card.charx", second)
-	if operation.Status != IngestSuccess || operation.Asset == nil {
+	if operation.Status != IngestSuccess || operation.Work == nil {
 		t.Fatalf("revision operation = %+v, want success", operation)
 	}
-	media, err := svc.assets.ListMedia(context.Background(), created.ID, &ownerID)
+	media, err := svc.works.ListMedia(context.Background(), created.ID, &ownerID)
 	if err != nil {
 		t.Fatalf("list reimported media: %v", err)
 	}
@@ -307,8 +307,8 @@ func TestReimportedMediaFillsTheAsset(t *testing.T) {
 	}
 	foundCreatorMedia := false
 	for _, image := range media {
-		if image.AssetID != created.ID {
-			t.Fatalf("reimported media belongs to %s, want %s", image.AssetID, created.ID)
+		if image.WorkID != created.ID {
+			t.Fatalf("reimported media belongs to %s, want %s", image.WorkID, created.ID)
 		}
 		foundCreatorMedia = foundCreatorMedia || image.ID == added.ID
 	}
@@ -316,36 +316,36 @@ func TestReimportedMediaFillsTheAsset(t *testing.T) {
 		t.Fatalf("creator media %s disappeared on reimport", added.ID)
 	}
 
-	var previewAsset uuid.UUID
+	var previewWork uuid.UUID
 	var width int
 	err = pool.QueryRow(context.Background(), `
-		select media.asset_id, media.width
-		  from assets asset
-		  join asset_media media on media.id = asset.cover_media_id
-		 where asset.id = $1
-	`, created.ID).Scan(&previewAsset, &width)
+		select media.work_id, media.width
+		  from works work
+		  join work_media media on media.id = work.cover_media_id
+		 where work.id = $1
+	`, created.ID).Scan(&previewWork, &width)
 	if err != nil {
 		t.Fatalf("read cover media: %v", err)
 	}
-	if previewAsset != created.ID {
-		t.Fatalf("cover belongs to asset %s, want %s", previewAsset, created.ID)
+	if previewWork != created.ID {
+		t.Fatalf("cover belongs to asset %s, want %s", previewWork, created.ID)
 	}
 	if width != 60 {
 		t.Fatalf("cover media is %d wide, want the reimported picture", width)
 	}
 }
 
-type kindModule struct {
-	id   string
-	kind string
+type typeModule struct {
+	id       string
+	workType string
 }
 
-func (m kindModule) ID() string { return m.id }
-func (m kindModule) Declaration() format.Declaration {
-	return testReaderDeclaration(m.id, m.kind)
+func (m typeModule) ID() string { return m.id }
+func (m typeModule) Declaration() format.Declaration {
+	return testReaderDeclaration(m.id, m.workType)
 }
 
-func (m kindModule) Claim(file format.Inspection) (format.Claim, bool) {
+func (m typeModule) Claim(file format.Inspection) (format.Claim, bool) {
 	for _, payload := range file.Payloads {
 		if spec, _ := payload.String("spec"); spec == m.id {
 			return format.AuthoritativeClaim(payload, "spec")
@@ -354,6 +354,6 @@ func (m kindModule) Claim(file format.Inspection) (format.Claim, bool) {
 	return format.Claim{}, false
 }
 
-func (m kindModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
-	return format.Parsed{Kind: m.kind, Format: m.id}, nil
+func (m typeModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+	return format.Parsed{Type: m.workType, Format: m.id}, nil
 }

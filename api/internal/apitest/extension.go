@@ -8,13 +8,13 @@ import (
 )
 
 type ExtensionPage struct {
-	Kind                  string   `json:"kind"`
+	Type                  string   `json:"kind"`
 	Name                  string   `json:"name"`
 	Identifier            *string  `json:"identifier"`
 	InstalledAppVersions  []string `json:"installedAppVersions"`
 	ExtensionDependencies []struct {
-		Name   string `json:"name"`
-		Assets []struct {
+		Name  string `json:"name"`
+		Works []struct {
 			ID      string `json:"id"`
 			Name    string `json:"name"`
 			Creator string `json:"creator"`
@@ -32,9 +32,9 @@ type ExtensionPage struct {
 	} `json:"blocks"`
 }
 
-func ReadExtensionPage(t *testing.T, r http.Handler, session *http.Cookie, assetID string) ExtensionPage {
+func ReadExtensionPage(t *testing.T, r http.Handler, session *http.Cookie, workID string) ExtensionPage {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil)
 	if session != nil {
 		request = Authorized(request, session)
 	}

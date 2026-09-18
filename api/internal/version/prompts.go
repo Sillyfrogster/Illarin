@@ -35,27 +35,27 @@ type PromptCorrespondence struct {
 func (s *Service) ProtectionMismatches(
 	ctx context.Context,
 	ownerID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) ([]Mismatch, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	if err := ownedAsset(ctx, tx, ownerID, assetID); err != nil {
+	if err := ownedWork(ctx, tx, ownerID, workID); err != nil {
 		return nil, err
 	}
-	sealed, err := private.SealedPrompts(ctx, tx, assetID)
+	sealed, err := private.SealedPrompts(ctx, tx, workID)
 	if err != nil {
 		return nil, err
 	}
-	numbers, err := recordedNumbers(ctx, tx, assetID)
+	numbers, err := recordedNumbers(ctx, tx, workID)
 	if err != nil {
 		return nil, err
 	}
 	mismatches := make([]Mismatch, 0)
 	for _, number := range numbers {
-		version, err := work.ReadVersion(ctx, tx, assetID, number)
+		version, err := work.ReadVersion(ctx, tx, workID, number)
 		if err != nil {
 			return nil, err
 		}
@@ -90,7 +90,7 @@ func (s *Service) ProtectionMismatches(
 func (s *Service) ResolvePromptCorrespondence(
 	ctx context.Context,
 	ownerID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	number int,
 	answers []PromptCorrespondence,
 ) error {
@@ -99,14 +99,14 @@ func (s *Service) ResolvePromptCorrespondence(
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if err := ownedAsset(ctx, tx, ownerID, assetID); err != nil {
+	if err := ownedWork(ctx, tx, ownerID, workID); err != nil {
 		return err
 	}
-	sealed, err := private.SealedPrompts(ctx, tx, assetID)
+	sealed, err := private.SealedPrompts(ctx, tx, workID)
 	if err != nil {
 		return err
 	}
-	version, err := work.ReadVersion(ctx, tx, assetID, number)
+	version, err := work.ReadVersion(ctx, tx, workID, number)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (s *Service) ResolvePromptCorrespondence(
 			return ErrUnknownPrompt
 		}
 		if _, err := tx.Exec(ctx, `
-			insert into asset_snapshot_prompt_matches
+			insert into work_snapshot_prompt_matches
 				(snapshot_id, current_fragment_id, recorded_fragment_id)
 			values ($1, $2, $3)
 			on conflict (snapshot_id, current_fragment_id) do update
@@ -135,23 +135,23 @@ func (s *Service) ResolvePromptCorrespondence(
 	return tx.Commit(ctx)
 }
 
-func ownedAsset(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.UUID) error {
+func ownedWork(ctx context.Context, tx pgx.Tx, ownerID, workID uuid.UUID) error {
 	var found bool
 	err := tx.QueryRow(ctx, `
-		select true from assets where id = $1 and owner_id = $2 and deleted_at is null
-	`, assetID, ownerID).Scan(&found)
+		select true from works where id = $1 and owner_id = $2 and deleted_at is null
+	`, workID, ownerID).Scan(&found)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return work.ErrNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("read the asset to settle: %w", err)
+		return fmt.Errorf("read the work to settle: %w", err)
 	}
 	return nil
 }
 
-func recordedNumbers(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) ([]int, error) {
+func recordedNumbers(ctx context.Context, tx pgx.Tx, workID uuid.UUID) ([]int, error) {
 	rows, err := tx.Query(ctx,
-		`select number from asset_snapshots where asset_id = $1 order by number desc`, assetID)
+		`select number from work_snapshots where work_id = $1 order by number desc`, workID)
 	if err != nil {
 		return nil, fmt.Errorf("list the recorded versions: %w", err)
 	}
@@ -169,7 +169,7 @@ func recordedNumbers(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) ([]int, 
 
 func settledPrompts(ctx context.Context, tx pgx.Tx, snapshotID uuid.UUID) (map[uuid.UUID]bool, error) {
 	rows, err := tx.Query(ctx,
-		`select current_fragment_id from asset_snapshot_prompt_matches where snapshot_id = $1`,
+		`select current_fragment_id from work_snapshot_prompt_matches where snapshot_id = $1`,
 		snapshotID)
 	if err != nil {
 		return nil, fmt.Errorf("read the settled prompts: %w", err)

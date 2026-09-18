@@ -11,20 +11,20 @@ import (
 )
 
 type Handlers struct {
-	assets         *work.Service
+	works          *work.Service
 	accounts       *account.Service
 	publications   *blog.Service
 	maxUploadBytes int64
 }
 
 func NewHandlers(
-	assets *work.Service,
+	works *work.Service,
 	accounts *account.Service,
 	publications *blog.Service,
 	maxUploadBytes int64,
 ) *Handlers {
 	return &Handlers{
-		assets:         assets,
+		works:          works,
 		accounts:       accounts,
 		publications:   publications,
 		maxUploadBytes: maxUploadBytes,

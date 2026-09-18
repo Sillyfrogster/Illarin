@@ -7,23 +7,23 @@ import (
 	"github.com/google/uuid"
 )
 
-type Asset struct {
-	Blurb     string         `json:"blurb"`
-	CreatedAt time.Time      `json:"createdAt"`
-	Discovery AssetDiscovery `json:"discovery"`
-	Format    string         `json:"format"`
-	Id        uuid.UUID      `json:"id"`
-	IsNsfw    *bool          `json:"isNsfw" tstype:"boolean | null,required"`
-	Kind      string         `json:"kind"`
-	Name      string         `json:"name"`
-	Tags      []string       `json:"tags"`
+type Work struct {
+	Blurb      string         `json:"blurb"`
+	CreatedAt  time.Time      `json:"createdAt"`
+	Visibility WorkVisibility `json:"discovery"`
+	Format     string         `json:"format"`
+	Id         uuid.UUID      `json:"id"`
+	IsNsfw     *bool          `json:"isNsfw" tstype:"boolean | null,required"`
+	Type       string         `json:"kind"`
+	Name       string         `json:"name"`
+	Tags       []string       `json:"tags"`
 }
 
-type AssetDiscovery string
+type WorkVisibility string
 
 const (
-	AssetDiscoveryListed   AssetDiscovery = "listed"
-	AssetDiscoveryUnlisted AssetDiscovery = "unlisted"
+	WorkVisibilityListed   WorkVisibility = "listed"
+	WorkVisibilityUnlisted WorkVisibility = "unlisted"
 )
 
 type IngestFailure struct {
@@ -34,7 +34,7 @@ type IngestFailure struct {
 type IngestFailureReason string
 
 const (
-	IngestFailureReasonAssetUnavailable    IngestFailureReason = "asset_unavailable"
+	IngestFailureReasonWorkUnavailable     IngestFailureReason = "asset_unavailable"
 	IngestFailureReasonInternalFailure     IngestFailureReason = "internal_failure"
 	IngestFailureReasonLimitExceeded       IngestFailureReason = "limit_exceeded"
 	IngestFailureReasonMalformedInput      IngestFailureReason = "malformed_input"
@@ -42,11 +42,11 @@ const (
 	IngestFailureReasonUnsupportedFormat   IngestFailureReason = "unsupported_format"
 	IngestFailureReasonUnsupportedVersion  IngestFailureReason = "unsupported_version"
 	IngestFailureReasonWorkingCopyConflict IngestFailureReason = "working_copy_conflict"
-	IngestFailureReasonWrongKind           IngestFailureReason = "wrong_kind"
+	IngestFailureReasonWrongType           IngestFailureReason = "wrong_kind"
 )
 
 type IngestOperation struct {
-	Asset   *Asset                `json:"asset,omitempty"`
+	Work    *Work                 `json:"asset,omitempty"`
 	Failure *IngestFailure        `json:"failure,omitempty"`
 	Id      uuid.UUID             `json:"id"`
 	Preview *ReplacementPreview   `json:"preview,omitempty"`
@@ -86,18 +86,18 @@ type ReplacementPreview struct {
 	Unrepresentable []string                     `json:"unrepresentable"`
 }
 
-type CreateAssetRequest struct {
-	Blurb     *string                      `json:"blurb,omitempty"`
-	Confirmed bool                         `json:"confirmed"`
-	Discovery *CreateAssetRequestDiscovery `json:"discovery,omitempty"`
-	IsNsfw    *bool                        `json:"isNsfw,omitempty"`
-	Name      *string                      `json:"name,omitempty"`
-	Tags      *[]string                    `json:"tags,omitempty"`
+type CreateWorkRequest struct {
+	Blurb      *string                      `json:"blurb,omitempty"`
+	Confirmed  bool                         `json:"confirmed"`
+	Visibility *CreateWorkRequestVisibility `json:"discovery,omitempty"`
+	IsNsfw     *bool                        `json:"isNsfw,omitempty"`
+	Name       *string                      `json:"name,omitempty"`
+	Tags       *[]string                    `json:"tags,omitempty"`
 }
 
-type CreateAssetRequestDiscovery string
+type CreateWorkRequestVisibility string
 
 const (
-	CreateAssetRequestDiscoveryListed   CreateAssetRequestDiscovery = "listed"
-	CreateAssetRequestDiscoveryUnlisted CreateAssetRequestDiscovery = "unlisted"
+	CreateWorkRequestVisibilityListed   CreateWorkRequestVisibility = "listed"
+	CreateWorkRequestVisibilityUnlisted CreateWorkRequestVisibility = "unlisted"
 )

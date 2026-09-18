@@ -222,12 +222,12 @@ func pngHeader(width, height uint32) []byte {
 	return out.Bytes()
 }
 
-func writePNGChunk(out *bytes.Buffer, kind string, data []byte) {
+func writePNGChunk(out *bytes.Buffer, chunkType string, data []byte) {
 	_ = binary.Write(out, binary.BigEndian, uint32(len(data)))
-	out.WriteString(kind)
+	out.WriteString(chunkType)
 	out.Write(data)
 	checksum := crc32.NewIEEE()
-	_, _ = checksum.Write([]byte(kind))
+	_, _ = checksum.Write([]byte(chunkType))
 	_, _ = checksum.Write(data)
 	_ = binary.Write(out, binary.BigEndian, checksum.Sum32())
 }

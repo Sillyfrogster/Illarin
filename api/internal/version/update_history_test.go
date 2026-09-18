@@ -30,23 +30,23 @@ type recordedVersionListBody struct {
 func readUpdateHistory(
 	t *testing.T,
 	r http.Handler,
-	assetID string,
+	workID string,
 	session *http.Cookie,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID+"/updates", nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID+"/updates", nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
 	return apitest.Send(t, r, request)
 }
 
-func TestTheAssetPageCarriesTheVersionReadersHave(t *testing.T) {
+func TestTheWorkPageCarriesTheVersionReadersHave(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
@@ -61,7 +61,7 @@ func TestTheAssetPageCarriesTheVersionReadersHave(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	update := apitest.PublishAssetUpdate(t, r, session, started.ID,
+	update := apitest.PublishWorkUpdate(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf"}`)
 	if update.Code != http.StatusOK {
 		t.Fatalf("publish an update status = %d, want 200: %s", update.Code, update.Body.String())
@@ -88,12 +88,12 @@ func TestTheAssetPageCarriesTheVersionReadersHave(t *testing.T) {
 	}
 }
 
-func TestUpdateHistoryFollowsTheAssetsCurrentAccess(t *testing.T) {
+func TestUpdateHistoryFollowsTheWorksCurrentAccess(t *testing.T) {
 	t.Parallel()
 	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	unlisted := apitest.Send(t, r, apitest.AuthorizedJSONRequest(t, http.MethodPut,
@@ -111,7 +111,7 @@ func TestUpdateHistoryFollowsTheAssetsCurrentAccess(t *testing.T) {
 		t.Fatalf("seed staff account: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(), `
-		update assets set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
+		update works set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
 		 where id = $1
 	`, started.ID, staff); err != nil {
 		t.Fatalf("withhold asset: %v", err)
@@ -127,13 +127,13 @@ func TestUpdateHistoryFollowsTheAssetsCurrentAccess(t *testing.T) {
 	}
 }
 
-func readLatestUpdate(t *testing.T, r http.Handler, assetID string) struct {
+func readLatestUpdate(t *testing.T, r http.Handler, workID string) struct {
 	Number  int    `json:"number"`
 	Initial bool   `json:"initial"`
 	Summary string `json:"summary"`
 } {
 	t.Helper()
-	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil))
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the asset page = %d: %s", response.Code, response.Body.String())
 	}

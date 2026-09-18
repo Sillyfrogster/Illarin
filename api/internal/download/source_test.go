@@ -54,28 +54,28 @@ func rasterSources(t *testing.T) map[string][]byte {
 
 func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 
 	original := []byte{0x00, 0xff, 0xfe, 0x10, 0x80}
 
 	metadata := apitest.ExampleMetadata("Exact")
 	metadata["filename"] = "exact.lumitheme"
-	rec := apitest.UploadAndFinish(t, r, session, assets, metadata, original)
+	rec := apitest.UploadAndFinish(t, r, session, works, metadata, original)
 
 	var created struct {
-		Asset *struct {
+		Work *struct {
 			ID string `json:"id"`
 		} `json:"asset"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if created.Asset == nil {
+	if created.Work == nil {
 		t.Fatal("completed ingest has no asset")
 	}
 
 	rec = httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/download/"+created.Asset.ID, nil))
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/download/"+created.Work.ID, nil))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("download status = %d, want 200", rec.Code)
@@ -90,37 +90,37 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 
 func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
+	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	before := time.Now()
-	download := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
+	download := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+workID, nil))
 	after := time.Now()
 	if download.Code != http.StatusOK || download.Header().Get("X-Accel-Redirect") == "" {
 		t.Fatalf("download = %d, headers %v", download.Code, download.Header())
 	}
 
 	var revisionID, currentRevisionID uuid.UUID
-	var target, authorizationClass, discovery string
+	var target, authorizationClass, visibility string
 	var handedOffAt time.Time
 	err := pool.QueryRow(context.Background(), `
-		select revision_id, export_target, handed_off_at, authorization_class, discovery
+		select revision_id, export_target, handed_off_at, authorization_class, visibility
 		  from download_events
-		 where asset_id = $1
-	`, assetID).Scan(&revisionID, &target, &handedOffAt, &authorizationClass, &discovery)
+		 where work_id = $1
+	`, workID).Scan(&revisionID, &target, &handedOffAt, &authorizationClass, &visibility)
 	if err != nil {
 		t.Fatalf("read download event: %v", err)
 	}
 	if err := pool.QueryRow(context.Background(), `
-		select current_revision_id from assets where id = $1
-	`, assetID).Scan(&currentRevisionID); err != nil {
+		select current_revision_id from works where id = $1
+	`, workID).Scan(&currentRevisionID); err != nil {
 		t.Fatalf("read current revision: %v", err)
 	}
 	if revisionID != currentRevisionID || target != "raw" ||
-		authorizationClass != "anonymous" || discovery != "listed" {
+		authorizationClass != "anonymous" || visibility != "listed" {
 		t.Fatalf(
 			"download event = revision %s, target %q, class %q, discovery %q",
-			revisionID, target, authorizationClass, discovery,
+			revisionID, target, authorizationClass, visibility,
 		)
 	}
 	if handedOffAt.Before(before) || handedOffAt.After(after) {
@@ -128,8 +128,8 @@ func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	}
 	var eventCount int
 	if err := pool.QueryRow(context.Background(), `
-		select count(*) from download_events where asset_id = $1
-	`, assetID).Scan(&eventCount); err != nil {
+		select count(*) from download_events where work_id = $1
+	`, workID).Scan(&eventCount); err != nil {
 		t.Fatalf("count download events: %v", err)
 	}
 	if eventCount != 1 {
@@ -137,12 +137,12 @@ func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	}
 }
 
-func TestExportFromAnAssetMadeInIllarinRecordsTheHandoff(t *testing.T) {
+func TestExportFromAnWorkMadeInIllarinRecordsTheHandoff(t *testing.T) {
 	t.Parallel()
 	router, session, _, pool := harness.NewCharacterIngestRouterWithPool(t)
 	started := apitest.StartCharacter(t, router, session)
 	apitest.WriteCharacterFloor(t, router, session, started)
-	if published := apitest.PublishAsset(t, router, session, started.ID); published.Code != http.StatusOK {
+	if published := apitest.PublishWork(t, router, session, started.ID); published.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", published.Code, published.Body.String())
 	}
 
@@ -158,7 +158,7 @@ func TestExportFromAnAssetMadeInIllarinRecordsTheHandoff(t *testing.T) {
 	if err := pool.QueryRow(context.Background(), `
 		select revision_id is null, export_target, authorization_class
 		  from download_events
-		 where asset_id = $1
+		 where work_id = $1
 	`, started.ID).Scan(&revisionMissing, &target, &authorizationClass); err != nil {
 		t.Fatalf("read download event: %v", err)
 	}
@@ -184,10 +184,10 @@ func (s *blockingRedirectStore) InternalRedirect(ctx context.Context, id uuid.UU
 	}
 }
 
-func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
+func TestDownloadSnapshotsVisibilityAtHandoff(t *testing.T) {
 	t.Parallel()
 	var blocker *blockingRedirectStore
-	router, session, assets, pool := harness.NewVerifiedIngestRouterWithStore(
+	router, session, works, pool := harness.NewVerifiedIngestRouterWithStore(
 		t,
 		format.NewRegistry(),
 		work.DefaultIngestSettings(),
@@ -198,11 +198,11 @@ func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
 			return blocker
 		},
 	)
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
+	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	response := make(chan *httptest.ResponseRecorder, 1)
 	go func() {
-		response <- apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil))
+		response <- apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+workID, nil))
 	}()
 	select {
 	case <-blocker.reached:
@@ -210,7 +210,7 @@ func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
 		t.Fatal("download did not reach the handoff boundary")
 	}
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
-		t, http.MethodPut, "/v1/assets/"+assetID+"/discovery",
+		t, http.MethodPut, "/v1/assets/"+workID+"/discovery",
 		`{"discovery":"unlisted"}`, session,
 	))
 	if changed.Code != http.StatusNoContent {
@@ -221,24 +221,24 @@ func TestDownloadSnapshotsDiscoveryAtHandoff(t *testing.T) {
 		t.Fatalf("download status = %d, want 200", download.Code)
 	}
 
-	var discovery string
+	var visibility string
 	if err := pool.QueryRow(context.Background(), `
-		select discovery from download_events where asset_id = $1
-	`, assetID).Scan(&discovery); err != nil {
+		select visibility from download_events where work_id = $1
+	`, workID).Scan(&visibility); err != nil {
 		t.Fatalf("read download event: %v", err)
 	}
-	if discovery != "unlisted" {
-		t.Fatalf("discovery at handoff = %q, want unlisted", discovery)
+	if visibility != "unlisted" {
+		t.Fatalf("discovery at handoff = %q, want unlisted", visibility)
 	}
 }
 
 func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
+	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	download := apitest.Send(t, router, httptest.NewRequest(
-		http.MethodGet, "/download/"+assetID+"/test_opaque", nil,
+		http.MethodGet, "/download/"+workID+"/test_opaque", nil,
 	))
 	if download.Code != http.StatusOK {
 		t.Fatalf("download status = %d, want 200: %s", download.Code, download.Body.String())
@@ -255,8 +255,8 @@ func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 
 	var target string
 	if err := pool.QueryRow(context.Background(), `
-		select export_target from download_events where asset_id = $1
-	`, assetID).Scan(&target); err != nil {
+		select export_target from download_events where work_id = $1
+	`, workID).Scan(&target); err != nil {
 		t.Fatalf("read download event: %v", err)
 	}
 	if target != "test_opaque" {
@@ -264,13 +264,13 @@ func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 	}
 }
 
-func TestATargetTheAssetIsNotOfferedInIs404(t *testing.T) {
+func TestATargetTheWorkIsNotOfferedInIs404(t *testing.T) {
 	t.Parallel()
-	router, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, session, assets, work.DiscoveryListed)
+	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	response := apitest.Send(t, router, httptest.NewRequest(
-		http.MethodGet, "/download/"+assetID+"/chara_card_v2", nil,
+		http.MethodGet, "/download/"+workID+"/chara_card_v2", nil,
 	))
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404: %s", response.Code, response.Body.String())
@@ -279,14 +279,14 @@ func TestATargetTheAssetIsNotOfferedInIs404(t *testing.T) {
 
 func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
 	t.Parallel()
-	router, ownerSession, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	assetID := apitest.UploadDiscoveryTestAsset(t, router, ownerSession, assets, work.DiscoveryListed)
+	router, ownerSession, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	workID := apitest.UploadVisibilityTestWork(t, router, ownerSession, works, work.VisibilityListed)
 	readerSession := apitest.SignUp(t, router, "reader@example.com", "signed.reader")
 
 	requests := []*http.Request{
-		httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil),
-		apitest.Authorized(httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil), ownerSession),
-		apitest.Authorized(httptest.NewRequest(http.MethodGet, "/download/"+assetID, nil), readerSession),
+		httptest.NewRequest(http.MethodGet, "/download/"+workID, nil),
+		apitest.Authorized(httptest.NewRequest(http.MethodGet, "/download/"+workID, nil), ownerSession),
+		apitest.Authorized(httptest.NewRequest(http.MethodGet, "/download/"+workID, nil), readerSession),
 	}
 	for _, request := range requests {
 		if response := apitest.Send(t, router, request); response.Code != http.StatusOK {
@@ -317,20 +317,20 @@ func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
 	}
 }
 
-func TestDownloadSnapshotsUnlistedAndOwnerWithheldAssets(t *testing.T) {
+func TestDownloadSnapshotsUnlistedAndOwnerWithheldWorks(t *testing.T) {
 	t.Parallel()
-	router, ownerSession, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	unlistedID := apitest.UploadDiscoveryTestAsset(
-		t, router, ownerSession, assets, work.DiscoveryUnlisted,
+	router, ownerSession, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	unlistedID := apitest.UploadVisibilityTestWork(
+		t, router, ownerSession, works, work.VisibilityUnlisted,
 	)
-	withheldID := apitest.UploadDiscoveryTestAsset(
-		t, router, ownerSession, assets, work.DiscoveryListed,
+	withheldID := apitest.UploadVisibilityTestWork(
+		t, router, ownerSession, works, work.VisibilityListed,
 	)
 	if _, err := pool.Exec(context.Background(), `
-		update assets asset
+		update works work
 		   set withheld_at = now(), withheld_by = owner.id, withheld_reason = 'review'
 		  from users owner
-		 where asset.id = $1 and owner.username = 'verified.creator'
+		 where work.id = $1 and owner.username = 'verified.creator'
 	`, withheldID); err != nil {
 		t.Fatalf("withhold asset: %v", err)
 	}
@@ -347,31 +347,31 @@ func TestDownloadSnapshotsUnlistedAndOwnerWithheldAssets(t *testing.T) {
 	}
 
 	for _, want := range []struct {
-		assetID       string
-		discovery     string
+		workID        string
+		visibility    string
 		authorization string
 	}{
-		{assetID: unlistedID, discovery: "unlisted", authorization: "anonymous"},
-		{assetID: withheldID, discovery: "listed", authorization: "owner"},
+		{workID: unlistedID, visibility: "unlisted", authorization: "anonymous"},
+		{workID: withheldID, visibility: "listed", authorization: "owner"},
 	} {
-		var discovery, authorization string
+		var visibility, authorization string
 		if err := pool.QueryRow(context.Background(), `
-			select discovery, authorization_class
+			select visibility, authorization_class
 			  from download_events
-			 where asset_id = $1
-		`, want.assetID).Scan(&discovery, &authorization); err != nil {
-			t.Fatalf("read download event for %s: %v", want.assetID, err)
+			 where work_id = $1
+		`, want.workID).Scan(&visibility, &authorization); err != nil {
+			t.Fatalf("read download event for %s: %v", want.workID, err)
 		}
-		if discovery != want.discovery || authorization != want.authorization {
+		if visibility != want.visibility || authorization != want.authorization {
 			t.Fatalf(
 				"event for %s = discovery %q, class %q; want %q, %q",
-				want.assetID, discovery, authorization, want.discovery, want.authorization,
+				want.workID, visibility, authorization, want.visibility, want.authorization,
 			)
 		}
 	}
 }
 
-func TestDownloadUnknownAssetIs404(t *testing.T) {
+func TestDownloadUnknownWorkIs404(t *testing.T) {
 	t.Parallel()
 	r, pool := harness.NewRouterWithSenderAndPool(
 		t, 1<<20, api.DefaultDeadlines(), &apitest.VerificationOutbox{},
@@ -394,7 +394,7 @@ func TestDownloadUnknownAssetIs404(t *testing.T) {
 
 func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterIngestRouter(t)
 	source := []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Before","first_mes":"Hello",
@@ -402,18 +402,18 @@ func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	}`)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
-	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, source))
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, source))
 
-	page := apitest.FetchStartedAsset(t, r, session, assetID)
+	page := apitest.FetchStartedWork(t, r, session, workID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
 	core.Elements[0].Content = json.RawMessage(`{"text":"After"}`)
-	saved := apitest.SaveBlock(t, r, session, assetID, apitest.BlockNamed(t, page.Blocks, "character_core").ID, core)
+	saved := apitest.SaveBlock(t, r, session, workID, apitest.BlockNamed(t, page.Blocks, "character_core").ID, core)
 	if saved.Code != http.StatusOK {
 		t.Fatalf("save the description: %d %s", saved.Code, saved.Body.String())
 	}
 
 	download := apitest.Send(t, r, httptest.NewRequest(
-		http.MethodGet, "/download/"+assetID+"/chara_card_v3", nil,
+		http.MethodGet, "/download/"+workID+"/chara_card_v3", nil,
 	))
 	if download.Code != http.StatusOK {
 		t.Fatalf("download status = %d, want 200: %s", download.Code, download.Body.String())
@@ -443,7 +443,7 @@ func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 			card.Data.Extensions, sourceCard.Data.Extensions)
 	}
 
-	storedSource, err := assets.OpenSource(context.Background(), uuid.MustParse(assetID))
+	storedSource, err := works.OpenSource(context.Background(), uuid.MustParse(workID))
 	if err != nil {
 		t.Fatalf("OpenSource: %v", err)
 	}
@@ -456,28 +456,28 @@ func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 
 func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 
 	payload := []byte(`<script>alert(1)</script>`)
 
 	metadata := apitest.ExampleMetadata("Evil")
 	metadata["filename"] = "evil.lumitheme"
-	rec := apitest.UploadAndFinish(t, r, session, assets, metadata, payload)
+	rec := apitest.UploadAndFinish(t, r, session, works, metadata, payload)
 
 	var created struct {
-		Asset *struct {
+		Work *struct {
 			ID string `json:"id"`
 		} `json:"asset"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if created.Asset == nil {
+	if created.Work == nil {
 		t.Fatal("completed ingest has no asset")
 	}
 
 	rec = httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/download/"+created.Asset.ID, nil))
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/download/"+created.Work.ID, nil))
 
 	if got := rec.Header().Get("Content-Type"); got != "application/octet-stream" {
 		t.Errorf("Content-Type = %q, want application/octet-stream", got)
@@ -497,25 +497,25 @@ func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
 	t.Parallel()
 	for wantType, source := range rasterSources(t) {
 		t.Run(wantType, func(t *testing.T) {
-			r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+			r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 			metadata := apitest.ExampleMetadata("Raster")
 			metadata["filename"] = "misleading.lumitheme"
-			created := apitest.UploadAndFinish(t, r, session, assets, metadata, source)
+			created := apitest.UploadAndFinish(t, r, session, works, metadata, source)
 
 			var operation struct {
-				Asset *struct {
+				Work *struct {
 					ID string `json:"id"`
 				} `json:"asset"`
 			}
 			if err := json.Unmarshal(created.Body.Bytes(), &operation); err != nil {
 				t.Fatalf("decode: %v", err)
 			}
-			if operation.Asset == nil {
+			if operation.Work == nil {
 				t.Fatal("completed ingest has no asset")
 			}
 
 			download := apitest.Send(t, r, httptest.NewRequest(
-				http.MethodGet, "/download/"+operation.Asset.ID, nil,
+				http.MethodGet, "/download/"+operation.Work.ID, nil,
 			))
 			if download.Code != http.StatusOK {
 				t.Fatalf("status = %d, want 200", download.Code)
@@ -536,7 +536,7 @@ func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *tes
 	if err := registry.Register(apitest.NeverClaimsModule{}); err != nil {
 		t.Fatalf("register non-claiming module: %v", err)
 	}
-	r, session, assets := harness.NewVerifiedIngestRouter(t, registry)
+	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
 	body := &bytes.Buffer{}
 	form := multipart.NewWriter(body)
 	apitest.WriteMetadataPart(t, form, apitest.ExampleMetadata("Claimed image"))
@@ -559,7 +559,7 @@ func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *tes
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("upload status = %d, want 202", accepted.Code)
 	}
-	if processed, err := apitest.Uploads(assets).ProcessNextIngest(request.Context()); err != nil || !processed {
+	if processed, err := apitest.Uploads(works).ProcessNextIngest(request.Context()); err != nil || !processed {
 		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 	}
 

@@ -38,13 +38,13 @@ func TestTwoMintsShareNothing(t *testing.T) {
 	}
 }
 
-func TestOneKindNeverReadsAsAnother(t *testing.T) {
+func TestOneTypeNeverReadsAsAnother(t *testing.T) {
 	t.Parallel()
 	minted, err := Mint(InstanceAccess)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
-	for _, other := range []Kind{InstanceRefresh} {
+	for _, other := range []Type{InstanceRefresh} {
 		if _, ok := Read(minted.Value, other); ok {
 			t.Fatalf("an %s secret was accepted as %s", InstanceAccess, other)
 		}

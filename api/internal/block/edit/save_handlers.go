@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) SaveAssetBlock(c *gin.Context) {
+func (h *Handlers) SaveWorkBlock(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -31,7 +31,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request SaveAssetBlockRequest
+	var request SaveWorkBlockRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Send valid JSON with a title, layout, width and elements. Every element id must be a UUID; display must be rich or verbatim, and an image size small, medium or large.")
 		return
@@ -65,7 +65,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not save the block.")
 	default:
-		blocks, conversionErr := block.ToBlocks(saved.Kind, []block.Block{saved.Block})
+		blocks, conversionErr := block.ToBlocks(saved.Type, []block.Block{saved.Block})
 		if conversionErr != nil {
 			api.Refuse(c, http.StatusInternalServerError, "Could not read the saved block.")
 			return
@@ -74,7 +74,7 @@ func (h *Handlers) SaveAssetBlock(c *gin.Context) {
 	}
 }
 
-func blockUpdate(request SaveAssetBlockRequest) (BlockUpdate, error) {
+func blockUpdate(request SaveWorkBlockRequest) (BlockUpdate, error) {
 	elements := make([]block.Element, len(request.Elements))
 	for i, incoming := range request.Elements {
 		elementType := block.Type(incoming.Type)

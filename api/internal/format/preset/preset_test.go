@@ -111,9 +111,9 @@ func TestBothPresetModulesReadAndWriteWithAFullDeclaration(t *testing.T) {
 	for _, module := range Modules() {
 		declaration := module.Declaration()
 		t.Run(declaration.ID, func(t *testing.T) {
-			if declaration.Kind != Kind || declaration.ID != module.ID() {
+			if declaration.Type != Type || declaration.ID != module.ID() {
 				t.Errorf("declaration identity = %q/%q, want %q under %q",
-					declaration.ID, declaration.Kind, module.ID(), Kind)
+					declaration.ID, declaration.Type, module.ID(), Type)
 			}
 			if !declaration.Direction.Read || !declaration.Direction.Write {
 				t.Errorf("direction = %+v, want read and write", declaration.Direction)
@@ -242,7 +242,7 @@ func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
 			if err := block.ValidateContentLimits(parsed.Elements); err != nil {
 				t.Fatalf("content limits: %v", err)
 			}
-			blocks, err := block.Place(parsed.Kind, parsed.Elements)
+			blocks, err := block.Place(parsed.Type, parsed.Elements)
 			if err != nil {
 				t.Fatalf("place: %v", err)
 			}
@@ -253,7 +253,7 @@ func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
 			if !slices.Contains(definitions, block.PresetCore) {
 				t.Fatalf("placed %v, want the prompt fragments among them", definitions)
 			}
-			if !blocks[0].Pinned(block.RolePromptFragments, Kind) {
+			if !blocks[0].Pinned(block.RolePromptFragments, Type) {
 				t.Error("the prompt fragments can be taken off the page a preset is")
 			}
 		})
@@ -268,7 +268,7 @@ func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 	} {
 		t.Run(test.origin, func(t *testing.T) {
 			targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-				Kind: Kind, Origin: test.origin,
+				Type: Type, Origin: test.origin,
 				Elements: []block.Element{{
 					ID: uuid.New(), Type: block.TypePromptList, Role: block.RolePromptFragments,
 					Content: block.PromptList{Fragments: []block.PromptFragment{{Text: "kept"}}},
@@ -284,7 +284,7 @@ func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 func TestAPresetBuiltHereIsOfferedBothWriters(t *testing.T) {
 	t.Parallel()
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: Kind,
+		Type: Type,
 		Elements: []block.Element{{
 			ID: uuid.New(), Type: block.TypePromptList, Role: block.RolePromptFragments,
 			Content: block.PromptList{Fragments: []block.PromptFragment{{Text: "kept"}}},
@@ -402,8 +402,8 @@ func write(t *testing.T, module format.Reader, parsed format.Parsed) format.Arti
 	if !writes {
 		t.Fatalf("%s does not write", module.ID())
 	}
-	written, err := writer.Write(context.Background(), format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements,
+	written, err := writer.Write(context.Background(), format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements,
 		Preserved: parsed.Remainder,
 	})
 	if err != nil {
@@ -555,7 +555,7 @@ func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
 		t.Error("a name belonging to the other preset format was written into the file")
 	}
 	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: Kind, Origin: SillyTavernID,
+		Type: Type, Origin: SillyTavernID,
 		Elements: []block.Element{{
 			ID: uuid.New(), Type: block.TypeSettingGroup, Role: block.RoleSamplerSettings,
 			Content: block.SettingGroup{Settings: []block.Setting{

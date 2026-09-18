@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChipSet } from "@/components/ui/Chip";
 import { Field, TextArea } from "@/components/ui/field";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
-import type { AssetDetail } from "@/lib/api/query";
+import type { WorkDetail } from "@/lib/api/query";
 import { canSendAsset } from "@/lib/asset-delivery";
 import { assetDisplayName } from "@/lib/asset-name";
 import { cn } from "@/lib/cn";
@@ -51,7 +51,7 @@ export function AssetHeader({
   sharedDate,
   shellClassName,
 }: {
-  asset: AssetDetail;
+  asset: WorkDetail;
   holdsNothing: boolean;
   kind: string;
   sharedDate: string;

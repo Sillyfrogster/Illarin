@@ -196,12 +196,12 @@ func TestAvatarBytesTravelTheSharedMediaPathAndAreNotCatalogMedia(t *testing.T) 
 		t.Fatalf("avatar cache control = %q", cache)
 	}
 
-	var catalogMedia int
-	if err := pool.QueryRow(t.Context(), `select count(*) from asset_media`).Scan(&catalogMedia); err != nil {
+	var workMedia int
+	if err := pool.QueryRow(t.Context(), `select count(*) from work_media`).Scan(&workMedia); err != nil {
 		t.Fatalf("count catalog media: %v", err)
 	}
-	if catalogMedia != 0 {
-		t.Fatalf("the avatar became %d catalog media rows", catalogMedia)
+	if workMedia != 0 {
+		t.Fatalf("the avatar became %d catalog media rows", workMedia)
 	}
 }
 

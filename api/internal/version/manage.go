@@ -23,72 +23,72 @@ var (
 	ErrVersionAlreadyWithdrawn       = errors.New("the version is already withdrawn")
 )
 
-func (s *Service) RestoreVersion(ctx context.Context, ownerID, assetID uuid.UUID, number int, candidate *work.Candidate) error {
+func (s *Service) RestoreVersion(ctx context.Context, ownerID, workID uuid.UUID, number int, candidate *work.Candidate) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	kind, err := candidate.Lock(ctx, tx, ownerID, assetID)
+	workType, err := candidate.Lock(ctx, tx, ownerID, workID)
 	if err != nil {
 		return err
 	}
-	recorded, err := work.ReadVersion(ctx, tx, assetID, number)
+	recorded, err := work.ReadVersion(ctx, tx, workID, number)
 	if err != nil {
 		return err
 	}
-	if recorded.Kind != kind {
+	if recorded.Type != workType {
 		return work.ErrNotFound
 	}
-	if err := private.PrepareRestoration(ctx, tx, assetID, recorded.ID, recorded.ProtectedPayloads, recorded.Blocks); err != nil {
+	if err := private.PrepareRestoration(ctx, tx, workID, recorded.ID, recorded.ProtectedPayloads, recorded.Blocks); err != nil {
 		return err
 	}
 
 	metadata := recorded.Metadata
 	_, err = tx.Exec(ctx, `
-		update assets set name = $2, blurb = $3, tags = $4, is_nsfw = $5,
-		       credited_author = $6, nickname = $7, asset_version = $8,
+		update works set name = $2, blurb = $3, tags = $4, is_nsfw = $5,
+		       credited_author = $6, nickname = $7, work_version = $8,
 		       origin_format = $9, current_revision_id = $10, cover_media_id = $11,
 		       updated_at = now()
 		 where id = $1
-	`, assetID, metadata.Name, metadata.Blurb, metadata.Tags, metadata.IsNSFW,
-		metadata.CreditedAuthor, metadata.Nickname, metadata.AssetVersion,
+	`, workID, metadata.Name, metadata.Blurb, metadata.Tags, metadata.IsNSFW,
+		metadata.CreditedAuthor, metadata.Nickname, metadata.WorkVersion,
 		recorded.Origin, recorded.SourceRevisionID, metadata.Cover)
 	if err != nil {
 		return fmt.Errorf("restore the recorded header: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		update asset_media media set is_current = exists (
-			select 1 from asset_snapshot_media kept
+		update work_media media set is_current = exists (
+			select 1 from work_snapshot_media kept
 			 where kept.snapshot_id = $2 and kept.media_id = media.id)
-		 where media.asset_id = $1
-	`, assetID, recorded.ID); err != nil {
+		 where media.work_id = $1
+	`, workID, recorded.ID); err != nil {
 		return fmt.Errorf("restore the recorded pictures: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `delete from asset_blocks where asset_id = $1`, assetID); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_blocks where work_id = $1`, workID); err != nil {
 		return fmt.Errorf("replace the working-copy blocks: %w", err)
 	}
-	if err := block.Insert(ctx, tx, assetID, recorded.Blocks); err != nil {
+	if err := block.Insert(ctx, tx, workID, recorded.Blocks); err != nil {
 		return fmt.Errorf("restore the recorded blocks: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `delete from asset_preserved_data where asset_id = $1`, assetID); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_preserved_data where work_id = $1`, workID); err != nil {
 		return fmt.Errorf("replace the preserved data: %w", err)
 	}
 	for _, kept := range recorded.Preserved {
 		if _, err := tx.Exec(ctx, `
-			insert into asset_preserved_data (id, asset_id, owner_kind, owner_id, namespace, payload)
+			insert into work_preserved_data (id, work_id, owner_type, owner_id, namespace, payload)
 			values ($1, $2, $3, $4, $5, $6::jsonb)
-		`, kept.ID, assetID, kept.Owner, kept.OwnerID, kept.Namespace, kept.Payload); err != nil {
+		`, kept.ID, workID, kept.Owner, kept.OwnerID, kept.Namespace, kept.Payload); err != nil {
 			return fmt.Errorf("restore preserved data: %w", err)
 		}
 	}
-	if err := s.writeSummary(ctx, tx, assetID); err != nil {
+	if err := s.writeSummary(ctx, tx, workID); err != nil {
 		return err
 	}
-	return candidate.Commit(ctx, tx, assetID)
+	return candidate.Commit(ctx, tx, workID)
 }
 
-func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, assetID uuid.UUID, number int, summary, notes string) error {
+func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, workID uuid.UUID, number int, summary, notes string) error {
 	summary = strings.TrimSpace(summary)
 	notes = strings.TrimSpace(notes)
 	if summary == "" {
@@ -102,13 +102,13 @@ func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, assetID uuid
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := work.LockEditable(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := work.LockEditable(ctx, tx, ownerID, workID); err != nil {
 		return err
 	}
 	result, err := tx.Exec(ctx, `
-		update asset_snapshots set summary = $3, notes = $4, notes_edited_at = now()
-		 where asset_id = $1 and number = $2
-	`, assetID, number, summary, notes)
+		update work_snapshots set summary = $3, notes = $4, notes_edited_at = now()
+		 where work_id = $1 and number = $2
+	`, workID, number, summary, notes)
 	if err != nil {
 		return fmt.Errorf("correct the update notes: %w", err)
 	}
@@ -118,7 +118,7 @@ func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, assetID uuid
 	return tx.Commit(ctx)
 }
 
-func (s *Service) WithdrawVersion(ctx context.Context, ownerID, assetID uuid.UUID, number int, explanation string) error {
+func (s *Service) WithdrawVersion(ctx context.Context, ownerID, workID uuid.UUID, number int, explanation string) error {
 	explanation = strings.TrimSpace(explanation)
 	if explanation == "" {
 		return ErrWithdrawalExplanationRequired
@@ -131,16 +131,16 @@ func (s *Service) WithdrawVersion(ctx context.Context, ownerID, assetID uuid.UUI
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := work.LockEditable(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := work.LockEditable(ctx, tx, ownerID, workID); err != nil {
 		return err
 	}
 	var current, chosen uuid.UUID
 	var withdrawn bool
 	err = tx.QueryRow(ctx, `
-		select asset.published_snapshot_id, snapshot.id, snapshot.withdrawn_at is not null
-		  from assets asset join asset_snapshots snapshot on snapshot.asset_id = asset.id
-		 where asset.id = $1 and snapshot.number = $2 for update of asset, snapshot
-	`, assetID, number).Scan(&current, &chosen, &withdrawn)
+		select work.published_snapshot_id, snapshot.id, snapshot.withdrawn_at is not null
+		  from works work join work_snapshots snapshot on snapshot.work_id = work.id
+		 where work.id = $1 and snapshot.number = $2 for update of work, snapshot
+	`, workID, number).Scan(&current, &chosen, &withdrawn)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return work.ErrNotFound
 	}
@@ -154,7 +154,7 @@ func (s *Service) WithdrawVersion(ctx context.Context, ownerID, assetID uuid.UUI
 		return ErrVersionAlreadyWithdrawn
 	}
 	if _, err := tx.Exec(ctx, `
-		update asset_snapshots set withdrawn_at = now(), withdrawal_explanation = $2 where id = $1
+		update work_snapshots set withdrawn_at = now(), withdrawal_explanation = $2 where id = $1
 	`, chosen, explanation); err != nil {
 		return fmt.Errorf("withdraw the version: %w", err)
 	}

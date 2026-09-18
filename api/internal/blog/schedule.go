@@ -460,7 +460,7 @@ func keepScheduleChoice(
 
 func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]announcements.Sending, error) {
 	rows, err := tx.Query(ctx, `
-		select destination.id, destination.name, destination.kind, destination.state,
+		select destination.id, destination.name, destination.type, destination.state,
 		       destination.events, destination.role_name, chosen.mention_role
 		  from post_schedule_destinations chosen
 		  join publication_destinations destination on destination.id = chosen.destination_id

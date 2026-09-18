@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	KindWebhook = "webhook"
-	KindDiscord = "discord"
+	TypeWebhook = "webhook"
+	TypeDiscord = "discord"
 )
 
 const (
@@ -40,7 +40,7 @@ var (
 
 type Destination struct {
 	ID          uuid.UUID
-	Kind        string
+	Type        string
 	Name        string
 	Host        string
 	Address     string
@@ -82,7 +82,7 @@ type AddedDestination struct {
 type Choice struct {
 	ID        uuid.UUID
 	Name      string
-	Kind      string
+	Type      string
 	State     string
 	Events    []string
 	Role      string
@@ -130,9 +130,9 @@ func (s *Service) AddDestination(
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
 		insert into publication_destinations
-		       (id, kind, name, host, address, signing_secret, events, created_by)
+		       (id, type, name, host, address, signing_secret, events, created_by)
 		values ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, id, KindWebhook, name, host, sealedAddress, sealedSecret, events, actor)
+	`, id, TypeWebhook, name, host, sealedAddress, sealedSecret, events, actor)
 	if err != nil {
 		return AddedDestination{}, fmt.Errorf("record the destination: %w", err)
 	}
@@ -162,7 +162,7 @@ func (s *Service) UpdateDestination(
 	if err != nil {
 		return Destination{}, err
 	}
-	if current.Kind == KindDiscord {
+	if current.Type == TypeDiscord {
 		return Destination{}, ErrNotWebhook
 	}
 	name := current.Name
@@ -382,7 +382,7 @@ func scanChannel(guildID, channelID, webhookName, roleID, roleName *string) *Cha
 }
 
 const selectDestinations = `
-	select held.id, held.kind, held.name, held.host, held.state, held.events,
+	select held.id, held.type, held.name, held.host, held.state, held.events,
 	       held.guild_id, held.channel_id, held.webhook_name, held.role_id, held.role_name,
 	       held.signing_secret_set_at, held.previous_secret_until,
 	       held.verified_at, held.disabled_at, held.created_at
@@ -396,7 +396,7 @@ func collectDestinations(rows pgx.Rows) ([]Destination, error) {
 		var one Destination
 		var guildID, channelID, webhookName, roleID, roleName *string
 		err := rows.Scan(
-			&one.ID, &one.Kind, &one.Name, &one.Host, &one.State, &one.Events,
+			&one.ID, &one.Type, &one.Name, &one.Host, &one.State, &one.Events,
 			&guildID, &channelID, &webhookName, &roleID, &roleName,
 			&one.SecretSetAt, &one.OldUntil,
 			&one.VerifiedAt, &one.DisabledAt, &one.CreatedAt,

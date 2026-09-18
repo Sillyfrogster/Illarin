@@ -19,7 +19,7 @@ import (
 // OpenRecordedExport writes one recorded version through the current writer for the target.
 func (s *Service) OpenRecordedExport(
 	ctx context.Context,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	viewerID *uuid.UUID,
 	number int,
 	target string,
@@ -31,7 +31,7 @@ func (s *Service) OpenRecordedExport(
 	}
 	defer tx.Rollback(ctx)
 
-	subject, sealed, err := s.recordedExportSubject(ctx, tx, assetID, viewerID, number)
+	subject, sealed, err := s.recordedExportSubject(ctx, tx, workID, viewerID, number)
 	if err != nil {
 		return Export{}, err
 	}
@@ -57,7 +57,7 @@ func (s *Service) OpenRecordedExport(
 // RecordedDownloads lists the formats and media available for a historical download.
 type RecordedDownloads struct {
 	Version           work.Version
-	Kind              string
+	Type              string
 	LinkedInstallOnly bool
 	Downloads         []format.Target
 	AppTargets        []format.AppTarget
@@ -68,10 +68,10 @@ type RecordedDownloads struct {
 // RecordedDownloads reads a historical version's download choices under current protection.
 func (s *Service) RecordedDownloads(
 	ctx context.Context,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	viewerID *uuid.UUID,
 	number int,
-	visibility work.ContentVisibility,
+	preference work.NSFWPreference,
 ) (RecordedDownloads, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
@@ -79,12 +79,12 @@ func (s *Service) RecordedDownloads(
 	}
 	defer tx.Rollback(ctx)
 
-	subject, sealed, err := s.recordedExportSubject(ctx, tx, assetID, viewerID, number)
+	subject, sealed, err := s.recordedExportSubject(ctx, tx, workID, viewerID, number)
 	if err != nil {
 		return RecordedDownloads{}, err
 	}
 	offered := RecordedDownloads{
-		Version: subject.recorded.Version, Kind: subject.kind, LinkedInstallOnly: sealed,
+		Version: subject.recorded.Version, Type: subject.workType, LinkedInstallOnly: sealed,
 		Downloads: []format.Target{}, AppTargets: []format.AppTarget{}, Blocks: []block.Block{},
 	}
 	if !sealed {
@@ -92,7 +92,7 @@ func (s *Service) RecordedDownloads(
 		offered.AppTargets = format.AppTargets(offered.Downloads, s.reg)
 		offered.Blocks = subject.blocks
 	}
-	offered.Media, err = s.recordedPictures(ctx, tx, subject, visibility)
+	offered.Media, err = s.recordedPictures(ctx, tx, subject, preference)
 	if err != nil {
 		return RecordedDownloads{}, err
 	}
@@ -103,18 +103,18 @@ func (s *Service) recordedPictures(
 	ctx context.Context,
 	tx pgx.Tx,
 	subject exportSubject,
-	visibility work.ContentVisibility,
+	preference work.NSFWPreference,
 ) ([]work.DetailImage, error) {
 	var flagged *bool
 	if err := tx.QueryRow(ctx,
-		`select is_nsfw from public.assets where id = $1`, subject.assetID).Scan(&flagged); err != nil {
-		return nil, fmt.Errorf("read the asset to address its pictures: %w", err)
+		`select is_nsfw from public.works where id = $1`, subject.workID).Scan(&flagged); err != nil {
+		return nil, fmt.Errorf("read the work to address its pictures: %w", err)
 	}
-	blurred := flagged != nil && *flagged && visibility != work.ContentShown
+	blurred := flagged != nil && *flagged && preference != work.NSFWShown
 	rows, err := tx.Query(ctx, `
 		select media.id, media.role, media.width, media.height, blob.byte_size
-		  from public.asset_snapshot_media kept
-		  join public.asset_media media on media.id = kept.media_id
+		  from public.work_snapshot_media kept
+		  join public.work_media media on media.id = kept.media_id
 		  join public.blobs blob on blob.id = media.blob_id
 		 where kept.snapshot_id = $1
 		   and media.width is not null and media.height is not null
@@ -142,8 +142,8 @@ func (s *Service) recordedPictures(
 		}
 		picture.Width, picture.Height = int(*width), int(*height)
 		picture.IsCover = subject.cover != nil && *subject.cover == picture.ID
-		picture.DetailURL = s.assets.ImageAddress(picture.ID, "detail", blurred, false)
-		picture.ThumbURL = s.assets.ImageAddress(picture.ID, "thumb", blurred, false)
+		picture.DetailURL = s.works.ImageAddress(picture.ID, "detail", blurred, false)
+		picture.ThumbURL = s.works.ImageAddress(picture.ID, "thumb", blurred, false)
 		pictures = append(pictures, picture)
 	}
 	return pictures, rows.Err()
@@ -153,26 +153,26 @@ func (s *Service) recordedPictures(
 func (s *Service) recordedExportSubject(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	viewerID *uuid.UUID,
 	number int,
 ) (exportSubject, bool, error) {
 	var subject exportSubject
 	var ownerID *uuid.UUID
 	err := tx.QueryRow(ctx, `
-		select asset.owner_id, asset.lifecycle
-		  from public.assets asset
-		 where asset.id = $1 and asset.deleted_at is null
-		   and (asset.lifecycle = 'published' or asset.owner_id = $2)
-		   and (asset.withheld_at is null or asset.owner_id = $2)
-	`, assetID, viewerID).Scan(&ownerID, &subject.lifecycle)
+		select work.owner_id, work.lifecycle
+		  from public.works work
+		 where work.id = $1 and work.deleted_at is null
+		   and (work.lifecycle = 'published' or work.owner_id = $2)
+		   and (work.withheld_at is null or work.owner_id = $2)
+	`, workID, viewerID).Scan(&ownerID, &subject.lifecycle)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return exportSubject{}, false, work.ErrNotFound
 	}
 	if err != nil {
-		return exportSubject{}, false, fmt.Errorf("read the asset to export: %w", err)
+		return exportSubject{}, false, fmt.Errorf("read the work to export: %w", err)
 	}
-	recorded, err := work.ReadVersion(ctx, tx, assetID, number)
+	recorded, err := work.ReadVersion(ctx, tx, workID, number)
 	if err != nil {
 		return exportSubject{}, false, err
 	}
@@ -182,22 +182,22 @@ func (s *Service) recordedExportSubject(
 	if err := private.RestoreRecordedPrompts(recorded.ProtectedPayloads, recorded.Blocks); err != nil {
 		return exportSubject{}, false, err
 	}
-	if _, err := private.ApplyRecordedPolicy(ctx, tx, assetID, &recorded.ID, recorded.Blocks); err != nil {
+	if _, err := private.ApplyRecordedPolicy(ctx, tx, workID, &recorded.ID, recorded.Blocks); err != nil {
 		return exportSubject{}, false, err
 	}
-	apps, err := private.Apps(ctx, tx, assetID)
+	apps, err := private.Apps(ctx, tx, workID)
 	if err != nil {
 		return exportSubject{}, false, err
 	}
 	sealed := len(apps) > 0 || private.HasPromptFragments(recorded.Blocks)
-	subject.assetID = assetID
-	subject.kind = recorded.Kind
+	subject.workID = workID
+	subject.workType = recorded.Type
 	subject.name = recorded.Metadata.Name
 	subject.origin = recorded.Origin
 	subject.header = format.Header{
 		Name:           recorded.Metadata.Name,
 		Blurb:          recorded.Metadata.Blurb,
-		AssetVersion:   recorded.Metadata.AssetVersion,
+		WorkVersion:    recorded.Metadata.WorkVersion,
 		CreditedAuthor: recorded.Metadata.CreditedAuthor,
 		Nickname:       recorded.Metadata.Nickname,
 	}

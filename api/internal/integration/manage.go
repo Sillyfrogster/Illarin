@@ -25,7 +25,7 @@ func (s *Service) Update(ctx context.Context, owner, id uuid.UUID, name, address
 	}
 	var prepared preparedAddress
 	if address != nil {
-		prepared, err = s.prepareAddress(ctx, held.Kind, *address)
+		prepared, err = s.prepareAddress(ctx, held.Type, *address)
 		if err != nil {
 			return Destination{}, err
 		}
@@ -37,7 +37,7 @@ func (s *Service) Update(ctx context.Context, owner, id uuid.UUID, name, address
 	}
 	defer tx.Rollback(ctx)
 	result, err := tx.Exec(ctx, `
-		update asset_update_destinations
+		update work_update_destinations
 		   set name = $4, host = $5, address = coalesce($6, address),
 		       state = case when $6::bytea is null then state else $7 end,
 		       verified_at = case when $6::bytea is null then verified_at else $8 end,
@@ -71,7 +71,7 @@ func (s *Service) Disable(ctx context.Context, owner, id uuid.UUID) (Destination
 	}
 	defer tx.Rollback(ctx)
 	result, err := tx.Exec(ctx, `
-		update asset_update_destinations
+		update work_update_destinations
 		   set state = 'disabled', disabled_at = now(), version = version+1, updated_at = now()
 		 where owner_id = $1 and id = $2
 	`, owner, id)
@@ -98,7 +98,7 @@ func (s *Service) Remove(ctx context.Context, owner, id uuid.UUID) error {
 	defer tx.Rollback(ctx)
 	var held bool
 	err = tx.QueryRow(ctx, `
-		select true from asset_update_destinations where owner_id = $1 and id = $2 for update
+		select true from work_update_destinations where owner_id = $1 and id = $2 for update
 	`, owner, id).Scan(&held)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrNotFound
@@ -109,7 +109,7 @@ func (s *Service) Remove(ctx context.Context, owner, id uuid.UUID) error {
 	if err := s.ledger.StopTo(ctx, tx, id, dispatch.Stopped(dispatch.Removed)); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `delete from asset_update_destinations where id = $1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_update_destinations where id = $1`, id); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
@@ -120,7 +120,7 @@ func (s *Service) RotateSecret(ctx context.Context, owner, id uuid.UUID) (Added,
 	if err != nil {
 		return Added{}, err
 	}
-	if held.Kind != Webhook {
+	if held.Type != Webhook {
 		return Added{}, FieldError{"kind", "Discord credentials are changed by replacing the webhook address."}
 	}
 	if held.PreviousSecretUntil != nil && time.Now().Before(*held.PreviousSecretUntil) {
@@ -136,7 +136,7 @@ func (s *Service) RotateSecret(ctx context.Context, owner, id uuid.UUID) (Added,
 	}
 	now := time.Now().UTC()
 	result, err := s.pool.Exec(ctx, `
-		update asset_update_destinations
+		update work_update_destinations
 		   set signing_secret = $4, signing_secret_set_at = $5, previous_secret = signing_secret,
 		       previous_secret_until = $6, version = version+1, updated_at = $5
 		 where owner_id = $1 and id = $2 and version = $3
@@ -153,7 +153,7 @@ func (s *Service) RotateSecret(ctx context.Context, owner, id uuid.UUID) (Added,
 
 func (s *Service) ForgetOldSecrets(ctx context.Context, now time.Time) (int64, error) {
 	result, err := s.pool.Exec(ctx, `
-		update asset_update_destinations set previous_secret = null, previous_secret_until = null
+		update work_update_destinations set previous_secret = null, previous_secret_until = null
 		 where previous_secret_until <= $1
 	`, now)
 	return result.RowsAffected(), err

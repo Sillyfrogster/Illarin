@@ -11,31 +11,19 @@ import type {
   AddedPublicationDestination,
   AddMediaRequest,
   AppTarget,
-  ArrangeAssetBlocksRequest,
-  AssetBlock,
-  AssetDetail,
-  AssetElement,
-  AssetIdentityRequest,
-  AssetImage,
-  AssetInstance,
-  AssetInstanceList,
-  AssetList,
-  AssetTag,
-  AssetUpdate,
-  AssetUpdateRequest,
-  AssetVersionNotesRequest,
-  BrowseAsset,
+  ArrangeWorkBlocksRequest,
   BrowseCursor,
+  BrowseWork,
   ColorSetContent,
-  DeletedAsset,
-  DeletedAssetList,
+  DeletedWork,
+  DeletedWorkList,
   DownloadTarget,
   ElementType,
   EntryTableContent,
   ExtensionDependency,
   IngestOperation,
-  ListAssetsParams,
-  NsfwVisibilityRequest,
+  ListWorksParams,
+  NsfwPreferenceRequest,
   OriginalUpload,
   Post,
   PostAction,
@@ -68,7 +56,7 @@ import type {
   PublicationDestination,
   PublicationDestinationChoice,
   PublicationDestinationChoiceList,
-  PublicationDestinationKind,
+  PublicationDestinationType,
   PublicationEvent,
   PublicationGrant,
   PublicationWorkspace,
@@ -82,10 +70,10 @@ import type {
   ReplacementAcceptance,
   ReplacementPreview,
   RotatedPublicationSecret,
-  SaveAssetBlockRequest,
+  SaveWorkBlockRequest,
   ScriptListContent,
   SettingGroupContent,
-  StartAssetRequest,
+  StartWorkRequest,
   StylesheetSetContent,
   TypedValue,
   VariableSchemaContent,
@@ -94,27 +82,39 @@ import type {
   VersionChange,
   VersionChangeGroup,
   VersionComparison,
+  WorkBlock,
+  WorkDetail,
+  WorkElement,
+  WorkIdentityRequest,
+  WorkImage,
+  WorkInstance,
+  WorkInstanceList,
+  WorkList,
+  WorkTag,
+  WorkUpdate,
+  WorkUpdateRequest,
+  WorkVersionNotesRequest,
 } from "./shapes";
 export type {
   AddableBlock,
   AddedPublicationDestination,
   AppTarget,
-  ArrangeAssetBlocksRequest,
-  AssetBlock,
-  AssetDetail,
-  AssetElement,
-  AssetIdentityRequest,
-  AssetImage,
-  AssetInstance,
-  AssetInstanceList,
-  AssetTag,
-  AssetUpdate,
-  AssetUpdateRequest,
-  AssetVersionNotesRequest,
-  BrowseAsset,
+  ArrangeWorkBlocksRequest,
+  WorkBlock,
+  WorkDetail,
+  WorkElement,
+  WorkIdentityRequest,
+  WorkImage,
+  WorkInstance,
+  WorkInstanceList,
+  WorkTag,
+  WorkUpdate,
+  WorkUpdateRequest,
+  WorkVersionNotesRequest,
+  BrowseWork,
   BrowseCursor,
   ColorSetContent,
-  DeletedAsset,
+  DeletedWork,
   DownloadTarget,
   ElementType,
   EntryTableContent,
@@ -150,7 +150,7 @@ export type {
   PublicationDestination,
   PublicationDestinationChoice,
   PublicationDestinationChoiceList,
-  PublicationDestinationKind,
+  PublicationDestinationType,
   PublicationEvent,
   PublicationGrant,
   PublicationWorkspace,
@@ -161,7 +161,7 @@ export type {
   RecordedVersionDownloads,
   ReplacementPreview,
   RotatedPublicationSecret,
-  SaveAssetBlockRequest,
+  SaveWorkBlockRequest,
   ScriptListContent,
   SettingGroupContent,
   StylesheetSetContent,
@@ -185,17 +185,17 @@ export type ThemeFile = StylesheetSetContent["assets"][number];
 export type PresetVariable = VariableSchemaContent["variables"][number];
 export type RegexScript = ScriptListContent["scripts"][number];
 export type ReplacementDecision = ReplacementAcceptance["unrepresentable"];
-export type BrowsePage = AssetList;
-export type BrowseKind = BrowseAsset["kind"];
-export type NsfwVisibility = NsfwVisibilityRequest["visibility"];
+export type BrowsePage = WorkList;
+export type BrowseKind = BrowseWork["kind"];
+export type NsfwVisibility = NsfwPreferenceRequest["visibility"];
 
 export type BrowseFilters = Pick<
-  ListAssetsParams,
+  ListWorksParams,
   "kind" | "platform" | "q" | "facet"
 >;
 
 export type AssetListParams = BrowseFilters &
-  Pick<ListAssetsParams, "creator" | "limit" | "before" | "beforeId" | "nsfw">;
+  Pick<ListWorksParams, "creator" | "limit" | "before" | "beforeId" | "nsfw">;
 
 /** Creates an isolated cache for each server render. */
 export function makeQueryClient() {
@@ -260,7 +260,7 @@ export async function fetchAssets(
   cookie?: string,
   signal?: AbortSignal,
 ): Promise<BrowsePage> {
-  const { data, error } = await api<AssetList>("GET", "/v1/assets", {
+  const { data, error } = await api<WorkList>("GET", "/v1/assets", {
     query: params,
     headers: cookie ? { cookie } : undefined,
     signal,
@@ -272,8 +272,8 @@ export async function fetchAssets(
 export async function fetchDeletedAssets(
   handle: string,
   cookie: string,
-): Promise<DeletedAsset[] | null> {
-  const { data, error } = await api<DeletedAssetList>(
+): Promise<DeletedWork[] | null> {
+  const { data, error } = await api<DeletedWorkList>(
     "GET",
     `/v1/profiles/${encodeURIComponent(handle)}/deleted`,
     { headers: { cookie } },
@@ -286,8 +286,8 @@ export async function fetchAsset(
   id: string,
   cookie?: string,
   workingCopy = false,
-): Promise<AssetDetail | null> {
-  const { data, error } = await api<AssetDetail>("GET", `/v1/assets/${id}`, {
+): Promise<WorkDetail | null> {
+  const { data, error } = await api<WorkDetail>("GET", `/v1/assets/${id}`, {
     query: { workingCopy },
     headers: cookie ? { cookie } : undefined,
   });
@@ -295,13 +295,13 @@ export async function fetchAsset(
   return data;
 }
 
-export type StartAssetApp = NonNullable<StartAssetRequest["app"]>;
+export type StartAssetApp = NonNullable<StartWorkRequest["app"]>;
 
 export async function startAsset(
   kind: string,
   app?: StartAssetApp,
-): Promise<AssetDetail> {
-  const { data, error } = await api<AssetDetail>("POST", "/v1/assets", {
+): Promise<WorkDetail> {
+  const { data, error } = await api<WorkDetail>("POST", "/v1/assets", {
     body: app ? { kind, app } : { kind },
   });
   if (error || !data || !("blocks" in data)) {
@@ -319,7 +319,7 @@ export async function saveNsfwVisibility(visibility: NsfwVisibility) {
 
 export async function saveAssetDiscovery(
   id: string,
-  discovery: AssetDetail["discovery"],
+  discovery: WorkDetail["discovery"],
 ) {
   const { error } = await api<void>("PUT", `/v1/assets/${id}/discovery`, {
     body: { discovery },
@@ -331,9 +331,9 @@ export async function saveAssetBlock(
   candidate: Candidate,
   assetId: string,
   blockId: string,
-  block: SaveAssetBlockRequest,
-): Promise<AssetBlock> {
-  const { data, error, response } = await api<AssetBlock>(
+  block: SaveWorkBlockRequest,
+): Promise<WorkBlock> {
+  const { data, error, response } = await api<WorkBlock>(
     "PUT",
     `/v1/assets/${assetId}/blocks/${blockId}`,
     {
@@ -353,8 +353,8 @@ export async function addAssetBlock(
   assetId: string,
   definition: string,
   elementType: ElementType,
-): Promise<AssetBlock> {
-  const { data, error, response } = await api<AssetBlock>(
+): Promise<WorkBlock> {
+  const { data, error, response } = await api<WorkBlock>(
     "POST",
     `/v1/assets/${assetId}/blocks`,
     {
@@ -403,9 +403,9 @@ export async function addAssetImage(
 export async function arrangeAssetBlocks(
   candidate: Candidate,
   assetId: string,
-  arrangement: ArrangeAssetBlocksRequest,
-): Promise<AssetBlock[]> {
-  const { data, error, response } = await api<AssetBlock[]>(
+  arrangement: ArrangeWorkBlocksRequest,
+): Promise<WorkBlock[]> {
+  const { data, error, response } = await api<WorkBlock[]>(
     "PUT",
     `/v1/assets/${assetId}/blocks`,
     {
@@ -437,8 +437,8 @@ export async function placeVaultPicture(
   assetId: string,
   pictureId: string,
   mediaId?: string,
-): Promise<AssetBlock[]> {
-  const { data, error, response } = await api<AssetBlock[]>(
+): Promise<WorkBlock[]> {
+  const { data, error, response } = await api<WorkBlock[]>(
     "POST",
     `/v1/assets/${assetId}/vault/${pictureId}/place`,
     {
@@ -490,8 +490,8 @@ export async function moveAssetBlockContent(
   assetId: string,
   blockId: string,
   destinationBlockId: string,
-): Promise<AssetBlock[]> {
-  const { data, error, response } = await api<AssetBlock[]>(
+): Promise<WorkBlock[]> {
+  const { data, error, response } = await api<WorkBlock[]>(
     "POST",
     `/v1/assets/${assetId}/blocks/${blockId}/move-and-remove`,
     {
@@ -509,7 +509,7 @@ export async function moveAssetBlockContent(
 export async function saveAssetIdentity(
   candidate: Candidate,
   id: string,
-  identity: AssetIdentityRequest,
+  identity: WorkIdentityRequest,
 ) {
   const { error, response } = await api<void>(
     "PUT",
@@ -532,7 +532,7 @@ export async function publishAsset(
   | { published: true }
   | { published: false; error: string; readiness?: ReadinessItem[] }
 > {
-  const { data, error, response } = await api<AssetDetail>(
+  const { data, error, response } = await api<WorkDetail>(
     "POST",
     `/v1/assets/${id}/publish`,
     { headers: { "X-Working-Copy-Version": String(candidate.version) } },
@@ -633,9 +633,9 @@ export async function cancelAssetReplacement(id: string, operationId: string) {
 export async function publishAssetUpdate(
   candidate: Candidate,
   id: string,
-  update: AssetUpdateRequest,
+  update: WorkUpdateRequest,
 ): Promise<
-  | { published: true; update: AssetUpdate }
+  | { published: true; update: WorkUpdate }
   | {
       published: false;
       error: string;
@@ -644,7 +644,7 @@ export async function publishAssetUpdate(
       readiness?: ReadinessItem[];
     }
 > {
-  const { data, error, response } = await api<AssetUpdate>(
+  const { data, error, response } = await api<WorkUpdate>(
     "POST",
     `/v1/assets/${id}/updates`,
     {
@@ -716,7 +716,7 @@ export async function restoreAssetVersion(
 export async function correctAssetVersionNotes(
   id: string,
   number: number,
-  correction: AssetVersionNotesRequest,
+  correction: WorkVersionNotesRequest,
 ) {
   const { error } = await api<void>(
     "PATCH",

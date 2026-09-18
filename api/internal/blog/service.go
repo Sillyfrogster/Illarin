@@ -185,8 +185,8 @@ var PostEvents = announcements.PostEvents
 var ErrEventUnknown = announcements.ErrEventUnknown
 var ErrNotWebhook = announcements.ErrNotWebhook
 
-const KindWebhook = announcements.KindWebhook
-const KindDiscord = announcements.KindDiscord
+const TypeWebhook = announcements.TypeWebhook
+const TypeDiscord = announcements.TypeDiscord
 const DestinationUnverified = announcements.DestinationUnverified
 const DestinationActive = announcements.DestinationActive
 const DestinationDisabled = announcements.DestinationDisabled

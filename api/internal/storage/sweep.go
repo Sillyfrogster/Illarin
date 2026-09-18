@@ -86,14 +86,14 @@ func (s *Sweeper) deleteExpiredSnapshots(ctx context.Context) error {
 	}
 	defer tx.Rollback(ctx)
 	if _, err := tx.Exec(ctx, `
-		update assets set published_snapshot_id = null
+		update works set published_snapshot_id = null
 		 where deleted_at is not null and recoverable_until <= now()
 		   and published_snapshot_id is not null
 	`); err != nil {
 		return fmt.Errorf("release expired published snapshots: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `delete from asset_snapshots s using assets a
-		where s.asset_id = a.id and a.deleted_at is not null and a.recoverable_until <= now()`); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_snapshots s using works a
+		where s.work_id = a.id and a.deleted_at is not null and a.recoverable_until <= now()`); err != nil {
 		return fmt.Errorf("remove expired history: %w", err)
 	}
 	return tx.Commit(ctx)
@@ -107,36 +107,36 @@ func (s *Sweeper) deleteExpiredProtectedContent(ctx context.Context, now time.Ti
 	defer tx.Rollback(ctx)
 
 	rows, err := tx.Query(ctx, `
-		select id from assets
+		select id from works
 		 where deleted_at is not null and recoverable_until <= $1
-		   and (exists (select 1 from protected_content where asset_id = assets.id)
-		        or exists (select 1 from protected_delivery_apps where asset_id = assets.id))
+		   and (exists (select 1 from protected_content where work_id = works.id)
+		        or exists (select 1 from protected_delivery_apps where work_id = works.id))
 		 for update
 	`, now)
 	if err != nil {
-		return fmt.Errorf("lock expired assets for protected content cleanup: %w", err)
+		return fmt.Errorf("lock expired works for protected content cleanup: %w", err)
 	}
 	var expired []uuid.UUID
 	for rows.Next() {
 		var id uuid.UUID
 		if err := rows.Scan(&id); err != nil {
 			rows.Close()
-			return fmt.Errorf("read expired asset for protected content cleanup: %w", err)
+			return fmt.Errorf("read expired work for protected content cleanup: %w", err)
 		}
 		expired = append(expired, id)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return fmt.Errorf("list expired assets for protected content cleanup: %w", err)
+		return fmt.Errorf("list expired works for protected content cleanup: %w", err)
 	}
 	rows.Close()
 	if len(expired) == 0 {
 		return tx.Commit(ctx)
 	}
-	if _, err := tx.Exec(ctx, `delete from protected_content where asset_id = any($1)`, expired); err != nil {
+	if _, err := tx.Exec(ctx, `delete from protected_content where work_id = any($1)`, expired); err != nil {
 		return fmt.Errorf("remove expired protected content: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `delete from protected_delivery_apps where asset_id = any($1)`, expired); err != nil {
+	if _, err := tx.Exec(ctx, `delete from protected_delivery_apps where work_id = any($1)`, expired); err != nil {
 		return fmt.Errorf("remove expired protected delivery policy: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -338,15 +338,15 @@ func liveBlobReferenceExpression(blobID, at string) string {
 		 where operation.blob_id = ` + blobID + `
 		   and operation.status in ('pending', 'processing')
 		union all
-		select 1 from asset_revisions revision
-		  join assets asset on asset.id = revision.asset_id
+		select 1 from work_revisions revision
+		  join works work on work.id = revision.work_id
 		 where revision.blob_id = ` + blobID + `
-		   and (asset.deleted_at is null or asset.recoverable_until > ` + at + `)
+		   and (work.deleted_at is null or work.recoverable_until > ` + at + `)
 		union all
-		select 1 from asset_media media
-		  join assets asset on asset.id = media.asset_id
+		select 1 from work_media media
+		  join works work on work.id = media.work_id
 		 where media.blob_id = ` + blobID + `
-		   and (asset.deleted_at is null or asset.recoverable_until > ` + at + `)
+		   and (work.deleted_at is null or work.recoverable_until > ` + at + `)
 		union all
 		select 1 from profile_media media where media.blob_id = ` + blobID + `
 		union all
@@ -360,14 +360,14 @@ func liveBlobReferenceExpression(blobID, at string) string {
 
 func releaseExpiredReferences(ctx context.Context, tx pgx.Tx, id uuid.UUID, now time.Time) error {
 	statements := []string{
-		`update asset_revisions revision set blob_id = null
-		   from assets asset
-		  where revision.asset_id = asset.id and revision.blob_id = $1
-		    and asset.deleted_at is not null and asset.recoverable_until <= $2`,
-		`update asset_media media set blob_id = null
-		   from assets asset
-		  where media.asset_id = asset.id and media.blob_id = $1
-		    and asset.deleted_at is not null and asset.recoverable_until <= $2`,
+		`update work_revisions revision set blob_id = null
+		   from works work
+		  where revision.work_id = work.id and revision.blob_id = $1
+		    and work.deleted_at is not null and work.recoverable_until <= $2`,
+		`update work_media media set blob_id = null
+		   from works work
+		  where media.work_id = work.id and media.blob_id = $1
+		    and work.deleted_at is not null and work.recoverable_until <= $2`,
 	}
 	for _, statement := range statements {
 		if _, err := tx.Exec(ctx, statement, id, now); err != nil {

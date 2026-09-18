@@ -74,9 +74,9 @@ func TestImportPayloadLimitNamesTheLimitAndActualBytes(t *testing.T) {
 		!strings.Contains(got.Failure.Message, strconv.Itoa(len(payload))) {
 		t.Fatalf("failure = %+v, want limit %d and actual %d", got.Failure, block.MaxPayloadBytes, len(payload))
 	}
-	var assets int
-	if err := pool.QueryRow(context.Background(), `select count(*) from assets`).Scan(&assets); err != nil || assets != 0 {
-		t.Fatalf("assets = %d, %v; over-limit import must store none", assets, err)
+	var works int
+	if err := pool.QueryRow(context.Background(), `select count(*) from works`).Scan(&works); err != nil || works != 0 {
+		t.Fatalf("assets = %d, %v; over-limit import must store none", works, err)
 	}
 }
 
@@ -137,7 +137,7 @@ func (m *leasedModule) Parse(context.Context, format.Inspection, format.Claim) (
 		close(m.started)
 		<-m.release
 	}
-	return format.Parsed{Kind: "character", Format: "leased"}, nil
+	return format.Parsed{Type: "character", Format: "leased"}, nil
 }
 
 func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
@@ -163,7 +163,7 @@ func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
 	name := "Leased card"
 	_, err = service.AcceptIngest(context.Background(), IngestInput{
 		OwnerID: ownerID, Filename: "leased.json", File: bytes.NewReader([]byte(`{"value":true}`)),
-		Name: &name, Discovery: work.DiscoveryListed,
+		Name: &name, Visibility: work.VisibilityListed,
 	})
 	if err != nil {
 		t.Fatalf("accept ingest: %v", err)
@@ -188,7 +188,7 @@ func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
 		t.Fatalf("stale worker finalization: %v", err)
 	}
 
-	for _, table := range []string{"assets", "asset_revisions"} {
+	for _, table := range []string{"works", "work_revisions"} {
 		var count int
 		if err := pool.QueryRow(context.Background(), "select count(*) from "+table).Scan(&count); err != nil {
 			t.Fatalf("count %s: %v", table, err)

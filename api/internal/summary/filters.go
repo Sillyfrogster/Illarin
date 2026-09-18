@@ -21,37 +21,37 @@ func WriteFilters(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
 	}
 	stored, err := json.Marshal(counts)
 	if err != nil {
-		return fmt.Errorf("write the facet projection: %w", err)
+		return fmt.Errorf("write the facet summary: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		insert into asset_projections (asset_id, facets, facet_stamp, facet_computed_at)
+		insert into work_summaries (work_id, facets, facet_stamp, facet_computed_at)
 		values ($1, $2, $3, now())
-		on conflict (asset_id) do update
+		on conflict (work_id) do update
 		   set facets = excluded.facets,
 		       facet_stamp = excluded.facet_stamp,
 		       facet_computed_at = excluded.facet_computed_at
 	`, workID, stored, block.FacetStamp()); err != nil {
-		return fmt.Errorf("store the facet projection: %w", err)
+		return fmt.Errorf("store the facet summary: %w", err)
 	}
 	return nil
 }
 
 func filterCounts(ctx context.Context, q db.DBTX, workID uuid.UUID) (map[block.FacetKey]int, error) {
-	var kind string
+	var workType string
 	err := q.QueryRow(ctx, `
-		select kind from assets where id = $1 and deleted_at is null
-	`, workID).Scan(&kind)
+		select type from works where id = $1 and deleted_at is null
+	`, workID).Scan(&workType)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read the asset to measure: %w", err)
+		return nil, fmt.Errorf("read the work to measure: %w", err)
 	}
 	blocks, err := block.Read(ctx, q, workID)
 	if err != nil {
 		return nil, err
 	}
-	return block.MeasureFacets(kind, shownElements(blocks)), nil
+	return block.MeasureFacets(workType, shownElements(blocks)), nil
 }
 
 func shownElements(blocks []block.Block) []block.Element {
@@ -67,12 +67,12 @@ func shownElements(blocks []block.Block) []block.Element {
 
 func RecomputeStaleFilters(ctx context.Context, pool *pgxpool.Pool, reg *format.Registry) (int, error) {
 	stale, err := staleWorks(ctx, pool, `
-		select asset.id
-		  from assets asset
-		  left join asset_projections projection on projection.asset_id = asset.id
-		 where asset.deleted_at is null
-		   and (projection.asset_id is null or projection.facet_stamp <> $1)
-		 order by asset.id
+		select work.id
+		  from works work
+		  left join work_summaries summary on summary.work_id = work.id
+		 where work.deleted_at is null
+		   and (summary.work_id is null or summary.facet_stamp <> $1)
+		 order by work.id
 	`, block.FacetStamp())
 	if err != nil {
 		return 0, err
@@ -84,7 +84,7 @@ func RecomputeStaleFilters(ctx context.Context, pool *pgxpool.Pool, reg *format.
 			}
 			return writePublished(ctx, tx, reg, workID)
 		}); err != nil {
-			return 0, fmt.Errorf("recompute the facet projection for %s: %w", workID, err)
+			return 0, fmt.Errorf("recompute the facet summary for %s: %w", workID, err)
 		}
 	}
 	return len(stale), nil

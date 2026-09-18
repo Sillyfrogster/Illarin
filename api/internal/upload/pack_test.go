@@ -12,7 +12,7 @@ import (
 	packformat "github.com/Sillyfrogster/Illarin/api/internal/format/pack"
 )
 
-func startPack(t *testing.T, r http.Handler, session *http.Cookie) apitest.StartedAsset {
+func startPack(t *testing.T, r http.Handler, session *http.Cookie) apitest.StartedWork {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
 		strings.NewReader(`{"kind":"pack"}`))
@@ -21,7 +21,7 @@ func startPack(t *testing.T, r http.Handler, session *http.Cookie) apitest.Start
 	if response.Code != http.StatusCreated {
 		t.Fatalf("start a Pack: status = %d, want 201: %s", response.Code, response.Body.String())
 	}
-	var started apitest.StartedAsset
+	var started apitest.StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
 		t.Fatalf("decode the started Pack: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestAPackBuiltFromNothingHasOneRequiredRecordListAndPublishesWithAnItem(t *
 	r, session := harness.NewVerifiedRouter(t)
 	started := startPack(t, r, session)
 
-	if started.Kind != "pack" || len(started.Blocks) != 1 {
+	if started.Type != "pack" || len(started.Blocks) != 1 {
 		t.Fatalf("started Pack = %+v, want one Pack block", started)
 	}
 	core := apitest.BlockNamed(t, started.Blocks, "pack_core")
@@ -45,7 +45,7 @@ func TestAPackBuiltFromNothingHasOneRequiredRecordListAndPublishesWithAnItem(t *
 		t.Fatalf("Pack core elements = %+v", core.Elements)
 	}
 
-	refused := apitest.PublishAsset(t, r, session, started.ID)
+	refused := apitest.PublishWork(t, r, session, started.ID)
 	if refused.Code != http.StatusConflict {
 		t.Fatalf("publish an empty Pack = %d, want 409: %s", refused.Code, refused.Body.String())
 	}
@@ -73,7 +73,7 @@ func TestAPackBuiltFromNothingHasOneRequiredRecordListAndPublishesWithAnItem(t *
 		`{"name":"Archive companions","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
 		t.Fatalf("save Pack identity = %d, want 204: %s", saved.Code, saved.Body.String())
 	}
-	if published := apitest.PublishAsset(t, r, session, started.ID); published.Code != http.StatusOK {
+	if published := apitest.PublishWork(t, r, session, started.ID); published.Code != http.StatusOK {
 		t.Fatalf("publish a ready Pack = %d, want 200: %s", published.Code, published.Body.String())
 	}
 }
@@ -86,7 +86,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, registry)
+	r, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, registry)
 	metadata := apitest.ExampleMetadata("Archive companions")
 	metadata["filename"] = "companions.json"
 	metadata["_keepDraft"] = true
@@ -100,9 +100,9 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 			"authorName":"A creator","version":3,"futureItem":{"kept":true}
 		}],"loomItems":[]
 	}`)
-	assetID := apitest.AssetIDFromIngest(t, apitest.UploadAndFinish(t, r, session, assets, metadata, source))
-	page := apitest.FetchStartedAsset(t, r, session, assetID)
-	if page.Kind != "pack" || page.Lifecycle != "draft" || len(page.Blocks) != 1 ||
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, source))
+	page := apitest.FetchStartedWork(t, r, session, workID)
+	if page.Type != "pack" || page.Lifecycle != "draft" || len(page.Blocks) != 1 ||
 		len(page.Media) != 0 {
 		t.Fatalf("imported Pack page = %+v", page)
 	}
@@ -112,7 +112,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	}
 
 	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
-		t, assetID, "pack_item", apitest.PNG(t, 96, 96),
+		t, workID, "pack_item", apitest.PNG(t, 96, 96),
 	), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add Pack item image = %d, want 201: %s", added.Code, added.Body.String())
@@ -123,7 +123,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	if err := json.Unmarshal(added.Body.Bytes(), &itemImage); err != nil {
 		t.Fatalf("decode Pack item image: %v", err)
 	}
-	if got := apitest.ContentGeneration(t, pool, assetID); got != 1 {
+	if got := apitest.ContentGeneration(t, pool, workID); got != 1 {
 		t.Fatalf("unreferenced Pack image moved content generation to %d", got)
 	}
 
@@ -138,15 +138,15 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	content.Records[0]["lumiaBehavior"] = "Answers with source notes."
 	content.Records[0]["avatarUrl"] = itemImage.ID
 	body.Elements[0].Content = json.RawMessage(apitest.JSONText(t, content))
-	if saved := apitest.SaveBlock(t, r, session, assetID, core.ID, body); saved.Code != http.StatusOK {
+	if saved := apitest.SaveBlock(t, r, session, workID, core.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save edited Pack item = %d, want 200: %s", saved.Code, saved.Body.String())
 	}
-	if got := apitest.ContentGeneration(t, pool, assetID); got != 2 {
+	if got := apitest.ContentGeneration(t, pool, workID); got != 2 {
 		t.Fatalf("Pack item edit moved content generation to %d, want 2", got)
 	}
 
 	cover := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
-		t, assetID, "avatar", apitest.PNG(t, 800, 1000),
+		t, workID, "avatar", apitest.PNG(t, 800, 1000),
 	), session))
 	if cover.Code != http.StatusCreated {
 		t.Fatalf("add Pack cover = %d, want 201: %s", cover.Code, cover.Body.String())
@@ -157,12 +157,12 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	if err := json.Unmarshal(cover.Body.Bytes(), &coverImage); err != nil {
 		t.Fatalf("decode Pack cover: %v", err)
 	}
-	if got := apitest.ContentGeneration(t, pool, assetID); got != 3 {
+	if got := apitest.ContentGeneration(t, pool, workID); got != 3 {
 		t.Fatalf("Pack cover moved content generation to %d, want 3", got)
 	}
 
 	request := httptest.NewRequest(
-		http.MethodGet, "/download/"+assetID+"/"+packformat.ID, nil,
+		http.MethodGet, "/download/"+workID+"/"+packformat.ID, nil,
 	)
 	download := apitest.Send(t, r, apitest.Authorized(request, session))
 	if download.Code != http.StatusOK {

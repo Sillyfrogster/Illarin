@@ -13,7 +13,7 @@ func (s *Service) PreservedNamespaces(
 	ownerID uuid.UUID,
 	workID uuid.UUID,
 ) ([]work.PreservedNamespace, error) {
-	return s.assets.PreservedNamespaces(ctx, ownerID, workID)
+	return s.works.PreservedNamespaces(ctx, ownerID, workID)
 }
 
 // DeletePreservedNamespace drops one namespace of preserved data from a work.
@@ -24,5 +24,5 @@ func (s *Service) DeletePreservedNamespace(
 	namespace string,
 	candidate *work.Candidate,
 ) error {
-	return s.assets.DeletePreservedNamespace(ctx, ownerID, workID, namespace, candidate)
+	return s.works.DeletePreservedNamespace(ctx, ownerID, workID, namespace, candidate)
 }

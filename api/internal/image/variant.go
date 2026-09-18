@@ -40,7 +40,7 @@ func (h *Handlers) GetMediaVariant(c *gin.Context) {
 		api.Refuse(c, http.StatusNotFound, "no such media variant")
 		return
 	}
-	download, err := h.assets.MediaVariant(c.Request.Context(), work.MediaRequest{
+	download, err := h.works.MediaVariant(c.Request.Context(), work.MediaRequest{
 		MediaID:   mediaID,
 		Variant:   variant,
 		Version:   uint32(derivativeVersion),
@@ -128,7 +128,7 @@ func valueOrEmpty(value *string) string {
 func toAPIMedia(found work.Media) Media {
 	return Media{
 		Id:                found.ID,
-		AssetId:           found.AssetID,
+		WorkId:            found.WorkID,
 		Role:              MediaRole(found.Role),
 		Width:             found.Width,
 		Height:            found.Height,

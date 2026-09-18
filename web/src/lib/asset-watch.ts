@@ -1,4 +1,4 @@
-import type { AssetWatch } from "@/lib/api/notifications";
+import type { WorkFollow } from "@/lib/api/notifications";
 
 type OfferStorage = Pick<Storage, "getItem" | "setItem">;
 
@@ -14,7 +14,7 @@ export type WatchWords = {
 };
 
 /** Says what a reader's watch means for them, naming the instances when an install is the reason. */
-export function watchWords(watch: AssetWatch, kind: string): WatchWords {
+export function watchWords(watch: WorkFollow, kind: string): WatchWords {
   const installedOn = names.format(watch.installedOn);
   switch (watch.state) {
     case "watching":
@@ -53,7 +53,7 @@ export function watchWords(watch: AssetWatch, kind: string): WatchWords {
 
 /** Says whether to offer a watch after a download or send. */
 export function offersWatch(
-  watch: AssetWatch | undefined,
+  watch: WorkFollow | undefined,
   notNow: boolean,
 ): boolean {
   return watch?.state === "none" && !notNow;

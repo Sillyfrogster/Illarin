@@ -21,7 +21,7 @@ type Media struct {
 }
 
 type Parsed struct {
-	Kind      string
+	Type      string
 	Format    string
 	Tags      []string
 	IsNSFW    *bool
@@ -55,7 +55,7 @@ type ProtectedPrompt struct {
 type Header struct {
 	Name           string
 	Blurb          string
-	AssetVersion   string
+	WorkVersion    string
 	CreditedAuthor string
 	Nickname       string
 	Identifier     string
@@ -66,7 +66,7 @@ const MaxBlurbRunes = 400
 type Owner string
 
 const (
-	OwnerAsset   Owner = "asset"
+	OwnerWork    Owner = "asset"
 	OwnerElement Owner = "element"
 	OwnerItem    Owner = "item"
 )
@@ -90,18 +90,18 @@ const (
 	InputDatabaseRow Input = "database_row"
 )
 
-type ColumnDispositionKind string
+type ColumnDispositionType string
 
 const (
-	ColumnMapped    ColumnDispositionKind = "mapped"
-	ColumnPreserved ColumnDispositionKind = "preserved"
-	ColumnDropped   ColumnDispositionKind = "dropped"
+	ColumnMapped    ColumnDispositionType = "mapped"
+	ColumnPreserved ColumnDispositionType = "preserved"
+	ColumnDropped   ColumnDispositionType = "dropped"
 )
 
 type ColumnDisposition struct {
 	Table       string
 	Column      string
-	Disposition ColumnDispositionKind
+	Disposition ColumnDispositionType
 	Destination string
 	Reason      string
 }
@@ -132,17 +132,17 @@ const (
 )
 
 type AnomalyDeclaration struct {
-	Kind        string
+	Type        string
 	Disposition AnomalyDisposition
 	Reason      string
 }
 
-type RecognitionKind string
+type RecognitionType string
 
 const (
-	RecognitionDiscriminator RecognitionKind = "discriminator"
-	RecognitionSignature     RecognitionKind = "signature"
-	RecognitionEntry         RecognitionKind = "entry"
+	RecognitionDiscriminator RecognitionType = "discriminator"
+	RecognitionSignature     RecognitionType = "signature"
+	RecognitionEntry         RecognitionType = "entry"
 )
 
 type ValueType string
@@ -156,7 +156,7 @@ const (
 )
 
 type Recognition struct {
-	Kind         RecognitionKind
+	Type         RecognitionType
 	Containers   []Container
 	Path         []string
 	Entry        string
@@ -176,7 +176,7 @@ func ClaimByDeclaration(file Inspection, declaration Declaration) (Claim, bool) 
 				!slices.Contains(recognition.Containers, payload.Locator.Container) {
 				continue
 			}
-			switch recognition.Kind {
+			switch recognition.Type {
 			case RecognitionDiscriminator:
 				value, ok := payloadValue(payload.Root, recognition.Path)
 				if !ok || !slices.Contains(recognition.Values, value) {
@@ -233,7 +233,7 @@ func payloadValue(root map[string]json.RawMessage, path []string) (string, bool)
 			if json.Unmarshal(raw, &value) == nil {
 				return value, true
 			}
-			if kind := jsonValueType(raw); kind == ValueNumber || kind == ValueBoolean {
+			if valueType := jsonValueType(raw); valueType == ValueNumber || valueType == ValueBoolean {
 				return string(bytes.TrimSpace(raw)), true
 			}
 			return "", false
@@ -393,8 +393,8 @@ func scalarText(value json.RawMessage) string {
 type Declaration struct {
 	ID               string
 	Label            string
-	Kind             string
-	Kinds            []string
+	Type             string
+	Types            []string
 	Input            Input
 	Columns          []ColumnDisposition
 	Anomalies        []AnomalyDeclaration
@@ -437,8 +437,8 @@ func validateDeclarationShape(d Declaration) error {
 		return errors.New("identity is required")
 	}
 	if d.Input == InputDatabaseRow {
-		if d.Kind != "" || len(d.Kinds) == 0 {
-			return errors.New("a database reader needs its supported kinds")
+		if d.Type != "" || len(d.Types) == 0 {
+			return errors.New("a database reader needs its supported types")
 		}
 		if !d.Direction.Read || d.Direction.Write || len(d.Recognition) > 0 {
 			return errors.New("a database reader reads rows and neither recognises nor writes files")
@@ -449,8 +449,8 @@ func validateDeclarationShape(d Declaration) error {
 		if len(d.Anomalies) == 0 {
 			return errors.New("a database reader needs an ahead-of-run anomaly policy")
 		}
-	} else if d.Kind == "" || len(d.Kinds) > 0 {
-		return errors.New("a file module needs exactly one kind")
+	} else if d.Type == "" || len(d.Types) > 0 {
+		return errors.New("a file module needs exactly one type")
 	} else if len(d.Columns) > 0 || len(d.Anomalies) > 0 {
 		return errors.New("only a database reader declares source columns and anomalies")
 	}
@@ -507,15 +507,15 @@ func validateAnomalies(d Declaration) error {
 func ValidateAnomalies(anomalies []AnomalyDeclaration) error {
 	seenAnomalies := make(map[string]bool, len(anomalies))
 	for _, anomaly := range anomalies {
-		if anomaly.Kind == "" || anomaly.Reason == "" {
-			return errors.New("an anomaly needs a kind and reason")
+		if anomaly.Type == "" || anomaly.Reason == "" {
+			return errors.New("an anomaly needs a type and reason")
 		}
-		if seenAnomalies[anomaly.Kind] {
-			return fmt.Errorf("anomaly %q is declared twice", anomaly.Kind)
+		if seenAnomalies[anomaly.Type] {
+			return fmt.Errorf("anomaly %q is declared twice", anomaly.Type)
 		}
-		seenAnomalies[anomaly.Kind] = true
+		seenAnomalies[anomaly.Type] = true
 		if anomaly.Disposition != AnomalyTolerated && anomaly.Disposition != AnomalyFatal {
-			return fmt.Errorf("anomaly %q has disposition %q", anomaly.Kind, anomaly.Disposition)
+			return fmt.Errorf("anomaly %q has disposition %q", anomaly.Type, anomaly.Disposition)
 		}
 	}
 	return nil
@@ -524,7 +524,7 @@ func ValidateAnomalies(anomalies []AnomalyDeclaration) error {
 func validateHeader(d Declaration) error {
 	for _, field := range d.Header {
 		if !field.Known() {
-			return fmt.Errorf("header field %q is not one an asset carries", field)
+			return fmt.Errorf("header field %q is not one a work carries", field)
 		}
 	}
 	return nil
@@ -535,7 +535,7 @@ func validateRecognition(d Declaration) error {
 		if len(recognition.Containers) == 0 {
 			return errors.New("recognition needs at least one container")
 		}
-		switch recognition.Kind {
+		switch recognition.Type {
 		case RecognitionDiscriminator:
 			if len(recognition.Path) == 0 || len(recognition.Values) == 0 {
 				return errors.New("a discriminator needs a location and accepted values")
@@ -562,7 +562,7 @@ func validateRecognition(d Declaration) error {
 				return errors.New("an entry recognition needs an archive and the entry it reads")
 			}
 		default:
-			return fmt.Errorf("unknown recognition kind %q", recognition.Kind)
+			return fmt.Errorf("unknown recognition type %q", recognition.Type)
 		}
 	}
 	return nil

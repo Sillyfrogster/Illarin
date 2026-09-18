@@ -18,14 +18,14 @@ const (
 )
 
 type Event struct {
-	AssetID            uuid.UUID
+	WorkID             uuid.UUID
 	RevisionID         *uuid.UUID
 	ExportTarget       string
 	AuthorizationClass AuthorizationClass
 }
 
 func newEvent(
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	revisionID *uuid.UUID,
 	target string,
 	ownerID *uuid.UUID,
@@ -39,7 +39,7 @@ func newEvent(
 		}
 	}
 	return Event{
-		AssetID: assetID, RevisionID: revisionID, ExportTarget: target,
+		WorkID: workID, RevisionID: revisionID, ExportTarget: target,
 		AuthorizationClass: authorization,
 	}
 }
@@ -47,14 +47,14 @@ func newEvent(
 func (s *Service) Record(ctx context.Context, event Event) error {
 	recorded, err := s.pool.Exec(ctx, `
 		insert into download_events
-			(asset_id, revision_id, export_target, authorization_class, discovery)
-		select asset.id, $2, $3, $4, asset.discovery
-		  from assets asset
-		 where asset.id = $1
-		   and asset.lifecycle = 'published'
-		   and asset.deleted_at is null
-		   and (asset.withheld_at is null or $4 = 'owner')
-	`, event.AssetID, event.RevisionID, event.ExportTarget, event.AuthorizationClass)
+			(work_id, revision_id, export_target, authorization_class, visibility)
+		select work.id, $2, $3, $4, work.visibility
+		  from works work
+		 where work.id = $1
+		   and work.lifecycle = 'published'
+		   and work.deleted_at is null
+		   and (work.withheld_at is null or $4 = 'owner')
+	`, event.WorkID, event.RevisionID, event.ExportTarget, event.AuthorizationClass)
 	if err != nil {
 		return fmt.Errorf("record download: %w", err)
 	}

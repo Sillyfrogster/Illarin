@@ -5,14 +5,14 @@ var Languages = []string{
 	"markdown", "python", "rust", "sql", "toml", "typescript", "yaml",
 }
 
-var CalloutKinds = []string{"note", "tip", "important", "warning"}
+var CalloutTypes = []string{"note", "tip", "important", "warning"}
 
 func isLanguage(name string) bool {
 	return contains(Languages, name)
 }
 
-func isCalloutKind(kind string) bool {
-	return contains(CalloutKinds, kind)
+func isCalloutType(calloutType string) bool {
+	return contains(CalloutTypes, calloutType)
 }
 
 func contains(names []string, name string) bool {

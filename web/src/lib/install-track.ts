@@ -1,4 +1,4 @@
-import type { AssetInstance, QueuedDelivery } from "@/lib/api/query";
+import type { QueuedDelivery, WorkInstance } from "@/lib/api/query";
 import { deliveryFailureLine } from "@/lib/asset-delivery";
 
 export type InstallStep = {
@@ -9,7 +9,7 @@ export type InstallStep = {
 
 /** InstallTrack is what an extension page shows for one instance the reader sent it to. */
 export type InstallTrack = {
-  instance: AssetInstance;
+  instance: WorkInstance;
   steps: InstallStep[];
   note: string;
   stopped: string | null;
@@ -32,14 +32,14 @@ function steps(done: number, now: number | null, last: string): InstallStep[] {
 type Standing = Omit<InstallTrack, "instance">;
 
 /** installTrack reads what the page can say about one instance, or nothing when it has never been sent there. */
-export function installTrack(instance: AssetInstance): InstallTrack | null {
+export function installTrack(instance: WorkInstance): InstallTrack | null {
   const standing = instance.delivery
     ? deliveryStanding(instance, instance.delivery)
     : libraryStanding(instance);
   return standing ? { instance, ...standing } : null;
 }
 
-function libraryStanding(instance: AssetInstance): Standing | null {
+function libraryStanding(instance: WorkInstance): Standing | null {
   if (instance.installedGeneration === null) return null;
   const here = instance.instanceName;
   return {
@@ -53,7 +53,7 @@ function libraryStanding(instance: AssetInstance): Standing | null {
 }
 
 function deliveryStanding(
-  instance: AssetInstance,
+  instance: WorkInstance,
   delivery: QueuedDelivery,
 ): Standing {
   const here = instance.instanceName;

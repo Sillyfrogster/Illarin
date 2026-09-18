@@ -23,11 +23,11 @@ func TestASillyTavernExtensionNeedsSillyTavernsCapability(t *testing.T) {
 	}
 }
 
-func TestOtherKindsNeedNoCapability(t *testing.T) {
+func TestOtherTypesNeedNoCapability(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []string{"character", "lorebook", "preset", "theme", "pack"} {
-		if needed := InstallCapabilities(kind, []string{"chara_card_v3", "extension_spindle"}); len(needed) != 0 {
-			t.Errorf("%s needs %v, want nothing", kind, needed)
+	for _, workType := range []string{"character", "lorebook", "preset", "theme", "pack"} {
+		if needed := InstallCapabilities(workType, []string{"chara_card_v3", "extension_spindle"}); len(needed) != 0 {
+			t.Errorf("%s needs %v, want nothing", workType, needed)
 		}
 	}
 }

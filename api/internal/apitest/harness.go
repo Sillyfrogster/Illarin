@@ -32,8 +32,8 @@ func init() {
 
 // Services are the running parts a test router serves
 type Services struct {
-	Assets             *work.Service
-	Works              *page.Service
+	Works              *work.Service
+	Pages              *page.Service
 	Blocks             *edit.Service
 	Versions           *version.Service
 	Uploads            *upload.Service
@@ -134,24 +134,24 @@ func NewServicesWithDelivery(
 	if err != nil {
 		t.Fatalf("storage: %v", err)
 	}
-	assets := work.NewService(pool, Registry(t), blob)
+	works := work.NewService(pool, Registry(t), blob)
 	accounts := NewAccounts(pool, sender, nil, MediaLibrary(blob))
 	links := NewLinkingService(pool)
 	updateDestinations := integration.NewService(
 		pool, SealingKey(), Publishing(to).Sender, "http://localhost:3000",
 	)
-	versions := version.NewService(pool, assets)
-	versions.OnUpdatePublished(updateDestinations.Announce, version.TellWatchers)
+	versions := version.NewService(pool, works)
+	versions.OnUpdatePublished(updateDestinations.Announce, version.TellFollowers)
 	return Services{
-		Assets:             assets,
-		Works:              page.NewService(pool, assets),
-		Blocks:             edit.NewService(pool, assets),
+		Works:              works,
+		Pages:              page.NewService(pool, works),
+		Blocks:             edit.NewService(pool, works),
 		Versions:           versions,
-		Uploads:            upload.NewService(pool, assets),
-		Downloads:          download.NewService(pool, assets),
+		Uploads:            upload.NewService(pool, works),
+		Downloads:          download.NewService(pool, works),
 		Accounts:           accounts,
 		Links:              links,
-		Deliveries:         connect.NewSends(pool, assets, links, settings),
+		Deliveries:         connect.NewSends(pool, works, links, settings),
 		Publications:       blog.NewService(pool, MediaLibrary(blob), Publishing(to)),
 		UpdateDestinations: updateDestinations,
 		Notifications:      NewNotifications(pool),
@@ -159,28 +159,28 @@ func NewServicesWithDelivery(
 	}
 }
 
-// NewServicesOver builds services over an existing pool, store and asset service
+// NewServicesOver builds services over an existing pool, store and work service
 func NewServicesOver(
 	pool *pgxpool.Pool,
 	blobs storage.Store,
-	assets *work.Service,
+	works *work.Service,
 	sender account.EmailSender,
 	provider account.DiscordProvider,
 ) Services {
 	links := NewLinkingService(pool)
 	destinations := NewUpdateDestinations(pool)
-	versions := version.NewService(pool, assets)
-	versions.OnUpdatePublished(destinations.Announce, version.TellWatchers)
+	versions := version.NewService(pool, works)
+	versions.OnUpdatePublished(destinations.Announce, version.TellFollowers)
 	return Services{
-		Assets:             assets,
-		Works:              page.NewService(pool, assets),
-		Blocks:             edit.NewService(pool, assets),
+		Works:              works,
+		Pages:              page.NewService(pool, works),
+		Blocks:             edit.NewService(pool, works),
 		Versions:           versions,
-		Uploads:            upload.NewService(pool, assets),
-		Downloads:          download.NewService(pool, assets),
+		Uploads:            upload.NewService(pool, works),
+		Downloads:          download.NewService(pool, works),
 		Accounts:           NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
 		Links:              links,
-		Deliveries:         NewDeliveryService(pool, assets, links),
+		Deliveries:         NewDeliveryService(pool, works, links),
 		Publications:       NewPublicationService(pool, blobs),
 		UpdateDestinations: destinations,
 		Notifications:      NewNotifications(pool),
@@ -213,9 +213,9 @@ func (h Harness) NewDiscordStack(
 	if err != nil {
 		t.Fatalf("storage: %v", err)
 	}
-	assets := work.NewService(pool, Registry(t), blob)
+	works := work.NewService(pool, Registry(t), blob)
 	outbox := &VerificationOutbox{}
-	services := NewServicesOver(pool, blob, assets, outbox, provider)
+	services := NewServicesOver(pool, blob, works, outbox, provider)
 	return h.RegisterRouter(t, services, api.DefaultDeadlines()), outbox, pool
 }
 
@@ -249,8 +249,8 @@ func (h Harness) NewVerifiedRouterWithService(
 	deadlines api.Deadlines,
 ) (*gin.Engine, *http.Cookie, *work.Service) {
 	t.Helper()
-	_, router, session, assets := h.NewVerifiedRoutersWithService(t, maxUploadBytes, deadlines)
-	return router, session, assets
+	_, router, session, works := h.NewVerifiedRoutersWithService(t, maxUploadBytes, deadlines)
+	return router, session, works
 }
 
 func (h Harness) NewVerifiedRoutersWithService(
@@ -259,8 +259,8 @@ func (h Harness) NewVerifiedRoutersWithService(
 	deadlines api.Deadlines,
 ) (*gin.Engine, *gin.Engine, *http.Cookie, *work.Service) {
 	t.Helper()
-	setupRouter, router, session, assets, _ := h.NewVerifiedRoutersWithPool(t, maxUploadBytes, deadlines)
-	return setupRouter, router, session, assets
+	setupRouter, router, session, works, _ := h.NewVerifiedRoutersWithPool(t, maxUploadBytes, deadlines)
+	return setupRouter, router, session, works
 }
 
 func (h Harness) NewVerifiedRoutersWithPool(
@@ -274,7 +274,7 @@ func (h Harness) NewVerifiedRoutersWithPool(
 		t, maxUploadBytes, api.DefaultDeadlines(), outbox,
 	)
 	session := VerifiedSignUp(t, setupRouter, outbox, "verified@example.com", "verified.creator")
-	return setupRouter, h.RegisterRouter(t, services, deadlines), session, services.Assets, pool
+	return setupRouter, h.RegisterRouter(t, services, deadlines), session, services.Works, pool
 }
 
 func (h Harness) NewVerifiedIngestRouter(
@@ -282,8 +282,8 @@ func (h Harness) NewVerifiedIngestRouter(
 	registry *format.Registry,
 ) (*gin.Engine, *http.Cookie, *work.Service) {
 	t.Helper()
-	router, session, assets, _ := h.NewVerifiedIngestRouterWithSettings(t, registry, work.DefaultIngestSettings())
-	return router, session, assets
+	router, session, works, _ := h.NewVerifiedIngestRouterWithSettings(t, registry, work.DefaultIngestSettings())
+	return router, session, works
 }
 
 func (h Harness) NewVerifiedIngestRouterWithPool(
@@ -338,9 +338,9 @@ func (h Harness) NewVerifiedIngestRouterWithStoreFactory(
 			t.Fatalf("register test format: %v", err)
 		}
 	}
-	assets := work.NewServiceWithIngestSettings(pool, registry, blobs, settings)
+	works := work.NewServiceWithIngestSettings(pool, registry, blobs, settings)
 	outbox := &VerificationOutbox{}
-	services := NewServicesOver(pool, blobs, assets, outbox, nil)
+	services := NewServicesOver(pool, blobs, works, outbox, nil)
 	setup := h.RegisterRouter(t, services, api.DefaultDeadlines())
 	session := SignUp(t, setup, "verified@example.com", "verified.creator")
 	verificationURL, err := url.Parse(outbox.Messages[0].Link)
@@ -352,7 +352,7 @@ func (h Harness) NewVerifiedIngestRouterWithStoreFactory(
 	if verified.Code != http.StatusOK {
 		t.Fatalf("verify test account: %d %s", verified.Code, verified.Body.String())
 	}
-	return h.RegisterRouter(t, services, api.DefaultDeadlines()), session, assets, pool
+	return h.RegisterRouter(t, services, api.DefaultDeadlines()), session, works, pool
 }
 
 // NewExtensionRouter serves a signed-in creator with every extension format registered

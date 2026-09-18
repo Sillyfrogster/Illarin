@@ -38,14 +38,14 @@ func (s *Service) SaveBlock(
 	}
 	defer tx.Rollback(ctx)
 
-	kind, err := candidate.Lock(ctx, tx, ownerID, workID)
+	workType, err := candidate.Lock(ctx, tx, ownerID, workID)
 	if err != nil {
 		return SavedBlock{}, err
 	}
 	var blocks []block.Block
 	var index int
-	if err := s.assets.ChangeContent(ctx, tx, workID, func() error {
-		blocks, index, err = s.writeBlock(ctx, tx, kind, workID, blockID, update)
+	if err := s.works.ChangeContent(ctx, tx, workID, func() error {
+		blocks, index, err = s.writeBlock(ctx, tx, workType, workID, blockID, update)
 		return err
 	}); err != nil {
 		return SavedBlock{}, err
@@ -56,13 +56,13 @@ func (s *Service) SaveBlock(
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
 		return SavedBlock{}, err
 	}
-	return SavedBlock{Kind: kind, Block: blocks[index]}, nil
+	return SavedBlock{Type: workType, Block: blocks[index]}, nil
 }
 
 func (s *Service) writeBlock(
 	ctx context.Context,
 	tx pgx.Tx,
-	kind string,
+	workType string,
 	workID uuid.UUID,
 	blockID uuid.UUID,
 	update BlockUpdate,
@@ -86,10 +86,10 @@ func (s *Service) writeBlock(
 	if err := block.ValidateStructure(blocks[index]); err != nil {
 		return nil, 0, invalid(err)
 	}
-	if err := block.ValidateBuilderConstraints(kind, before, blocks); err != nil {
+	if err := block.ValidateBuilderConstraints(workType, before, blocks); err != nil {
 		return nil, 0, invalid(err)
 	}
-	if err := s.validateProtectedApps(ctx, tx, workID, kind, blocks, update.AllowedApps); err != nil {
+	if err := s.validateProtectedApps(ctx, tx, workID, workType, blocks, update.AllowedApps); err != nil {
 		return nil, 0, invalid(err)
 	}
 	if !update.ExposeProtected {
@@ -110,9 +110,9 @@ func (s *Service) writeBlock(
 		return nil, 0, fmt.Errorf("write %s elements: %w", saved.Definition, err)
 	}
 	result, err := tx.Exec(ctx, `
-		update asset_blocks
+		update work_blocks
 		   set title = $3, layout = $4, width = $5, elements = $6
-		 where id = $1 and asset_id = $2
+		 where id = $1 and work_id = $2
 	`, blockID, workID, saved.Title, saved.Layout, saved.Width, elements)
 	if err != nil {
 		return nil, 0, fmt.Errorf("save block: %w", err)
@@ -130,7 +130,7 @@ func (s *Service) validateProtectedApps(
 	ctx context.Context,
 	q db.DBTX,
 	workID uuid.UUID,
-	kind string,
+	workType string,
 	blocks []block.Block,
 	allowedApps *[]string,
 ) error {
@@ -138,22 +138,22 @@ func (s *Service) validateProtectedApps(
 		return nil
 	}
 	var origin string
-	if err := q.QueryRow(ctx, `select coalesce(origin_format, '') from assets where id = $1`, workID).Scan(&origin); err != nil {
-		return fmt.Errorf("read the asset origin for protected delivery: %w", err)
+	if err := q.QueryRow(ctx, `select coalesce(origin_format, '') from works where id = $1`, workID).Scan(&origin); err != nil {
+		return fmt.Errorf("read the work origin for protected delivery: %w", err)
 	}
 	elements := make([]block.Element, 0)
 	for _, holder := range blocks {
 		elements = append(elements, holder.Elements...)
 	}
 	offered := s.reg.OfferedTargets(format.CapabilitySubject{
-		Kind: kind, Origin: origin, Elements: elements,
+		Type: workType, Origin: origin, Elements: elements,
 	})
 	for _, app := range *allowedApps {
-		available := slices.ContainsFunc(private.AppTargets(kind, app), func(wanted string) bool {
+		available := slices.ContainsFunc(private.AppTargets(workType, app), func(wanted string) bool {
 			return slices.ContainsFunc(offered, func(target format.Target) bool { return target.Format == wanted })
 		})
 		if !available {
-			return fmt.Errorf("%q has no usable export target for this asset", app)
+			return fmt.Errorf("%q has no usable export target for this work", app)
 		}
 	}
 	return nil

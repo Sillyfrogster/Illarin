@@ -47,10 +47,10 @@ func TestMediaURLsUseTheSmoothBlurCacheVersion(t *testing.T) {
 
 func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testing.T) {
 	t.Parallel()
-	svc, pool := apitest.Assets(t)
+	svc, pool := apitest.Works(t)
 	ownerID := uuid.New()
 	created, err := apitest.Uploads(svc).Create(context.Background(), upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: "theme.bin",
+		OwnerID: ownerID, Type: "theme", Filename: "theme.bin",
 		File: bytes.NewReader([]byte("theme")), Name: "Theme",
 	})
 	if err != nil {
@@ -59,7 +59,7 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 	source := testPNG(t, 1200, 600, color.RGBA{R: 12, G: 34, B: 56, A: 255})
 
 	added, err := svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaGallery,
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaGallery,
 		File: bytes.NewReader(source),
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil {
@@ -68,8 +68,8 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 	if added.ID == uuid.Nil {
 		t.Fatal("media id is empty")
 	}
-	if added.AssetID != created.ID {
-		t.Fatalf("media asset = %v, want %s", added.AssetID, created.ID)
+	if added.WorkID != created.ID {
+		t.Fatalf("media asset = %v, want %s", added.WorkID, created.ID)
 	}
 	if added.Width != 1200 || added.Height != 600 {
 		t.Fatalf("dimensions = %dx%d, want native 1200x600", added.Width, added.Height)
@@ -80,18 +80,18 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 
 	var blobID uuid.UUID
 	var digestBytes []byte
-	var storedAsset uuid.UUID
+	var storedWork uuid.UUID
 	err = pool.QueryRow(context.Background(), `
-		select media.blob_id, blob.sha256, media.asset_id
-		  from asset_media media
+		select media.blob_id, blob.sha256, media.work_id
+		  from work_media media
 		  join blobs blob on blob.id = media.blob_id
 		 where media.id = $1
-	`, added.ID).Scan(&blobID, &digestBytes, &storedAsset)
+	`, added.ID).Scan(&blobID, &digestBytes, &storedWork)
 	if err != nil {
 		t.Fatalf("read media row: %v", err)
 	}
-	if storedAsset != created.ID {
-		t.Fatalf("stored media asset = %v, want %s", storedAsset, created.ID)
+	if storedWork != created.ID {
+		t.Fatalf("stored media asset = %v, want %s", storedWork, created.ID)
 	}
 	var digest [sha256.Size]byte
 	copy(digest[:], digestBytes)
@@ -121,24 +121,24 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 
 func TestAddingAReplacementMintsANewImmutableMediaRecord(t *testing.T) {
 	t.Parallel()
-	svc, _ := apitest.Assets(t)
+	svc, _ := apitest.Works(t)
 	ownerID := uuid.New()
 	created, err := apitest.Uploads(svc).Create(context.Background(), upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: "theme.bin",
+		OwnerID: ownerID, Type: "theme", Filename: "theme.bin",
 		File: bytes.NewReader([]byte("theme")), Name: "Theme",
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 	first, err := svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaAvatar,
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaAvatar,
 		File: bytes.NewReader(testPNG(t, 20, 10, color.Black)),
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("Add first media: %v", err)
 	}
 	second, err := svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaAvatar,
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaAvatar,
 		File: bytes.NewReader(testPNG(t, 30, 15, color.White)),
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil {
@@ -152,7 +152,7 @@ func TestAddingAReplacementMintsANewImmutableMediaRecord(t *testing.T) {
 	}
 	var coverID uuid.UUID
 	if err := svc.Pool().QueryRow(context.Background(),
-		`select cover_media_id from assets where id = $1`, created.ID,
+		`select cover_media_id from works where id = $1`, created.ID,
 	).Scan(&coverID); err != nil {
 		t.Fatalf("read cover: %v", err)
 	}
@@ -163,10 +163,10 @@ func TestAddingAReplacementMintsANewImmutableMediaRecord(t *testing.T) {
 
 func TestAReplacementDisplayPictureRetiresTheOneBeforeIt(t *testing.T) {
 	t.Parallel()
-	svc, _ := apitest.Assets(t)
+	svc, _ := apitest.Works(t)
 	ownerID := uuid.New()
 	created, err := apitest.Uploads(svc).Create(context.Background(), upload.CreateInput{
-		OwnerID: ownerID, Kind: "lorebook", Filename: "book.bin",
+		OwnerID: ownerID, Type: "lorebook", Filename: "book.bin",
 		File: bytes.NewReader([]byte("book")), Name: "Book",
 	})
 	if err != nil {
@@ -175,7 +175,7 @@ func TestAReplacementDisplayPictureRetiresTheOneBeforeIt(t *testing.T) {
 	var newest uuid.UUID
 	for range 3 {
 		added, err := svc.AddMedia(context.Background(), work.AddMediaInput{
-			OwnerID: ownerID, AssetID: created.ID, Role: work.MediaAvatar,
+			OwnerID: ownerID, WorkID: created.ID, Role: work.MediaAvatar,
 			File: bytes.NewReader(testPNG(t, 20, 10, color.Black)),
 		}, apitest.CurrentCandidate(t, svc, created.ID))
 		if err != nil {
@@ -184,7 +184,7 @@ func TestAReplacementDisplayPictureRetiresTheOneBeforeIt(t *testing.T) {
 		newest = added.ID
 	}
 	rows, err := svc.Pool().Query(context.Background(),
-		`select id from asset_media where asset_id = $1 and is_current`, created.ID)
+		`select id from work_media where work_id = $1 and is_current`, created.ID)
 	if err != nil {
 		t.Fatalf("read current media: %v", err)
 	}
@@ -204,24 +204,24 @@ func TestAReplacementDisplayPictureRetiresTheOneBeforeIt(t *testing.T) {
 
 func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 	t.Parallel()
-	svc, _ := apitest.Assets(t)
+	svc, _ := apitest.Works(t)
 	ownerID := uuid.New()
 	created, err := apitest.Uploads(svc).Create(context.Background(), upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: "theme.bin",
+		OwnerID: ownerID, Type: "theme", Filename: "theme.bin",
 		File: bytes.NewReader([]byte("theme")), Name: "Theme",
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 	_, err = svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaAvatarAlt,
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaAvatarAlt,
 		File: bytes.NewReader(testPNG(t, 20, 10, color.Black)),
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("Add alternate avatar: %v", err)
 	}
 	alternate, err := svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaAvatarAlt,
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaAvatarAlt,
 		File: bytes.NewReader(testPNG(t, 30, 15, color.White)),
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil {
@@ -229,7 +229,7 @@ func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 	}
 	var coverID uuid.UUID
 	if err := svc.Pool().QueryRow(context.Background(),
-		`select cover_media_id from assets where id = $1`, created.ID,
+		`select cover_media_id from works where id = $1`, created.ID,
 	).Scan(&coverID); err != nil {
 		t.Fatalf("read alternate cover: %v", err)
 	}
@@ -237,20 +237,20 @@ func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 		t.Fatalf("cover = %s, want latest alternate %s", coverID, alternate.ID)
 	}
 	primary, err := svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaAvatar,
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaAvatar,
 		File: bytes.NewReader(testPNG(t, 40, 20, color.Gray{Y: 128})),
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil {
 		t.Fatalf("Add primary avatar: %v", err)
 	}
 	if _, err := svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaAvatarAlt,
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaAvatarAlt,
 		File: bytes.NewReader(testPNG(t, 50, 25, color.White)),
 	}, apitest.CurrentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("Add alternate after primary: %v", err)
 	}
 	if err := svc.Pool().QueryRow(context.Background(),
-		`select cover_media_id from assets where id = $1`, created.ID,
+		`select cover_media_id from works where id = $1`, created.ID,
 	).Scan(&coverID); err != nil {
 		t.Fatalf("read cover: %v", err)
 	}
@@ -261,17 +261,17 @@ func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 
 func TestMediaVariantRegeneratesABoundedCacheMiss(t *testing.T) {
 	t.Parallel()
-	svc, _ := apitest.Assets(t)
+	svc, _ := apitest.Works(t)
 	ownerID := uuid.New()
 	created, err := apitest.Uploads(svc).Create(context.Background(), upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: "theme.bin",
+		OwnerID: ownerID, Type: "theme", Filename: "theme.bin",
 		File: bytes.NewReader([]byte("theme")), Name: "Theme",
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 	added, err := svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaGallery,
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaGallery,
 		File: bytes.NewReader(testPNG(t, 320, 180, color.White)),
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil {
@@ -310,18 +310,18 @@ func TestMediaVariantRegeneratesABoundedCacheMiss(t *testing.T) {
 	}
 }
 
-func TestCreatorCannotAddMediaToSomebodyElsesAsset(t *testing.T) {
+func TestCreatorCannotAddMediaToSomebodyElsesWork(t *testing.T) {
 	t.Parallel()
-	svc, _ := apitest.Assets(t)
+	svc, _ := apitest.Works(t)
 	created, err := apitest.Uploads(svc).Create(context.Background(), upload.CreateInput{
-		OwnerID: uuid.New(), Kind: "theme", Filename: "theme.bin",
+		OwnerID: uuid.New(), Type: "theme", Filename: "theme.bin",
 		File: bytes.NewReader([]byte("theme")), Name: "Theme",
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 	_, err = svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: uuid.New(), AssetID: created.ID, Role: work.MediaGallery,
+		OwnerID: uuid.New(), WorkID: created.ID, Role: work.MediaGallery,
 		File: bytes.NewReader(testPNG(t, 20, 10, color.White)),
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if !errors.Is(err, work.ErrMediaNotFound) {
@@ -329,14 +329,14 @@ func TestCreatorCannotAddMediaToSomebodyElsesAsset(t *testing.T) {
 	}
 }
 
-func TestIngestStoresExtractedMediaOnTheAsset(t *testing.T) {
+func TestIngestStoresExtractedMediaOnTheWork(t *testing.T) {
 	t.Parallel()
 	archive := archiveWithImage(t, testPNG(t, 90, 45, color.White))
 	registry := apitest.RegistryWith(t, apitest.RecognizedModule{Parsed: format.Parsed{
-		Kind: "character", Format: "recognized",
+		Type: "character", Format: "recognized",
 		Media: []format.Media{{Role: "expression", ImageID: 0}},
 	}})
-	svc, pool := apitest.AssetsWithRegistry(t, registry)
+	svc, pool := apitest.WorksWithRegistry(t, registry)
 	ownerID := uuid.New()
 	if _, err := pool.Exec(context.Background(),
 		`insert into users (id, username) values ($1, 'media.extractor')`, ownerID); err != nil {
@@ -356,23 +356,23 @@ func TestIngestStoresExtractedMediaOnTheAsset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetIngest: %v", err)
 	}
-	if operation.Asset == nil {
+	if operation.Work == nil {
 		t.Fatal("ingest did not create an asset")
 	}
 
-	var assetID uuid.UUID
+	var workID uuid.UUID
 	var role string
 	var width, height int
 	err = pool.QueryRow(context.Background(), `
-		select asset_id, role, width, height
-		  from asset_media
-		 where asset_id = $1
-	`, operation.Asset.ID).Scan(&assetID, &role, &width, &height)
+		select work_id, role, width, height
+		  from work_media
+		 where work_id = $1
+	`, operation.Work.ID).Scan(&workID, &role, &width, &height)
 	if err != nil {
 		t.Fatalf("read extracted media: %v", err)
 	}
-	if assetID != operation.Asset.ID {
-		t.Fatalf("extracted media asset = %v, want %v", assetID, operation.Asset.ID)
+	if workID != operation.Work.ID {
+		t.Fatalf("extracted media asset = %v, want %v", workID, operation.Work.ID)
 	}
 	if role != "expression" || width != 90 || height != 45 {
 		t.Fatalf("extracted media = %s %dx%d", role, width, height)
@@ -397,14 +397,14 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 	)
 	ownerID := uuid.New()
 	created, err := apitest.Uploads(svc).Create(context.Background(), upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: "theme.bin",
+		OwnerID: ownerID, Type: "theme", Filename: "theme.bin",
 		File: bytes.NewReader([]byte("theme")), Name: "Theme",
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 	added, err := svc.AddMedia(context.Background(), work.AddMediaInput{
-		OwnerID: ownerID, AssetID: created.ID, Role: work.MediaGallery,
+		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaGallery,
 		File: bytes.NewReader([]byte("encoded image")),
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil {

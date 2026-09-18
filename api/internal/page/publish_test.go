@@ -16,7 +16,7 @@ func TestPublishRefusesAnIncompleteDraftAndNamesEveryMissingItem(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 
-	response := apitest.PublishAsset(t, r, session, started.ID)
+	response := apitest.PublishWork(t, r, session, started.ID)
 
 	if response.Code != http.StatusConflict {
 		t.Fatalf("publish an empty draft status = %d, want 409: %s",
@@ -45,7 +45,7 @@ func TestPublishRefusesAnIncompleteDraftAndNamesEveryMissingItem(t *testing.T) {
 		t.Error("the name links to a block, and it is a header field")
 	}
 
-	page := apitest.FetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedWork(t, r, session, started.ID)
 	if page.Lifecycle != "draft" {
 		t.Errorf("a refused draft is now %q", page.Lifecycle)
 	}
@@ -57,12 +57,12 @@ func TestABlurbIsNeverRequiredAndPublishingIsOneWay(t *testing.T) {
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
 
-	published := apitest.PublishAsset(t, r, session, started.ID)
+	published := apitest.PublishWork(t, r, session, started.ID)
 	if published.Code != http.StatusOK {
 		t.Fatalf("publish a complete draft status = %d, want 200: %s",
 			published.Code, published.Body.String())
 	}
-	var page apitest.StartedAsset
+	var page apitest.StartedWork
 	if err := json.Unmarshal(published.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode the published page: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestABlurbIsNeverRequiredAndPublishingIsOneWay(t *testing.T) {
 		t.Errorf("a reader got %d for a published asset, want 200", stranger.Code)
 	}
 
-	again := apitest.PublishAsset(t, r, session, started.ID)
+	again := apitest.PublishWork(t, r, session, started.ID)
 	if again.Code != http.StatusConflict {
 		t.Errorf("publishing twice status = %d, want 409: %s", again.Code, again.Body.String())
 	}
@@ -96,7 +96,7 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 		t.Fatalf("save identity status = %d: %s", got.Code, got.Body.String())
 	}
 
-	refused := apitest.PublishAsset(t, r, session, started.ID)
+	refused := apitest.PublishWork(t, r, session, started.ID)
 	if refused.Code != http.StatusConflict {
 		t.Fatalf("an asset with empty required blocks published: %d", refused.Code)
 	}
@@ -114,7 +114,7 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 		t.Fatalf("save an empty greeting status = %d: %s", got.Code, got.Body.String())
 	}
 
-	stillRefused := apitest.PublishAsset(t, r, session, started.ID)
+	stillRefused := apitest.PublishWork(t, r, session, started.ID)
 	if stillRefused.Code != http.StatusConflict {
 		t.Fatalf("a greeting with no text published the draft: %d", stillRefused.Code)
 	}
@@ -133,7 +133,7 @@ func TestTheFloorReadsElementContentRatherThanTheBlockItSitsIn(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, messagesBlock.ID, messages); got.Code != http.StatusOK {
 		t.Fatalf("save a written greeting status = %d: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 }
@@ -150,7 +150,7 @@ func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
 		`{"name":"Ilse","blurb":"","isNsfw":null}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save a name with no answer status = %d: %s", got.Code, got.Body.String())
 	}
-	named := apitest.FetchStartedAsset(t, r, session, started.ID)
+	named := apitest.FetchStartedWork(t, r, session, started.ID)
 	if !apitest.ItemNamed(t, named.Readiness, "name").Met {
 		t.Error("a named draft still reads as unnamed")
 	}
@@ -169,7 +169,7 @@ func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
 	}
 }
 
-func TestADraftHasNoDownloadNoDeliveryAndNoDiscoveryToSet(t *testing.T) {
+func TestADraftHasNoDownloadNoDeliveryAndNoVisibilityToSet(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
@@ -186,10 +186,10 @@ func TestADraftHasNoDownloadNoDeliveryAndNoDiscoveryToSet(t *testing.T) {
 		}
 	}
 
-	discovery := httptest.NewRequest(http.MethodPut,
+	visibility := httptest.NewRequest(http.MethodPut,
 		"/v1/assets/"+started.ID+"/discovery", strings.NewReader(`{"discovery":"unlisted"}`))
-	discovery.Header.Set("Content-Type", "application/json")
-	if got := apitest.Send(t, r, apitest.Authorized(discovery, session)); got.Code != http.StatusConflict {
+	visibility.Header.Set("Content-Type", "application/json")
+	if got := apitest.Send(t, r, apitest.Authorized(visibility, session)); got.Code != http.StatusConflict {
 		t.Errorf("set discovery on a draft status = %d, want 409: %s", got.Code, got.Body.String())
 	}
 }
@@ -212,7 +212,7 @@ func TestADraftsImagesAreServedOnlyAgainstTheSignatureItsPageCarries(t *testing.
 		t.Errorf("a stranger listed a draft's images: %d", strangerList.Code)
 	}
 
-	page := apitest.FetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedWork(t, r, session, started.ID)
 	if len(page.Media) != 1 {
 		t.Fatalf("draft media = %+v, want the image just added", page.Media)
 	}
@@ -240,7 +240,7 @@ func TestADraftsImagesAreServedOnlyAgainstTheSignatureItsPageCarries(t *testing.
 	}
 
 	apitest.WriteCharacterFloor(t, r, session, started)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 	published := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, path, nil))
@@ -275,7 +275,7 @@ func TestDraftsStandInTheOwnersOwnListingAndNowhereElse(t *testing.T) {
 	}
 
 	apitest.WriteCharacterFloor(t, r, session, started)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 	after := readProfileListing(t, r, "/v1/assets?creator=verified.creator", session)
@@ -317,17 +317,17 @@ func TestDeletingADraftTakesTheSameRecoveryWindow(t *testing.T) {
 	if restored.Code != http.StatusNoContent {
 		t.Fatalf("restore a draft status = %d, want 204: %s", restored.Code, restored.Body.String())
 	}
-	if page := apitest.FetchStartedAsset(t, r, session, started.ID); page.Lifecycle != "draft" {
+	if page := apitest.FetchStartedWork(t, r, session, started.ID); page.Lifecycle != "draft" {
 		t.Errorf("a restored draft is now %q", page.Lifecycle)
 	}
 }
 
-func TestAPublishedAssetKeepsItsAdultContentAnswer(t *testing.T) {
+func TestAPublishedWorkKeepsItsAdultContentAnswer(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 
@@ -349,11 +349,11 @@ func TestAPublishedPageBelowTheFloorMarksTheShortfallForItsOwner(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	page := apitest.FetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedWork(t, r, session, started.ID)
 	if len(page.Readiness) != 0 {
 		t.Errorf("a published page that meets the floor carries %d items", len(page.Readiness))
 	}
@@ -365,7 +365,7 @@ func TestAPublishedPageBelowTheFloorMarksTheShortfallForItsOwner(t *testing.T) {
 		t.Fatalf("empty the greetings status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	short := apitest.FetchStartedAsset(t, r, session, started.ID)
+	short := apitest.FetchStartedWork(t, r, session, started.ID)
 	if short.Lifecycle != "published" {
 		t.Errorf("the page is now %q, and a shortfall never unpublishes", short.Lifecycle)
 	}
@@ -383,10 +383,10 @@ func TestAPublishedPageBelowTheFloorMarksNothingForAVisitor(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	page := apitest.FetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedWork(t, r, session, started.ID)
 	messagesBlock := apitest.BlockNamed(t, page.Blocks, "messages")
 	messages := apitest.EditableBlock(messagesBlock)
 	messages.Elements[0].Content = json.RawMessage(`{"texts":[]}`)
@@ -398,7 +398,7 @@ func TestAPublishedPageBelowTheFloorMarksNothingForAVisitor(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the page as a visitor status = %d, want 200", response.Code)
 	}
-	var visitor apitest.StartedAsset
+	var visitor apitest.StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &visitor); err != nil {
 		t.Fatalf("decode the visitor's page: %v", err)
 	}
@@ -412,7 +412,7 @@ func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
@@ -422,7 +422,7 @@ func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.
 		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	response := apitest.PublishAssetUpdate(t, r, session, started.ID,
+	response := apitest.PublishWorkUpdate(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf","versionLabel":"v2"}`)
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish an update status = %d, want 200: %s", response.Code, response.Body.String())
@@ -443,7 +443,7 @@ func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.
 		t.Error("the update named no committed working-copy version")
 	}
 
-	again := apitest.PublishAssetUpdate(t, r, session, started.ID, `{"summary":"Nothing new"}`)
+	again := apitest.PublishWorkUpdate(t, r, session, started.ID, `{"summary":"Nothing new"}`)
 	if again.Code != http.StatusConflict {
 		t.Fatalf("republishing status = %d, want 409: %s", again.Code, again.Body.String())
 	}

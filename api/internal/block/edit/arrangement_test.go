@@ -12,16 +12,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func insertEmptyGallery(t *testing.T, pool *pgxpool.Pool, assetID string) string {
+func insertEmptyGallery(t *testing.T, pool *pgxpool.Pool, workID string) string {
 	t.Helper()
 	id := uuid.New()
 	elementID := uuid.New()
 	elements := `[{"id":"` + elementID.String() + `","type":"image_set","role":"gallery","slot":"main","version":1,"options":{"itemSize":"medium"},"content":{"images":[]}}]`
 	if _, err := pool.Exec(t.Context(), `
-		insert into asset_blocks
-		  (id, asset_id, definition, position, hidden, layout, width, elements)
+		insert into work_blocks
+		  (id, work_id, definition, position, hidden, layout, width, elements)
 		values ($1, $2, 'gallery', 2, false, 'single', 'half', $3)
-	`, id, assetID, elements); err != nil {
+	`, id, workID, elements); err != nil {
 		t.Fatalf("insert gallery: %v", err)
 	}
 	return id.String()
@@ -42,7 +42,7 @@ func TestCreatorReordersAndHidesBlocksAsOneArrangement(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("arrange status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved := apitest.FetchStartedAsset(t, r, session, started.ID)
+	saved := apitest.FetchStartedWork(t, r, session, started.ID)
 	if saved.Blocks[0].ID != messages.ID || saved.Blocks[0].Position != 0 || saved.Blocks[0].Width != "half" {
 		t.Errorf("first arranged block = %+v, want Messages at half width", saved.Blocks[0])
 	}
@@ -97,7 +97,7 @@ func TestCreatorRemovesAnOptionalBlockAndRequiredBlocksStay(t *testing.T) {
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("remove Gallery status = %d, want 204: %s", response.Code, response.Body.String())
 	}
-	saved := apitest.FetchStartedAsset(t, r, session, started.ID)
+	saved := apitest.FetchStartedWork(t, r, session, started.ID)
 	if len(saved.Blocks) != 2 || saved.Blocks[0].Position != 0 || saved.Blocks[1].Position != 1 {
 		t.Errorf("blocks after remove = %+v, want two required blocks in gapless order", saved.Blocks)
 	}
@@ -117,7 +117,7 @@ func TestSavingAnOptionalBlockEmptyKeepsItUntilExplicitRemoval(t *testing.T) {
 	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := apitest.StartCharacter(t, r, session)
 	insertEmptyGallery(t, pool, started.ID)
-	gallery := apitest.BlockNamed(t, apitest.FetchStartedAsset(t, r, session, started.ID).Blocks, "gallery")
+	gallery := apitest.BlockNamed(t, apitest.FetchStartedWork(t, r, session, started.ID).Blocks, "gallery")
 
 	update := apitest.EditableBlock(gallery)
 	update.Width = "full"
@@ -126,7 +126,7 @@ func TestSavingAnOptionalBlockEmptyKeepsItUntilExplicitRemoval(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("save empty Gallery status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved := apitest.FetchStartedAsset(t, r, session, started.ID)
+	saved := apitest.FetchStartedWork(t, r, session, started.ID)
 	kept := apitest.BlockNamed(t, saved.Blocks, "gallery")
 	if len(saved.Blocks) != 3 || kept.ID != gallery.ID || kept.Width != "full" {
 		t.Errorf("blocks after empty save = %+v, want the full-width Gallery kept", saved.Blocks)
@@ -159,7 +159,7 @@ func TestCreatorMovesUnpinnedContentBeforeRemovingItsBlock(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("move Gallery content status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved := apitest.FetchStartedAsset(t, r, session, started.ID)
+	saved := apitest.FetchStartedWork(t, r, session, started.ID)
 	if len(saved.Blocks) != 2 {
 		t.Fatalf("blocks after move = %d, want the source removed", len(saved.Blocks))
 	}

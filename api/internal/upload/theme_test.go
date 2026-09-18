@@ -10,7 +10,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
-func startTheme(t *testing.T, r http.Handler, session *http.Cookie, app string) apitest.StartedAsset {
+func startTheme(t *testing.T, r http.Handler, session *http.Cookie, app string) apitest.StartedWork {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
 		strings.NewReader(`{"kind":"theme","app":"`+app+`"}`))
@@ -20,7 +20,7 @@ func startTheme(t *testing.T, r http.Handler, session *http.Cookie, app string) 
 		t.Fatalf("start a theme for %s: status = %d, want 201: %s",
 			app, response.Code, response.Body.String())
 	}
-	var started apitest.StartedAsset
+	var started apitest.StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
 		t.Fatalf("decode the started theme: %v", err)
 	}

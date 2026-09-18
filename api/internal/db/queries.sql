@@ -1,44 +1,44 @@
--- name: InsertAsset :one
-insert into assets
-  (id, kind, owner_id, name, blurb, tags, is_nsfw, discovery, lifecycle,
-   asset_version, credited_author, nickname, origin_format, created_at)
+-- name: InsertWork :one
+insert into works
+  (id, type, owner_id, name, blurb, tags, is_nsfw, visibility, lifecycle,
+   work_version, credited_author, nickname, origin_format, created_at)
 values ($1, $2, $3, $4, $5, $6, sqlc.narg('is_nsfw')::boolean, $7, $8,
         $9, $10, $11, sqlc.narg('origin_format')::text,
         coalesce(sqlc.narg('created_at')::timestamptz, now()))
 returning created_at;
 
--- name: InsertAssetBlock :exec
-insert into asset_blocks
-  (id, asset_id, definition, title, position, hidden, layout, width, elements)
+-- name: InsertWorkBlock :exec
+insert into work_blocks
+  (id, work_id, definition, title, position, hidden, layout, width, elements)
 values ($1, $2, $3, sqlc.narg('title')::text, $4, $5, $6, $7, $8);
 
--- name: AssetBlocks :many
+-- name: WorkBlocks :many
 select id, definition, title, position, hidden, layout, width, elements
-  from asset_blocks
- where asset_id = $1
+  from work_blocks
+ where work_id = $1
  order by position;
 
 -- name: InsertRevision :exec
-insert into asset_revisions
-  (id, asset_id, revision, blob_id, media_type, format, identifier)
+insert into work_revisions
+  (id, work_id, revision, blob_id, media_type, format, identifier)
 values ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: SetCurrentRevision :exec
-update assets set current_revision_id = $2, updated_at = now() where id = $1;
+update works set current_revision_id = $2, updated_at = now() where id = $1;
 
--- name: ListAssets :many
-select a.id, a.kind, revision.format, a.origin_format,
-       a.asset_version, a.credited_author, a.nickname, a.lifecycle,
+-- name: ListWorks :many
+select a.id, a.type, revision.format, a.origin_format,
+       a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
-       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
+       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
        a.current_revision_id, a.created_at
-  from assets a
-  left join asset_revisions revision on revision.id = a.current_revision_id
+  from works a
+  left join work_revisions revision on revision.id = a.current_revision_id
  where a.lifecycle = 'published'
-   and a.discovery = 'listed'
+   and a.visibility = 'listed'
    and a.withheld_at is null
    and a.deleted_at is null
-   and ($1 = '' or a.kind = $1)
+   and ($1 = '' or a.type = $1)
    and (not $2::boolean or revision.format is not distinct from $3)
    and ($4::text[] is null or a.tags @> $4)
    and (sqlc.narg('before')::timestamptz is null
@@ -47,16 +47,16 @@ select a.id, a.kind, revision.format, a.origin_format,
  order by a.created_at desc, a.id desc
  limit $5;
 
--- name: BrowseAssets :many
+-- name: BrowseWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.kind, a.is_nsfw, a.created_at, a.lifecycle,
+       a.type, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.discovery, a.withheld_at, a.withheld_reason
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+       a.visibility, a.withheld_at, a.withheld_reason
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
-  left join asset_media cover
-    on cover.id = a.cover_media_id and cover.asset_id = a.id
+  left join work_media cover
+    on cover.id = a.cover_media_id and cover.work_id = a.id
    and cover.is_current
    and cover.width is not null and cover.height is not null
    and cover.blob_id is not null
@@ -66,18 +66,18 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
    and a.deleted_at is null
    and (
        (sqlc.narg('creator_id')::uuid is null
-        and a.discovery = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.withheld_at is null)
        or
        (a.owner_id = sqlc.narg('creator_id')::uuid
         and (sqlc.arg('own_profile')::boolean
-             or (a.discovery = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.withheld_at is null)))
    )
-   and (sqlc.arg('kind')::text = '' or a.kind = sqlc.arg('kind')::text)
+   and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
    and (sqlc.arg('own_profile')::boolean
-        or sqlc.arg('nsfw_visibility')::text <> 'hidden' or not a.is_nsfw)
+        or sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
    and (sqlc.arg('platform')::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(target)
          where offered.target ->> 'format' = any(sqlc.arg('formats')::text[])
    ))
    and (cardinality(sqlc.arg('facet_keys')::text[]) = 0 or not exists (
@@ -89,9 +89,9 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
    and (sqlc.arg('search_text')::text = ''
         or position(sqlc.arg('search_text')::text in lower(a.name)) > 0
@@ -111,10 +111,10 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
  order by a.created_at desc, a.id desc
  limit sqlc.arg('page_size');
 
--- name: CountBrowseAssets :one
+-- name: CountBrowseWorks :one
 select count(*)
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
  where (a.lifecycle = 'published'
         or (sqlc.arg('own_profile')::boolean
@@ -122,18 +122,18 @@ select count(*)
    and a.deleted_at is null
    and (
        (sqlc.narg('creator_id')::uuid is null
-        and a.discovery = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.withheld_at is null)
        or
        (a.owner_id = sqlc.narg('creator_id')::uuid
         and (sqlc.arg('own_profile')::boolean
-             or (a.discovery = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.withheld_at is null)))
    )
-   and (sqlc.arg('kind')::text = '' or a.kind = sqlc.arg('kind')::text)
+   and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
    and (sqlc.arg('own_profile')::boolean
-        or sqlc.arg('nsfw_visibility')::text <> 'hidden' or not a.is_nsfw)
+        or sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
    and (sqlc.arg('platform')::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(target)
          where offered.target ->> 'format' = any(sqlc.arg('formats')::text[])
    ))
    and (cardinality(sqlc.arg('facet_keys')::text[]) = 0 or not exists (
@@ -145,9 +145,9 @@ select count(*)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
    and (sqlc.arg('search_text')::text = ''
         or position(sqlc.arg('search_text')::text in lower(a.name)) > 0
@@ -162,20 +162,20 @@ select count(*)
          )
    ));
 
--- name: CountSuppressedBrowseAssets :one
+-- name: CountSuppressedBrowseWorks :one
 select count(*)
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
  where a.lifecycle = 'published'
-   and a.discovery = 'listed'
+   and a.visibility = 'listed'
    and a.withheld_at is null
    and a.deleted_at is null
    and (sqlc.narg('creator_id')::uuid is null or a.owner_id = sqlc.narg('creator_id')::uuid)
-   and (sqlc.arg('kind')::text = '' or a.kind = sqlc.arg('kind')::text)
+   and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
    and (sqlc.arg('platform')::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(target)
          where offered.target ->> 'format' = any(sqlc.arg('formats')::text[])
    ))
    and (cardinality(sqlc.arg('facet_keys')::text[]) = 0 or not exists (
@@ -187,9 +187,9 @@ select count(*)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
    and (sqlc.arg('search_text')::text = ''
         or position(sqlc.arg('search_text')::text in lower(a.name)) > 0
@@ -205,8 +205,8 @@ select count(*)
    ))
    and a.is_nsfw;
 
--- name: AssetPage :one
-select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
+-- name: WorkPage :one
+select a.id, a.type, a.name, a.blurb, a.tags, a.is_nsfw, a.visibility,
        a.lifecycle, a.created_at,
        revision.format as original_format, revision.media_type as original_media_type,
        revision.created_at as original_arrived_at,
@@ -214,19 +214,19 @@ select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = sqlc.narg('viewer_id')::uuid, false)::boolean as is_owner,
        a.withheld_reason, a.withheld_at
-  from assets a
+  from works a
   left join users owner on owner.id = a.owner_id
-  left join asset_revisions revision on revision.id = a.current_revision_id
+  left join work_revisions revision on revision.id = a.current_revision_id
  where a.id = $1
    and a.deleted_at is null
    and (a.lifecycle = 'published' or a.owner_id = sqlc.narg('viewer_id')::uuid)
    and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
--- name: AssetPageMedia :many
+-- name: WorkPageMedia :many
 select media.id, media.role, media.width, media.height, blob.byte_size,
        coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
-  from assets a
-  join asset_media media on media.asset_id = a.id
+  from works a
+  join work_media media on media.work_id = a.id
   join blobs blob on blob.id = media.blob_id
  where a.id = $1
    and media.is_current
@@ -245,10 +245,10 @@ select media.id, media.role, media.width, media.height, blob.byte_size,
           media.created_at desc, media.id desc;
 
 -- name: CurrentRevisionLocation :one
-select a.id as asset_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
-  from assets a
-  left join public.asset_snapshots snapshot on snapshot.id = a.published_snapshot_id
-  join asset_revisions r on r.id = case when snapshot.id is null
+select a.id as work_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
+  from works a
+  left join public.work_snapshots snapshot on snapshot.id = a.published_snapshot_id
+  join work_revisions r on r.id = case when snapshot.id is null
       then a.current_revision_id else snapshot.source_revision_id end
  where a.id = $1
    and r.blob_id is not null
@@ -256,81 +256,81 @@ select a.id as asset_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_i
    and a.deleted_at is null
    and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
--- name: AssetByID :one
-select a.id, a.kind, revision.format, a.origin_format,
-       a.asset_version, a.credited_author, a.nickname, a.lifecycle,
+-- name: WorkByID :one
+select a.id, a.type, revision.format, a.origin_format,
+       a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
-       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
+       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
        a.current_revision_id, a.created_at
-  from assets a
-  join asset_revisions revision on revision.id = a.current_revision_id
+  from works a
+  join work_revisions revision on revision.id = a.current_revision_id
  where a.id = $1;
 
--- name: SetAssetDiscovery :execrows
-update assets
-   set discovery = $3, updated_at = now()
+-- name: SetWorkVisibility :execrows
+update works
+   set visibility = $3, updated_at = now()
  where id = $1 and owner_id = $2 and lifecycle = 'published'
    and withheld_at is null and deleted_at is null;
 
--- name: AssetStateForOwner :one
+-- name: WorkStateForOwner :one
 select withheld_at, lifecycle
-  from assets
+  from works
  where id = $1 and owner_id = $2 and deleted_at is null;
 
--- name: WithholdAsset :one
+-- name: WithholdWork :one
 with withheld as (
-    update assets as asset
+    update works as work
        set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
            updated_at = now()
-     where asset.id = $1 and asset.lifecycle = 'published'
-       and asset.withheld_at is null and asset.deleted_at is null
-    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
+     where work.id = $1 and work.lifecycle = 'published'
+       and work.withheld_at is null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_snapshot_id
 ), stopped as (
     update instance_deliveries as delivery
        set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
-     where delivery.asset_id in (select withheld.id from withheld)
+     where delivery.work_id in (select withheld.id from withheld)
        and delivery.state = 'queued'
 )
 select withheld.owner_id, coalesce(snapshot.payload ->> 'name', withheld.name)::text as public_name
   from withheld
-  left join asset_snapshots snapshot on snapshot.id = withheld.published_snapshot_id;
+  left join work_snapshots snapshot on snapshot.id = withheld.published_snapshot_id;
 
--- name: ClearAssetWithhold :one
+-- name: ClearWorkWithhold :one
 with cleared as (
-    update assets as asset
+    update works as work
        set withheld_at = null, withheld_by = null, withheld_reason = null,
            updated_at = now()
-     where asset.id = $1 and asset.withheld_at is not null and asset.deleted_at is null
-    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
+     where work.id = $1 and work.withheld_at is not null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_snapshot_id
 )
 select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
   from cleared
-  left join asset_snapshots snapshot on snapshot.id = cleared.published_snapshot_id;
+  left join work_snapshots snapshot on snapshot.id = cleared.published_snapshot_id;
 
--- name: AssetDeletionState :one
+-- name: WorkDeletionState :one
 select withheld_at, deleted_at
-  from assets
+  from works
  where id = $1 and owner_id = $2;
 
--- name: SoftDeleteAsset :execrows
-update assets
+-- name: SoftDeleteWork :execrows
+update works
    set deleted_at = $3, recoverable_until = $4, updated_at = $3
  where id = $1 and owner_id = $2
    and withheld_at is null and deleted_at is null;
 
--- name: RestoreAsset :execrows
-update assets
+-- name: RestoreWork :execrows
+update works
    set deleted_at = null, recoverable_until = null, updated_at = $3
  where id = $1 and owner_id = $2
    and deleted_at is not null and recoverable_until > $3;
 
--- name: ListDeletedAssets :many
-select asset.id, asset.name, asset.kind, asset.deleted_at, asset.recoverable_until
-  from assets asset
-  join users owner on owner.id = asset.owner_id
- where asset.owner_id = $1 and owner.username = $2
-   and asset.deleted_at is not null and asset.recoverable_until > $3
- order by asset.deleted_at desc, asset.id desc;
+-- name: ListDeletedWorks :many
+select work.id, work.name, work.type, work.deleted_at, work.recoverable_until
+  from works work
+  join users owner on owner.id = work.owner_id
+ where work.owner_id = $1 and owner.username = $2
+   and work.deleted_at is not null and work.recoverable_until > $3
+ order by work.deleted_at desc, work.id desc;
 
 -- name: UpsertBlob :one
 insert into blobs (id, sha256, byte_size, storage_key)
@@ -396,15 +396,15 @@ select u.id, u.username, u.email, u.email_verified_at,
   join users u on u.id = s.user_id
  where s.token_hash = $1 and s.expires_at > now();
 
--- name: NSFWVisibilityBySessionHash :one
-select u.nsfw_visibility
+-- name: NSFWPreferenceBySessionHash :one
+select u.nsfw_preference
   from sessions session
   join users u on u.id = session.user_id
  where session.token_hash = $1 and session.expires_at > now();
 
--- name: SetNSFWVisibilityBySessionHash :execrows
+-- name: SetNSFWPreferenceBySessionHash :execrows
 update users u
-   set nsfw_visibility = $1, updated_at = now()
+   set nsfw_preference = $1, updated_at = now()
   from sessions session
  where session.user_id = u.id and session.token_hash = $2
    and session.expires_at > now();
@@ -975,25 +975,25 @@ select id, user_id, application_name, instance_name, application_version,
    and revoked_at is null;
 
 -- name: QueueDelivery :one
-insert into instance_deliveries (id, instance_id, asset_id, expires_at, updates_install)
-select sqlc.arg('id'), sqlc.arg('instance_id'), sqlc.arg('asset_id'),
+insert into instance_deliveries (id, instance_id, work_id, expires_at, updates_install)
+select sqlc.arg('id'), sqlc.arg('instance_id'), sqlc.arg('work_id'),
        sqlc.arg('expires_at'),
        exists (
            select 1
              from instance_library_entries as entry
             where entry.instance_id = sqlc.arg('instance_id')
-              and entry.asset_id = sqlc.arg('asset_id')
+              and entry.work_id = sqlc.arg('work_id')
        )
-on conflict (instance_id, asset_id) where state in ('queued', 'released') do nothing
-returning id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+on conflict (instance_id, work_id) where state in ('queued', 'released') do nothing
+returning id, instance_id, work_id, state, settled_reason, queued_at, settled_at,
           expires_at, updates_install;
 
--- name: LiveDeliveryForAsset :one
-select id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+-- name: LiveDeliveryForWork :one
+select id, instance_id, work_id, state, settled_reason, queued_at, settled_at,
        expires_at, updates_install
   from instance_deliveries
  where instance_id = sqlc.arg('instance_id')
-   and asset_id = sqlc.arg('asset_id')
+   and work_id = sqlc.arg('work_id')
    and state in ('queued', 'released');
 
 -- name: CountLiveDeliveries :one
@@ -1033,7 +1033,7 @@ update instance_deliveries as delivery
        lease_expires_at = sqlc.arg('lease_expires_at')
   from candidates
  where delivery.id = candidates.id
-returning delivery.id, delivery.asset_id, delivery.queued_at,
+returning delivery.id, delivery.work_id, delivery.queued_at,
           delivery.lease_expires_at;
 
 -- name: SetDeliveryTarget :exec
@@ -1062,7 +1062,7 @@ delete from instance_deliveries as delivery
    and instance.user_id = sqlc.arg('user_id');
 
 -- name: DeliveryForArtifact :one
-select delivery.asset_id, delivery.chosen_target, instance.id as instance_id
+select delivery.work_id, delivery.chosen_target, instance.id as instance_id
   from instance_deliveries as delivery
   join linked_instances as instance on instance.id = delivery.instance_id
  where delivery.id = sqlc.arg('delivery_id')
@@ -1086,15 +1086,15 @@ delete from instance_deliveries as delivery
  using expired
  where delivery.id = expired.id;
 
--- name: SendableAssetGeneration :one
+-- name: SendableWorkGeneration :one
 select content_generation
-  from assets
- where id = sqlc.arg('asset_id')
+  from works
+ where id = sqlc.arg('work_id')
    and deleted_at is null
    and withheld_at is null
    and lifecycle = 'published';
 
--- name: AssetInstanceStates :many
+-- name: WorkInstanceStates :many
 select instance.id, instance.application_name, instance.instance_name,
        instance.last_seen_at, instance.scopes, instance.capabilities,
        instance.accepted_targets,
@@ -1111,13 +1111,13 @@ select instance.id, instance.application_name, instance.instance_name,
              waiting.updates_install
         from instance_deliveries as waiting
        where waiting.instance_id = instance.id
-         and waiting.asset_id = sqlc.arg('asset_id')
+         and waiting.work_id = sqlc.arg('work_id')
        order by (waiting.state in ('queued', 'released')) desc,
                 waiting.queued_at desc
        limit 1
   ) as delivery on true
   left join instance_library_entries as entry
-    on entry.instance_id = instance.id and entry.asset_id = sqlc.arg('asset_id')
+    on entry.instance_id = instance.id and entry.work_id = sqlc.arg('work_id')
  where instance.user_id = sqlc.arg('user_id') and instance.revoked_at is null
  order by coalesce(instance.last_seen_at, instance.linked_at) desc,
           instance.linked_at desc;
@@ -1126,56 +1126,56 @@ select instance.id, instance.application_name, instance.instance_name,
 select entry.instance_id,
        count(*)::bigint as installed,
        count(*) filter (
-           where asset.content_generation > entry.content_generation
+           where work.content_generation > entry.content_generation
        )::bigint as updates_available
   from instance_library_entries as entry
-  join assets as asset on asset.id = entry.asset_id
+  join works as work on work.id = entry.work_id
   join linked_instances as instance on instance.id = entry.instance_id
  where instance.user_id = sqlc.arg('user_id')
    and instance.revoked_at is null
-   and asset.deleted_at is null
-   and asset.withheld_at is null
-   and asset.lifecycle = 'published'
+   and work.deleted_at is null
+   and work.withheld_at is null
+   and work.lifecycle = 'published'
  group by entry.instance_id;
 
 -- name: ReportLibraryEntries :execrows
 insert into instance_library_entries
-    (instance_id, asset_id, content_generation, reported_at)
-select sqlc.arg('instance_id'), asset.id,
-       coalesce(nullif(reported.generation, 0), asset.content_generation), now()
+    (instance_id, work_id, content_generation, reported_at)
+select sqlc.arg('instance_id'), work.id,
+       coalesce(nullif(reported.generation, 0), work.content_generation), now()
   from (
-      select unnest(sqlc.arg('asset_ids')::uuid[]) as asset_id,
+      select unnest(sqlc.arg('work_ids')::uuid[]) as work_id,
              unnest(sqlc.arg('generations')::integer[]) as generation
   ) as reported
-  join assets as asset
-    on asset.id = reported.asset_id
-   and asset.deleted_at is null
-   and asset.lifecycle = 'published'
-on conflict (instance_id, asset_id) do update
+  join works as work
+    on work.id = reported.work_id
+   and work.deleted_at is null
+   and work.lifecycle = 'published'
+on conflict (instance_id, work_id) do update
    set content_generation = excluded.content_generation,
        reported_at = excluded.reported_at;
 
 -- name: RemoveLibraryEntries :execrows
 delete from instance_library_entries
  where instance_id = sqlc.arg('instance_id')
-   and asset_id = any(sqlc.arg('asset_ids')::uuid[]);
+   and work_id = any(sqlc.arg('work_ids')::uuid[]);
 
 -- name: PruneLibraryToSnapshot :execrows
 delete from instance_library_entries
  where instance_id = sqlc.arg('instance_id')
-   and not (asset_id = any(sqlc.arg('asset_ids')::uuid[]));
+   and not (work_id = any(sqlc.arg('work_ids')::uuid[]));
 
 -- name: TakeWithheldNotices :many
 update instance_library_entries as entry
-   set notified_withheld_at = asset.withheld_at
-  from asset_public.assets as asset
+   set notified_withheld_at = work.withheld_at
+  from work_public.works as work
  where entry.instance_id = sqlc.arg('instance_id')
-   and asset.id = entry.asset_id
-   and asset.kind = any(sqlc.arg('kinds')::text[])
-   and asset.withheld_at is not null
-   and asset.deleted_at is null
-   and entry.notified_withheld_at is distinct from asset.withheld_at
-returning entry.asset_id, asset.name::text as name, asset.withheld_at;
+   and work.id = entry.work_id
+   and work.type = any(sqlc.arg('types')::text[])
+   and work.withheld_at is not null
+   and work.deleted_at is null
+   and entry.notified_withheld_at is distinct from work.withheld_at
+returning entry.work_id, work.name::text as name, work.withheld_at;
 
 -- name: RecordLibraryApplicationVersion :exec
 update linked_instances
@@ -1190,7 +1190,7 @@ select coalesce(instance.library_application_version,
     on instance.id = entry.instance_id
    and instance.revoked_at is null
    and instance.capabilities && sqlc.arg('capabilities')::text[]
- where entry.asset_id = sqlc.arg('asset_id')
+ where entry.work_id = sqlc.arg('work_id')
    and coalesce(instance.library_application_version, instance.application_version) is not null
  group by coalesce(instance.library_application_version, instance.application_version)
 having count(*) >= sqlc.arg('minimum_group_size')::bigint

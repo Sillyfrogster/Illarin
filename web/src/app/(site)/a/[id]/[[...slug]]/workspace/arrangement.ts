@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { type RefObject, useCallback, useState } from "react";
 import {
-  type AssetBlock,
   addAssetBlock,
   arrangeAssetBlocks,
   type ElementType,
   moveAssetBlockContent,
   removeAssetBlock,
+  type WorkBlock,
 } from "@/lib/api/query";
 import type { Candidate } from "@/lib/working-copy";
 import { arrangementRequest, moveBlock } from "./composition";
@@ -25,10 +25,10 @@ export type Arrangement = {
 type Page = {
   assetId: string;
   candidate: Candidate;
-  applyServerBlocks: (blocks: AssetBlock[]) => void;
-  blocks: RefObject<AssetBlock[]>;
-  editBlockList: (change: (blocks: AssetBlock[]) => AssetBlock[]) => void;
-  savedBlocks: RefObject<AssetBlock[]>;
+  applyServerBlocks: (blocks: WorkBlock[]) => void;
+  blocks: RefObject<WorkBlock[]>;
+  editBlockList: (change: (blocks: WorkBlock[]) => WorkBlock[]) => void;
+  savedBlocks: RefObject<WorkBlock[]>;
   say: (message: string) => void;
 };
 
@@ -70,7 +70,7 @@ export function useArrangement(page: Page): Arrangement {
   );
 
   const arrange = useCallback(
-    (order: AssetBlock[], refusal: string, done?: () => void) =>
+    (order: WorkBlock[], refusal: string, done?: () => void) =>
       run(
         async () => {
           const saved = await arrangeAssetBlocks(

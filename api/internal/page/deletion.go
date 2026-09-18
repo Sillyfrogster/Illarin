@@ -14,35 +14,27 @@ import (
 
 const RecoveryWindow = 30 * 24 * time.Hour
 
-type DeletedWork struct {
-	ID               uuid.UUID
-	Name             string
-	Kind             string
-	DeletedAt        time.Time
-	RecoverableUntil time.Time
-}
-
 func (s *Service) Delete(ctx context.Context, ownerID, id uuid.UUID) error {
 	queries := db.New(s.pool)
-	state, err := queries.AssetDeletionState(ctx, db.AssetDeletionStateParams{
+	state, err := queries.WorkDeletionState(ctx, db.WorkDeletionStateParams{
 		ID: uuidToPgtype(id), OwnerID: uuidToPgtype(ownerID),
 	})
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && state.DeletedAt.Valid) {
 		return work.ErrNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("read asset deletion state: %w", err)
+		return fmt.Errorf("read work deletion state: %w", err)
 	}
 	if state.WithheldAt.Valid {
-		return work.ErrAssetFrozen
+		return work.ErrWorkFrozen
 	}
-	now := s.assets.Now()
-	changed, err := queries.SoftDeleteAsset(ctx, db.SoftDeleteAssetParams{
+	now := s.works.Now()
+	changed, err := queries.SoftDeleteWork(ctx, db.SoftDeleteWorkParams{
 		ID: uuidToPgtype(id), OwnerID: uuidToPgtype(ownerID),
 		DeletedAt: timeToNullable(&now), RecoverableUntil: timeToNullable(timePointer(now.Add(RecoveryWindow))),
 	})
 	if err != nil {
-		return fmt.Errorf("delete asset: %w", err)
+		return fmt.Errorf("delete work: %w", err)
 	}
 	if changed == 0 {
 		return work.ErrNotFound
@@ -51,12 +43,12 @@ func (s *Service) Delete(ctx context.Context, ownerID, id uuid.UUID) error {
 }
 
 func (s *Service) Restore(ctx context.Context, ownerID, id uuid.UUID) error {
-	now := s.assets.Now()
-	changed, err := db.New(s.pool).RestoreAsset(ctx, db.RestoreAssetParams{
+	now := s.works.Now()
+	changed, err := db.New(s.pool).RestoreWork(ctx, db.RestoreWorkParams{
 		ID: uuidToPgtype(id), OwnerID: uuidToPgtype(ownerID), UpdatedAt: timeToNullable(&now),
 	})
 	if err != nil {
-		return fmt.Errorf("restore asset: %w", err)
+		return fmt.Errorf("restore work: %w", err)
 	}
 	if changed == 0 {
 		return work.ErrNotFound
@@ -65,17 +57,17 @@ func (s *Service) Restore(ctx context.Context, ownerID, id uuid.UUID) error {
 }
 
 func (s *Service) Deleted(ctx context.Context, ownerID uuid.UUID, handle string) ([]DeletedWork, error) {
-	rows, err := db.New(s.pool).ListDeletedAssets(ctx, db.ListDeletedAssetsParams{
+	rows, err := db.New(s.pool).ListDeletedWorks(ctx, db.ListDeletedWorksParams{
 		OwnerID: uuidToPgtype(ownerID), Username: handle,
-		RecoverableUntil: timeToNullable(timePointer(s.assets.Now())),
+		RecoverableUntil: timeToNullable(timePointer(s.works.Now())),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("list deleted assets: %w", err)
+		return nil, fmt.Errorf("list deleted works: %w", err)
 	}
 	items := make([]DeletedWork, len(rows))
 	for i, row := range rows {
 		items[i] = DeletedWork{
-			ID: uuidFromPgtype(row.ID), Name: row.Name, Kind: row.Kind,
+			Id: uuidFromPgtype(row.ID), Name: row.Name, Type: DeletedWorkType(row.Type),
 			DeletedAt: timeFromPgtype(row.DeletedAt), RecoverableUntil: timeFromPgtype(row.RecoverableUntil),
 		}
 	}

@@ -4,7 +4,7 @@ import { CircleHelp, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import type { BrowseAsset, NsfwVisibility } from "@/lib/api/query";
+import type { BrowseWork, NsfwVisibility } from "@/lib/api/query";
 import { assetDisplayName } from "@/lib/asset-name";
 import { assetHref } from "@/lib/asset-url";
 import { cn } from "@/lib/cn";
@@ -44,7 +44,7 @@ export function CatalogPoster({
   eager = false,
   visibility,
 }: {
-  asset: BrowseAsset;
+  asset: BrowseWork;
   eager?: boolean;
   visibility: NsfwVisibility;
 }) {
@@ -160,7 +160,7 @@ export function CatalogPoster({
 function Withheld({
   withhold,
 }: {
-  withhold: NonNullable<BrowseAsset["withhold"]>;
+  withhold: NonNullable<BrowseWork["withhold"]>;
 }) {
   return (
     <div className="relative z-1 mt-3 rounded-control bg-stop-wash p-3">

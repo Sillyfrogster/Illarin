@@ -6,17 +6,17 @@ type PublicationDestinationChoice struct {
 	ByDefault bool                        `json:"byDefault"`
 	Events    []PublicationEvent          `json:"events"`
 	Id        uuid.UUID                   `json:"id"`
-	Kind      PublicationDestinationKind  `json:"kind"`
+	Type      PublicationDestinationType  `json:"kind"`
 	Name      string                      `json:"name"`
 	Role      string                      `json:"role"`
 	State     PublicationDestinationState `json:"state"`
 }
 
-type PublicationDestinationKind string
+type PublicationDestinationType string
 
 const (
-	PublicationDestinationKindDiscord PublicationDestinationKind = "discord"
-	PublicationDestinationKindWebhook PublicationDestinationKind = "webhook"
+	PublicationDestinationTypeDiscord PublicationDestinationType = "discord"
+	PublicationDestinationTypeWebhook PublicationDestinationType = "webhook"
 )
 
 type PublicationDestinationState string
@@ -45,7 +45,7 @@ func ChoiceRows(held []Choice) []PublicationDestinationChoice {
 		listed = append(listed, PublicationDestinationChoice{
 			Id:        one.ID,
 			Name:      one.Name,
-			Kind:      PublicationDestinationKind(one.Kind),
+			Type:      PublicationDestinationType(one.Type),
 			State:     PublicationDestinationState(one.State),
 			Events:    events,
 			Role:      one.Role,

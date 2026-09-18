@@ -31,9 +31,9 @@ func (w *writer) blocks(blocks []Block) {
 	w.out.WriteString(`]`)
 }
 
-func (w *writer) open(kind string) {
+func (w *writer) open(calloutType string) {
 	w.out.WriteString(`{"type":"`)
-	w.out.WriteString(kind)
+	w.out.WriteString(calloutType)
 	w.out.WriteString(`"`)
 }
 
@@ -161,7 +161,7 @@ func (c Cell) writeJSON(w *writer) {
 
 func (c Callout) writeJSON(w *writer) {
 	w.open("callout")
-	w.text("kind", c.Kind)
+	w.text("kind", c.Type)
 	w.content(c.Blocks)
 }
 

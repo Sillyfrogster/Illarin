@@ -12,23 +12,23 @@ type DownloadExportParams struct {
 
 type RecordedVersionDownloads struct {
 	AppTargets        []page.AppTarget             `json:"appTargets"`
-	Blocks            []block.AssetBlock           `json:"blocks"`
+	Blocks            []block.WorkBlock            `json:"blocks"`
 	Downloads         []page.DownloadTarget        `json:"downloads"`
-	Kind              RecordedVersionDownloadsKind `json:"kind"`
+	Type              RecordedVersionDownloadsType `json:"kind"`
 	LinkedInstallOnly bool                         `json:"linkedInstallOnly"`
-	Media             []page.AssetImage            `json:"media"`
+	Media             []page.WorkImage             `json:"media"`
 	Version           page.RecordedVersion         `json:"version"`
 }
 
-type RecordedVersionDownloadsKind string
+type RecordedVersionDownloadsType string
 
 const (
-	RecordedVersionDownloadsKindCharacter RecordedVersionDownloadsKind = "character"
-	RecordedVersionDownloadsKindExtension RecordedVersionDownloadsKind = "extension"
-	RecordedVersionDownloadsKindLorebook  RecordedVersionDownloadsKind = "lorebook"
-	RecordedVersionDownloadsKindPack      RecordedVersionDownloadsKind = "pack"
-	RecordedVersionDownloadsKindPreset    RecordedVersionDownloadsKind = "preset"
-	RecordedVersionDownloadsKindTheme     RecordedVersionDownloadsKind = "theme"
+	RecordedVersionDownloadsTypeCharacter RecordedVersionDownloadsType = "character"
+	RecordedVersionDownloadsTypeExtension RecordedVersionDownloadsType = "extension"
+	RecordedVersionDownloadsTypeLorebook  RecordedVersionDownloadsType = "lorebook"
+	RecordedVersionDownloadsTypePack      RecordedVersionDownloadsType = "pack"
+	RecordedVersionDownloadsTypePreset    RecordedVersionDownloadsType = "preset"
+	RecordedVersionDownloadsTypeTheme     RecordedVersionDownloadsType = "theme"
 )
 
 type GetRecordedVersionDownloadsParams struct {

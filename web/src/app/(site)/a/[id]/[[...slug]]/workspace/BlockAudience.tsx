@@ -1,6 +1,6 @@
 "use client";
 
-import type { AssetBlock } from "@/lib/api/query";
+import type { WorkBlock } from "@/lib/api/query";
 import { blockAudience } from "@/lib/asset-page-content";
 import { useWorkspace } from "./state";
 
@@ -13,7 +13,7 @@ const SHOW =
   "min-h-11 shrink-0 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45";
 
 /** Tells a creator when a reader does not meet this block where it sits */
-export function BlockAudience({ block }: { block: AssetBlock }) {
+export function BlockAudience({ block }: { block: WorkBlock }) {
   const workspace = useWorkspace();
   const audience = blockAudience(block);
 

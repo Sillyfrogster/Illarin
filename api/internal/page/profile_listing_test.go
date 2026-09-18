@@ -16,7 +16,7 @@ import (
 
 func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 	t.Parallel()
-	router, _, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, _, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var firstID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = $1`, "verified.creator").Scan(&firstID); err != nil {
@@ -27,8 +27,8 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 		`insert into users (id, username) values ($1, $2)`, secondID, "second.creator"); err != nil {
 		t.Fatalf("insert second creator: %v", err)
 	}
-	apitest.CreateProfileAsset(t, assets, firstID, "First garden", false, work.DiscoveryListed)
-	apitest.CreateProfileAsset(t, assets, secondID, "Second garden", false, work.DiscoveryListed)
+	apitest.CreateProfileWork(t, works, firstID, "First garden", false, work.VisibilityListed)
+	apitest.CreateProfileWork(t, works, secondID, "Second garden", false, work.VisibilityListed)
 
 	response := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/v1/assets?creator=verified.creator", nil,
@@ -48,14 +48,14 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 
 func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 	t.Parallel()
-	router, _, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, _, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var creatorID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = $1`, "verified.creator").Scan(&creatorID); err != nil {
 		t.Fatalf("read creator: %v", err)
 	}
-	apitest.CreateProfileAsset(t, assets, creatorID, "Open garden", false, work.DiscoveryListed)
-	apitest.CreateProfileAsset(t, assets, creatorID, "Midnight garden", true, work.DiscoveryListed)
+	apitest.CreateProfileWork(t, works, creatorID, "Open garden", false, work.VisibilityListed)
+	apitest.CreateProfileWork(t, works, creatorID, "Midnight garden", true, work.VisibilityListed)
 
 	shown := readProfileListing(
 		t, router, "/v1/assets?creator=verified.creator&nsfw=shown", nil,
@@ -79,30 +79,30 @@ func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 
 func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	var creatorID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = $1`, "verified.creator").Scan(&creatorID); err != nil {
 		t.Fatalf("read creator: %v", err)
 	}
-	apitest.CreateProfileAsset(t, assets, creatorID, "Public garden", false, work.DiscoveryListed)
-	apitest.CreateProfileAsset(t, assets, creatorID, "Adult garden", true, work.DiscoveryListed)
-	apitest.CreateProfileAsset(t, assets, creatorID, "Unlisted garden", false, work.DiscoveryUnlisted)
-	withheldID := apitest.CreateProfileAsset(
-		t, assets, creatorID, "Withheld garden", false, work.DiscoveryListed,
+	apitest.CreateProfileWork(t, works, creatorID, "Public garden", false, work.VisibilityListed)
+	apitest.CreateProfileWork(t, works, creatorID, "Adult garden", true, work.VisibilityListed)
+	apitest.CreateProfileWork(t, works, creatorID, "Unlisted garden", false, work.VisibilityUnlisted)
+	withheldID := apitest.CreateProfileWork(
+		t, works, creatorID, "Withheld garden", false, work.VisibilityListed,
 	)
-	deletedID := apitest.CreateProfileAsset(
-		t, assets, creatorID, "Deleted garden", false, work.DiscoveryListed,
+	deletedID := apitest.CreateProfileWork(
+		t, works, creatorID, "Deleted garden", false, work.VisibilityListed,
 	)
 	if _, err := pool.Exec(context.Background(), `
-		update assets
+		update works
 		   set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
 		 where id = $1
 	`, withheldID, creatorID); err != nil {
 		t.Fatalf("withhold asset: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(),
-		`update assets set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deletedID); err != nil {
+		`update works set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deletedID); err != nil {
 		t.Fatalf("soft-delete asset: %v", err)
 	}
 

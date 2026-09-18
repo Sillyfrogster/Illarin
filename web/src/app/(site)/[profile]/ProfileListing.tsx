@@ -2,7 +2,7 @@ import { CatalogSurface } from "@/components/catalog/CatalogSurface";
 import type {
   BrowseFilters,
   BrowsePage,
-  DeletedAsset,
+  DeletedWork,
   Profile,
 } from "@/lib/api/query";
 import { DeletedAssets } from "./DeletedAssets";
@@ -14,7 +14,7 @@ export function ProfileListing({
   initialPage,
   profile,
 }: {
-  deletedAssets: DeletedAsset[] | null;
+  deletedAssets: DeletedWork[] | null;
   filters: BrowseFilters;
   initialPage: BrowsePage | null;
   profile: Profile;

@@ -16,15 +16,15 @@ import (
 
 func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewExtensionRouter(t)
+	r, session, works, pool := harness.NewExtensionRouter(t)
 	upload := apitest.ExtensionZip(t, map[string]string{
 		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}",
 	})
-	assetID := apitest.UploadExtension(t, r, session, assets, upload)
+	workID := apitest.UploadExtension(t, r, session, works, upload)
 
-	page := apitest.ReadExtensionPage(t, r, session, assetID)
-	if page.Kind != "extension" || page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
-		t.Fatalf("page kind %q identifier %v, want an extension showing quiet_toolbox", page.Kind, page.Identifier)
+	page := apitest.ReadExtensionPage(t, r, session, workID)
+	if page.Type != "extension" || page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
+		t.Fatalf("page kind %q identifier %v, want an extension showing quiet_toolbox", page.Type, page.Identifier)
 	}
 	if len(page.Blocks) != 2 {
 		t.Fatalf("page blocks = %+v, want permissions and source", page.Blocks)
@@ -37,28 +37,28 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 		}
 	}
 
-	started := apitest.FetchStartedAsset(t, r, session, assetID)
+	started := apitest.FetchStartedWork(t, r, session, workID)
 	source := apitest.BlockNamed(t, started.Blocks, "extension_source")
 	edited := apitest.EditableBlock(source)
 	edited.Elements[0].Content = json.RawMessage(`{"fields":[{"name":"Version","value":"9.9.9"}]}`)
-	refused := apitest.SaveBlock(t, r, session, assetID, source.ID, edited)
+	refused := apitest.SaveBlock(t, r, session, workID, source.ID, edited)
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "archive") {
 		t.Fatalf("edit a locked element = %d %s, want a refusal naming the archive", refused.Code, refused.Body.String())
 	}
 
-	if saved := apitest.SaveIdentity(t, r, session, assetID,
+	if saved := apitest.SaveIdentity(t, r, session, workID,
 		`{"name":"A Renamed Toolbox","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
 		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
 	}
-	if published := apitest.PublishAsset(t, r, session, assetID); published.Code != http.StatusOK {
+	if published := apitest.PublishWork(t, r, session, workID); published.Code != http.StatusOK {
 		t.Fatalf("publish the extension = %d: %s", published.Code, published.Body.String())
 	}
 
-	menu := apitest.DownloadMenu(t, r, nil, assetID)
+	menu := apitest.DownloadMenu(t, r, nil, workID)
 	if len(menu) != 1 || menu[0].Format != extension.SpindleID || len(menu[0].Roles) != 0 {
 		t.Fatalf("download menu = %+v, want the archive with no loss report", menu)
 	}
-	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+assetID+"/"+extension.SpindleID, nil))
+	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+workID+"/"+extension.SpindleID, nil))
 	if download.Code != http.StatusOK || download.Header().Get("Content-Type") != "application/zip" {
 		t.Fatalf("download = %d %q: %s", download.Code, download.Header().Get("Content-Type"), download.Body.String())
 	}
@@ -66,11 +66,11 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 
 	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
 	apitest.Declare(t, r, grant.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
-	if queued := apitest.SendToInstance(t, r, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	if queued := apitest.SendToInstance(t, r, session, workID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send to the instance = %d: %s", queued.Code, queued.Body.String())
 	}
 	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, r, grant.AccessToken, nil)).Deliveries[0]
-	if work.Format != extension.SpindleID || work.Kind != "extension" {
+	if work.Format != extension.SpindleID || work.Type != "extension" {
 		t.Fatalf("delivery = %+v, want the Spindle archive", work)
 	}
 	fetched := apitest.FetchSigned(t, r, work.Artifacts[0].URL)
@@ -79,26 +79,26 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	}
 	assertSameBytes(t, "delivery", fetched.Body.Bytes(), upload)
 
-	if lumiverse := browsedIDs(t, r, "/v1/assets?kind=extension&platform=lumiverse"); !strings.Contains(lumiverse, assetID) {
+	if lumiverse := browsedIDs(t, r, "/v1/assets?kind=extension&platform=lumiverse"); !strings.Contains(lumiverse, workID) {
 		t.Errorf("browsing Lumiverse extensions did not find the asset: %s", lumiverse)
 	}
-	if tavern := browsedIDs(t, r, "/v1/assets?kind=extension&platform=sillytavern"); strings.Contains(tavern, assetID) {
+	if tavern := browsedIDs(t, r, "/v1/assets?kind=extension&platform=sillytavern"); strings.Contains(tavern, workID) {
 		t.Errorf("browsing SillyTavern extensions found a Spindle extension: %s", tavern)
 	}
-	if generation := apitest.ContentGeneration(t, pool, assetID); generation != 1 {
+	if generation := apitest.ContentGeneration(t, pool, workID); generation != 1 {
 		t.Errorf("a listing edit moved the content generation to %d", generation)
 	}
 }
 
 func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedArchive(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
+	r, session, works, _ := harness.NewExtensionRouter(t)
 	library := apitest.ExtensionZip(t, map[string]string{
 		"manifest.json": `{"display_name":"LALib","js":"index.js","author":"A developer",` +
 			`"homePage":"https://github.com/example/SillyTavern-LALib"}`,
 		"index.js": "",
 	})
-	libraryID := apitest.PublishExtension(t, r, session, assets, "LALib", library)
+	libraryID := apitest.PublishExtension(t, r, session, works, "LALib", library)
 
 	upload := apitest.ExtensionZip(t, map[string]string{
 		"manifest.json": `{"display_name":"Custom Sliders","js":"dist/index.js","author":"A developer",` +
@@ -106,9 +106,9 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 			`"dependencies":["third-party/SillyTavern-LALib","vectors"]}`,
 		"dist/index.js": "export {}",
 	})
-	assetID := apitest.PublishExtension(t, r, session, assets, "Custom Sliders", upload)
+	workID := apitest.PublishExtension(t, r, session, works, "Custom Sliders", upload)
 
-	page := apitest.ReadExtensionPage(t, r, nil, assetID)
+	page := apitest.ReadExtensionPage(t, r, nil, workID)
 	if page.Identifier == nil || *page.Identifier != "Extension-CustomSliders" {
 		t.Fatalf("identifier = %v, want the folder SillyTavern clones into", page.Identifier)
 	}
@@ -128,45 +128,45 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 	if len(dependencies) != 2 || dependencies[0].Name != "third-party/SillyTavern-LALib" || dependencies[1].Name != "vectors" {
 		t.Fatalf("dependencies = %+v, want both names in manifest order", dependencies)
 	}
-	if len(dependencies[0].Assets) != 1 || dependencies[0].Assets[0].ID != libraryID || dependencies[0].Assets[0].Name != "LALib" {
-		t.Errorf("third-party/SillyTavern-LALib links to %+v, want the LALib asset", dependencies[0].Assets)
+	if len(dependencies[0].Works) != 1 || dependencies[0].Works[0].ID != libraryID || dependencies[0].Works[0].Name != "LALib" {
+		t.Errorf("third-party/SillyTavern-LALib links to %+v, want the LALib asset", dependencies[0].Works)
 	}
-	if len(dependencies[1].Assets) != 0 {
-		t.Errorf("the built-in vectors links to %+v, want the bare name", dependencies[1].Assets)
+	if len(dependencies[1].Works) != 0 {
+		t.Errorf("the built-in vectors links to %+v, want the bare name", dependencies[1].Works)
 	}
 
-	menu := apitest.DownloadMenu(t, r, nil, assetID)
+	menu := apitest.DownloadMenu(t, r, nil, workID)
 	if len(menu) != 1 || menu[0].Format != extension.SillyTavernID || len(menu[0].Roles) != 0 {
 		t.Fatalf("download menu = %+v, want the archive with no loss report", menu)
 	}
-	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+assetID+"/"+extension.SillyTavernID, nil))
+	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+workID+"/"+extension.SillyTavernID, nil))
 	if download.Code != http.StatusOK {
 		t.Fatalf("download = %d: %s", download.Code, download.Body.String())
 	}
 	assertSameBytes(t, "download", download.Body.Bytes(), upload)
 
-	if tavern := browsedIDs(t, r, "/v1/assets?kind=extension&platform=sillytavern"); !strings.Contains(tavern, assetID) {
+	if tavern := browsedIDs(t, r, "/v1/assets?kind=extension&platform=sillytavern"); !strings.Contains(tavern, workID) {
 		t.Errorf("browsing SillyTavern extensions did not find the asset: %s", tavern)
 	}
-	if lumiverse := browsedIDs(t, r, "/v1/assets?kind=extension&platform=lumiverse"); strings.Contains(lumiverse, assetID) {
+	if lumiverse := browsedIDs(t, r, "/v1/assets?kind=extension&platform=lumiverse"); strings.Contains(lumiverse, workID) {
 		t.Errorf("browsing Lumiverse extensions found a SillyTavern extension: %s", lumiverse)
 	}
 }
 
 func TestARepositoryDownloadIsListedAndDownloadedUnchanged(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
+	r, session, works, _ := harness.NewExtensionRouter(t)
 	upload := apitest.ExtensionZip(t, map[string]string{
 		"quiet_toolbox-main/":                 "",
 		"quiet_toolbox-main/spindle.json":     apitest.ToolboxManifest,
 		"quiet_toolbox-main/dist/frontend.js": "export default {}",
 	})
-	assetID := apitest.PublishExtension(t, r, session, assets, "Quiet Toolbox", upload)
+	workID := apitest.PublishExtension(t, r, session, works, "Quiet Toolbox", upload)
 
-	if page := apitest.ReadExtensionPage(t, r, nil, assetID); page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
+	if page := apitest.ReadExtensionPage(t, r, nil, workID); page.Identifier == nil || *page.Identifier != "quiet_toolbox" {
 		t.Fatalf("identifier = %v, want the manifest inside the folder read", page.Identifier)
 	}
-	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+assetID+"/"+extension.SpindleID, nil))
+	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+workID+"/"+extension.SpindleID, nil))
 	if download.Code != http.StatusOK {
 		t.Fatalf("download = %d: %s", download.Code, download.Body.String())
 	}
@@ -175,37 +175,37 @@ func TestARepositoryDownloadIsListedAndDownloadedUnchanged(t *testing.T) {
 
 func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewExtensionRouter(t)
+	r, session, works, pool := harness.NewExtensionRouter(t)
 	first := apitest.ExtensionZip(t, map[string]string{"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "one"})
-	assetID := apitest.UploadExtension(t, r, session, assets, first)
-	if saved := apitest.SaveIdentity(t, r, session, assetID,
+	workID := apitest.UploadExtension(t, r, session, works, first)
+	if saved := apitest.SaveIdentity(t, r, session, workID,
 		`{"name":"Quiet Toolbox","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
 		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
 	}
-	if published := apitest.PublishAsset(t, r, session, assetID); published.Code != http.StatusOK {
+	if published := apitest.PublishWork(t, r, session, workID); published.Code != http.StatusOK {
 		t.Fatalf("publish = %d: %s", published.Code, published.Body.String())
 	}
-	before := apitest.ContentGeneration(t, pool, assetID)
+	before := apitest.ContentGeneration(t, pool, workID)
 
 	manifest := strings.Replace(apitest.ToolboxManifest, `"ui_panels", "generation"`, `"ui_panels", "generation", "tools"`, 1)
 	manifest = strings.Replace(manifest, `"version": "1.0.0"`, `"version": "1.1.0"`, 1)
 	second := apitest.ExtensionZip(t, map[string]string{"spindle.json": manifest, "dist/frontend.js": "two"})
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, assetID, "toolbox.zip", second), session))
+	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "toolbox.zip", second), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement = %d: %s", revision.Code, revision.Body.String())
 	}
-	if _, err := apitest.Uploads(assets).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
-	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Adds tools"}`); update.Code != http.StatusOK {
+	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
+	if update := apitest.PublishWorkUpdate(t, r, session, workID, `{"summary":"Adds tools"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
 
-	if after := apitest.ContentGeneration(t, pool, assetID); after <= before {
+	if after := apitest.ContentGeneration(t, pool, workID); after <= before {
 		t.Errorf("content generation stayed at %d after a new archive", after)
 	}
-	page := apitest.ReadExtensionPage(t, r, nil, assetID)
+	page := apitest.ReadExtensionPage(t, r, nil, workID)
 	contents := ""
 	for _, holder := range page.Blocks {
 		for _, element := range holder.Elements {
@@ -215,36 +215,36 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testin
 	if !strings.Contains(contents, `"tools"`) || !strings.Contains(contents, "1.1.0") {
 		t.Errorf("locked elements after the replacement = %s, want the new permission and version", contents)
 	}
-	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+assetID+"/"+extension.SpindleID, nil))
+	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+workID+"/"+extension.SpindleID, nil))
 	assertSameBytes(t, "download after the replacement", download.Body.Bytes(), second)
 }
 
 func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
+	r, session, works, _ := harness.NewExtensionRouter(t)
 	first := apitest.ExtensionZip(t, map[string]string{
 		"spindle.json":     apitest.ToolboxManifest,
 		"dist/backend.js":  `spindle.registerTool({ name: "tidy_reply" })`,
 		"dist/frontend.js": `export function setup(ctx) { ctx.ui.registerDrawerTab({ title: "Quiet Toolbox" }) }`,
 	})
-	assetID := apitest.UploadExtension(t, r, session, assets, first)
+	workID := apitest.UploadExtension(t, r, session, works, first)
 
-	started := apitest.FetchStartedAsset(t, r, session, assetID)
+	started := apitest.FetchStartedWork(t, r, session, workID)
 	adds := apitest.BlockNamed(t, started.Blocks, "extension_additions")
 	edited := apitest.EditableBlock(adds)
 	edited.Elements[0].Content = json.RawMessage(`{"fields":[{"name":"Tools","value":"a_tool_it_lacks"}]}`)
-	refused := apitest.SaveBlock(t, r, session, assetID, adds.ID, edited)
+	refused := apitest.SaveBlock(t, r, session, workID, adds.ID, edited)
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "archive") {
 		t.Fatalf("edit what it adds = %d %s, want a refusal naming the archive", refused.Code, refused.Body.String())
 	}
-	if saved := apitest.SaveIdentity(t, r, session, assetID,
+	if saved := apitest.SaveIdentity(t, r, session, workID,
 		`{"name":"Quiet Toolbox","blurb":"","isNsfw":false}`); saved.Code != http.StatusNoContent {
 		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
 	}
-	if published := apitest.PublishAsset(t, r, session, assetID); published.Code != http.StatusOK {
+	if published := apitest.PublishWork(t, r, session, workID); published.Code != http.StatusOK {
 		t.Fatalf("publish = %d: %s", published.Code, published.Body.String())
 	}
-	if listed := additionsOnPage(t, r, assetID); listed != "Tools tidy_reply; UI surfaces Drawer tab: Quiet Toolbox" {
+	if listed := additionsOnPage(t, r, workID); listed != "Tools tidy_reply; UI surfaces Drawer tab: Quiet Toolbox" {
 		t.Fatalf("what it adds = %q, want the tool and the drawer tab, locked", listed)
 	}
 
@@ -253,26 +253,26 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 		"dist/backend.js":  `spindle.registerMacro({ name: "tidy" })`,
 		"dist/frontend.js": `export function setup(ctx) { ctx.ui.registerDrawerTab({ title: "Quiet Toolbox" }) }`,
 	})
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, assetID, "toolbox.zip", second), session))
+	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "toolbox.zip", second), session))
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement = %d: %s", revision.Code, revision.Body.String())
 	}
-	if _, err := apitest.Uploads(assets).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, assetID, revision.Header().Get("Location"))
-	if update := apitest.PublishAssetUpdate(t, r, session, assetID, `{"summary":"Swaps the tool for a macro"}`); update.Code != http.StatusOK {
+	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
+	if update := apitest.PublishWorkUpdate(t, r, session, workID, `{"summary":"Swaps the tool for a macro"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
-	if listed := additionsOnPage(t, r, assetID); listed != "Macros {{tidy}}; UI surfaces Drawer tab: Quiet Toolbox" {
+	if listed := additionsOnPage(t, r, workID); listed != "Macros {{tidy}}; UI surfaces Drawer tab: Quiet Toolbox" {
 		t.Fatalf("what it adds after the replacement = %q, want the macro in place of the tool", listed)
 	}
 }
 
 // additionsOnPage reads the public page's locked list of what the extension adds, as group and name pairs.
-func additionsOnPage(t *testing.T, r http.Handler, assetID string) string {
+func additionsOnPage(t *testing.T, r http.Handler, workID string) string {
 	t.Helper()
-	page := apitest.ReadExtensionPage(t, r, nil, assetID)
+	page := apitest.ReadExtensionPage(t, r, nil, workID)
 	for _, holder := range page.Blocks {
 		if holder.Definition != "extension_additions" {
 			continue
@@ -330,10 +330,10 @@ func TestAnUnsafeOrInvalidExtensionArchiveIsRefused(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			r, session, assets, _ := harness.NewExtensionRouter(t)
+			r, session, works, _ := harness.NewExtensionRouter(t)
 			metadata := apitest.ExampleMetadata("Quiet Toolbox")
 			metadata["filename"] = "toolbox.zip"
-			finished := apitest.UploadAndFinish(t, r, session, assets, metadata, apitest.ExtensionZip(t, tc.files))
+			finished := apitest.UploadAndFinish(t, r, session, works, metadata, apitest.ExtensionZip(t, tc.files))
 			var operation struct {
 				Status  string `json:"status"`
 				Failure *struct {
@@ -352,12 +352,12 @@ func TestAnUnsafeOrInvalidExtensionArchiveIsRefused(t *testing.T) {
 
 func TestAnExtensionBuiltIntoManyFilesIsAccepted(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
+	r, session, works, _ := harness.NewExtensionRouter(t)
 	files := map[string]string{"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": ""}
 	for index := range 600 {
 		files[fmt.Sprintf("dist/chunks/%d.js", index)] = ""
 	}
-	apitest.UploadExtension(t, r, session, assets, apitest.ExtensionZip(t, files))
+	apitest.UploadExtension(t, r, session, works, apitest.ExtensionZip(t, files))
 }
 
 func TestAnExtensionCannotBeStartedWithoutAnArchive(t *testing.T) {

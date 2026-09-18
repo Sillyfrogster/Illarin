@@ -26,7 +26,7 @@ func TestACardKeepsItsExactBytesWhileItsPictureIsExtracted(t *testing.T) {
 			t.Fatalf("register %q: %v", module.ID(), err)
 		}
 	}
-	svc, pool := apitest.AssetsWithRegistry(t, registry)
+	svc, pool := apitest.WorksWithRegistry(t, registry)
 	ownerID := apitest.Owner(t, svc, "card.owner")
 
 	card := pngCardFile(t, `{
@@ -41,8 +41,8 @@ func TestACardKeepsItsExactBytesWhileItsPictureIsExtracted(t *testing.T) {
 	}`)
 	created := apitest.IngestOne(t, svc, ownerID, "ana.png", card)
 	apitest.PublishImported(t, svc, ownerID, created)
-	if created.Kind != "character" || created.Format != character.V2 {
-		t.Fatalf("asset = kind %q format %q", created.Kind, created.Format)
+	if created.Type != "character" || created.Format != character.V2 {
+		t.Fatalf("asset = kind %q format %q", created.Type, created.Format)
 	}
 	if created.Name != "Ana" || created.Blurb != "A quiet archivist." {
 		t.Fatalf("catalog seed = %q, %q", created.Name, created.Blurb)
@@ -62,18 +62,18 @@ func TestACardKeepsItsExactBytesWhileItsPictureIsExtracted(t *testing.T) {
 	}
 
 	var coverRole string
-	var coverAsset uuid.UUID
+	var coverWork uuid.UUID
 	err = pool.QueryRow(context.Background(), `
-		select media.role, media.asset_id
-		  from assets asset
-		  join asset_media media on media.id = asset.cover_media_id
-		 where asset.id = $1
-	`, created.ID).Scan(&coverRole, &coverAsset)
+		select media.role, media.work_id
+		  from works work
+		  join work_media media on media.id = work.cover_media_id
+		 where work.id = $1
+	`, created.ID).Scan(&coverRole, &coverWork)
 	if err != nil {
 		t.Fatalf("read cover media: %v", err)
 	}
-	if coverRole != string(work.MediaAvatar) || coverAsset != created.ID {
-		t.Fatalf("cover = %s on asset %s", coverRole, coverAsset)
+	if coverRole != string(work.MediaAvatar) || coverWork != created.ID {
+		t.Fatalf("cover = %s on asset %s", coverRole, coverWork)
 	}
 
 }

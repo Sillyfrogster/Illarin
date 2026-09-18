@@ -22,15 +22,15 @@ type RecordedVersionBody struct {
 	Number int    `json:"number"`
 }
 
-// FetchAsset reads a work page, as its owner when a session is given
-func FetchAsset(
+// FetchWork reads a work page, as its owner when a session is given
+func FetchWork(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
-) StartedAsset {
+	workID string,
+) StartedWork {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil)
 	if session != nil {
 		request = Authorized(request, session)
 	}
@@ -38,7 +38,7 @@ func FetchAsset(
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the asset: %d %s", response.Code, response.Body.String())
 	}
-	var page StartedAsset
+	var page StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode the asset: %v", err)
 	}
@@ -78,7 +78,7 @@ func PublishSealedPreset(
 	); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	return started.ID
@@ -100,7 +100,7 @@ func PublishTwoPromptPreset(
 	session *http.Cookie,
 	publicID, sealedID uuid.UUID,
 	publicText, sealedText string,
-) StartedAsset {
+) StartedWork {
 	t.Helper()
 	started := StartPreset(t, router, session, "lumiverse")
 	core := EditableBlock(BlockNamed(t, started.Blocks, "preset_core"))
@@ -113,14 +113,14 @@ func PublishTwoPromptPreset(
 		`{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save the identity: %d %s", got.Code, got.Body.String())
 	}
-	if got := PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish the preset: %d %s", got.Code, got.Body.String())
 	}
 	return started
 }
 
 // AcceptReplacementPreview accepts the staged replacement at location, removing whatever the file cannot hold
-func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, assetID, location string, exposeProtected ...bool) {
+func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, workID, location string, exposeProtected ...bool) {
 	t.Helper()
 	preview := Send(t, r, Authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
 	if preview.Code != http.StatusOK {
@@ -150,7 +150,7 @@ func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie,
 		t.Fatal(err)
 	}
 	operationID := strings.TrimPrefix(location, "/v1/ingests/")
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/revisions/"+operationID+"/accept", bytes.NewReader(body))
+	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/revisions/"+operationID+"/accept", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	accepted := Send(t, r, Authorized(request, session))
 	if accepted.Code != http.StatusOK {

@@ -19,10 +19,10 @@ type sourceIdentity struct {
 func stableItemNames(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	incoming []format.Remainder,
 ) (map[uuid.UUID]string, error) {
-	held, err := readSourceIdentities(ctx, tx, assetID)
+	held, err := readSourceIdentities(ctx, tx, workID)
 	if err != nil {
 		return nil, err
 	}
@@ -40,11 +40,11 @@ func stableItemNames(
 func carriedPromptText(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	existing []block.Block,
 	incoming []format.Remainder,
 ) (map[uuid.UUID]string, error) {
-	held, err := readSourceIdentities(ctx, tx, assetID)
+	held, err := readSourceIdentities(ctx, tx, workID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,13 +81,13 @@ func sourceIdentities(records []format.Remainder) map[uuid.UUID]sourceIdentity {
 func readSourceIdentities(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) (map[uuid.UUID]sourceIdentity, error) {
 	rows, err := tx.Query(ctx, `
 		select owner_id, namespace, payload
-		  from asset_preserved_data
-		 where asset_id = $1 and owner_kind = $2
-	`, assetID, string(format.OwnerItem))
+		  from work_preserved_data
+		 where work_id = $1 and owner_type = $2
+	`, workID, string(format.OwnerItem))
 	if err != nil {
 		return nil, err
 	}

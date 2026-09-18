@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type AssetInstance struct {
+type WorkInstance struct {
 	ApplicationName     string          `json:"applicationName"`
 	CanReceive          bool            `json:"canReceive"`
 	Delivery            *QueuedDelivery `json:"delivery" tstype:"QueuedDelivery | null,required"`
@@ -18,9 +18,9 @@ type AssetInstance struct {
 	UpdateAvailable     bool            `json:"updateAvailable"`
 }
 
-type AssetInstanceList struct {
-	ContentGeneration int             `json:"contentGeneration"`
-	Items             []AssetInstance `json:"items"`
+type WorkInstanceList struct {
+	ContentGeneration int            `json:"contentGeneration"`
+	Items             []WorkInstance `json:"items"`
 }
 
 type CollectDeliveries struct {
@@ -29,26 +29,26 @@ type CollectDeliveries struct {
 
 type DeliveryArtifact struct {
 	IsCover *bool                `json:"isCover,omitempty"`
-	Kind    DeliveryArtifactKind `json:"kind"`
+	Type    DeliveryArtifactType `json:"kind"`
 	MediaId *uuid.UUID           `json:"mediaId,omitempty"`
 	Role    *string              `json:"role,omitempty"`
 	Url     string               `json:"url"`
 }
 
-type DeliveryArtifactKind string
+type DeliveryArtifactType string
 
 const (
-	DeliveryArtifactKindExport  DeliveryArtifactKind = "export"
-	DeliveryArtifactKindPicture DeliveryArtifactKind = "picture"
+	DeliveryArtifactTypeExport  DeliveryArtifactType = "export"
+	DeliveryArtifactTypePicture DeliveryArtifactType = "picture"
 )
 
 type DeliveryWork struct {
 	Artifacts         []DeliveryArtifact `json:"artifacts"`
-	AssetId           uuid.UUID          `json:"assetId"`
+	WorkId            uuid.UUID          `json:"assetId"`
 	ContentGeneration int                `json:"contentGeneration"`
 	Format            string             `json:"format"`
 	Id                uuid.UUID          `json:"id"`
-	Kind              string             `json:"kind"`
+	Type              string             `json:"kind"`
 	Label             string             `json:"label"`
 	LeaseExpiresAt    time.Time          `json:"leaseExpiresAt"`
 	Name              string             `json:"name"`
@@ -61,7 +61,7 @@ type DeliveryWorkList struct {
 }
 
 type LibraryEntry struct {
-	AssetId           uuid.UUID `json:"assetId"`
+	WorkId            uuid.UUID `json:"assetId"`
 	ContentGeneration *int      `json:"contentGeneration,omitempty"`
 }
 
@@ -80,7 +80,7 @@ type LibraryReportResult struct {
 }
 
 type QueuedDelivery struct {
-	AssetId        uuid.UUID             `json:"assetId"`
+	WorkId         uuid.UUID             `json:"assetId"`
 	ExpiresAt      time.Time             `json:"expiresAt"`
 	Id             uuid.UUID             `json:"id"`
 	InstanceId     uuid.UUID             `json:"instanceId"`
@@ -109,12 +109,12 @@ const (
 	QueuedDeliveryStateReleased  QueuedDeliveryState = "released"
 )
 
-type SendAssetRequest struct {
+type SendWorkRequest struct {
 	InstanceId uuid.UUID `json:"instanceId"`
 }
 
 type WithheldNotice struct {
-	AssetId    uuid.UUID `json:"assetId"`
+	WorkId     uuid.UUID `json:"assetId"`
 	Name       string    `json:"name"`
 	WithheldAt time.Time `json:"withheldAt"`
 }

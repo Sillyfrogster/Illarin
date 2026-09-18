@@ -10,16 +10,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AssetPageResponse struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Name      string `json:"name"`
-	Blurb     string `json:"blurb"`
-	Creator   string `json:"creator"`
-	IsNSFW    bool   `json:"isNsfw"`
-	Discovery string `json:"discovery"`
-	CreatedAt string `json:"createdAt"`
-	Tags      []struct {
+type WorkPageResponse struct {
+	ID         string `json:"id"`
+	Type       string `json:"kind"`
+	Name       string `json:"name"`
+	Blurb      string `json:"blurb"`
+	Creator    string `json:"creator"`
+	IsNSFW     bool   `json:"isNsfw"`
+	Visibility string `json:"discovery"`
+	CreatedAt  string `json:"createdAt"`
+	Tags       []struct {
 		Label string `json:"label"`
 		Value string `json:"value"`
 	} `json:"tags"`
@@ -32,34 +32,34 @@ type AssetPageResponse struct {
 		Width     int    `json:"width"`
 		Height    int    `json:"height"`
 	} `json:"media"`
-	Preview    *string `json:"preview"`
-	Visibility string  `json:"visibility"`
-	Withhold   *struct {
+	Preview        *string `json:"preview"`
+	NSFWPreference string  `json:"visibility"`
+	Withhold       *struct {
 		Reason string    `json:"reason"`
 		At     time.Time `json:"at"`
 	} `json:"withhold"`
 }
 
-func FetchAssetPage(t *testing.T, r http.Handler, path string) AssetPageResponse {
+func FetchWorkPage(t *testing.T, r http.Handler, path string) WorkPageResponse {
 	t.Helper()
 	response := Send(t, r, httptest.NewRequest(http.MethodGet, path, nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("GET %s status = %d, want 200: %s", path, response.Code, response.Body.String())
 	}
-	var page AssetPageResponse
+	var page WorkPageResponse
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode asset page: %v", err)
 	}
 	return page
 }
 
-type ListedAsset struct {
+type ListedWork struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
 type ListedPage struct {
-	Items      []ListedAsset `json:"items"`
+	Items      []ListedWork `json:"items"`
 	NextCursor *struct {
 		Before   time.Time `json:"before"`
 		BeforeID string    `json:"beforeId"`
@@ -81,7 +81,7 @@ func ListPage(t *testing.T, r *gin.Engine, url string) ListedPage {
 	return list
 }
 
-func ListItems(t *testing.T, r *gin.Engine, url string) []ListedAsset {
+func ListItems(t *testing.T, r *gin.Engine, url string) []ListedWork {
 	t.Helper()
 	return ListPage(t, r, url).Items
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { type RefObject, useCallback, useEffect, useState } from "react";
-import type { AssetBlock } from "@/lib/api/query";
+import type { WorkBlock } from "@/lib/api/query";
 import {
   type BlockWidth,
   suggestedBlockWidth,
@@ -10,7 +10,7 @@ import {
 
 function measureCandidateHeights(
   source: HTMLElement,
-  layout: AssetBlock["layout"],
+  layout: WorkBlock["layout"],
   availableWidth: number,
 ): Partial<Record<BlockWidth, number>> {
   const heights: Partial<Record<BlockWidth, number>> = {};
@@ -86,7 +86,7 @@ export function useSuggestedWidths({
   rows,
 }: {
   availableWidth: number | undefined;
-  blocks: AssetBlock[];
+  blocks: WorkBlock[];
   paused: boolean;
   rows: RefObject<HTMLDivElement | null>;
 }): Record<string, BlockWidth> {

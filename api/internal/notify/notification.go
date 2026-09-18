@@ -9,31 +9,31 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Type names one kind of notification in the closed set Illarin sends.
+// Type names one type of notification in the closed set Illarin sends.
 type Type string
 
 const (
-	AssetWithheld     Type = "asset_withheld"
-	AssetRestored     Type = "asset_restored"
-	AssetUpdated      Type = "asset_updated"
+	WorkWithheld      Type = "asset_withheld"
+	WorkRestored      Type = "asset_restored"
+	WorkUpdated       Type = "asset_updated"
 	ProfileRestricted Type = "profile_restricted"
 	ProfileRestored   Type = "profile_restored"
 )
 
 // Words is what a notification shows, kept as it read when the change happened.
 type Words struct {
-	AssetName    string `json:"assetName,omitempty"`
+	WorkName     string `json:"assetName,omitempty"`
 	Reason       string `json:"reason,omitempty"`
 	UpdateNumber int    `json:"updateNumber,omitempty"`
 	VersionLabel string `json:"versionLabel,omitempty"`
 	Summary      string `json:"summary,omitempty"`
 }
 
-// Event is one change to tell people about. Without an account, the fan-out works out who hears from the asset.
+// Event is one change to tell people about. Without an account, the fan-out works out who hears from the work.
 type Event struct {
 	Type    Type
 	Account *uuid.UUID
-	Asset   *uuid.UUID
+	Work    *uuid.UUID
 	Words   Words
 }
 
@@ -44,9 +44,9 @@ func Record(ctx context.Context, tx pgx.Tx, event Event) error {
 		return fmt.Errorf("encode the notification's words: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		insert into notification_events (id, type, account_id, asset_id, words)
+		insert into notification_events (id, type, account_id, work_id, words)
 		values ($1, $2, $3, $4, $5)
-	`, uuid.New(), event.Type, event.Account, event.Asset, words); err != nil {
+	`, uuid.New(), event.Type, event.Account, event.Work, words); err != nil {
 		return fmt.Errorf("record a notification event: %w", err)
 	}
 	return nil

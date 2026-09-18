@@ -26,14 +26,14 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	owner := apitest.FetchStartedAsset(t, r, session, started.ID)
+	owner := apitest.FetchStartedWork(t, r, session, started.ID)
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) {
 		t.Fatal("the owner did not receive the restored sealed prompt")
 	}
 	if got := apitest.SaveIdentity(t, r, session, started.ID, `{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish sealed preset status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
@@ -77,7 +77,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 		t.Fatalf("save several sealed prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	owner := apitest.FetchStartedAsset(t, r, session, started.ID)
+	owner := apitest.FetchStartedWork(t, r, session, started.ID)
 	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
 		t.Fatalf("sealed prompt policy = linked install only %t, allowed apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
@@ -90,7 +90,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	if got := apitest.SaveIdentity(t, r, session, started.ID, `{"name":"Several sealed prompts","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save identity status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishAsset(t, r, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish sealed preset status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
@@ -119,7 +119,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("unseal final prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	owner = apitest.FetchStartedAsset(t, r, session, started.ID)
+	owner = apitest.FetchStartedWork(t, r, session, started.ID)
 	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
 		t.Fatalf("unsealed prompt policy = linked install only %t, allowed apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
@@ -155,7 +155,7 @@ func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
 		t.Fatalf("save greeting status = %d, want 200: %s", response.Code, response.Body.String())
 	}
 
-	saved := apitest.FetchStartedAsset(t, r, session, started.ID)
+	saved := apitest.FetchStartedWork(t, r, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, saved.Blocks, "character_core"))
 	messages = apitest.EditableBlock(apitest.BlockNamed(t, saved.Blocks, "messages"))
 	if string(core.Elements[0].Content) != `{"text":"She keeps the memories that books forget."}` {
@@ -191,7 +191,7 @@ func TestACreatorCanChooseAndReleaseABlockTitle(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("save chosen title status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved := apitest.BlockNamed(t, apitest.FetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
+	saved := apitest.BlockNamed(t, apitest.FetchStartedWork(t, r, session, started.ID).Blocks, "character_core")
 	if saved.Title != chosen || saved.TitleIsDefault {
 		t.Fatalf("chosen title = %q, default = %t", saved.Title, saved.TitleIsDefault)
 	}
@@ -201,7 +201,7 @@ func TestACreatorCanChooseAndReleaseABlockTitle(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("release title status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved = apitest.BlockNamed(t, apitest.FetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
+	saved = apitest.BlockNamed(t, apitest.FetchStartedWork(t, r, session, started.ID).Blocks, "character_core")
 	if saved.Title != "The character" || !saved.TitleIsDefault {
 		t.Fatalf("released title = %q, default = %t", saved.Title, saved.TitleIsDefault)
 	}
@@ -452,7 +452,7 @@ func TestACreatorCanNarrowARequiredBlock(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("narrow required block status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	saved := apitest.BlockNamed(t, apitest.FetchStartedAsset(t, r, session, started.ID).Blocks, "character_core")
+	saved := apitest.BlockNamed(t, apitest.FetchStartedWork(t, r, session, started.ID).Blocks, "character_core")
 	if saved.Width != "half" || saved.Layout != "stack-3" {
 		t.Errorf("saved arrangement = %s at %s, want stack-3 at half", saved.Layout, saved.Width)
 	}
@@ -544,7 +544,7 @@ func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.
 	var stored []block.Element
 	var encoded []byte
 	if err := pool.QueryRow(t.Context(), `
-		select elements from asset_blocks where id = $1
+		select elements from work_blocks where id = $1
 	`, messagesBlock.ID).Scan(&encoded); err != nil {
 		t.Fatalf("read messages elements: %v", err)
 	}
@@ -563,13 +563,13 @@ func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.
 		t.Fatalf("encode messages elements: %v", err)
 	}
 	if _, err := pool.Exec(t.Context(), `
-		update asset_blocks set layout = 'stack-3', elements = $2 where id = $1
+		update work_blocks set layout = 'stack-3', elements = $2 where id = $1
 	`, messagesBlock.ID, encoded); err != nil {
 		t.Fatalf("prepare three messages: %v", err)
 	}
 
-	savedAsset := apitest.FetchStartedAsset(t, r, session, started.ID)
-	messagesBlock = apitest.BlockNamed(t, savedAsset.Blocks, "messages")
+	savedWork := apitest.FetchStartedWork(t, r, session, started.ID)
+	messagesBlock = apitest.BlockNamed(t, savedWork.Blocks, "messages")
 	messages := apitest.EditableBlock(messagesBlock)
 	messages.Layout = "stack-2"
 
@@ -604,7 +604,7 @@ func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 		t.Fatalf("after sealing: %d payloads and %d policy rows, want 2 and 1", payloads, policies)
 	}
 
-	owner := apitest.FetchStartedAsset(t, r, session, started.ID)
+	owner := apitest.FetchStartedWork(t, r, session, started.ID)
 	shorter := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	shorter.Elements[0].Content = withoutFragment(t, owner, "First sealed")
 	shorter.AllowedApps = &apps
@@ -615,7 +615,7 @@ func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 		t.Fatalf("after one removal: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
 	}
 
-	owner = apitest.FetchStartedAsset(t, r, session, started.ID)
+	owner = apitest.FetchStartedWork(t, r, session, started.ID)
 	shortest := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	shortest.Elements[0].Content = withoutFragment(t, owner, "Second sealed")
 	shortest.AllowedApps = &[]string{}
@@ -626,14 +626,14 @@ func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 		t.Fatalf("after the final removal: %d payloads and %d policy rows, want none", payloads, policies)
 	}
 
-	owner = apitest.FetchStartedAsset(t, r, session, started.ID)
+	owner = apitest.FetchStartedWork(t, r, session, started.ID)
 	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
 		t.Fatalf("after the final removal: linked install only %t, allowed apps %v",
 			owner.LinkedInstallOnly, owner.AllowedApps)
 	}
 }
 
-func withoutFragment(t *testing.T, owner apitest.StartedAsset, name string) json.RawMessage {
+func withoutFragment(t *testing.T, owner apitest.StartedWork, name string) json.RawMessage {
 	t.Helper()
 	var content struct {
 		Groups    json.RawMessage   `json:"groups"`

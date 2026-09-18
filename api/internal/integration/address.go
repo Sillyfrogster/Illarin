@@ -16,9 +16,9 @@ type preparedAddress struct {
 	verifiedAt *time.Time
 }
 
-func (s *Service) prepareAddress(ctx context.Context, kind, address string) (preparedAddress, error) {
+func (s *Service) prepareAddress(ctx context.Context, destinationType, address string) (preparedAddress, error) {
 	prepared := preparedAddress{state: Unverified}
-	if kind == Discord {
+	if destinationType == Discord {
 		capability, found, err := discord.VerifyCapability(ctx, s.sender, address)
 		if err != nil {
 			return prepared, FieldError{"address", err.Error()}

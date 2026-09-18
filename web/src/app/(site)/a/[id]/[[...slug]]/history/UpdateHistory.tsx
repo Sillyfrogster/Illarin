@@ -14,9 +14,9 @@ import {
   ExpandingPanelTrigger,
 } from "@/components/ui/expanding-panel";
 import {
-  type AssetDetail,
   fetchAssetUpdates,
   type RecordedVersion,
+  type WorkDetail,
 } from "@/lib/api/query";
 import { versionDate, versionSummary, versionTitle } from "@/lib/asset-updates";
 import { assetHref } from "@/lib/asset-url";
@@ -46,7 +46,7 @@ export function UpdateHistory({
   kind,
   kindLabel,
 }: {
-  asset: AssetDetail;
+  asset: WorkDetail;
   download: ReactNode;
   kind: string;
   kindLabel: string;

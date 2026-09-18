@@ -15,7 +15,7 @@ func TestTheOwnerIsOfferedTheSharedBlocksGroupedByDestination(t *testing.T) {
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
 
-	page := apitest.FetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedWork(t, r, session, started.ID)
 	byDefinition := make(map[string]apitest.AddableBlock, len(page.AddableBlocks))
 	for _, block := range page.AddableBlocks {
 		byDefinition[block.Definition] = block
@@ -66,7 +66,7 @@ func TestAddingABlockPutsItAtTheFootOfThePageHoldingItsElement(t *testing.T) {
 		t.Errorf("the new block arrived %s at %s, want the catalog's declared pair", added.Layout, added.Width)
 	}
 
-	page := apitest.FetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedWork(t, r, session, started.ID)
 	if len(page.Blocks) != 3 || page.Blocks[2].ID != added.ID {
 		t.Errorf("the saved page = %d blocks, want the gallery last", len(page.Blocks))
 	}
@@ -134,7 +134,7 @@ func TestAnAddedBlockIsFilledAndReadBack(t *testing.T) {
 		t.Fatalf("save links: status = %d, want 200: %s", response.Code, response.Body.String())
 	}
 
-	page := apitest.FetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedWork(t, r, session, started.ID)
 	saved := apitest.BlockNamed(t, page.Blocks, "runs_best_with")
 	if saved.IsEmpty {
 		t.Errorf("a block holding a link reads as empty")
@@ -193,7 +193,7 @@ func TestSavingAnEmptyAddedBlockKeepsEveryDefinition(t *testing.T) {
 				t.Fatalf("save empty block: status = %d, want 200: %s", response.Code, response.Body.String())
 			}
 
-			page := apitest.FetchStartedAsset(t, r, session, started.ID)
+			page := apitest.FetchStartedWork(t, r, session, started.ID)
 			saved := apitest.BlockNamed(t, page.Blocks, test.definition)
 			if len(page.Blocks) != 3 || saved.ID != added.ID || saved.Width != "full" || !saved.IsEmpty {
 				t.Errorf("saved page = %+v, want the empty block kept at full width", page.Blocks)
@@ -210,7 +210,7 @@ func TestOnlyTheOwnerIsOfferedBlocksToAdd(t *testing.T) {
 	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID, nil))
 
 	if response.Code == http.StatusOK {
-		var page apitest.StartedAsset
+		var page apitest.StartedWork
 		if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 			t.Fatalf("decode the reader's page: %v", err)
 		}

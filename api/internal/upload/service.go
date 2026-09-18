@@ -19,20 +19,20 @@ type Service struct {
 	reg      *format.Registry
 	store    storage.Store
 	settings work.IngestSettings
-	assets   *work.Service
+	works    *work.Service
 	now      func() time.Time
 }
 
-func NewService(pool *pgxpool.Pool, assets *work.Service) *Service {
+func NewService(pool *pgxpool.Pool, works *work.Service) *Service {
 	return &Service{
-		pool: pool, reg: assets.Registry(), store: assets.Store(),
-		settings: assets.IngestSettings(), assets: assets, now: assets.Now,
+		pool: pool, reg: works.Registry(), store: works.Store(),
+		settings: works.IngestSettings(), works: works, now: works.Now,
 	}
 }
 
 // writeSummary rewrites the work's summary row inside the transaction that changed it
-func (s *Service) writeSummary(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
-	if err := summary.Write(ctx, tx, s.reg, assetID); err != nil {
+func (s *Service) writeSummary(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
+	if err := summary.Write(ctx, tx, s.reg, workID); err != nil {
 		if errors.Is(err, summary.ErrNotFound) {
 			return work.ErrNotFound
 		}

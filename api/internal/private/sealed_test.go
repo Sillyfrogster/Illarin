@@ -17,13 +17,13 @@ import (
 func sealPresetBlock(
 	t *testing.T,
 	pool *pgxpool.Pool,
-	assetID string,
+	workID string,
 	ownerID uuid.UUID,
 	version, key, content string,
 ) {
 	t.Helper()
 	payload, err := json.Marshal(map[string]any{
-		"id": uuid.NewString(), "preset_id": assetID, "version": version,
+		"id": uuid.NewString(), "preset_id": workID, "version": version,
 		"block_key": key, "content": content,
 	})
 	if err != nil {
@@ -31,19 +31,19 @@ func sealPresetBlock(
 	}
 	_, err = pool.Exec(t.Context(), `
 		insert into migration_preserved_records
-			(id, source_table, source_id, asset_id, owner_id, payload)
+			(id, source_table, source_id, work_id, owner_id, payload)
 		values ($1, 'preset_sealed_blocks', $2, $3, $4, $5)
-	`, uuid.New(), uuid.NewString(), assetID, ownerID, payload)
+	`, uuid.New(), uuid.NewString(), workID, ownerID, payload)
 	if err != nil {
 		t.Fatalf("preserve a sealed block: %v", err)
 	}
 }
 
-func ownerOfAsset(t *testing.T, pool *pgxpool.Pool, assetID string) uuid.UUID {
+func ownerOfWork(t *testing.T, pool *pgxpool.Pool, workID string) uuid.UUID {
 	t.Helper()
 	var ownerID uuid.UUID
 	if err := pool.QueryRow(t.Context(),
-		`select owner_id from assets where id = $1`, assetID).Scan(&ownerID); err != nil {
+		`select owner_id from works where id = $1`, workID).Scan(&ownerID); err != nil {
 		t.Fatalf("read the asset owner: %v", err)
 	}
 	return ownerID
@@ -53,7 +53,7 @@ type sealedStack struct {
 	router   *gin.Engine
 	session  *http.Cookie
 	stranger *http.Cookie
-	assetID  string
+	workID   string
 	pool     *pgxpool.Pool
 }
 
@@ -68,15 +68,15 @@ func newSealedStack(t *testing.T) sealedStack {
 	started := apitest.StartPreset(t, router, session, "sillytavern")
 	return sealedStack{
 		router: router, session: session, stranger: stranger,
-		assetID: started.ID, pool: pool,
+		workID: started.ID, pool: pool,
 	}
 }
 
 func (stack sealedStack) seal(t *testing.T, version, key, content string) {
 	t.Helper()
 	sealPresetBlock(
-		t, stack.pool, stack.assetID,
-		ownerOfAsset(t, stack.pool, stack.assetID), version, key, content,
+		t, stack.pool, stack.workID,
+		ownerOfWork(t, stack.pool, stack.workID), version, key, content,
 	)
 }
 
@@ -88,7 +88,7 @@ func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 	stack.seal(t, "0.9.0", "jailbreak", "An older take.")
 
 	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.assetID+"/sealed", nil,
+		http.MethodGet, "/v1/assets/"+stack.workID+"/sealed", nil,
 	), stack.session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("export sealed content: status = %d: %s", response.Code, response.Body.String())
@@ -103,8 +103,8 @@ func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 	}
 
 	var exported struct {
-		AssetID string `json:"asset_id"`
-		Blocks  []struct {
+		WorkID string `json:"asset_id"`
+		Blocks []struct {
 			Version string `json:"version"`
 			Key     string `json:"block_key"`
 			Content string `json:"content"`
@@ -113,8 +113,8 @@ func TestAnOwnerExportsEverySealedBlockTheirPresetPreserves(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &exported); err != nil {
 		t.Fatalf("decode the export: %v", err)
 	}
-	if exported.AssetID != stack.assetID {
-		t.Errorf("the export names asset %s, want %s", exported.AssetID, stack.assetID)
+	if exported.WorkID != stack.workID {
+		t.Errorf("the export names asset %s, want %s", exported.WorkID, stack.workID)
 	}
 	if len(exported.Blocks) != 3 {
 		t.Fatalf("the export holds %d blocks, want all three", len(exported.Blocks))
@@ -140,14 +140,14 @@ func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
 
 	signedOut := apitest.Send(t, stack.router, httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.assetID+"/sealed", nil,
+		http.MethodGet, "/v1/assets/"+stack.workID+"/sealed", nil,
 	))
 	if signedOut.Code != http.StatusUnauthorized {
 		t.Errorf("a signed-out reader asked for sealed content and got %d", signedOut.Code)
 	}
 
 	stranger := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.assetID+"/sealed", nil,
+		http.MethodGet, "/v1/assets/"+stack.workID+"/sealed", nil,
 	), stack.stranger))
 	if stranger.Code != http.StatusNotFound {
 		t.Errorf("another creator asked for sealed content and got %d, want 404", stranger.Code)
@@ -157,7 +157,7 @@ func TestSealedContentAnswersNobodyButItsOwner(t *testing.T) {
 	}
 }
 
-func TestAnAssetHoldingNothingSealedHasNoExport(t *testing.T) {
+func TestAnWorkHoldingNothingSealedHasNoExport(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartPreset(t, r, session, "sillytavern")
@@ -176,7 +176,7 @@ func TestTheSealedCountStandsOnlyForTheOwner(t *testing.T) {
 	stack.seal(t, "1.0.0", "jailbreak", "The withheld one.")
 
 	owner := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.assetID, nil,
+		http.MethodGet, "/v1/assets/"+stack.workID, nil,
 	), stack.session))
 	var page struct {
 		SealedBlocks *int `json:"sealedBlocks"`
@@ -192,7 +192,7 @@ func TestTheSealedCountStandsOnlyForTheOwner(t *testing.T) {
 	}
 
 	stranger := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/assets/"+stack.assetID, nil,
+		http.MethodGet, "/v1/assets/"+stack.workID, nil,
 	), stack.stranger))
 	if strings.Contains(stranger.Body.String(), "sealedBlocks") {
 		t.Error("a stranger's page says the asset is withholding something")

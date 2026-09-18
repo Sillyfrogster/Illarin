@@ -41,8 +41,8 @@ func TestACharXGivesBackTheFilesIllarinReadsNothingFrom(t *testing.T) {
 		"lumiverse_modules.json": modules,
 	}))
 
-	written := write(t, CharXModule{}, format.ExportAsset{
-		Kind: Kind, Header: format.Header{Name: "Ana"},
+	written := write(t, CharXModule{}, format.ExportWork{
+		Type: Type, Header: format.Header{Name: "Ana"},
 		Elements: parsed.Elements, Preserved: parsed.Remainder,
 	})
 	if held := archiveEntry(t, written.Body, "lumiverse_modules.json"); !bytes.Equal(held, modules) {
@@ -57,8 +57,8 @@ func TestACardBodyNeverCarriesAnArchivedFile(t *testing.T) {
 	}))
 
 	for _, module := range []format.Module{CCv2Module{}, CCv3Module{}} {
-		written := write(t, module, format.ExportAsset{
-			Kind: Kind, Header: format.Header{Name: "Ana"},
+		written := write(t, module, format.ExportWork{
+			Type: Type, Header: format.Header{Name: "Ana"},
 			Elements: parsed.Elements, Preserved: parsed.Remainder,
 		})
 		if strings.Contains(string(written.Body), "archive:") {
@@ -121,7 +121,7 @@ func archived(name, body string) format.Remainder {
 		panic(err)
 	}
 	return format.Remainder{
-		Owner: format.OwnerAsset, Namespace: MemberNamespace + name, Payload: payload,
+		Owner: format.OwnerWork, Namespace: MemberNamespace + name, Payload: payload,
 	}
 }
 

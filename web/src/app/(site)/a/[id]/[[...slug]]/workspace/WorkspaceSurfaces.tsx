@@ -6,10 +6,10 @@ import { useEffect, useState } from "react";
 import { AnnouncementStatus } from "@/components/updates/AnnouncementStatus";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import type {
-  AssetDetail,
-  AssetElement,
-  AssetImage,
   ReadinessItem,
+  WorkDetail,
+  WorkElement,
+  WorkImage,
 } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import type { PageTarget } from "@/lib/readiness";
@@ -38,9 +38,9 @@ import { WorkspaceDock } from "./WorkspaceDock";
 
 export type WorkspaceSurfacesProps = {
   creator: string;
-  discovery: AssetDetail["discovery"];
+  discovery: WorkDetail["discovery"];
   hasOriginal: boolean;
-  images: AssetImage[];
+  images: WorkImage[];
   kind: string;
   readiness?: ReadinessItem[];
   sealedBlocks?: number;
@@ -361,8 +361,8 @@ function Fields({
 }: {
   assetId: string;
   blockId: string;
-  element: AssetElement;
-  images: AssetImage[];
+  element: WorkElement;
+  images: WorkImage[];
 }) {
   const workspace = useWorkspace();
   return (

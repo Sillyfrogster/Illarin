@@ -18,12 +18,12 @@ const ordinaryPreset = `{
 	]
 }`
 
-func settledDelivery(t *testing.T, pool *pgxpool.Pool, assetID string) (string, string) {
+func settledDelivery(t *testing.T, pool *pgxpool.Pool, workID string) (string, string) {
 	t.Helper()
 	var state, reason string
 	if err := pool.QueryRow(context.Background(),
-		`select state, coalesce(settled_reason, '') from instance_deliveries where asset_id = $1`,
-		assetID,
+		`select state, coalesce(settled_reason, '') from instance_deliveries where work_id = $1`,
+		workID,
 	).Scan(&state, &reason); err != nil {
 		t.Fatalf("read the delivery: %v", err)
 	}
@@ -32,22 +32,22 @@ func settledDelivery(t *testing.T, pool *pgxpool.Pool, assetID string) (string, 
 
 func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
-	assetID := apitest.AssetIDFromIngest(
-		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(ordinaryPreset)),
+	workID := apitest.WorkIDFromIngest(
+		t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(ordinaryPreset)),
 	)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
 	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
-	if queued := apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	if queued := apitest.SendToInstance(t, router, session, workID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("queue status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
 
-	page := apitest.FetchStartedAsset(t, router, session, assetID)
+	page := apitest.FetchStartedWork(t, router, session, workID)
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
 	sealed := apitest.SealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
-	if got := apitest.SaveBlock(t, router, session, assetID, core.ID, sealed); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, router, session, workID, core.ID, sealed); got.Code != http.StatusOK {
 		t.Fatalf("seal the prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
@@ -56,7 +56,7 @@ func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("collect status = %d, want 204: %s", rec.Code, rec.Body.String())
 	}
-	state, reason := settledDelivery(t, pool, assetID)
+	state, reason := settledDelivery(t, pool, workID)
 	if state != "failed" || reason != "unsupported" {
 		t.Fatalf("delivery = %s/%s, want failed/unsupported", state, reason)
 	}
@@ -67,21 +67,21 @@ func TestSealingAPromptStopsAQueuedDeliveryTheAppCanNoLongerReceive(t *testing.T
 
 func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
-	assetID := apitest.AssetIDFromIngest(
-		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(ordinaryPreset)),
+	workID := apitest.WorkIDFromIngest(
+		t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(ordinaryPreset)),
 	)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
 	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
-	apitest.SendToInstance(t, router, session, assetID, grant.Instance.ID)
+	apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
 	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
 
-	page := apitest.FetchStartedAsset(t, router, session, assetID)
+	page := apitest.FetchStartedWork(t, router, session, workID)
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
 	sealed := apitest.SealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
-	if got := apitest.SaveBlock(t, router, session, assetID, core.ID, sealed); got.Code != http.StatusOK {
+	if got := apitest.SaveBlock(t, router, session, workID, core.ID, sealed); got.Code != http.StatusOK {
 		t.Fatalf("seal the prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
@@ -101,14 +101,14 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 func TestAnInstancesApplicationNameGrantsNoProtectedDelivery(t *testing.T) {
 	t.Parallel()
 	router, session, _ := harness.NewLinkingRouter(t)
-	assetID := apitest.PublishSealedPreset(t, router, session, "Named app preset", "Sealed for allowed apps only.")
+	workID := apitest.PublishSealedPreset(t, router, session, "Named app preset", "Sealed for allowed apps only.")
 	borrowedName := apitest.LinkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
 	apitest.DeclareTargets(t, router, borrowedName.AccessToken, []string{"invented_by_the_client"})
 	otherName := apitest.LinkDeviceInstance(t, router, session, "Some Other App", "tablet", []string{apitest.ReceiveScope})
 	apitest.DeclareTargets(t, router, otherName.AccessToken, []string{"preset_lumiverse"})
 
 	offered := map[string]bool{}
-	for _, state := range apitest.AssetInstances(t, router, session, assetID).Items {
+	for _, state := range apitest.WorkInstances(t, router, session, workID).Items {
 		offered[state.InstanceID] = state.CanReceive
 	}
 
@@ -118,10 +118,10 @@ func TestAnInstancesApplicationNameGrantsNoProtectedDelivery(t *testing.T) {
 	if !offered[otherName.Instance.ID] {
 		t.Fatal("an instance accepting the allowed target was not offered a sealed preset")
 	}
-	if got := apitest.SendToInstance(t, router, session, assetID, borrowedName.Instance.ID); got.Code != http.StatusConflict {
+	if got := apitest.SendToInstance(t, router, session, workID, borrowedName.Instance.ID); got.Code != http.StatusConflict {
 		t.Fatalf("queue by borrowed name = %d, want 409: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.SendToInstance(t, router, session, assetID, otherName.Instance.ID); got.Code != http.StatusAccepted {
+	if got := apitest.SendToInstance(t, router, session, workID, otherName.Instance.ID); got.Code != http.StatusAccepted {
 		t.Fatalf("queue by accepted target = %d, want 202: %s", got.Code, got.Body.String())
 	}
 	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, otherName.AccessToken, nil)).Deliveries[0]
@@ -132,17 +132,17 @@ func TestAnInstancesApplicationNameGrantsNoProtectedDelivery(t *testing.T) {
 
 func TestAnyReadersAllowedInstanceReceivesTheCompleteProtectedPreset(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
 	metadata["filename"] = "keyed.json"
-	assetID := apitest.AssetIDFromIngest(
-		t, apitest.UploadAndFinish(t, router, session, assets, metadata, []byte(apitest.KeyedSealedPreset)),
+	workID := apitest.WorkIDFromIngest(
+		t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedSealedPreset)),
 	)
 	reader := apitest.AddVerifiedLinkingUser(t, router, pool, "reader@example.com", "reader.creator")
 	grant := apitest.LinkDeviceInstance(t, router, reader, "Lumiverse", "reader desk", []string{apitest.ReceiveScope})
 	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"preset_lumiverse"})
 
-	if queued := apitest.SendToInstance(t, router, reader, assetID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	if queued := apitest.SendToInstance(t, router, reader, workID, grant.Instance.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("a reader could not queue the preset: %d %s", queued.Code, queued.Body.String())
 	}
 	if before := apitest.DownloadEventCount(t, pool, "linked_instance"); before != 0 {

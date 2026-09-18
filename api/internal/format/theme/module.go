@@ -16,7 +16,7 @@ const (
 
 	lumiverseNamespace          = LumiverseID
 	lumiverseComponentNamespace = LumiverseID + "_component"
-	lumiverseAssetNamespace     = LumiverseID + "_asset"
+	lumiverseFileNamespace      = LumiverseID + "_asset"
 	sillyTavernNamespace        = SillyTavernID
 )
 
@@ -35,7 +35,7 @@ func (LumiverseModule) Declaration() format.Declaration {
 		LumiverseID,
 		"Lumiverse theme bundle",
 		[]format.Recognition{{
-			Kind: format.RecognitionDiscriminator, Containers: []format.Container{format.ZIP},
+			Type: format.RecognitionDiscriminator, Containers: []format.Container{format.ZIP},
 			Path: []string{"format"}, Values: []string{"3"},
 		}},
 		lumiverseColors,
@@ -50,7 +50,7 @@ func (SillyTavernModule) Declaration() format.Declaration {
 		SillyTavernID,
 		"SillyTavern theme",
 		[]format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []format.Container{format.JSON},
+			Type: format.RecognitionSignature, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				"main_text_color": format.ValueString,
 				"blur_strength":   format.ValueNumber,
@@ -97,7 +97,7 @@ func themeDeclaration(
 		preservesOrigins = append(preservesOrigins, format.OriginV1)
 	}
 	return format.Declaration{
-		ID: id, Label: label, Kind: Kind,
+		ID: id, Label: label, Type: Type,
 		Direction:   format.Direction{Read: true, Write: true},
 		Recognition: recognition,
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -160,16 +160,16 @@ func declaredColorSlots(names []string) []format.SlotDeclaration {
 func declaredControlSlots(slots []namedSlot) []format.SlotDeclaration {
 	result := make([]format.SlotDeclaration, 0, len(slots))
 	for _, slot := range slots {
-		kind := format.ValueString
+		valueType := format.ValueString
 		switch slot.settingType {
 		case block.SettingNumber:
-			kind = format.ValueNumber
+			valueType = format.ValueNumber
 		case block.SettingBoolean:
-			kind = format.ValueBoolean
+			valueType = format.ValueBoolean
 		case block.SettingStrings:
-			kind = format.ValueArray
+			valueType = format.ValueArray
 		}
-		result = append(result, format.SlotDeclaration{Name: slot.name, Type: kind})
+		result = append(result, format.SlotDeclaration{Name: slot.name, Type: valueType})
 	}
 	return result
 }
@@ -273,7 +273,7 @@ func sillyTavernStylesReduced(content block.Content) bool {
 	if !ok {
 		return false
 	}
-	if len(styles.Assets) > 0 {
+	if len(styles.Files) > 0 {
 		return styles.Global != "" || hasEnabledStylesheet(styles)
 	}
 	return len(styles.Stylesheets) > 0 && (styles.Global != "" || hasEnabledStylesheet(styles))

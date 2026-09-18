@@ -68,7 +68,7 @@ func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
 	}
 	publicGeneration := apitest.ContentGeneration(t, pool, started.ID)
 
-	owner := apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.Replace(
 		string(core.Elements[0].Content), `"enabled":true`, `"protected":true,"enabled":true`, 1,
@@ -81,7 +81,7 @@ func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
 	if got := apitest.ContentGeneration(t, pool, started.ID); got != publicGeneration {
 		t.Fatalf("content generation after sealing unchanged text = %d, want %d", got, publicGeneration)
 	}
-	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
 		t.Fatalf("sealed prompt availability = linked install only %t, apps %v",
 			owner.LinkedInstallOnly, owner.AllowedApps)
@@ -100,7 +100,7 @@ func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
 		t.Fatalf("content generation after editing sealed text = %d, want %d", editedGeneration, publicGeneration+1)
 	}
 
-	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.Replace(
 		string(core.Elements[0].Content), `,"protected":true`, "", 1,
@@ -114,7 +114,7 @@ func TestProtectedPromptGenerationFollowsCompleteArtifactBytes(t *testing.T) {
 	if got := apitest.ContentGeneration(t, pool, started.ID); got != editedGeneration {
 		t.Fatalf("content generation after unsealing unchanged text = %d, want %d", got, editedGeneration)
 	}
-	owner = apitest.FetchStartedAsset(t, router, session, started.ID)
+	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
 		t.Fatalf("unsealed prompt availability = linked install only %t, apps %v",
 			owner.LinkedInstallOnly, owner.AllowedApps)

@@ -11,15 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *Handlers) ListAssets(c *gin.Context) {
+func (h *Handlers) ListWorks(c *gin.Context) {
 	q := api.ReadQuery(c)
-	params := ListAssetsParams{
-		Kind:     api.QueryText[ListAssetsParamsKind](q, "kind"),
+	params := ListWorksParams{
+		Type:     api.QueryText[ListWorksParamsType](q, "kind"),
 		Platform: api.QueryText[string](q, "platform"),
 		Creator:  api.QueryText[string](q, "creator"),
 		Q:        api.QueryText[string](q, "q"),
 		Facet:    api.QueryList(q, "facet"),
-		Nsfw:     api.QueryText[ListAssetsParamsNsfw](q, "nsfw"),
+		Nsfw:     api.QueryText[ListWorksParamsNsfw](q, "nsfw"),
 		Limit:    api.QueryNumber(q, "limit"),
 		Before:   api.QueryTime(q, "before"),
 		BeforeId: api.QueryID(q, "beforeId"),
@@ -50,8 +50,8 @@ func (h *Handlers) ListAssets(c *gin.Context) {
 		}
 	}
 
-	if params.Kind != nil {
-		f.Kind = string(*params.Kind)
+	if params.Type != nil {
+		f.Type = string(*params.Type)
 	}
 	if params.Platform != nil {
 		f.Platform, f.PlatformSet = params.Platform, true
@@ -78,17 +78,17 @@ func (h *Handlers) ListAssets(c *gin.Context) {
 		value := string(*params.Nsfw)
 		requested = &value
 	}
-	visibility, ok := ReaderVisibility(c, h.accounts, requested)
+	preference, ok := ReaderNSFWPreference(c, h.accounts, requested)
 	if !ok {
 		return
 	}
-	found, err := h.works.Browse(c.Request.Context(), f, visibility)
+	found, err := h.works.Browse(c.Request.Context(), f, preference)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "could not list assets")
 		return
 	}
 
-	items := make([]BrowseAsset, 0, len(found.Items))
+	items := make([]BrowseWork, 0, len(found.Items))
 	for _, item := range found.Items {
 		var cover *BrowseCover
 		if item.Cover != nil {
@@ -96,14 +96,14 @@ func (h *Handlers) ListAssets(c *gin.Context) {
 				Url: item.Cover.URL, Width: item.Cover.Width, Height: item.Cover.Height,
 			}
 		}
-		var ownerState *BrowseAssetOwnerState
+		var ownerState *BrowseWorkOwnerState
 		if item.OwnerState != "" {
-			value := BrowseAssetOwnerState(item.OwnerState)
+			value := BrowseWorkOwnerState(item.OwnerState)
 			ownerState = &value
 		}
-		items = append(items, BrowseAsset{
+		items = append(items, BrowseWork{
 			Id: item.ID, Name: item.Name, Creator: item.Creator,
-			Kind: BrowseAssetKind(item.Kind), IsNsfw: item.IsNSFW, Cover: cover,
+			Type: BrowseWorkType(item.Type), IsNsfw: item.IsNSFW, Cover: cover,
 			OwnerState: ownerState,
 			Withhold:   toAPIWithhold(item.Withhold),
 		})
@@ -112,9 +112,9 @@ func (h *Handlers) ListAssets(c *gin.Context) {
 	if found.Next != nil {
 		next = &BrowseCursor{Before: found.Next.MadeAt, BeforeId: found.Next.ID}
 	}
-	var empty *AssetListEmptyState
+	var empty *WorkListEmptyState
 	if found.EmptyState != "" {
-		value := AssetListEmptyState(found.EmptyState)
+		value := WorkListEmptyState(found.EmptyState)
 		empty = &value
 	}
 	platforms := make([]BrowseOption, 0, len(found.Platforms))
@@ -133,14 +133,14 @@ func (h *Handlers) ListAssets(c *gin.Context) {
 		}
 		facets = append(facets, BrowseFacet{Key: group.Key, Label: group.Label, Options: options})
 	}
-	c.JSON(http.StatusOK, AssetList{
+	c.JSON(http.StatusOK, WorkList{
 		Items: items, Total: found.Total, Suppressed: found.Suppressed,
-		Visibility: AssetListVisibility(visibility),
-		NextCursor: next, Platforms: platforms, Facets: facets, EmptyState: empty,
+		NSFWPreference: WorkListNSFWPreference(preference),
+		NextCursor:     next, Platforms: platforms, Facets: facets, EmptyState: empty,
 	})
 }
 
-func cursorFrom(params ListAssetsParams) (*Cursor, bool) {
+func cursorFrom(params ListWorksParams) (*Cursor, bool) {
 	switch {
 	case params.Before == nil && params.BeforeId == nil:
 		return nil, true

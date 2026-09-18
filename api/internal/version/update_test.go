@@ -36,7 +36,7 @@ func TestBundledLumiverseScriptsChangeThroughAJSONReplacement(t *testing.T) {
 		}]}
 	}`
 
-	svc, pool := apitest.AssetsWithRegistry(t, apitest.RegistryWith(t, preset.LumiverseModule{}))
+	svc, pool := apitest.WorksWithRegistry(t, apitest.RegistryWith(t, preset.LumiverseModule{}))
 	owner := apitest.Owner(t, svc, "bundled.scripts.update")
 	created := apitest.IngestOne(t, svc, owner, "preset.json", []byte(initial))
 	apitest.PublishImported(t, svc, owner, created)
@@ -47,7 +47,7 @@ func TestBundledLumiverseScriptsChangeThroughAJSONReplacement(t *testing.T) {
 	if operation.Status != upload.IngestSuccess {
 		t.Fatalf("replacement = %+v, want success", operation)
 	}
-	working, err := apitest.Works(svc).WorkingCopy(t.Context(), created.ID, &owner, work.ContentShown)
+	working, err := apitest.Pages(svc).WorkingCopy(t.Context(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func TestBundledLumiverseScriptsChangeThroughAJSONReplacement(t *testing.T) {
 		t.Fatalf("working scripts = %+v", scripts)
 	}
 	updated, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(t.Context(), version.UpdateRequest{
-		OwnerID: owner, AssetID: created.ID, Summary: "Updated the bundled script",
+		OwnerID: owner, WorkID: created.ID, Summary: "Updated the bundled script",
 	}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil || !updated.ContentChanged {
 		t.Fatalf("publish JSON replacement = %+v, %v", updated, err)
@@ -72,19 +72,19 @@ func TestBundledLumiverseScriptsChangeThroughAJSONReplacement(t *testing.T) {
 
 func TestAnIdenticalReuploadCannotPublishAnUpdate(t *testing.T) {
 	t.Parallel()
-	parsed := format.Parsed{Kind: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
+	parsed := format.Parsed{Type: "character", Format: "replacing", Header: format.Header{Name: "Wren"},
 		Elements: []block.Element{
 			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}},
 			{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: uuid.New(), Text: "Hello"}}}},
 		}}
-	svc, pool := apitest.AssetsWithRegistry(t, apitest.RegistryWith(t, apitest.ReplacingModule{Parsed: &parsed}))
+	svc, pool := apitest.WorksWithRegistry(t, apitest.RegistryWith(t, apitest.ReplacingModule{Parsed: &parsed}))
 	owner := apitest.Owner(t, svc, "unchanged.upload")
 	created := apitest.IngestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	apitest.PublishImported(t, svc, owner, created)
 	generation := apitest.ContentGeneration(t, pool, created.ID.String())
 	parsed.Elements[1].Content = block.TextSet{Texts: []block.TextItem{{ID: uuid.New(), Text: "Hello"}}}
 	candidate := apitest.CurrentCandidate(t, svc, created.ID)
-	operation, err := apitest.Uploads(svc).AcceptRevision(t.Context(), upload.RevisionInput{OwnerID: owner, AssetID: created.ID,
+	operation, err := apitest.Uploads(svc).AcceptRevision(t.Context(), upload.RevisionInput{OwnerID: owner, WorkID: created.ID,
 		Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true}`)}, candidate)
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestAnIdenticalReuploadCannotPublishAnUpdate(t *testing.T) {
 	if _, err := apitest.Uploads(svc).AcceptReplacement(t.Context(), owner, created.ID, operation.ID, candidate, nil, false); err != nil {
 		t.Fatal(err)
 	}
-	_, _, err = version.NewService(svc.Pool(), svc).PublishUpdate(t.Context(), version.UpdateRequest{OwnerID: owner, AssetID: created.ID, Summary: "No change"}, apitest.CurrentCandidate(t, svc, created.ID))
+	_, _, err = version.NewService(svc.Pool(), svc).PublishUpdate(t.Context(), version.UpdateRequest{OwnerID: owner, WorkID: created.ID, Summary: "No change"}, apitest.CurrentCandidate(t, svc, created.ID))
 	if !errors.Is(err, version.ErrNothingToPublish) {
 		t.Fatalf("identical upload = %v", err)
 	}
@@ -103,13 +103,13 @@ func TestAnIdenticalReuploadCannotPublishAnUpdate(t *testing.T) {
 		t.Fatal("identical upload published a version")
 	}
 	apitest.SaveDescription(t, svc, owner, created.ID, "A real change")
-	updated, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(t.Context(), version.UpdateRequest{OwnerID: owner, AssetID: created.ID, Summary: "Changed description"}, apitest.CurrentCandidate(t, svc, created.ID))
+	updated, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(t.Context(), version.UpdateRequest{OwnerID: owner, WorkID: created.ID, Summary: "Changed description"}, apitest.CurrentCandidate(t, svc, created.ID))
 	if err != nil || !updated.ContentChanged {
 		t.Fatalf("real change = %+v, %v", updated, err)
 	}
 }
 
-func publishedAsset(t *testing.T, svc *work.Service, pool *pgxpool.Pool, handle string) (uuid.UUID, uuid.UUID) {
+func publishedWork(t *testing.T, svc *work.Service, pool *pgxpool.Pool, handle string) (uuid.UUID, uuid.UUID) {
 	t.Helper()
 	owner := apitest.Owner(t, svc, handle)
 	id, err := apitest.Uploads(svc).StartFromNothing(context.Background(), owner, "character", "")
@@ -118,23 +118,23 @@ func publishedAsset(t *testing.T, svc *work.Service, pool *pgxpool.Pool, handle 
 	}
 	apitest.SaveDescription(t, svc, owner, id, "Published description")
 	apitest.SaveGreeting(t, svc, owner, id, "Published greeting")
-	adult := false
-	if err := apitest.Works(svc).SetIdentity(context.Background(), page.Identity{
-		OwnerID: owner, AssetID: id, Name: "Published name", IsNSFW: &adult,
+	nsfw := false
+	if err := apitest.Pages(svc).SetIdentity(context.Background(), page.Identity{
+		OwnerID: owner, WorkID: id, Name: "Published name", IsNSFW: &nsfw,
 	}, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatalf("save the header: %v", err)
 	}
-	if _, err := apitest.Works(svc).Publish(context.Background(), owner, id, apitest.CurrentCandidate(t, svc, id)); err != nil {
+	if _, err := apitest.Pages(svc).Publish(context.Background(), owner, id, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatalf("publish the asset: %v", err)
 	}
 	return owner, id
 }
 
-func recordedUpdates(t *testing.T, pool *pgxpool.Pool, assetID uuid.UUID) int {
+func recordedUpdates(t *testing.T, pool *pgxpool.Pool, workID uuid.UUID) int {
 	t.Helper()
 	var count int
 	if err := pool.QueryRow(context.Background(),
-		`select count(*) from asset_snapshots where asset_id = $1`, assetID).Scan(&count); err != nil {
+		`select count(*) from work_snapshots where work_id = $1`, workID).Scan(&count); err != nil {
 		t.Fatalf("count the recorded updates: %v", err)
 	}
 	return count
@@ -142,18 +142,18 @@ func recordedUpdates(t *testing.T, pool *pgxpool.Pool, assetID uuid.UUID) int {
 
 func TestPublishingAnUpdateRecordsTheReviewedCandidateAndMovesTheGeneration(t *testing.T) {
 	t.Parallel()
-	svc, pool := apitest.Assets(t)
+	svc, pool := apitest.Works(t)
 	ctx := context.Background()
 	owner, id := apitest.PublishedWork(t, svc, "update.owner")
 	var madeAt, kept any
-	if err := pool.QueryRow(ctx, `select created_at, id from assets where id = $1`, id).Scan(&madeAt, &kept); err != nil {
+	if err := pool.QueryRow(ctx, `select created_at, id from works where id = $1`, id).Scan(&madeAt, &kept); err != nil {
 		t.Fatal(err)
 	}
 	generation := apitest.ContentGeneration(t, pool, id.String())
 	apitest.SaveDescription(t, svc, owner, id, "Second description")
 
 	recorded, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "Rewrote the description",
+		OwnerID: owner, WorkID: id, Summary: "Rewrote the description",
 		Notes: "The longer explanation.", VersionLabel: "v2",
 	}, apitest.CurrentCandidate(t, svc, id))
 	if err != nil {
@@ -167,7 +167,7 @@ func TestPublishingAnUpdateRecordsTheReviewedCandidateAndMovesTheGeneration(t *t
 	if got := apitest.ContentGeneration(t, pool, id.String()); got != generation+1 {
 		t.Fatalf("content generation = %d, want %d", got, generation+1)
 	}
-	page, err := apitest.Works(svc).Detail(ctx, id, nil, work.ContentShown)
+	page, err := apitest.Pages(svc).Detail(ctx, id, nil, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestPublishingAnUpdateRecordsTheReviewedCandidateAndMovesTheGeneration(t *t
 	}
 	var stable bool
 	err = pool.QueryRow(ctx, `select created_at = $2 and id = $3 and content_generation = $4
-		from assets where id = $1`, id, madeAt, kept, recorded.ContentGeneration).Scan(&stable)
+		from works where id = $1`, id, madeAt, kept, recorded.ContentGeneration).Scan(&stable)
 	if err != nil || !stable {
 		t.Fatalf("asset identity and generation stable = %v, error = %v", stable, err)
 	}
@@ -189,18 +189,18 @@ func TestPublishingAnUpdateRecordsTheReviewedCandidateAndMovesTheGeneration(t *t
 
 func TestAnUpdateWithoutAChangeOrASummaryIsRefused(t *testing.T) {
 	t.Parallel()
-	svc, pool := apitest.Assets(t)
+	svc, pool := apitest.Works(t)
 	ctx := context.Background()
 	owner, id := apitest.PublishedWork(t, svc, "unchanged.owner")
 
 	_, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "  ",
+		OwnerID: owner, WorkID: id, Summary: "  ",
 	}, apitest.CurrentCandidate(t, svc, id))
 	if !errors.Is(err, version.ErrSummaryRequired) {
 		t.Fatalf("publishing without a summary = %v, want ErrSummaryRequired", err)
 	}
 	_, _, err = version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "Nothing has changed",
+		OwnerID: owner, WorkID: id, Summary: "Nothing has changed",
 		Notes: "But the notes are new.",
 	}, apitest.CurrentCandidate(t, svc, id))
 	if !errors.Is(err, version.ErrNothingToPublish) {
@@ -208,12 +208,12 @@ func TestAnUpdateWithoutAChangeOrASummaryIsRefused(t *testing.T) {
 	}
 	apitest.SaveDescription(t, svc, owner, id, "Second description")
 	if _, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "Rewrote the description",
+		OwnerID: owner, WorkID: id, Summary: "Rewrote the description",
 	}, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatalf("publish the update: %v", err)
 	}
 	_, _, err = version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "Same content, fresh notes",
+		OwnerID: owner, WorkID: id, Summary: "Same content, fresh notes",
 	}, apitest.CurrentCandidate(t, svc, id))
 	if !errors.Is(err, version.ErrNothingToPublish) {
 		t.Fatalf("republishing the same candidate = %v, want ErrNothingToPublish", err)
@@ -225,7 +225,7 @@ func TestAnUpdateWithoutAChangeOrASummaryIsRefused(t *testing.T) {
 
 func TestAPresentationChangePublishesWithoutMovingTheGeneration(t *testing.T) {
 	t.Parallel()
-	svc, pool := apitest.Assets(t)
+	svc, pool := apitest.Works(t)
 	ctx := context.Background()
 	owner, id := apitest.PublishedWork(t, svc, "presentation.owner")
 	generation := apitest.ContentGeneration(t, pool, id.String())
@@ -240,7 +240,7 @@ func TestAPresentationChangePublishesWithoutMovingTheGeneration(t *testing.T) {
 	}
 
 	recorded, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "Hid the character block",
+		OwnerID: owner, WorkID: id, Summary: "Hid the character block",
 	}, apitest.CurrentCandidate(t, svc, id))
 	if err != nil {
 		t.Fatalf("publish the update: %v", err)
@@ -253,9 +253,9 @@ func TestAPresentationChangePublishesWithoutMovingTheGeneration(t *testing.T) {
 	}
 }
 
-func TestAnUploadWaitingForADecisionRefusesPublicationAndKeepsThePublicAsset(t *testing.T) {
+func TestAnUploadWaitingForADecisionRefusesPublicationAndKeepsThePublicWork(t *testing.T) {
 	t.Parallel()
-	svc, pool := apitest.Assets(t)
+	svc, pool := apitest.Works(t)
 	ctx := context.Background()
 	owner, id := apitest.PublishedWork(t, svc, "waiting.owner")
 	apitest.SaveDescription(t, svc, owner, id, "Second description")
@@ -265,7 +265,7 @@ func TestAnUploadWaitingForADecisionRefusesPublicationAndKeepsThePublicAsset(t *
 	}
 	_, err = pool.Exec(ctx, `
 		insert into ingest_operations (id, owner_id, blob_id, filename, status,
-		    target_asset_id, replacement_preview)
+		    target_work_id, replacement_preview)
 		values ($1, $2, $3, 'replacement.json', 'preview', $4, '{}'::jsonb)
 	`, uuid.New(), owner, stored.ID, id)
 	if err != nil {
@@ -273,7 +273,7 @@ func TestAnUploadWaitingForADecisionRefusesPublicationAndKeepsThePublicAsset(t *
 	}
 
 	_, items, err := version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "Rewrote the description",
+		OwnerID: owner, WorkID: id, Summary: "Rewrote the description",
 	}, apitest.CurrentCandidate(t, svc, id))
 	if !errors.Is(err, work.ErrPublishFloor) {
 		t.Fatalf("publishing over a waiting upload = %v, want ErrPublishFloor", err)
@@ -286,7 +286,7 @@ func TestAnUploadWaitingForADecisionRefusesPublicationAndKeepsThePublicAsset(t *
 	if got := recordedUpdates(t, pool, id); got != 1 {
 		t.Fatalf("recorded updates = %d, want the published version alone", got)
 	}
-	page, err := apitest.Works(svc).Detail(ctx, id, nil, work.ContentShown)
+	page, err := apitest.Pages(svc).Detail(ctx, id, nil, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +298,7 @@ func TestAnUploadWaitingForADecisionRefusesPublicationAndKeepsThePublicAsset(t *
 
 func TestARefusedAnnouncementRollsTheWholePublicationBack(t *testing.T) {
 	t.Parallel()
-	svc, pool := apitest.Assets(t)
+	svc, pool := apitest.Works(t)
 	ctx := context.Background()
 	refused := errors.New("delivery refused this update")
 	versions := apitest.Versions(svc)
@@ -309,7 +309,7 @@ func TestARefusedAnnouncementRollsTheWholePublicationBack(t *testing.T) {
 	working := apitest.CurrentCandidate(t, svc, id).Version
 
 	_, _, err := versions.PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "Rewrote the description",
+		OwnerID: owner, WorkID: id, Summary: "Rewrote the description",
 	}, &work.Candidate{Version: working})
 	if !errors.Is(err, refused) {
 		t.Fatalf("publishing with a refused announcement = %v", err)
@@ -327,7 +327,7 @@ func TestARefusedAnnouncementRollsTheWholePublicationBack(t *testing.T) {
 
 func TestSimultaneousPublicationRecordsOneUpdate(t *testing.T) {
 	t.Parallel()
-	svc, pool := apitest.Assets(t)
+	svc, pool := apitest.Works(t)
 	ctx := context.Background()
 	owner, id := apitest.PublishedWork(t, svc, "simultaneous.owner")
 	apitest.SaveDescription(t, svc, owner, id, "Second description")
@@ -337,7 +337,7 @@ func TestSimultaneousPublicationRecordsOneUpdate(t *testing.T) {
 	for range 2 {
 		go func() {
 			_, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-				OwnerID: owner, AssetID: id, Summary: "Rewrote the description",
+				OwnerID: owner, WorkID: id, Summary: "Rewrote the description",
 			}, &work.Candidate{Version: working})
 			results <- err
 		}()
@@ -365,20 +365,20 @@ func TestSimultaneousPublicationRecordsOneUpdate(t *testing.T) {
 
 func TestRestoringEarlierContentPublishesAFurtherUpdate(t *testing.T) {
 	t.Parallel()
-	svc, pool := apitest.Assets(t)
+	svc, pool := apitest.Works(t)
 	ctx := context.Background()
 	owner, id := apitest.PublishedWork(t, svc, "restore.owner")
 	generation := apitest.ContentGeneration(t, pool, id.String())
 	apitest.SaveDescription(t, svc, owner, id, "Second description")
 	if _, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "Rewrote the description", VersionLabel: "the same label",
+		OwnerID: owner, WorkID: id, Summary: "Rewrote the description", VersionLabel: "the same label",
 	}, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatalf("publish the second version: %v", err)
 	}
 	apitest.SaveDescription(t, svc, owner, id, "Published description")
 
 	recorded, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(ctx, version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: "Put the first description back",
+		OwnerID: owner, WorkID: id, Summary: "Put the first description back",
 		VersionLabel: "the same label",
 	}, apitest.CurrentCandidate(t, svc, id))
 	if err != nil {
@@ -390,7 +390,7 @@ func TestRestoringEarlierContentPublishesAFurtherUpdate(t *testing.T) {
 	if got := apitest.ContentGeneration(t, pool, id.String()); got != generation+2 {
 		t.Fatalf("content generation = %d, want %d", got, generation+2)
 	}
-	page, err := apitest.Works(svc).Detail(ctx, id, nil, work.ContentShown)
+	page, err := apitest.Pages(svc).Detail(ctx, id, nil, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}

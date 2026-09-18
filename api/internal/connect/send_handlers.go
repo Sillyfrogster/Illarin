@@ -15,7 +15,7 @@ const maxLibraryBodyBytes = 256 << 10
 
 func (h *Handlers) CollectDeliveries(c *gin.Context) {
 	noStoreLink(c)
-	instance, ok := h.instance(c, ScopeAssetReceive)
+	instance, ok := h.instance(c, ScopeWorkReceive)
 	if !ok {
 		return
 	}
@@ -64,7 +64,7 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 	})
 }
 
-func (h *Handlers) GetAssetInstances(c *gin.Context) {
+func (h *Handlers) GetWorkInstances(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -74,21 +74,21 @@ func (h *Handlers) GetAssetInstances(c *gin.Context) {
 	if !ok {
 		return
 	}
-	found, err := h.sends.AssetInstances(c.Request.Context(), creator.ID, id)
+	found, err := h.sends.WorkInstances(c.Request.Context(), creator.ID, id)
 	if err != nil {
 		h.deliveryError(c, err)
 		return
 	}
-	items := make([]AssetInstance, 0, len(found.Items))
+	items := make([]WorkInstance, 0, len(found.Items))
 	for _, state := range found.Items {
-		items = append(items, toAPIAssetInstance(state))
+		items = append(items, toAPIWorkInstance(state))
 	}
-	c.JSON(http.StatusOK, AssetInstanceList{
+	c.JSON(http.StatusOK, WorkInstanceList{
 		ContentGeneration: found.ContentGeneration, Items: items,
 	})
 }
 
-func (h *Handlers) SendAssetToInstance(c *gin.Context) {
+func (h *Handlers) SendWorkToInstance(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -101,7 +101,7 @@ func (h *Handlers) SendAssetToInstance(c *gin.Context) {
 	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
-	var request SendAssetRequest
+	var request SendWorkRequest
 	if !readLinkJSON(c, &request) {
 		return
 	}
@@ -149,14 +149,14 @@ func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "private, no-store")
-	assetID, target, err := h.sends.Artifact(
+	workID, target, err := h.sends.Artifact(
 		c.Request.Context(), id, params.Expires, params.Signature,
 	)
 	if err != nil {
 		h.deliveryArtifactError(c, err)
 		return
 	}
-	h.files.LinkedInstanceFile(c, assetID, target)
+	h.files.LinkedInstanceFile(c, workID, target)
 }
 
 func (h *Handlers) deliveryArtifactError(c *gin.Context, err error) {
@@ -181,7 +181,7 @@ func (h *Handlers) deliveryError(c *gin.Context, err error) {
 		api.Refuse(c, http.StatusNotFound, "No live application of yours has that id.")
 	case errors.Is(err, ErrMissingScope):
 		api.Refuse(c, http.StatusForbidden, "That application cannot receive assets.")
-	case errors.Is(err, ErrAssetNotFound), errors.Is(err, ErrAssetNotSendable):
+	case errors.Is(err, ErrWorkNotFound), errors.Is(err, ErrWorkNotSendable):
 		api.Refuse(c, http.StatusNotFound, "No asset that can be sent has that id.")
 	case errors.Is(err, ErrNoTarget):
 		api.Refuse(c, http.StatusConflict, "That application accepts no format this asset can be written in.")
@@ -210,7 +210,7 @@ func toLibraryReport(request LibraryReport) ReportedLibrary {
 	entries := make([]ReportedEntry, 0, len(request.Entries))
 	for _, entry := range request.Entries {
 		entries = append(entries, ReportedEntry{
-			AssetID: entry.AssetId, ContentGeneration: entry.ContentGeneration,
+			WorkID: entry.WorkId, ContentGeneration: entry.ContentGeneration,
 		})
 	}
 	var removed []uuid.UUID
@@ -230,7 +230,7 @@ func toAPIDeliveryWork(released Work) DeliveryWork {
 	artifacts := make([]DeliveryArtifact, 0, len(released.Artifacts))
 	for _, artifact := range released.Artifacts {
 		item := DeliveryArtifact{
-			Kind: DeliveryArtifactKind(artifact.Kind), Url: artifact.URL,
+			Type: DeliveryArtifactType(artifact.Type), Url: artifact.URL,
 		}
 		if artifact.MediaID != nil {
 			mediaID := *artifact.MediaID
@@ -240,8 +240,8 @@ func toAPIDeliveryWork(released Work) DeliveryWork {
 		artifacts = append(artifacts, item)
 	}
 	return DeliveryWork{
-		Id: released.ID, AssetId: released.AssetID,
-		ContentGeneration: released.ContentGeneration, Kind: released.Kind,
+		Id: released.ID, WorkId: released.WorkID,
+		ContentGeneration: released.ContentGeneration, Type: released.Type,
 		Name: released.Name, Format: released.Format, Label: released.Label,
 		QueuedAt: released.QueuedAt, LeaseExpiresAt: released.LeaseExpiresAt,
 		Artifacts: artifacts,
@@ -251,7 +251,7 @@ func toAPIDeliveryWork(released Work) DeliveryWork {
 func toAPIQueuedDelivery(queued Delivery) QueuedDelivery {
 	item := QueuedDelivery{
 		Id: queued.ID, InstanceId: queued.InstanceID,
-		AssetId: queued.AssetID, State: QueuedDeliveryState(queued.State),
+		WorkId: queued.WorkID, State: QueuedDeliveryState(queued.State),
 		QueuedAt: queued.QueuedAt, SettledAt: queued.SettledAt, ExpiresAt: queued.ExpiresAt,
 		UpdatesInstall: queued.UpdatesInstall,
 	}
@@ -262,8 +262,8 @@ func toAPIQueuedDelivery(queued Delivery) QueuedDelivery {
 	return item
 }
 
-func toAPIAssetInstance(state InstanceState) AssetInstance {
-	item := AssetInstance{
+func toAPIWorkInstance(state InstanceState) WorkInstance {
+	item := WorkInstance{
 		InstanceId: state.InstanceID, ApplicationName: state.ApplicationName,
 		InstanceName: state.InstanceName, LastSeenAt: state.LastSeenAt,
 		CanReceive: state.CanReceive, ReportsLibrary: state.ReportsLibrary,
@@ -281,7 +281,7 @@ func toAPIWithheldNotices(notices []WithheldWork) []WithheldNotice {
 	items := make([]WithheldNotice, 0, len(notices))
 	for _, notice := range notices {
 		items = append(items, WithheldNotice{
-			AssetId: notice.AssetID, Name: notice.Name, WithheldAt: notice.WithheldAt,
+			WorkId: notice.WorkID, Name: notice.Name, WithheldAt: notice.WithheldAt,
 		})
 	}
 	return items

@@ -17,7 +17,7 @@ func (m claimingModule) ID() string { return m.id }
 func (m claimingModule) Declaration() Declaration {
 	declaration := testReaderDeclaration(m.id, "character")
 	declaration.Recognition = []Recognition{{
-		Kind: RecognitionDiscriminator, Path: []string{"spec"}, Values: []string{m.spec},
+		Type: RecognitionDiscriminator, Path: []string{"spec"}, Values: []string{m.spec},
 		Containers: []Container{PNG},
 	}}
 	return declaration

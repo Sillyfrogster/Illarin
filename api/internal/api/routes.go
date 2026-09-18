@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Deadlines are how long each kind of route may run before it gives up
+// Deadlines are how long each type of route may run before it gives up
 type Deadlines struct {
 	JSON     time.Duration
 	Upload   time.Duration

@@ -20,8 +20,8 @@ type Choice struct {
 	Label string
 }
 
-func Offers(kind string) ([]Offer, bool) {
-	definitions, ok := Catalog(kind)
+func Offers(workType string) ([]Offer, bool) {
+	definitions, ok := Definitions(workType)
 	if !ok {
 		return nil, false
 	}
@@ -47,13 +47,13 @@ func Offers(kind string) ([]Offer, bool) {
 	return offers, true
 }
 
-func NewBlock(kind string, id DefinitionID, elementType Type, page []Block) (Block, error) {
-	definition, ok := id.Definition(kind)
+func NewBlock(workType string, id DefinitionID, elementType Type, page []Block) (Block, error) {
+	definition, ok := id.Definition(workType)
 	if !ok {
-		return Block{}, fmt.Errorf("a %s has no %s block", kind, id)
+		return Block{}, fmt.Errorf("a %s has no %s block", workType, id)
 	}
 	if definition.Required {
-		return Block{}, fmt.Errorf("%s is on every %s already", definition.Title, kind)
+		return Block{}, fmt.Errorf("%s is on every %s already", definition.Title, workType)
 	}
 	if !definition.Repeatable {
 		for _, holder := range page {

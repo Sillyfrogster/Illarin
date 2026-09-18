@@ -4,13 +4,13 @@ import (
 	"github.com/google/uuid"
 )
 
-func (e NsfwVisibilityRequestVisibility) Valid() bool {
+func (e NsfwPreferenceRequestPreference) Valid() bool {
 	switch e {
-	case NsfwVisibilityRequestVisibilityBlurred:
+	case NsfwPreferenceRequestPreferenceBlurred:
 		return true
-	case NsfwVisibilityRequestVisibilityHidden:
+	case NsfwPreferenceRequestPreferenceHidden:
 		return true
-	case NsfwVisibilityRequestVisibilityShown:
+	case NsfwPreferenceRequestPreferenceShown:
 		return true
 	default:
 		return false
@@ -44,16 +44,16 @@ type CompletePasswordResetRequest struct {
 	Token    string `json:"token"`
 }
 
-type NsfwVisibilityRequest struct {
-	Visibility NsfwVisibilityRequestVisibility `json:"visibility"`
+type NsfwPreferenceRequest struct {
+	Preference NsfwPreferenceRequestPreference `json:"visibility"`
 }
 
-type NsfwVisibilityRequestVisibility string
+type NsfwPreferenceRequestPreference string
 
 const (
-	NsfwVisibilityRequestVisibilityBlurred NsfwVisibilityRequestVisibility = "blurred"
-	NsfwVisibilityRequestVisibilityHidden  NsfwVisibilityRequestVisibility = "hidden"
-	NsfwVisibilityRequestVisibilityShown   NsfwVisibilityRequestVisibility = "shown"
+	NsfwPreferenceRequestPreferenceBlurred NsfwPreferenceRequestPreference = "blurred"
+	NsfwPreferenceRequestPreferenceHidden  NsfwPreferenceRequestPreference = "hidden"
+	NsfwPreferenceRequestPreferenceShown   NsfwPreferenceRequestPreference = "shown"
 )
 
 type PasswordRequest struct {

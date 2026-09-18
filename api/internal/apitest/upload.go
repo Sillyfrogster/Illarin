@@ -78,7 +78,7 @@ func UploadAndFinish(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assets *work.Service,
+	works *work.Service,
 	metadata map[string]any,
 	file []byte,
 ) *httptest.ResponseRecorder {
@@ -87,7 +87,7 @@ func UploadAndFinish(
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("upload status = %d, want 202. body: %s", accepted.Code, accepted.Body.String())
 	}
-	if processed, err := Uploads(assets).ProcessNextIngest(context.Background()); err != nil || !processed {
+	if processed, err := Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
 	}
 	finished := Send(t, r, Authorized(
@@ -96,14 +96,14 @@ func UploadAndFinish(
 	if keep, _ := metadata["_keepDraft"].(bool); !keep {
 		var operation struct {
 			Status string `json:"status"`
-			Asset  *struct {
+			Work   *struct {
 				ID string `json:"id"`
 			} `json:"asset"`
 		}
 		if json.Unmarshal(finished.Body.Bytes(), &operation) == nil &&
-			operation.Status == "success" && operation.Asset != nil {
+			operation.Status == "success" && operation.Work != nil {
 			_ = Send(t, r, Authorized(httptest.NewRequest(
-				http.MethodPost, "/v1/assets/"+operation.Asset.ID+"/publish", nil,
+				http.MethodPost, "/v1/assets/"+operation.Work.ID+"/publish", nil,
 			), session))
 		}
 	}
@@ -125,7 +125,7 @@ func PNG(t *testing.T, width, height int) []byte {
 	return encoded.Bytes()
 }
 
-func MediaUploadRequest(t *testing.T, assetID, role string, file []byte) *http.Request {
+func MediaUploadRequest(t *testing.T, workID, role string, file []byte) *http.Request {
 	t.Helper()
 	var body bytes.Buffer
 	form := multipart.NewWriter(&body)
@@ -134,44 +134,44 @@ func MediaUploadRequest(t *testing.T, assetID, role string, file []byte) *http.R
 	if err := form.Close(); err != nil {
 		t.Fatalf("close media form: %v", err)
 	}
-	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/media", &body)
+	request := httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/media", &body)
 	request.Header.Set("Content-Type", form.FormDataContentType())
 	return request
 }
 
-func AssetIDFromIngest(t *testing.T, response *httptest.ResponseRecorder) string {
+func WorkIDFromIngest(t *testing.T, response *httptest.ResponseRecorder) string {
 	t.Helper()
 	var operation struct {
-		Asset *struct {
+		Work *struct {
 			ID string `json:"id"`
 		} `json:"asset"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &operation); err != nil {
 		t.Fatalf("decode ingest response: %v", err)
 	}
-	if operation.Asset == nil {
+	if operation.Work == nil {
 		t.Fatal("ingest response has no asset")
 	}
-	return operation.Asset.ID
+	return operation.Work.ID
 }
 
-func UploadDiscoveryTestAsset(
+func UploadVisibilityTestWork(
 	t *testing.T,
 	router http.Handler,
 	session *http.Cookie,
-	assets *work.Service,
-	discovery work.Discovery,
+	works *work.Service,
+	visibility work.Visibility,
 ) string {
 	t.Helper()
 	metadata := ExampleMetadata("A quiet draft")
 	metadata["filename"] = "quiet-draft.lumitheme"
-	if discovery == "" {
+	if visibility == "" {
 		delete(metadata, "discovery")
 	} else {
-		metadata["discovery"] = discovery
+		metadata["discovery"] = visibility
 	}
-	return AssetIDFromIngest(
-		t, UploadAndFinish(t, router, session, assets, metadata, []byte("theme")),
+	return WorkIDFromIngest(
+		t, UploadAndFinish(t, router, session, works, metadata, []byte("theme")),
 	)
 }
 
@@ -179,11 +179,11 @@ func UploadedImageID(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID, role string,
+	workID, role string,
 	file []byte,
 ) string {
 	t.Helper()
-	added := Send(t, r, Authorized(MediaUploadRequest(t, assetID, role, file), session))
+	added := Send(t, r, Authorized(MediaUploadRequest(t, workID, role, file), session))
 	if added.Code != http.StatusCreated {
 		t.Fatalf("add a %s image: %d %s", role, added.Code, added.Body.String())
 	}
@@ -196,13 +196,13 @@ func UploadedImageID(
 	return picture.ID
 }
 
-// Uploads reads files in over the same database and store as assets
-func Uploads(assets *work.Service) *upload.Service {
-	return upload.NewService(assets.Pool(), assets)
+// Uploads reads files in over the same database and store as works
+func Uploads(works *work.Service) *upload.Service {
+	return upload.NewService(works.Pool(), works)
 }
 
 // RevisionRequest uploads file as a new version of the work
-func RevisionRequest(t *testing.T, assetID, filename string, file []byte) *http.Request {
+func RevisionRequest(t *testing.T, workID, filename string, file []byte) *http.Request {
 	t.Helper()
 	body := &bytes.Buffer{}
 	form := multipart.NewWriter(body)
@@ -210,22 +210,22 @@ func RevisionRequest(t *testing.T, assetID, filename string, file []byte) *http.
 	if err := form.Close(); err != nil {
 		t.Fatalf("close form: %v", err)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/revisions", body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/revisions", body)
 	req.Header.Set("Content-Type", form.FormDataContentType())
 	return req
 }
 
 // UploadExtension uploads an extension archive and leaves it a draft
-func UploadExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *work.Service, file []byte) string {
+func UploadExtension(t *testing.T, r http.Handler, session *http.Cookie, works *work.Service, file []byte) string {
 	t.Helper()
 	metadata := ExampleMetadata("Quiet Toolbox")
 	metadata["filename"] = "toolbox.zip"
 	metadata["_keepDraft"] = true
-	finished := UploadAndFinish(t, r, session, assets, metadata, file)
+	finished := UploadAndFinish(t, r, session, works, metadata, file)
 	if !strings.Contains(finished.Body.String(), `"success"`) {
 		t.Fatalf("extension ingest did not succeed: %s", finished.Body.String())
 	}
-	return AssetIDFromIngest(t, finished)
+	return WorkIDFromIngest(t, finished)
 }
 
 // ExtensionZip packs files into a ZIP archive
@@ -248,8 +248,8 @@ func ExtensionZip(t *testing.T, files map[string]string) []byte {
 	return file.Bytes()
 }
 
-// PollIngestAsset reads a finished upload and fails the test unless it made a work
-func PollIngestAsset(t *testing.T, r *gin.Engine, session *http.Cookie, location string) struct {
+// PollIngestWork reads a finished upload and fails the test unless it made a work
+func PollIngestWork(t *testing.T, r *gin.Engine, session *http.Cookie, location string) struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 } {
@@ -260,7 +260,7 @@ func PollIngestAsset(t *testing.T, r *gin.Engine, session *http.Cookie, location
 	}
 	var operation struct {
 		Status string `json:"status"`
-		Asset  *struct {
+		Work   *struct {
 			ID   string `json:"id"`
 			Name string `json:"name"`
 		} `json:"asset"`
@@ -268,10 +268,10 @@ func PollIngestAsset(t *testing.T, r *gin.Engine, session *http.Cookie, location
 	if err := json.Unmarshal(rec.Body.Bytes(), &operation); err != nil {
 		t.Fatalf("decode operation: %v", err)
 	}
-	if operation.Status != "success" || operation.Asset == nil {
+	if operation.Status != "success" || operation.Work == nil {
 		t.Fatalf("operation = %#v, want a successful asset", operation)
 	}
-	return *operation.Asset
+	return *operation.Work
 }
 
 // ToolboxManifest is the manifest of a small SillyTavern extension
@@ -289,15 +289,15 @@ const ToolboxManifest = `{
 }`
 
 // PublishExtension gives an uploaded extension its catalog details and publishes it
-func PublishExtension(t *testing.T, r http.Handler, session *http.Cookie, assets *work.Service, name string, file []byte) string {
+func PublishExtension(t *testing.T, r http.Handler, session *http.Cookie, works *work.Service, name string, file []byte) string {
 	t.Helper()
-	assetID := UploadExtension(t, r, session, assets, file)
+	workID := UploadExtension(t, r, session, works, file)
 	identity := fmt.Sprintf(`{"name":%q,"blurb":"","isNsfw":false}`, name)
-	if saved := SaveIdentity(t, r, session, assetID, identity); saved.Code != http.StatusNoContent {
+	if saved := SaveIdentity(t, r, session, workID, identity); saved.Code != http.StatusNoContent {
 		t.Fatalf("save identity = %d: %s", saved.Code, saved.Body.String())
 	}
-	if published := PublishAsset(t, r, session, assetID); published.Code != http.StatusOK {
+	if published := PublishWork(t, r, session, workID); published.Code != http.StatusOK {
 		t.Fatalf("publish %s = %d: %s", name, published.Code, published.Body.String())
 	}
-	return assetID
+	return workID
 }

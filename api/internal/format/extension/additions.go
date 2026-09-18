@@ -29,7 +29,7 @@ const (
 	maxAdditionRunes = 120
 )
 
-// group is a kind of thing an extension adds to its app, in the order a page lists them.
+// group is a type of thing an extension adds to its app, in the order a page lists them.
 type group int
 
 const (

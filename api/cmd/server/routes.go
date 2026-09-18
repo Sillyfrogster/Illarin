@@ -27,8 +27,8 @@ import (
 
 // services holds the running parts the routes need
 type services struct {
-	Assets             *work.Service
-	Works              *page.Service
+	Works              *work.Service
+	Pages              *page.Service
 	Blocks             *edit.Service
 	Versions           *version.Service
 	Uploads            *upload.Service
@@ -70,18 +70,18 @@ func registerRoutes(r *gin.Engine, s services, d api.Deadlines, ready readiness)
 	account.Register(routes, account.NewHandlers(s.Accounts, s.Links, s.Publications))
 	profile.Register(routes, profile.NewHandlers(s.Accounts, s.MaxUploadBytes))
 	notify.Register(routes, notify.NewHandlers(s.Notifications, s.Deliveries))
-	page.Register(routes, page.NewHandlers(s.Works, s.Accounts, s.Deliveries, s.Notifications))
+	page.Register(routes, page.NewHandlers(s.Pages, s.Accounts, s.Deliveries, s.Notifications))
 	edit.Register(routes, edit.NewHandlers(s.Blocks))
 	version.Register(routes, version.NewHandlers(s.Versions, s.Accounts))
-	upload.Register(routes, upload.NewHandlers(s.Uploads, s.Works, s.MaxUploadBytes))
+	upload.Register(routes, upload.NewHandlers(s.Uploads, s.Pages, s.MaxUploadBytes))
 	download.Register(routes, downloads)
-	image.Register(routes, image.NewHandlers(s.Assets, s.Accounts, s.Publications, s.MaxUploadBytes))
-	private.Register(routes, private.NewHandlers(private.NewService(s.Assets.Pool())))
+	image.Register(routes, image.NewHandlers(s.Works, s.Accounts, s.Publications, s.MaxUploadBytes))
+	private.Register(routes, private.NewHandlers(private.NewService(s.Works.Pool())))
 	connect.Register(routes, connect.NewHandlers(s.Links, s.Deliveries, downloads))
 	blog.Register(routes, posts)
 	integration.Register(routes, integration.NewHandlers(
 		s.Publications, s.UpdateDestinations, posts.IntegrationAccess()))
-	staff.Register(routes, staff.NewHandlers(staff.NewService(s.Assets.Pool())))
+	staff.Register(routes, staff.NewHandlers(staff.NewService(s.Works.Pool())))
 	return nil
 }
 

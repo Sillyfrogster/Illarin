@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestAKindsExportedHeaderFieldsAreEveryOneItsWritersPutInAFile(t *testing.T) {
+func TestATypesExportedHeaderFieldsAreEveryOneItsWritersPutInAFile(t *testing.T) {
 	t.Parallel()
 	older := writerDeclaration("card_old", fullCharacterGrades())
 	older.Header = []HeaderField{HeaderName, HeaderCreditedAuthor}
@@ -22,12 +22,12 @@ func TestAKindsExportedHeaderFieldsAreEveryOneItsWritersPutInAFile(t *testing.T)
 	}
 }
 
-func TestAFieldOneKindWritesIsNotExportedOnAnother(t *testing.T) {
+func TestAFieldOneTypeWritesIsNotExportedOnAnother(t *testing.T) {
 	t.Parallel()
 	card := writerDeclaration("card", fullCharacterGrades())
 	card.Header = []HeaderField{HeaderName}
 	bundle := writerDeclaration("bundle", fullCharacterGrades())
-	bundle.Kind = "theme"
+	bundle.Type = "theme"
 	bundle.Header = []HeaderField{HeaderName, HeaderBlurb}
 	registry := registryOf(t, card, bundle)
 

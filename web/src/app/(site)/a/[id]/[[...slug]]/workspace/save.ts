@@ -1,26 +1,26 @@
 import type {
-  AssetBlock,
-  AssetElement,
-  SaveAssetBlockRequest,
+  SaveWorkBlockRequest,
+  WorkBlock,
+  WorkElement,
 } from "@/lib/api/query";
 import { writesInPlace as writtenInPlace } from "@/lib/page-arrangement";
 import type { AllowedApp } from "../SealedPolicy";
 
-export function writesInPlace(element: AssetElement): boolean {
+export function writesInPlace(element: WorkElement): boolean {
   return writtenInPlace(element.type);
 }
 
 export function blockSaveRequest(
-  block: AssetBlock,
+  block: WorkBlock,
   changes: {
     title?: string | null;
-    layout?: AssetBlock["layout"];
-    width?: AssetBlock["width"];
-    elements?: AssetElement[];
+    layout?: WorkBlock["layout"];
+    width?: WorkBlock["width"];
+    elements?: WorkElement[];
     allowedApps?: AllowedApp[];
     exposeProtected?: boolean;
   } = {},
-): SaveAssetBlockRequest {
+): SaveWorkBlockRequest {
   return {
     title:
       changes.title !== undefined
@@ -45,16 +45,16 @@ export function blockSaveRequest(
 }
 
 export function replaceBlock(
-  blocks: AssetBlock[],
-  saved: AssetBlock,
-): AssetBlock[] {
+  blocks: WorkBlock[],
+  saved: WorkBlock,
+): WorkBlock[] {
   return blocks.map((block) => (block.id === saved.id ? saved : block));
 }
 
 export function replaceElement(
-  block: AssetBlock,
-  element: AssetElement,
-): AssetBlock {
+  block: WorkBlock,
+  element: WorkElement,
+): WorkBlock {
   return {
     ...block,
     elements: block.elements.map((item) =>
@@ -64,8 +64,8 @@ export function replaceElement(
 }
 
 export function changedBlockIds(
-  draft: AssetBlock[],
-  saved: AssetBlock[],
+  draft: WorkBlock[],
+  saved: WorkBlock[],
 ): string[] {
   const before = new Map(saved.map((block) => [block.id, block]));
   return draft
@@ -76,7 +76,7 @@ export function changedBlockIds(
     .map((block) => block.id);
 }
 
-function sameContent(left: AssetBlock, right: AssetBlock): boolean {
+function sameContent(left: WorkBlock, right: WorkBlock): boolean {
   return (
     left.title === right.title &&
     left.layout === right.layout &&
@@ -86,7 +86,7 @@ function sameContent(left: AssetBlock, right: AssetBlock): boolean {
   );
 }
 
-function contentOf(element: AssetElement) {
+function contentOf(element: WorkElement) {
   return {
     id: element.id,
     display: element.display,
@@ -95,7 +95,7 @@ function contentOf(element: AssetElement) {
   };
 }
 
-export function isEmptyContent(element: AssetElement): boolean {
+export function isEmptyContent(element: WorkElement): boolean {
   const content = element.content;
   if ("text" in content) return String(content.text ?? "").trim() === "";
   if ("texts" in content) {
@@ -113,7 +113,7 @@ export function isEmptyContent(element: AssetElement): boolean {
   return element.isEmpty;
 }
 
-export function firstCursor(element: AssetElement): string | null {
+export function firstCursor(element: WorkElement): string | null {
   if (!writesInPlace(element)) return null;
   const content = element.content;
   if ("text" in content) return `${element.id}:text`;

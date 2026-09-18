@@ -17,12 +17,12 @@ const MaxNameRunes = 200
 var (
 	ErrNameTooLong        = errors.New("the name is too long")
 	ErrBlurbTooLong       = errors.New("the blurb is too long")
-	ErrRatingUnanswerable = errors.New("a published asset needs an adult content answer")
+	ErrRatingUnanswerable = errors.New("a published work needs an adult content answer")
 )
 
 type Identity struct {
 	OwnerID uuid.UUID
-	AssetID uuid.UUID
+	WorkID  uuid.UUID
 	Name    string
 	Blurb   string
 	IsNSFW  *bool
@@ -44,28 +44,28 @@ func (s *Service) SetIdentity(ctx context.Context, in Identity, candidate *work.
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.AssetID); err != nil {
+	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.WorkID); err != nil {
 		return err
 	}
 
 	var lifecycle string
-	if err := tx.QueryRow(ctx, `select lifecycle from assets where id = $1`, in.AssetID).Scan(&lifecycle); err != nil {
+	if err := tx.QueryRow(ctx, `select lifecycle from works where id = $1`, in.WorkID).Scan(&lifecycle); err != nil {
 		return err
 	}
 
 	if in.IsNSFW == nil && work.Lifecycle(lifecycle) != work.LifecycleDraft {
 		return ErrRatingUnanswerable
 	}
-	if err := s.assets.ChangeContent(ctx, tx, in.AssetID, func() error {
+	if err := s.works.ChangeContent(ctx, tx, in.WorkID, func() error {
 		if _, err := tx.Exec(ctx, `
-			update assets set name = $2, blurb = $3, is_nsfw = $4, updated_at = now()
+			update works set name = $2, blurb = $3, is_nsfw = $4, updated_at = now()
 			 where id = $1
-		`, in.AssetID, name, in.Blurb, in.IsNSFW); err != nil {
-			return fmt.Errorf("save asset header: %w", err)
+		`, in.WorkID, name, in.Blurb, in.IsNSFW); err != nil {
+			return fmt.Errorf("save work header: %w", err)
 		}
 		return nil
 	}); err != nil {
 		return err
 	}
-	return candidate.Commit(ctx, tx, in.AssetID)
+	return candidate.Commit(ctx, tx, in.WorkID)
 }

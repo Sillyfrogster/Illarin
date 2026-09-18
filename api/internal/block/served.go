@@ -1,26 +1,26 @@
 package block
 
-func ToBlocks(kind string, blocks []Block) ([]AssetBlock, error) {
-	out := make([]AssetBlock, 0, len(blocks))
+func ToBlocks(workType string, blocks []Block) ([]WorkBlock, error) {
+	out := make([]WorkBlock, 0, len(blocks))
 	for _, b := range blocks {
-		definition, _ := b.Definition.Definition(kind)
+		definition, _ := b.Definition.Definition(workType)
 		title, isDefault := definition.Title, true
 		if b.Title != nil {
 			title, isDefault = *b.Title, false
 		}
-		elements, err := toAPIElements(kind, b)
+		elements, err := toAPIElements(workType, b)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, AssetBlock{
+		out = append(out, WorkBlock{
 			Id:             b.ID,
 			Definition:     string(b.Definition),
 			Title:          title,
 			TitleIsDefault: isDefault,
 			Position:       b.Position,
 			Hidden:         b.Hidden,
-			Layout:         AssetBlockLayout(b.Layout),
-			Width:          AssetBlockWidth(b.Width),
+			Layout:         WorkBlockLayout(b.Layout),
+			Width:          WorkBlockWidth(b.Width),
 			AllowedLayouts: apiLayouts(definition.Layouts),
 			Required:       definition.Required,
 			Hideable:       !definition.Required || definition.Hideable,
@@ -31,16 +31,16 @@ func ToBlocks(kind string, blocks []Block) ([]AssetBlock, error) {
 	return out, nil
 }
 
-func apiLayouts(layouts []Layout) []AssetBlockAllowedLayouts {
-	out := make([]AssetBlockAllowedLayouts, len(layouts))
+func apiLayouts(layouts []Layout) []WorkBlockAllowedLayouts {
+	out := make([]WorkBlockAllowedLayouts, len(layouts))
 	for i, layout := range layouts {
-		out[i] = AssetBlockAllowedLayouts(layout)
+		out[i] = WorkBlockAllowedLayouts(layout)
 	}
 	return out
 }
 
-func toAPIElements(kind string, holder Block) ([]AssetElement, error) {
-	out := make([]AssetElement, 0, len(holder.Elements))
+func toAPIElements(workType string, holder Block) ([]WorkElement, error) {
+	out := make([]WorkElement, 0, len(holder.Elements))
 	for _, element := range holder.Elements {
 		content, err := element.ContentJSON()
 		if err != nil {
@@ -50,13 +50,13 @@ func toAPIElements(kind string, holder Block) ([]AssetElement, error) {
 		if facts == nil {
 			facts = []string{}
 		}
-		served := AssetElement{
+		served := WorkElement{
 			Id:      element.ID,
 			Type:    ElementType(element.Type),
 			Slot:    string(element.Slot),
 			Label:   element.Label(),
-			Pinned:  holder.Pinned(element.Role, kind),
-			Locked:  holder.Locked(element.Role, kind),
+			Pinned:  holder.Pinned(element.Role, workType),
+			Locked:  holder.Locked(element.Role, workType),
 			IsEmpty: element.Content == nil || element.Content.Empty(),
 			Facts:   facts,
 			Content: content,
@@ -66,11 +66,11 @@ func toAPIElements(kind string, holder Block) ([]AssetElement, error) {
 			served.Role = &role
 		}
 		if element.Options.Display != "" {
-			display := AssetElementDisplay(element.Options.Display)
+			display := WorkElementDisplay(element.Options.Display)
 			served.Display = &display
 		}
 		if element.Options.ItemSize != "" {
-			size := AssetElementItemSize(element.Options.ItemSize)
+			size := WorkElementItemSize(element.Options.ItemSize)
 			served.ItemSize = &size
 		}
 		out = append(out, served)

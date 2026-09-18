@@ -69,7 +69,7 @@ func TestTheSillyTavernSignatureIsDisjointFromTheThemes(t *testing.T) {
 	t.Parallel()
 	themeKeys := []string{"main_text_color", "blur_strength"}
 	recognition := (SillyTavernModule{}).Declaration().Recognition
-	if len(recognition) != 1 || recognition[0].Kind != format.RecognitionSignature {
+	if len(recognition) != 1 || recognition[0].Type != format.RecognitionSignature {
 		t.Fatalf("recognition = %+v, want one structural signature", recognition)
 	}
 	required := recognition[0].Required
@@ -122,7 +122,7 @@ func TestTheSillyTavernOrderDecidesTheFragmentsAndTheirSwitches(t *testing.T) {
 		t.Errorf("marker = %q, want what the file holds a place for", marker.Marker)
 	}
 
-	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, sillyTavernNamespace)
+	body := preservedPayload(t, parsed.Remainder, format.OwnerWork, sillyTavernNamespace)
 	var others []map[string]any
 	if err := json.Unmarshal(body["prompt_order"], &others); err != nil {
 		t.Fatalf("read the preserved order: %v", err)

@@ -32,10 +32,10 @@ func (s *Sends) Sync(
 		return LibraryResult{}, err
 	}
 
-	assetIDs := make([]uuid.UUID, 0, len(entries))
+	workIDs := make([]uuid.UUID, 0, len(entries))
 	generations := make([]int32, 0, len(entries))
 	for _, entry := range entries {
-		assetIDs = append(assetIDs, entry.AssetID)
+		workIDs = append(workIDs, entry.WorkID)
 		reported := int32(0)
 		if entry.ContentGeneration != nil {
 			reported = int32(*entry.ContentGeneration)
@@ -50,7 +50,7 @@ func (s *Sends) Sync(
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 	accepted, err := queries.ReportLibraryEntries(ctx, db.ReportLibraryEntriesParams{
-		InstanceID: uuidValue(instance.ID), AssetIds: uuidValues(assetIDs),
+		InstanceID: uuidValue(instance.ID), WorkIds: uuidValues(workIDs),
 		Generations: generations,
 	})
 	if err != nil {
@@ -64,11 +64,11 @@ func (s *Sends) Sync(
 	var dropped int64
 	if report.Snapshot {
 		dropped, err = queries.PruneLibraryToSnapshot(ctx, db.PruneLibraryToSnapshotParams{
-			InstanceID: uuidValue(instance.ID), AssetIds: uuidValues(assetIDs),
+			InstanceID: uuidValue(instance.ID), WorkIds: uuidValues(workIDs),
 		})
 	} else if len(removed) > 0 {
 		dropped, err = queries.RemoveLibraryEntries(ctx, db.RemoveLibraryEntriesParams{
-			InstanceID: uuidValue(instance.ID), AssetIds: uuidValues(removed),
+			InstanceID: uuidValue(instance.ID), WorkIds: uuidValues(removed),
 		})
 	}
 	if err != nil {
@@ -101,18 +101,18 @@ func (s *Sends) readReport(report ReportedLibrary) ([]ReportedEntry, []uuid.UUID
 		if entry.ContentGeneration != nil && *entry.ContentGeneration < 1 {
 			return nil, nil, ErrLibraryReport
 		}
-		if _, repeated := seen[entry.AssetID]; repeated {
+		if _, repeated := seen[entry.WorkID]; repeated {
 			return nil, nil, ErrLibraryReport
 		}
-		seen[entry.AssetID] = struct{}{}
+		seen[entry.WorkID] = struct{}{}
 		entries = append(entries, entry)
 	}
 	removed := make([]uuid.UUID, 0, len(report.Removed))
-	for _, assetID := range report.Removed {
-		if _, installed := seen[assetID]; installed {
+	for _, workID := range report.Removed {
+		if _, installed := seen[workID]; installed {
 			return nil, nil, ErrLibraryReport
 		}
-		removed = append(removed, assetID)
+		removed = append(removed, workID)
 	}
 	return entries, removed, nil
 }
@@ -123,7 +123,7 @@ func (s *Sends) LibraryCountsByInstance(
 ) (map[uuid.UUID]LibraryCounts, error) {
 	rows, err := db.New(s.pool).InstanceLibraryCounts(ctx, uuidValue(userID))
 	if err != nil {
-		return nil, fmt.Errorf("count installed assets: %w", err)
+		return nil, fmt.Errorf("count installed works: %w", err)
 	}
 	counts := make(map[uuid.UUID]LibraryCounts, len(rows))
 	for _, row := range rows {

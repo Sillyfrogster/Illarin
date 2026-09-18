@@ -1,13 +1,13 @@
 package upload
 
-type StartAssetRequest struct {
-	App  *StartAssetRequestApp `json:"app,omitempty"`
-	Kind string                `json:"kind"`
+type StartWorkRequest struct {
+	App  *StartWorkRequestApp `json:"app,omitempty"`
+	Type string               `json:"kind"`
 }
 
-type StartAssetRequestApp string
+type StartWorkRequestApp string
 
 const (
-	StartAssetRequestAppLumiverse   StartAssetRequestApp = "lumiverse"
-	StartAssetRequestAppSillytavern StartAssetRequestApp = "sillytavern"
+	StartWorkRequestAppLumiverse   StartWorkRequestApp = "lumiverse"
+	StartWorkRequestAppSillytavern StartWorkRequestApp = "sillytavern"
 )

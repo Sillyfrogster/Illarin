@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import {
-  type AssetUpdateAnnouncement,
   readAssetUpdateAnnouncements,
+  type WorkUpdateAnnouncement,
 } from "@/lib/api/asset-destinations";
 import { cn } from "@/lib/cn";
 import { deliveryStanding, deliveryState } from "@/lib/delivery-standing";
 
 export function AnnouncementStatus({ assetId }: { assetId: string }) {
-  const [sent, setSent] = useState<AssetUpdateAnnouncement[]>([]);
+  const [sent, setSent] = useState<WorkUpdateAnnouncement[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -55,7 +55,7 @@ export function AnnouncementStatus({ assetId }: { assetId: string }) {
   );
 }
 
-function troubled(one: AssetUpdateAnnouncement): boolean {
+function troubled(one: WorkUpdateAnnouncement): boolean {
   const standing = deliveryState(one);
   return standing === "gaveUp" || standing === "stopped";
 }

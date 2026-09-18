@@ -21,7 +21,7 @@ func (s *Service) VerifyDestination(
 	if err != nil {
 		return Destination{}, err
 	}
-	if current.Kind == KindDiscord {
+	if current.Type == TypeDiscord {
 		return s.provenByDiscord(ctx, actor, id)
 	}
 	address, secrets, err := s.endpointOf(ctx, id)

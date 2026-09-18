@@ -16,10 +16,10 @@ var ErrChanged = errors.New("the destination changed while this request was runn
 const EventVerification = "asset.endpoint.verification.v1"
 
 type configuration struct {
-	kind    string
-	version int64
-	address string
-	secrets []string
+	destinationType string
+	version         int64
+	address         string
+	secrets         []string
 }
 
 func (s *Service) configuration(ctx context.Context, owner, id uuid.UUID) (configuration, error) {
@@ -27,9 +27,9 @@ func (s *Service) configuration(ctx context.Context, owner, id uuid.UUID) (confi
 	var address, secret, old []byte
 	var until *time.Time
 	err := s.pool.QueryRow(ctx, `
-		select kind, version, address, signing_secret, previous_secret, previous_secret_until
-		  from asset_update_destinations where owner_id = $1 and id = $2
-	`, owner, id).Scan(&found.kind, &found.version, &address, &secret, &old, &until)
+		select type, version, address, signing_secret, previous_secret, previous_secret_until
+		  from work_update_destinations where owner_id = $1 and id = $2
+	`, owner, id).Scan(&found.destinationType, &found.version, &address, &secret, &old, &until)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return found, ErrNotFound
 	}
@@ -64,7 +64,7 @@ func (s *Service) Verify(ctx context.Context, owner, id uuid.UUID) (Destination,
 		return Destination{}, err
 	}
 	var guildID, channelID *string
-	if held.kind == Discord {
+	if held.destinationType == Discord {
 		_, found, err := discord.VerifyCapability(ctx, s.sender, held.address)
 		if err != nil {
 			return Destination{}, FieldError{"address", err.Error()}
@@ -76,7 +76,7 @@ func (s *Service) Verify(ctx context.Context, owner, id uuid.UUID) (Destination,
 		}
 	}
 	result, err := s.pool.Exec(ctx, `
-		update asset_update_destinations
+		update work_update_destinations
 		   set state = 'active', verified_at = now(), disabled_at = null, version = version+1,
 		       updated_at = now(), guild_id = $4, channel_id = $5
 		 where owner_id = $1 and id = $2 and version = $3

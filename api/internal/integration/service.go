@@ -23,7 +23,7 @@ const (
 	Unverified = "unverified"
 )
 
-var ErrNotFound = errors.New("no such asset update destination")
+var ErrNotFound = errors.New("no such work update destination")
 
 type FieldError struct {
 	Field   string
@@ -48,7 +48,7 @@ type Service struct {
 }
 
 var deliveryTables = dispatch.Tables{
-	Deliveries: "asset_update_deliveries", Attempts: "asset_update_delivery_attempts",
+	Deliveries: "work_update_deliveries", Attempts: "work_update_delivery_attempts",
 }
 
 func NewService(pool *pgxpool.Pool, sealing secrets.Key, sender Sender, site string) *Service {
@@ -61,7 +61,7 @@ func NewService(pool *pgxpool.Pool, sealing secrets.Key, sender Sender, site str
 type Destination struct {
 	version             int64
 	ID                  uuid.UUID
-	Kind                string
+	Type                string
 	Name                string
 	Host                string
 	Address             string
@@ -80,22 +80,22 @@ type Added struct {
 	Secret      string
 }
 
-func (s *Service) Add(ctx context.Context, owner uuid.UUID, kind, name, address string) (Added, error) {
+func (s *Service) Add(ctx context.Context, owner uuid.UUID, destinationType, name, address string) (Added, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || utf8.RuneCountInString(name) > 48 {
 		return Added{}, FieldError{"name", "Name the destination in 1 to 48 characters."}
 	}
-	if kind != Webhook && kind != Discord {
+	if destinationType != Webhook && destinationType != Discord {
 		return Added{}, FieldError{"kind", "Choose a webhook or Discord destination."}
 	}
-	prepared, err := s.prepareAddress(ctx, kind, address)
+	prepared, err := s.prepareAddress(ctx, destinationType, address)
 	if err != nil {
 		return Added{}, err
 	}
 	var secret string
 	var sealedSecret []byte
 	var secretAt *time.Time
-	if kind == Webhook {
+	if destinationType == Webhook {
 		secret, err = dispatch.MintSecret()
 		if err != nil {
 			return Added{}, err
@@ -109,14 +109,14 @@ func (s *Service) Add(ctx context.Context, owner uuid.UUID, kind, name, address 
 	}
 	id := uuid.New()
 	_, err = s.pool.Exec(ctx, `
-		insert into asset_update_destinations
-		    (id, owner_id, kind, name, host, address, signing_secret, signing_secret_set_at,
+		insert into work_update_destinations
+		    (id, owner_id, type, name, host, address, signing_secret, signing_secret_set_at,
 		     state, guild_id, channel_id, verified_at)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	`, id, owner, kind, name, prepared.host, prepared.sealed, sealedSecret, secretAt,
+	`, id, owner, destinationType, name, prepared.host, prepared.sealed, sealedSecret, secretAt,
 		prepared.state, prepared.guildID, prepared.channelID, prepared.verifiedAt)
 	if err != nil {
-		return Added{}, fmt.Errorf("create asset update destination: %w", err)
+		return Added{}, fmt.Errorf("create work update destination: %w", err)
 	}
 	found, err := s.Get(ctx, owner, id)
 	return Added{Destination: found, Secret: secret}, err
@@ -144,14 +144,14 @@ func (s *Service) Get(ctx context.Context, owner, id uuid.UUID) (Destination, er
 }
 
 const selectDestinations = `
-	select id, kind, name, host, state, guild_id, channel_id, signing_secret_set_at,
+	select id, type, name, host, state, guild_id, channel_id, signing_secret_set_at,
 	       previous_secret_until, verified_at, disabled_at, created_at, version
-	  from asset_update_destinations
+	  from work_update_destinations
 `
 
 func readDestination(row pgx.Row) (Destination, error) {
 	var d Destination
-	err := row.Scan(&d.ID, &d.Kind, &d.Name, &d.Host, &d.State, &d.GuildID, &d.ChannelID,
+	err := row.Scan(&d.ID, &d.Type, &d.Name, &d.Host, &d.State, &d.GuildID, &d.ChannelID,
 		&d.SecretSetAt, &d.PreviousSecretUntil, &d.VerifiedAt, &d.DisabledAt, &d.CreatedAt, &d.version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Destination{}, ErrNotFound

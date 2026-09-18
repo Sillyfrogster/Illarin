@@ -22,16 +22,16 @@ var (
 	ErrAccessRequired = errors.New("a comparison needs the reader's access rules")
 )
 
-type ChangeKind string
+type ChangeType string
 
 const (
-	ChangeAdded   ChangeKind = "addition"
-	ChangeRemoved ChangeKind = "removal"
-	ChangeEdited  ChangeKind = "change"
+	ChangeAdded   ChangeType = "addition"
+	ChangeRemoved ChangeType = "removal"
+	ChangeEdited  ChangeType = "change"
 )
 
 type Change struct {
-	Kind         ChangeKind
+	Type         ChangeType
 	Name         string
 	Note         string
 	PreviousName string
@@ -60,12 +60,12 @@ type Comparison struct {
 type VersionAccess func(work.Version) string
 
 type ComparisonRequest struct {
-	AssetID    uuid.UUID
-	From       int
-	To         int
-	Access     VersionAccess
-	AsOwner    bool
-	Visibility work.ContentVisibility
+	WorkID         uuid.UUID
+	From           int
+	To             int
+	Access         VersionAccess
+	AsOwner        bool
+	NSFWPreference work.NSFWPreference
 }
 
 const (
@@ -75,13 +75,13 @@ const (
 	PicturesSubject     = "pictures"
 )
 
-func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to int) (int, int, error) {
+func resolveVersions(ctx context.Context, tx pgx.Tx, workID uuid.UUID, from, to int) (int, int, error) {
 	if to == 0 {
 		err := tx.QueryRow(ctx, `
-			select s.number from asset_snapshots s
-			  join assets a on a.published_snapshot_id = s.id and a.id = s.asset_id
+			select s.number from work_snapshots s
+			  join works a on a.published_snapshot_id = s.id and a.id = s.work_id
 			 where a.id = $1
-		`, assetID).Scan(&to)
+		`, workID).Scan(&to)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, 0, work.ErrNotFound
 		}
@@ -92,8 +92,8 @@ func resolveVersions(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, from, to
 	if from == 0 {
 		var earlier *int
 		err := tx.QueryRow(ctx, `
-			select max(number) from asset_snapshots where asset_id = $1 and number < $2
-		`, assetID, to).Scan(&earlier)
+			select max(number) from work_snapshots where work_id = $1 and number < $2
+		`, workID, to).Scan(&earlier)
 		if err != nil {
 			return 0, 0, fmt.Errorf("read the version before %d: %w", to, err)
 		}
@@ -114,10 +114,10 @@ func AddressPictures(
 ) error {
 	var flagged *bool
 	if err := tx.QueryRow(ctx,
-		`select is_nsfw from assets where id = $1`, in.AssetID).Scan(&flagged); err != nil {
-		return fmt.Errorf("read the asset to address its pictures: %w", err)
+		`select is_nsfw from works where id = $1`, in.WorkID).Scan(&flagged); err != nil {
+		return fmt.Errorf("read the work to address its pictures: %w", err)
 	}
-	blurred := flagged != nil && *flagged && in.Visibility != work.ContentShown
+	blurred := flagged != nil && *flagged && in.NSFWPreference != work.NSFWShown
 	for _, group := range groups {
 		for index, change := range group.Changes {
 			if change.BeforeMedia != nil {
@@ -140,15 +140,15 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 		return Comparison{}, err
 	}
 	defer tx.Rollback(ctx)
-	from, to, err := resolveVersions(ctx, tx, in.AssetID, in.From, in.To)
+	from, to, err := resolveVersions(ctx, tx, in.WorkID, in.From, in.To)
 	if err != nil {
 		return Comparison{}, err
 	}
-	earlier, err := work.ReadVersion(ctx, tx, in.AssetID, from)
+	earlier, err := work.ReadVersion(ctx, tx, in.WorkID, from)
 	if err != nil {
 		return Comparison{}, err
 	}
-	later, err := work.ReadVersion(ctx, tx, in.AssetID, to)
+	later, err := work.ReadVersion(ctx, tx, in.WorkID, to)
 	if err != nil {
 		return Comparison{}, err
 	}
@@ -164,14 +164,14 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 		}
 	}
 	for _, version := range []work.Snapshot{earlier, later} {
-		withheld, err := version.HoldPrompts(ctx, tx, in.AssetID, in.AsOwner)
+		withheld, err := version.HoldPrompts(ctx, tx, in.WorkID, in.AsOwner)
 		if err != nil {
 			return Comparison{}, err
 		}
 		compared.PromptsWithheld = compared.PromptsWithheld || withheld
 	}
 	compared.Groups = compareVersions(earlier, later)
-	if err := AddressPictures(ctx, tx, s.assets, in, compared.Groups); err != nil {
+	if err := AddressPictures(ctx, tx, s.works, in, compared.Groups); err != nil {
 		return Comparison{}, err
 	}
 	return compared, nil
@@ -182,7 +182,7 @@ func compareVersions(earlier, later work.Snapshot) []ChangeGroup {
 	groups = AddGroup(groups, MetadataSubject, "Details", compareMetadata(earlier.Metadata, later.Metadata))
 	groups = append(groups, compareContent(earlier.Blocks, later.Blocks)...)
 	groups = AddGroup(groups, PresentationSubject, "Page",
-		ComparePresentation(later.Kind, earlier.Blocks, later.Blocks))
+		ComparePresentation(later.Type, earlier.Blocks, later.Blocks))
 	groups = AddGroup(groups, PreservedSubject, "Preserved data",
 		ComparePreserved(earlier.Preserved, later.Preserved))
 	return groups
@@ -201,10 +201,10 @@ func compareMetadata(earlier, later work.VersionMetadata) []Change {
 		{"Name", earlier.Name, later.Name},
 		{"Blurb", earlier.Blurb, later.Blurb},
 		{"Tags", strings.Join(earlier.Tags, ", "), strings.Join(later.Tags, ", ")},
-		{"Adult content", adultAnswer(earlier.IsNSFW), adultAnswer(later.IsNSFW)},
+		{"Adult content", nsfwFlag(earlier.IsNSFW), nsfwFlag(later.IsNSFW)},
 		{"Credited author", earlier.CreditedAuthor, later.CreditedAuthor},
 		{"Nickname", earlier.Nickname, later.Nickname},
-		{"Version", earlier.AssetVersion, later.AssetVersion},
+		{"Version", earlier.WorkVersion, later.WorkVersion},
 	} {
 		if change, changed := textChange(field.name, field.before, field.after); changed {
 			changes = append(changes, change)
@@ -212,14 +212,14 @@ func compareMetadata(earlier, later work.VersionMetadata) []Change {
 	}
 	if !sameMedia(earlier.Cover, later.Cover) {
 		changes = append(changes, Change{
-			Kind: mediaChangeKind(earlier.Cover, later.Cover), Name: "Cover picture",
+			Type: mediaChangeType(earlier.Cover, later.Cover), Name: "Cover picture",
 			BeforeMedia: earlier.Cover, AfterMedia: later.Cover,
 		})
 	}
 	return changes
 }
 
-func adultAnswer(answered *bool) string {
+func nsfwFlag(answered *bool) string {
 	if answered == nil {
 		return ""
 	}
@@ -233,7 +233,7 @@ func sameMedia(earlier, later *uuid.UUID) bool {
 	return *earlier == *later
 }
 
-func mediaChangeKind(earlier, later *uuid.UUID) ChangeKind {
+func mediaChangeType(earlier, later *uuid.UUID) ChangeType {
 	switch {
 	case earlier == nil:
 		return ChangeAdded
@@ -249,11 +249,11 @@ func textChange(name, before, after string) (Change, bool) {
 	case before == after:
 		return Change{}, false
 	case before == "":
-		return Change{Kind: ChangeAdded, Name: name, After: after}, true
+		return Change{Type: ChangeAdded, Name: name, After: after}, true
 	case after == "":
-		return Change{Kind: ChangeRemoved, Name: name, Before: before}, true
+		return Change{Type: ChangeRemoved, Name: name, Before: before}, true
 	default:
-		return Change{Kind: ChangeEdited, Name: name, Before: before, After: after}, true
+		return Change{Type: ChangeEdited, Name: name, Before: before, After: after}, true
 	}
 }
 
@@ -418,7 +418,7 @@ func elementItems(element block.Element, names map[uuid.UUID]string) []versionIt
 		items := listItems(names, held.Stylesheets, func(sheet block.Stylesheet) versionItem {
 			return versionItem{key: itemKey(sheet.ID), name: sheet.Name, text: sheet.CSS}
 		})
-		items = append(items, listItems(names, held.Assets, func(file block.StylesheetAsset) versionItem {
+		items = append(items, listItems(names, held.Files, func(file block.StylesheetFile) versionItem {
 			return versionItem{key: itemKey(file.ID), name: file.Path}
 		})...)
 		if held.Global != "" {
@@ -516,7 +516,7 @@ func compareItems(earlier, later []versionItem) []Change {
 	for index, item := range later {
 		if partner[index] < 0 {
 			changes = append(changes, Change{
-				Kind: ChangeAdded, Name: item.name, Note: item.note,
+				Type: ChangeAdded, Name: item.name, Note: item.note,
 				After: item.text, AfterMedia: item.mediaRef(),
 			})
 			continue
@@ -530,7 +530,7 @@ func compareItems(earlier, later []versionItem) []Change {
 	for index, item := range earlier {
 		if !taken[index] {
 			changes = append(changes, Change{
-				Kind: ChangeRemoved, Name: item.name, Note: item.note,
+				Type: ChangeRemoved, Name: item.name, Note: item.note,
 				Before: item.text, BeforeMedia: item.mediaRef(),
 			})
 		}
@@ -565,7 +565,7 @@ func editedItem(was, now versionItem) Change {
 			return change
 		}
 	}
-	edited := Change{Kind: ChangeEdited, Name: now.name}
+	edited := Change{Type: ChangeEdited, Name: now.name}
 	if was.note != now.note {
 		edited.Note = now.note
 		if edited.Note == "" {
@@ -584,25 +584,25 @@ func editedItem(was, now versionItem) Change {
 	return edited
 }
 
-func ComparePresentation(kind string, earlier, later []block.Block) []Change {
+func ComparePresentation(workType string, earlier, later []block.Block) []Change {
 	before := blocksByID(earlier)
 	after := blocksByID(later)
 	changes := make([]Change, 0, len(later))
 	for _, holder := range later {
 		was, kept := before[holder.ID]
 		if !kept {
-			changes = append(changes, Change{Kind: ChangeAdded, Name: blockName(kind, holder)})
+			changes = append(changes, Change{Type: ChangeAdded, Name: blockName(workType, holder)})
 			continue
 		}
-		changes = append(changes, blockChanges(kind, was, holder)...)
+		changes = append(changes, blockChanges(workType, was, holder)...)
 	}
 	for _, holder := range earlier {
 		if _, kept := after[holder.ID]; !kept {
-			changes = append(changes, Change{Kind: ChangeRemoved, Name: blockName(kind, holder)})
+			changes = append(changes, Change{Type: ChangeRemoved, Name: blockName(workType, holder)})
 		}
 	}
 	if !slices.Equal(sharedOrder(earlier, after), sharedOrder(later, before)) {
-		changes = append(changes, Change{Kind: ChangeEdited, Name: "Page order"})
+		changes = append(changes, Change{Type: ChangeEdited, Name: "Page order"})
 	}
 	return changes
 }
@@ -625,8 +625,8 @@ func sharedOrder(blocks []block.Block, other map[uuid.UUID]block.Block) []uuid.U
 	return shared
 }
 
-func blockChanges(kind string, was, now block.Block) []Change {
-	name := blockName(kind, now)
+func blockChanges(workType string, was, now block.Block) []Change {
+	name := blockName(workType, now)
 	changes := make([]Change, 0, 5)
 	for _, facet := range []struct{ label, before, after string }{
 		{"title", blockTitle(was), blockTitle(now)},
@@ -648,7 +648,7 @@ func blockChanges(kind string, was, now block.Block) []Change {
 			continue
 		}
 		changes = append(changes, Change{
-			Kind: ChangeEdited, Name: element.Label() + " display",
+			Type: ChangeEdited, Name: element.Label() + " display",
 			Before: optionWords(prior.Options), After: optionWords(element.Options),
 		})
 	}
@@ -662,11 +662,11 @@ func blockTitle(holder block.Block) string {
 	return *holder.Title
 }
 
-func blockName(kind string, holder block.Block) string {
+func blockName(workType string, holder block.Block) string {
 	if title := blockTitle(holder); title != "" {
 		return title
 	}
-	definitions, known := block.Catalog(kind)
+	definitions, known := block.Definitions(workType)
 	if !known {
 		return string(holder.Definition)
 	}
@@ -715,11 +715,11 @@ func ComparePreserved(earlier, later []work.VersionPreserved) []Change {
 		now, holds := after[namespace]
 		switch {
 		case !held:
-			changes = append(changes, Change{Kind: ChangeAdded, Name: namespace})
+			changes = append(changes, Change{Type: ChangeAdded, Name: namespace})
 		case !holds:
-			changes = append(changes, Change{Kind: ChangeRemoved, Name: namespace})
+			changes = append(changes, Change{Type: ChangeRemoved, Name: namespace})
 		case was != now:
-			changes = append(changes, Change{Kind: ChangeEdited, Name: namespace})
+			changes = append(changes, Change{Type: ChangeEdited, Name: namespace})
 		}
 	}
 	return changes

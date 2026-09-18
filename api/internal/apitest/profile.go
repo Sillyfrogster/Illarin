@@ -72,19 +72,19 @@ type ProfileListingResponse struct {
 	Suppressed int `json:"suppressed"`
 }
 
-func CreateProfileAsset(
+func CreateProfileWork(
 	t *testing.T,
-	assets *work.Service,
+	works *work.Service,
 	ownerID uuid.UUID,
 	name string,
 	isNSFW bool,
-	discovery work.Discovery,
+	visibility work.Visibility,
 ) uuid.UUID {
 	t.Helper()
-	created, err := Uploads(assets).Create(context.Background(), upload.CreateInput{
-		OwnerID: ownerID, Kind: "theme", Filename: name + ".lumitheme",
+	created, err := Uploads(works).Create(context.Background(), upload.CreateInput{
+		OwnerID: ownerID, Type: "theme", Filename: name + ".lumitheme",
 		File: bytes.NewReader([]byte(name)), Name: name, IsNSFW: isNSFW,
-		Discovery: discovery,
+		Visibility: visibility,
 	})
 	if err != nil {
 		t.Fatalf("create profile asset %q: %v", name, err)

@@ -11,13 +11,13 @@ import (
 )
 
 type Service struct {
-	pool   *pgxpool.Pool
-	reg    *format.Registry
-	assets *work.Service
+	pool  *pgxpool.Pool
+	reg   *format.Registry
+	works *work.Service
 }
 
-func NewService(pool *pgxpool.Pool, assets *work.Service) *Service {
-	return &Service{pool: pool, reg: assets.Registry(), assets: assets}
+func NewService(pool *pgxpool.Pool, works *work.Service) *Service {
+	return &Service{pool: pool, reg: works.Registry(), works: works}
 }
 
 func uuidToPgtype(u uuid.UUID) pgtype.UUID {

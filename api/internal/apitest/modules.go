@@ -39,7 +39,7 @@ func (ReplacingModule) Declaration() format.Declaration {
 	declaration := ReaderDeclaration("replacing", "character")
 	declaration.Label = "Replacing format"
 	declaration.Direction.Write = true
-	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderAssetVersion}
+	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderWorkVersion}
 	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
 	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
 		block.RoleDescription: {
@@ -52,6 +52,6 @@ func (ReplacingModule) Declaration() format.Declaration {
 func (module ReplacingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return *module.Parsed, nil
 }
-func (ReplacingModule) Write(context.Context, format.ExportAsset) (format.Artifact, error) {
+func (ReplacingModule) Write(context.Context, format.ExportWork) (format.Artifact, error) {
 	return format.Artifact{MediaType: "text/plain", Extension: ".txt"}, nil
 }

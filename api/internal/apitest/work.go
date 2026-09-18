@@ -14,9 +14,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type StartedAsset struct {
+type StartedWork struct {
 	ID        string `json:"id"`
-	Kind      string `json:"kind"`
+	Type      string `json:"kind"`
 	Name      string `json:"name"`
 	Blurb     string `json:"blurb"`
 	Lifecycle string `json:"lifecycle"`
@@ -113,7 +113,7 @@ type OriginalUpload struct {
 	ArrivedAt string `json:"arrivedAt"`
 }
 
-func StartCharacter(t *testing.T, r http.Handler, session *http.Cookie) StartedAsset {
+func StartCharacter(t *testing.T, r http.Handler, session *http.Cookie) StartedWork {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
 		strings.NewReader(`{"kind":"character"}`))
@@ -123,7 +123,7 @@ func StartCharacter(t *testing.T, r http.Handler, session *http.Cookie) StartedA
 		t.Fatalf("start a character: status = %d, want 201: %s",
 			response.Code, response.Body.String())
 	}
-	var started StartedAsset
+	var started StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
 		t.Fatalf("decode the started asset: %v", err)
 	}
@@ -180,7 +180,7 @@ func SaveBlock(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	blockID string,
 	body SaveBlockBody,
 ) *httptest.ResponseRecorder {
@@ -191,7 +191,7 @@ func SaveBlock(
 	}
 	request := httptest.NewRequest(
 		http.MethodPut,
-		"/v1/assets/"+assetID+"/blocks/"+blockID,
+		"/v1/assets/"+workID+"/blocks/"+blockID,
 		strings.NewReader(string(encoded)),
 	)
 	request.Header.Set("Content-Type", "application/json")
@@ -210,17 +210,17 @@ func SaveIdentity(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPut,
-		"/v1/assets/"+assetID+"/identity", strings.NewReader(body))
+		"/v1/assets/"+workID+"/identity", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
 }
 
-func WriteCharacterFloor(t *testing.T, r http.Handler, session *http.Cookie, started StartedAsset) {
+func WriteCharacterFloor(t *testing.T, r http.Handler, session *http.Cookie, started StartedWork) {
 	t.Helper()
 	if got := SaveIdentity(t, r, session, started.ID,
 		`{"name":"Ilse of the west shelf","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
@@ -240,22 +240,22 @@ func WriteCharacterFloor(t *testing.T, r http.Handler, session *http.Cookie, sta
 	}
 }
 
-func PublishAsset(
+func PublishWork(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return Send(t, r, Authorized(
-		httptest.NewRequest(http.MethodPost, "/v1/assets/"+assetID+"/publish", nil), session))
+		httptest.NewRequest(http.MethodPost, "/v1/assets/"+workID+"/publish", nil), session))
 }
 
-func PublishedAsset(t *testing.T, r *gin.Engine, session *http.Cookie) string {
+func PublishedCharacter(t *testing.T, r *gin.Engine, session *http.Cookie) string {
 	t.Helper()
 	started := StartCharacter(t, r, session)
 	WriteCharacterFloor(t, r, session, started)
-	if published := PublishAsset(t, r, session, started.ID); published.Code != http.StatusOK {
+	if published := PublishWork(t, r, session, started.ID); published.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", published.Code, published.Body.String())
 	}
 	return started.ID
@@ -290,22 +290,22 @@ func WithReviewedVersion(t *testing.T, r http.Handler, req *http.Request) {
 	req.Header.Set("X-Working-Copy-Version", strconv.FormatInt(page.WorkingCopyVersion, 10))
 }
 
-func ContentGeneration(t *testing.T, pool *pgxpool.Pool, assetID string) int {
+func ContentGeneration(t *testing.T, pool *pgxpool.Pool, workID string) int {
 	t.Helper()
-	id, err := uuid.Parse(assetID)
+	id, err := uuid.Parse(workID)
 	if err != nil {
 		t.Fatalf("parse the asset id: %v", err)
 	}
 	var generation int
 	if err := pool.QueryRow(t.Context(),
-		`select content_generation from assets where id = $1`, id,
+		`select content_generation from works where id = $1`, id,
 	).Scan(&generation); err != nil {
 		t.Fatalf("read the content generation: %v", err)
 	}
 	return generation
 }
 
-func StartPreset(t *testing.T, r http.Handler, session *http.Cookie, app string) StartedAsset {
+func StartPreset(t *testing.T, r http.Handler, session *http.Cookie, app string) StartedWork {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPost, "/v1/assets",
 		strings.NewReader(`{"kind":"preset","app":"`+app+`"}`))
@@ -315,7 +315,7 @@ func StartPreset(t *testing.T, r http.Handler, session *http.Cookie, app string)
 		t.Fatalf("start a preset for %s: status = %d, want 201: %s",
 			app, response.Code, response.Body.String())
 	}
-	var started StartedAsset
+	var started StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &started); err != nil {
 		t.Fatalf("decode the started asset: %v", err)
 	}
@@ -338,23 +338,23 @@ func ItemNamed(t *testing.T, items []ReadinessItem, id string) ReadinessItem {
 	return ReadinessItem{}
 }
 
-func PublishAssetUpdate(
+func PublishWorkUpdate(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	assetID string,
+	workID string,
 	body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPost,
-		"/v1/assets/"+assetID+"/updates", strings.NewReader(body))
+		"/v1/assets/"+workID+"/updates", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
 }
 
-func DownloadMenu(t *testing.T, r http.Handler, session *http.Cookie, assetID string) []DownloadTarget {
+func DownloadMenu(t *testing.T, r http.Handler, session *http.Cookie, workID string) []DownloadTarget {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+assetID, nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil)
 	if session != nil {
 		request = Authorized(request, session)
 	}
@@ -362,7 +362,7 @@ func DownloadMenu(t *testing.T, r http.Handler, session *http.Cookie, assetID st
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the asset: status = %d: %s", response.Code, response.Body.String())
 	}
-	var page StartedAsset
+	var page StartedWork
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode the asset: %v", err)
 	}

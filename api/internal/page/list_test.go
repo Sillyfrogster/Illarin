@@ -18,33 +18,33 @@ func post(
 	t *testing.T,
 	r *gin.Engine,
 	session *http.Cookie,
-	assets *work.Service,
+	works *work.Service,
 	name string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	metadata := apitest.ExampleMetadata(name)
 	metadata["filename"] = name + ".lumitheme"
-	return apitest.UploadAndFinish(t, r, session, assets, metadata, []byte(name))
+	return apitest.UploadAndFinish(t, r, session, works, metadata, []byte(name))
 }
 
 func TestCreateThenListRoundTrip(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 
-	rec := post(t, r, session, assets, "Mystery")
+	rec := post(t, r, session, works, "Mystery")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("poll status = %d, want 200. body: %s", rec.Code, rec.Body.String())
 	}
 
 	var created struct {
-		Asset *struct {
+		Work *struct {
 			CreatedAt time.Time `json:"createdAt"`
 		} `json:"asset"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
 		t.Fatalf("decode created asset: %v", err)
 	}
-	if created.Asset == nil || created.Asset.CreatedAt.IsZero() {
+	if created.Work == nil || created.Work.CreatedAt.IsZero() {
 		t.Error("created asset came back with no made date")
 	}
 
@@ -56,9 +56,9 @@ func TestCreateThenListRoundTrip(t *testing.T) {
 
 func TestListPagesFromWhereTheLastPageEnded(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	for _, name := range []string{"first", "second", "third"} {
-		if rec := post(t, r, session, assets, name); rec.Code != http.StatusOK {
+		if rec := post(t, r, session, works, name); rec.Code != http.StatusOK {
 			t.Fatalf("POST %s status = %d. body: %s", name, rec.Code, rec.Body.String())
 		}
 	}

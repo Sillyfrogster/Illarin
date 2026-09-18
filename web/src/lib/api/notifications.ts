@@ -1,12 +1,12 @@
 import { ask } from "./request";
 
 import type {
-  AssetWatch,
   Notification,
   NotificationCursor,
   NotificationList,
+  WorkFollow,
 } from "./shapes";
-export type { AssetWatch, Notification, NotificationCursor, NotificationList };
+export type { WorkFollow, Notification, NotificationCursor, NotificationList };
 
 export const notificationKeys = {
   all: ["notifications"] as const,
@@ -67,19 +67,19 @@ export async function clearNotifications(): Promise<void> {
   if (answer.error) throw new Error(answer.error);
 }
 
-export function watchAsset(assetId: string): Promise<AssetWatch> {
+export function watchAsset(assetId: string): Promise<WorkFollow> {
   return changeWatch(assetId, "PUT");
 }
 
-export function stopWatchingAsset(assetId: string): Promise<AssetWatch> {
+export function stopWatchingAsset(assetId: string): Promise<WorkFollow> {
   return changeWatch(assetId, "DELETE");
 }
 
 async function changeWatch(
   assetId: string,
   method: "PUT" | "DELETE",
-): Promise<AssetWatch> {
-  const answer = await ask<AssetWatch>(
+): Promise<WorkFollow> {
+  const answer = await ask<WorkFollow>(
     method,
     `/assets/${encodeURIComponent(assetId)}/watch`,
   );

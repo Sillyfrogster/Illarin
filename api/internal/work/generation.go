@@ -24,54 +24,54 @@ import (
 func (s *Service) contentFingerprint(
 	ctx context.Context,
 	q db.DBTX,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) (string, error) {
 	digest := sha256.New()
 
-	var kind, name, blurb, assetVersion, creditedAuthor, nickname string
+	var workType, name, blurb, workVersion, creditedAuthor, nickname string
 	var origin pgtype.Text
 	var cover pgtype.UUID
 	err := q.QueryRow(ctx, `
-		select kind, origin_format, name, blurb, asset_version, credited_author,
+		select type, origin_format, name, blurb, work_version, credited_author,
 		       nickname, cover_media_id
-		  from assets
+		  from works
 		 where id = $1 and deleted_at is null
-	`, assetID).Scan(&kind, &origin, &name, &blurb, &assetVersion, &creditedAuthor,
+	`, workID).Scan(&workType, &origin, &name, &blurb, &workVersion, &creditedAuthor,
 		&nickname, &cover)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}
 	if err != nil {
-		return "", fmt.Errorf("read the asset to fingerprint: %w", err)
+		return "", fmt.Errorf("read the work to fingerprint: %w", err)
 	}
-	fmt.Fprintf(digest, "asset\x00%s\x00%s\n", kind, origin.String)
-	if err := s.fingerprintUpload(ctx, q, assetID, origin.String, digest); err != nil {
+	fmt.Fprintf(digest, "asset\x00%s\x00%s\n", workType, origin.String)
+	if err := s.fingerprintUpload(ctx, q, workID, origin.String, digest); err != nil {
 		return "", err
 	}
 
 	values := map[format.HeaderField]string{
 		format.HeaderName:           name,
 		format.HeaderBlurb:          blurb,
-		format.HeaderAssetVersion:   assetVersion,
+		format.HeaderWorkVersion:    workVersion,
 		format.HeaderCreditedAuthor: creditedAuthor,
 		format.HeaderNickname:       nickname,
 	}
-	for _, field := range s.reg.ExportedHeaderFields(kind) {
+	for _, field := range s.reg.ExportedHeaderFields(workType) {
 		fmt.Fprintf(digest, "header\x00%s\x00%s\n", field, values[field])
 	}
 
-	blocks, err := block.Read(ctx, q, assetID)
+	blocks, err := block.Read(ctx, q, workID)
 	if err != nil {
 		return "", err
 	}
-	if err := private.RestorePromptFragments(ctx, q, assetID, blocks); err != nil {
+	if err := private.RestorePromptFragments(ctx, q, workID, blocks); err != nil {
 		return "", err
 	}
 	elements := make([]block.Element, 0)
 	for _, holder := range blocks {
 		elements = append(elements, holder.Elements...)
 	}
-	names, err := fingerprintNames(ctx, q, assetID, elements)
+	names, err := fingerprintNames(ctx, q, workID, elements)
 	if err != nil {
 		return "", err
 	}
@@ -106,17 +106,17 @@ func (s *Service) contentFingerprint(
 		fmt.Fprintf(digest, "element\x00%s\x00%s\n", names[element.ID], content)
 	}
 
-	if err := fingerprintPreserved(ctx, q, assetID, names, digest); err != nil {
+	if err := fingerprintPreserved(ctx, q, workID, names, digest); err != nil {
 		return "", err
 	}
-	if err := fingerprintPictures(ctx, q, assetID, elements, uuidOrNil(cover), names, digest); err != nil {
+	if err := fingerprintPictures(ctx, q, workID, elements, uuidOrNil(cover), names, digest); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(digest.Sum(nil)), nil
 }
 
 // fingerprintUpload counts the uploaded bytes as content where the export hands them back unchanged.
-func (s *Service) fingerprintUpload(ctx context.Context, q db.DBTX, assetID uuid.UUID, origin string, digest hash.Hash) error {
+func (s *Service) fingerprintUpload(ctx context.Context, q db.DBTX, workID uuid.UUID, origin string, digest hash.Hash) error {
 	declaration, known := s.reg.Declaration(origin)
 	if !known || !declaration.KeepsUpload {
 		return nil
@@ -124,11 +124,11 @@ func (s *Service) fingerprintUpload(ctx context.Context, q db.DBTX, assetID uuid
 	var sum []byte
 	err := q.QueryRow(ctx, `
 		select blob.sha256
-		  from assets asset
-		  join asset_revisions revision on revision.id = asset.current_revision_id
+		  from works work
+		  join work_revisions revision on revision.id = work.current_revision_id
 		  join blobs blob on blob.id = revision.blob_id
-		 where asset.id = $1
-	`, assetID).Scan(&sum)
+		 where work.id = $1
+	`, workID).Scan(&sum)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
@@ -140,7 +140,7 @@ func (s *Service) fingerprintUpload(ctx context.Context, q db.DBTX, assetID uuid
 }
 
 // fingerprintNames gives imported elements, items and pictures stable comparison keys.
-func fingerprintNames(ctx context.Context, q db.DBTX, assetID uuid.UUID, elements []block.Element) (map[uuid.UUID]string, error) {
+func fingerprintNames(ctx context.Context, q db.DBTX, workID uuid.UUID, elements []block.Element) (map[uuid.UUID]string, error) {
 	names := make(map[uuid.UUID]string)
 	counts := make(map[string]int)
 	for _, element := range elements {
@@ -152,7 +152,7 @@ func fingerprintNames(ctx context.Context, q db.DBTX, assetID uuid.UUID, element
 			names[id] = key + "/" + strconv.Itoa(index)
 		}
 	}
-	rows, err := q.Query(ctx, `select id, blob_id from asset_media where asset_id = $1`, assetID)
+	rows, err := q.Query(ctx, `select id, blob_id from work_media where work_id = $1`, workID)
 	if err != nil {
 		return nil, err
 	}
@@ -170,25 +170,25 @@ func fingerprintNames(ctx context.Context, q db.DBTX, assetID uuid.UUID, element
 func fingerprintPreserved(
 	ctx context.Context,
 	q db.DBTX,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	names map[uuid.UUID]string,
 	digest hash.Hash,
 ) error {
 	rows, err := q.Query(ctx, `
-		select owner_kind, owner_id, namespace, payload::text
-		  from asset_preserved_data
-		 where asset_id = $1
-		 order by owner_kind, owner_id, namespace
-	`, assetID)
+		select owner_type, owner_id, namespace, payload::text
+		  from work_preserved_data
+		 where work_id = $1
+		 order by owner_type, owner_id, namespace
+	`, workID)
 	if err != nil {
 		return fmt.Errorf("read preserved data to fingerprint: %w", err)
 	}
 	defer rows.Close()
 	entries := []string{}
 	for rows.Next() {
-		var ownerKind, namespace, payload string
+		var ownerType, namespace, payload string
 		var ownerID uuid.UUID
-		if err := rows.Scan(&ownerKind, &ownerID, &namespace, &payload); err != nil {
+		if err := rows.Scan(&ownerType, &ownerID, &namespace, &payload); err != nil {
 			return fmt.Errorf("read a preserved row to fingerprint: %w", err)
 		}
 		var value any
@@ -206,7 +206,7 @@ func fingerprintPreserved(
 			owner = stable
 		}
 		entries = append(entries, fmt.Sprintf("preserved\x00%s\x00%s\x00%s\x00%s\n",
-			ownerKind, owner, namespace, canonical))
+			ownerType, owner, namespace, canonical))
 	}
 	slices.Sort(entries)
 	for _, entry := range entries {
@@ -218,7 +218,7 @@ func fingerprintPreserved(
 func fingerprintPictures(
 	ctx context.Context,
 	q db.DBTX,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	elements []block.Element,
 	cover *uuid.UUID,
 	names map[uuid.UUID]string,
@@ -242,10 +242,10 @@ func fingerprintPictures(
 	}
 	rows, err := q.Query(ctx, `
 		select id, blob_id, is_current
-		  from asset_media
-		 where asset_id = $1 and id = any($2)
+		  from work_media
+		 where work_id = $1 and id = any($2)
 		 order by id
-	`, assetID, wanted)
+	`, workID, wanted)
 	if err != nil {
 		return fmt.Errorf("read pictures to fingerprint: %w", err)
 	}
@@ -269,10 +269,10 @@ func fingerprintPictures(
 func (s *Service) moveContentGeneration(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	before string,
 ) error {
-	after, err := s.contentFingerprint(ctx, tx, assetID)
+	after, err := s.contentFingerprint(ctx, tx, workID)
 	if err != nil {
 		return err
 	}
@@ -280,24 +280,24 @@ func (s *Service) moveContentGeneration(
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `
-		update assets set content_generation = content_generation + 1
+		update works set content_generation = content_generation + 1
 		 where id = $1 and published_snapshot_id is null
-	`, assetID); err != nil {
+	`, workID); err != nil {
 		return fmt.Errorf("move the content generation: %w", err)
 	}
 	return nil
 }
 
 // ChangeContent runs a change to a work's drafted content and moves its content generation when the content changed
-func (s *Service) ChangeContent(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, change func() error) error {
-	fingerprint, err := s.contentFingerprint(ctx, tx, assetID)
+func (s *Service) ChangeContent(ctx context.Context, tx pgx.Tx, workID uuid.UUID, change func() error) error {
+	fingerprint, err := s.contentFingerprint(ctx, tx, workID)
 	if err != nil {
 		return err
 	}
 	if err := change(); err != nil {
 		return err
 	}
-	return s.moveContentGeneration(ctx, tx, assetID, fingerprint)
+	return s.moveContentGeneration(ctx, tx, workID, fingerprint)
 }
 
 // SteadyIDs swaps ids a file mints afresh for the stable names they stand for

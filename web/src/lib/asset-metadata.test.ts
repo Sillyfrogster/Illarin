@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import type { AssetDetail } from "./api/query";
+import type { WorkDetail } from "./api/query";
 import { assetMetadata } from "./asset-metadata";
 import { SITE_CARD } from "./site-metadata";
 
 const ID = "0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a";
 
-function asset(over: Partial<AssetDetail> = {}): AssetDetail {
+function asset(over: Partial<WorkDetail> = {}): WorkDetail {
   return {
     id: ID,
     kind: "character",

@@ -24,12 +24,12 @@ func changesUnder(t *testing.T, groups []version.ChangeGroup, subject string) []
 	return nil
 }
 
-func changeKinds(changes []version.Change) []version.ChangeKind {
-	kinds := make([]version.ChangeKind, 0, len(changes))
+func changeTypes(changes []version.Change) []version.ChangeType {
+	types := make([]version.ChangeType, 0, len(changes))
 	for _, change := range changes {
-		kinds = append(kinds, change.Kind)
+		types = append(types, change.Type)
 	}
-	return kinds
+	return types
 }
 
 func subjectsOf(groups []version.ChangeGroup) []string {
@@ -44,26 +44,26 @@ func number(value float64) *block.Value { return &block.Value{Number: &value} }
 
 func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 	t.Parallel()
-	svc, _ := apitest.Assets(t)
+	svc, _ := apitest.Works(t)
 	ctx := context.Background()
 	owner, id := apitest.PublishedWork(t, svc, "compare.owner")
 	open := func(work.Version) string { return "" }
 
-	if _, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{AssetID: id, Access: open}); !errors.Is(err, work.ErrNoEarlierVersion) {
+	if _, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{WorkID: id, Access: open}); !errors.Is(err, work.ErrNoEarlierVersion) {
 		t.Fatalf("first version compared against nothing: %v", err)
 	}
 	apitest.SaveDescription(t, svc, owner, id, "Second description")
 	publishUpdate(t, svc, owner, id, "Rewrote the description")
 	apitest.SaveDescription(t, svc, owner, id, "Third description")
-	adult := false
-	if err := apitest.Works(svc).SetIdentity(ctx, page.Identity{
-		OwnerID: owner, AssetID: id, Name: "Renamed", Blurb: "A changed pitch", IsNSFW: &adult,
+	nsfw := false
+	if err := apitest.Pages(svc).SetIdentity(ctx, page.Identity{
+		OwnerID: owner, WorkID: id, Name: "Renamed", Blurb: "A changed pitch", IsNSFW: &nsfw,
 	}, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatal(err)
 	}
 	publishUpdate(t, svc, owner, id, "Rewrote it again")
 
-	latest, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{AssetID: id, Access: open})
+	latest, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{WorkID: id, Access: open})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 		renamed[1].Name != "Blurb" || renamed[1].Before != "" || renamed[1].After != "A changed pitch" {
 		t.Fatalf("metadata changes = %+v", renamed)
 	}
-	chosen, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{AssetID: id, From: 1, To: 3, Access: open})
+	chosen, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{WorkID: id, From: 1, To: 3, Access: open})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,16 +93,16 @@ func TestComparisonDefaultsToTheVersionBeforeThePublishedOne(t *testing.T) {
 
 func TestComparisonNeedsAccessRulesAndExplainsAVersionItCannotOpen(t *testing.T) {
 	t.Parallel()
-	svc, _ := apitest.Assets(t)
+	svc, _ := apitest.Works(t)
 	ctx := context.Background()
 	owner, id := apitest.PublishedWork(t, svc, "gated.owner")
 	apitest.SaveDescription(t, svc, owner, id, "Second description")
 	publishUpdate(t, svc, owner, id, "Rewrote the description")
 
-	if _, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{AssetID: id}); !errors.Is(err, version.ErrAccessRequired) {
+	if _, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{WorkID: id}); !errors.Is(err, version.ErrAccessRequired) {
 		t.Fatalf("comparison ran without access rules: %v", err)
 	}
-	withheld, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{AssetID: id, Access: func(version work.Version) string {
+	withheld, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{WorkID: id, Access: func(version work.Version) string {
 		if version.Number == 1 {
 			return "That version was withdrawn."
 		}
@@ -119,7 +119,7 @@ func TestComparisonNeedsAccessRulesAndExplainsAVersionItCannotOpen(t *testing.T)
 func publishUpdate(t *testing.T, svc *work.Service, owner, id uuid.UUID, summary string) {
 	t.Helper()
 	if _, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(context.Background(), version.UpdateRequest{
-		OwnerID: owner, AssetID: id, Summary: summary,
+		OwnerID: owner, WorkID: id, Summary: summary,
 	}, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatalf("publish the update: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestReplacementPreviewUsesStableItemIDs(t *testing.T) {
 			continue
 		}
 		for _, change := range group.Changes {
-			switch change.Kind {
+			switch change.Type {
 			case version.ChangeAdded:
 				additions++
 			case version.ChangeRemoved:
@@ -174,7 +174,7 @@ func TestReplacementPreviewShowsTheWordingOnBothSides(t *testing.T) {
 		t.Fatalf("groups = %+v", groups)
 	}
 	change := groups[0].Changes[0]
-	if change.Kind != version.ChangeEdited || change.Before != "Old wording" || change.After != "New wording" {
+	if change.Type != version.ChangeEdited || change.Before != "Old wording" || change.After != "New wording" {
 		t.Fatalf("change = %+v, want the wording on both sides", change)
 	}
 }

@@ -12,9 +12,9 @@ import (
 
 // Read returns a work's drafted blocks in page order
 func Read(ctx context.Context, q db.DBTX, workID uuid.UUID) ([]Block, error) {
-	rows, err := db.New(q).AssetBlocks(ctx, pgtype.UUID{Bytes: workID, Valid: true})
+	rows, err := db.New(q).WorkBlocks(ctx, pgtype.UUID{Bytes: workID, Valid: true})
 	if err != nil {
-		return nil, fmt.Errorf("read asset blocks: %w", err)
+		return nil, fmt.Errorf("read work blocks: %w", err)
 	}
 	blocks := make([]Block, 0, len(rows))
 	for _, row := range rows {

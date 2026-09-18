@@ -26,39 +26,39 @@ func linkInstallations(t *testing.T, r *gin.Engine, session *http.Cookie, count 
 	return grants
 }
 
-func installedAppVersions(t *testing.T, r http.Handler, assetID string) []string {
+func installedAppVersions(t *testing.T, r http.Handler, workID string) []string {
 	t.Helper()
-	return apitest.ReadExtensionPage(t, r, nil, assetID).InstalledAppVersions
+	return apitest.ReadExtensionPage(t, r, nil, workID).InstalledAppVersions
 }
 
 func TestAnExtensionPageListsAnAppVersionOnlyOnceFiveInstallationsReportIt(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
-	assetID := publishedSpindleExtension(t, r, session, assets)
+	r, session, works, _ := harness.NewExtensionRouter(t)
+	workID := publishedSpindleExtension(t, r, session, works)
 	installs := linkInstallations(t, r, session, 5)
 
 	for _, install := range installs[:4] {
-		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
+		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", workID)
 	}
-	if versions := installedAppVersions(t, r, assetID); len(versions) != 0 {
+	if versions := installedAppVersions(t, r, workID); len(versions) != 0 {
 		t.Fatalf("installed app versions = %v with four installations, want none", versions)
 	}
 
-	apitest.ReportInstalled(t, r, installs[4].AccessToken, "1.2.0", assetID)
-	if versions := installedAppVersions(t, r, assetID); !slices.Equal(versions, []string{"1.2.0"}) {
+	apitest.ReportInstalled(t, r, installs[4].AccessToken, "1.2.0", workID)
+	if versions := installedAppVersions(t, r, workID); !slices.Equal(versions, []string{"1.2.0"}) {
 		t.Fatalf("installed app versions = %v with five installations, want [1.2.0]", versions)
 	}
 }
 
 func TestRevokingAnInstallationLeavesNoAppVersionOrNoticeBehind(t *testing.T) {
 	t.Parallel()
-	r, session, assets, pool := harness.NewExtensionRouter(t)
-	assetID := publishedSpindleExtension(t, r, session, assets)
+	r, session, works, pool := harness.NewExtensionRouter(t)
+	workID := publishedSpindleExtension(t, r, session, works)
 	installs := linkInstallations(t, r, session, 5)
 	for _, install := range installs {
-		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
+		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", workID)
 	}
-	withholdAsAdmin(t, r, pool, session, "verified.creator", assetID)
+	withholdAsAdmin(t, r, pool, session, "verified.creator", workID)
 	revokedID := installs[0].Instance.ID
 
 	revoked := apitest.Send(t, r, apitest.BrowserRequest(t, http.MethodDelete, "/v1/instances/"+revokedID, nil, session))
@@ -66,7 +66,7 @@ func TestRevokingAnInstallationLeavesNoAppVersionOrNoticeBehind(t *testing.T) {
 		t.Fatalf("revoke status = %d, want 204: %s", revoked.Code, revoked.Body.String())
 	}
 
-	if versions := apitest.ReadExtensionPage(t, r, session, assetID).InstalledAppVersions; len(versions) != 0 {
+	if versions := apitest.ReadExtensionPage(t, r, session, workID).InstalledAppVersions; len(versions) != 0 {
 		t.Fatalf("installed app versions = %v after one of five installations was revoked, want none", versions)
 	}
 	if kept := rowCount(t, pool, `select count(*) from linked_instances
@@ -82,26 +82,26 @@ func TestRevokingAnInstallationLeavesNoAppVersionOrNoticeBehind(t *testing.T) {
 func TestOnlyAnExtensionPageListsInstalledAppVersions(t *testing.T) {
 	t.Parallel()
 	r, session, _ := harness.NewLinkingRouter(t)
-	assetID := apitest.PublishedAsset(t, r, session)
+	workID := apitest.PublishedCharacter(t, r, session)
 	for _, install := range linkInstallations(t, r, session, 5) {
-		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
+		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", workID)
 	}
 
-	if versions := installedAppVersions(t, r, assetID); len(versions) != 0 {
+	if versions := installedAppVersions(t, r, workID); len(versions) != 0 {
 		t.Fatalf("a character page lists installed app versions %v, want none", versions)
 	}
 }
 
 func TestAnAppVersionCountsOnlyFromInstallationsThatCanInstallTheExtensionsApp(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
-	assetID := publishedSpindleExtension(t, r, session, assets)
+	r, session, works, _ := harness.NewExtensionRouter(t)
+	workID := publishedSpindleExtension(t, r, session, works)
 	for _, install := range linkInstallations(t, r, session, 5) {
 		apitest.Declare(t, r, install.AccessToken, []string{apitest.SillyTavernInstalls}, []string{extension.SillyTavernID})
-		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", assetID)
+		apitest.ReportInstalled(t, r, install.AccessToken, "1.2.0", workID)
 	}
 
-	if versions := installedAppVersions(t, r, assetID); len(versions) != 0 {
+	if versions := installedAppVersions(t, r, workID); len(versions) != 0 {
 		t.Fatalf("a Lumiverse extension page lists %v reported by SillyTavern installations, want none", versions)
 	}
 }
@@ -121,41 +121,41 @@ func declareApplicationVersion(t *testing.T, r http.Handler, token, version stri
 
 func TestAnInstallationThatLeavesOutItsAppVersionCountsUnderTheVersionItDeclared(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
-	assetID := publishedSpindleExtension(t, r, session, assets)
+	r, session, works, _ := harness.NewExtensionRouter(t)
+	workID := publishedSpindleExtension(t, r, session, works)
 	installs := linkInstallations(t, r, session, 5)
 
 	for _, install := range installs {
 		declareApplicationVersion(t, r, install.AccessToken, "1.1.6")
-		apitest.ReportInstalled(t, r, install.AccessToken, "", assetID)
+		apitest.ReportInstalled(t, r, install.AccessToken, "", workID)
 	}
-	if versions := installedAppVersions(t, r, assetID); !slices.Equal(versions, []string{"1.1.6"}) {
+	if versions := installedAppVersions(t, r, workID); !slices.Equal(versions, []string{"1.1.6"}) {
 		t.Fatalf("installed app versions = %v, want the declared [1.1.6]", versions)
 	}
 
-	apitest.ReportInstalled(t, r, installs[0].AccessToken, "1.2.0", assetID)
-	if versions := installedAppVersions(t, r, assetID); len(versions) != 0 {
+	apitest.ReportInstalled(t, r, installs[0].AccessToken, "1.2.0", workID)
+	if versions := installedAppVersions(t, r, workID); len(versions) != 0 {
 		t.Fatalf("installed app versions = %v after one installation reported 1.2.0, want none", versions)
 	}
 }
 
 func TestALibraryReportRefusesAnAppVersionThatIsNotShortPrintableText(t *testing.T) {
 	t.Parallel()
-	r, session, assets, _ := harness.NewExtensionRouter(t)
-	assetID := publishedSpindleExtension(t, r, session, assets)
+	r, session, works, _ := harness.NewExtensionRouter(t)
+	workID := publishedSpindleExtension(t, r, session, works)
 	install := linkInstallations(t, r, session, 1)[0]
 
 	for _, bad := range []string{"1.2.0\a", strings.Repeat("9", 65)} {
 		rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodPost, "/v1/library/sync", install.AccessToken, map[string]any{
 			"snapshot":           false,
 			"applicationVersion": bad,
-			"entries":            []map[string]any{{"assetId": assetID}},
+			"entries":            []map[string]any{{"assetId": workID}},
 		}))
 		if rec.Code != http.StatusBadRequest {
 			t.Errorf("application version %q = %d, want 400: %s", bad, rec.Code, rec.Body.String())
 		}
 	}
-	if state := apitest.AssetInstances(t, r, session, assetID).Items[0]; state.InstalledGeneration != nil {
+	if state := apitest.WorkInstances(t, r, session, workID).Items[0]; state.InstalledGeneration != nil {
 		t.Fatal("a refused report still recorded the install")
 	}
 }

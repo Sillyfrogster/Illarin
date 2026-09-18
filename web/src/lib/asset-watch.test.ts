@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { AssetWatch } from "@/lib/api/notifications";
+import type { WorkFollow } from "@/lib/api/notifications";
 import {
   offersWatch,
   rememberNotNow,
@@ -9,7 +9,7 @@ import {
 
 const ASSET_ID = "0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a";
 
-function watch(overrides: Partial<AssetWatch> = {}): AssetWatch {
+function watch(overrides: Partial<WorkFollow> = {}): WorkFollow {
   return { state: "none", installedOn: [], ...overrides };
 }
 

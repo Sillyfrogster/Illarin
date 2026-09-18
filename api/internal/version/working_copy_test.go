@@ -16,16 +16,16 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestPrivateAssetEditsStayPrivateAcrossHTTPReads(t *testing.T) {
+func TestPrivateWorkEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 	t.Parallel()
 	_, router, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	id := publishedCharacter(t, router, session)
-	before := apitest.FetchAssetPage(t, router, "/v1/assets/"+id)
+	before := apitest.FetchWorkPage(t, router, "/v1/assets/"+id)
 	generation := apitest.ContentGeneration(t, pool, id)
 	if got := apitest.SaveIdentity(t, router, session, id, `{"name":"Unpublished name","blurb":"","isNsfw":true}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save private header: %d %s", got.Code, got.Body.String())
 	}
-	owner := apitest.FetchStartedAsset(t, router, session, id)
+	owner := apitest.FetchStartedWork(t, router, session, id)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "character_core"))
 	core.Elements[0].Content = json.RawMessage(`{"text":"Unpublished description"}`)
 	if got := apitest.SaveBlock(t, router, session, id, apitest.BlockNamed(t, owner.Blocks, "character_core").ID, core); got.Code != http.StatusOK {
@@ -35,7 +35,7 @@ func TestPrivateAssetEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 	if public.Code != http.StatusOK || strings.Contains(public.Body.String(), "Unpublished") {
 		t.Fatalf("public page leaked a private edit: %d", public.Code)
 	}
-	if got := apitest.FetchAssetPage(t, router, "/v1/assets/"+id); got.Name != before.Name || got.IsNSFW != before.IsNSFW {
+	if got := apitest.FetchWorkPage(t, router, "/v1/assets/"+id); got.Name != before.Name || got.IsNSFW != before.IsNSFW {
 		t.Fatal("private header changed public metadata")
 	}
 	working := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+id+"?workingCopy=true", nil), session))
@@ -51,7 +51,7 @@ func TestPrivateAssetEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 	}
 }
 
-func TestWorkingCopyMediaIsPrivateOnAPublishedAsset(t *testing.T) {
+func TestWorkingCopyMediaIsPrivateOnAPublishedWork(t *testing.T) {
 	t.Parallel()
 	router, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, router, session)
@@ -59,19 +59,19 @@ func TestWorkingCopyMediaIsPrivateOnAPublishedAsset(t *testing.T) {
 	if got := apitest.Send(t, router, apitest.Authorized(apitest.MediaUploadRequest(t, started.ID, "avatar", apitest.PNG(t, 40, 60)), session)); got.Code != http.StatusCreated {
 		t.Fatalf("upload original cover: %d", got.Code)
 	}
-	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish: %d", got.Code)
 	}
-	before := apitest.FetchAssetPage(t, router, "/v1/assets/"+started.ID)
+	before := apitest.FetchWorkPage(t, router, "/v1/assets/"+started.ID)
 	if got := apitest.Send(t, router, apitest.Authorized(apitest.MediaUploadRequest(t, started.ID, "avatar", apitest.PNG(t, 80, 120)), session)); got.Code != http.StatusCreated {
 		t.Fatalf("upload private cover: %d", got.Code)
 	}
-	public := apitest.FetchAssetPage(t, router, "/v1/assets/"+started.ID)
+	public := apitest.FetchWorkPage(t, router, "/v1/assets/"+started.ID)
 	if len(public.Media) != 1 || public.Media[0].ID != before.Media[0].ID {
 		t.Fatal("private cover changed the public media")
 	}
 	response := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/assets/"+started.ID+"?workingCopy=true", nil), session))
-	var working apitest.AssetPageResponse
+	var working apitest.WorkPageResponse
 	if err := json.Unmarshal(response.Body.Bytes(), &working); err != nil || response.Code != http.StatusOK {
 		t.Fatalf("working copy: %d, %v", response.Code, err)
 	}
@@ -94,15 +94,15 @@ func TestWorkingCopyMediaIsPrivateOnAPublishedAsset(t *testing.T) {
 
 func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 	t.Parallel()
-	router, session, assets, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	id := apitest.PublishSealedPreset(t, router, session, "Recorded preset", "Recorded secret")
-	owner := apitest.FetchStartedAsset(t, router, session, id)
+	owner := apitest.FetchStartedWork(t, router, session, id)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(string(core.Elements[0].Content), "Recorded secret", "Unpublished secret"))
 	if got := apitest.SaveBlock(t, router, session, id, apitest.BlockNamed(t, owner.Blocks, "preset_core").ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save private protected text: %d %s", got.Code, got.Body.String())
 	}
-	exported, err := download.NewService(pool, assets).OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), "preset_lumiverse")
+	exported, err := download.NewService(pool, works).OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), "preset_lumiverse")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,11 +114,11 @@ func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 		t.Fatalf("replace protected working-copy prompt: %d %s", got.Code, got.Body.String())
 	}
 	for _, target := range []string{"preset_lumiverse", "preset_sillytavern"} {
-		if _, err := download.NewService(pool, assets).OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), target); !errors.Is(err, download.ErrLinkedInstallOnly) {
+		if _, err := download.NewService(pool, works).OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), target); !errors.Is(err, download.ErrLinkedInstallOnly) {
 			t.Fatalf("delivery without a policy for %s: %v", target, err)
 		}
 	}
-	if _, err := assets.DeliverableAsset(t.Context(), pool, uuid.MustParse(id)); !errors.Is(err, connect.ErrNotDeliverable) {
+	if _, err := works.DeliverableWork(t.Context(), pool, uuid.MustParse(id)); !errors.Is(err, connect.ErrNotDeliverable) {
 		t.Fatalf("advertised delivery without a policy: %v", err)
 	}
 }
@@ -127,7 +127,7 @@ func publishedCharacter(t *testing.T, router *gin.Engine, session *http.Cookie) 
 	t.Helper()
 	started := apitest.StartCharacter(t, router, session)
 	apitest.WriteCharacterFloor(t, router, session, started)
-	if got := apitest.PublishAsset(t, router, session, started.ID); got.Code != http.StatusOK {
+	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	return started.ID

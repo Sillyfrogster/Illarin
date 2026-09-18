@@ -102,12 +102,12 @@ func TestEveryVocabularySetIsClosed(t *testing.T) {
 			t.Errorf("language %q is listed but refused: %v", name, err)
 		}
 	}
-	for _, kind := range postbody.CalloutKinds {
+	for _, calloutType := range postbody.CalloutTypes {
 		body := fmt.Sprintf(
 			`{"version":2,"content":[{"type":"callout","kind":%q,"content":[`+
-				`{"type":"paragraph","content":[{"type":"text","text":"x"}]}]}]}`, kind)
+				`{"type":"paragraph","content":[{"type":"text","text":"x"}]}]}]}`, calloutType)
 		if _, err := postbody.Read([]byte(body)); err != nil {
-			t.Errorf("callout kind %q is listed but refused: %v", kind, err)
+			t.Errorf("callout kind %q is listed but refused: %v", calloutType, err)
 		}
 	}
 }

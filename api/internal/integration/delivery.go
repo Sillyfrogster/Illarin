@@ -60,16 +60,16 @@ func (s *Service) SendDueAnnouncements(ctx context.Context, now time.Time) (int,
 }
 
 type standing struct {
-	unpublished    bool
-	withheld       bool
-	unlisted       bool
-	withdrawn      bool
-	consent        bool
-	payload        []byte
-	kind           string
-	state          string
-	sameOwner      bool
-	hasDestination bool
+	unpublished     bool
+	withheld        bool
+	unlisted        bool
+	withdrawn       bool
+	consent         bool
+	payload         []byte
+	destinationType string
+	state           string
+	sameOwner       bool
+	hasDestination  bool
 }
 
 func (s *Service) sendLeased(ctx context.Context, held dispatch.Work, now time.Time) error {
@@ -80,7 +80,7 @@ func (s *Service) sendLeased(ctx context.Context, held dispatch.Work, now time.T
 	if said, cancelled := found.cancels(); cancelled {
 		return s.ledger.Record(ctx, held, said, now)
 	}
-	if found.kind == Discord {
+	if found.destinationType == Discord {
 		return s.announceOnDiscord(ctx, held, *held.DestinationID, found.payload, now)
 	}
 	endpoint, err := s.configurationByID(ctx, *held.DestinationID)
@@ -108,21 +108,21 @@ func (s *Service) sendLeased(ctx context.Context, held dispatch.Work, now time.T
 
 func (s *Service) recheck(ctx context.Context, held dispatch.Work) (standing, error) {
 	var found standing
-	var kind, state *string
+	var destinationType, state *string
 	var sameOwner *bool
 	err := s.pool.QueryRow(ctx, `
 		select owned.deleted_at is not null or owned.lifecycle <> 'published',
-		       owned.withheld_at is not null, owned.discovery = 'unlisted',
+		       owned.withheld_at is not null, owned.visibility = 'unlisted',
 		       snapshot.withdrawn_at is not null, event.unlisted_consent, event.payload::text,
-		       destination.kind, destination.state, destination.owner_id = owned.owner_id
-		  from asset_update_events event
-		  join assets owned on owned.id = event.asset_id
-		  join asset_snapshots snapshot on snapshot.id = event.snapshot_id
-		  left join asset_update_destinations destination on destination.id = $2
+		       destination.type, destination.state, destination.owner_id = owned.owner_id
+		  from work_update_events event
+		  join works owned on owned.id = event.work_id
+		  join work_snapshots snapshot on snapshot.id = event.snapshot_id
+		  left join work_update_destinations destination on destination.id = $2
 		 where event.id = $1
 	`, held.EventID, held.DestinationID).Scan(
 		&found.unpublished, &found.withheld, &found.unlisted, &found.withdrawn, &found.consent,
-		&found.payload, &kind, &state, &sameOwner,
+		&found.payload, &destinationType, &state, &sameOwner,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		found.unpublished = true
@@ -131,8 +131,8 @@ func (s *Service) recheck(ctx context.Context, held dispatch.Work) (standing, er
 	if err != nil {
 		return found, fmt.Errorf("recheck an announcement before sending it: %w", err)
 	}
-	if kind != nil && state != nil && sameOwner != nil {
-		found.hasDestination, found.kind, found.state, found.sameOwner = true, *kind, *state, *sameOwner
+	if destinationType != nil && state != nil && sameOwner != nil {
+		found.hasDestination, found.destinationType, found.state, found.sameOwner = true, *destinationType, *state, *sameOwner
 	}
 	return found, nil
 }
@@ -211,7 +211,7 @@ func noticeOf(said sent) discord.Announcement {
 		update = said.Update.VersionLabel
 	}
 	return discord.Announcement{
-		Title:   said.Asset.Name,
+		Title:   said.Work.Name,
 		Summary: said.Update.Summary,
 		URL:     said.Update.HistoryURL,
 		Update:  update,
@@ -223,7 +223,7 @@ func noticeOf(said sent) discord.Announcement {
 func (s *Service) configurationByID(ctx context.Context, id uuid.UUID) (configuration, error) {
 	var owner uuid.UUID
 	err := s.pool.QueryRow(ctx, `
-		select owner_id from asset_update_destinations where id = $1
+		select owner_id from work_update_destinations where id = $1
 	`, id).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return configuration{}, ErrNotFound
@@ -241,7 +241,7 @@ func (s *Service) retire(ctx context.Context, id uuid.UUID) error {
 	}
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
-		update asset_update_destinations
+		update work_update_destinations
 		   set state = $2, disabled_at = now(), version = version + 1, updated_at = now()
 		 where id = $1 and state <> $2
 	`, id, Disabled)

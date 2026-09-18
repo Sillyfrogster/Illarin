@@ -32,27 +32,27 @@ type SealedContent struct {
 }
 
 type sealedExport struct {
-	AssetID   uuid.UUID         `json:"asset_id"`
-	AssetName string            `json:"asset_name"`
-	Source    string            `json:"source"`
-	Blocks    []json.RawMessage `json:"blocks"`
+	WorkID   uuid.UUID         `json:"asset_id"`
+	WorkName string            `json:"asset_name"`
+	Source   string            `json:"source"`
+	Blocks   []json.RawMessage `json:"blocks"`
 }
 
 func (s *Service) OpenSealedContent(
 	ctx context.Context,
 	ownerID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) (SealedContent, error) {
 	rows, err := s.pool.Query(ctx, `
 		select owned.name, record.payload
 		  from migration_preserved_records record
-		  join assets owned on owned.id = record.asset_id
-		 where record.asset_id = $1
+		  join works owned on owned.id = record.work_id
+		 where record.work_id = $1
 		   and record.source_table = $2
 		   and owned.owner_id = $3
 		   and owned.deleted_at is null
 		 order by record.payload ->> 'version', record.payload ->> 'block_key'
-	`, assetID, sealedSourceTable, ownerID)
+	`, workID, sealedSourceTable, ownerID)
 	if err != nil {
 		return SealedContent{}, fmt.Errorf("read sealed content: %w", err)
 	}
@@ -75,7 +75,7 @@ func (s *Service) OpenSealedContent(
 	}
 
 	body, err := json.MarshalIndent(sealedExport{
-		AssetID: assetID, AssetName: name, Source: sealedSourceTable, Blocks: blocks,
+		WorkID: workID, WorkName: name, Source: sealedSourceTable, Blocks: blocks,
 	}, "", "  ")
 	if err != nil {
 		return SealedContent{}, fmt.Errorf("write sealed content: %w", err)
@@ -95,18 +95,18 @@ func SealedBlockCount(
 		QueryRow(context.Context, string, ...any) pgx.Row
 	},
 	ownerID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) (int, error) {
 	var count int
 	err := q.QueryRow(ctx, `
 		select count(*)
 		  from migration_preserved_records record
-		  join assets owned on owned.id = record.asset_id
-		 where record.asset_id = $1
+		  join works owned on owned.id = record.work_id
+		 where record.work_id = $1
 		   and record.source_table = $2
 		   and owned.owner_id = $3
 		   and owned.deleted_at is null
-	`, assetID, sealedSourceTable, ownerID).Scan(&count)
+	`, workID, sealedSourceTable, ownerID).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count sealed content: %w", err)
 	}

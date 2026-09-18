@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) DeleteAsset(c *gin.Context) {
+func (h *Handlers) DeleteWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -23,7 +23,7 @@ func (h *Handlers) DeleteAsset(c *gin.Context) {
 	switch {
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "no such asset")
-	case errors.Is(err, work.ErrAssetFrozen):
+	case errors.Is(err, work.ErrWorkFrozen):
 		api.Refuse(c, http.StatusConflict, "A withheld asset cannot be deleted.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not delete the asset.")
@@ -32,7 +32,7 @@ func (h *Handlers) DeleteAsset(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) RestoreAsset(c *gin.Context) {
+func (h *Handlers) RestoreWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -52,7 +52,7 @@ func (h *Handlers) RestoreAsset(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) ListDeletedAssets(c *gin.Context) {
+func (h *Handlers) ListDeletedWorks(c *gin.Context) {
 	handle := c.Param("handle")
 	owner, ok := api.Verified(c, "uploading")
 	if !ok {
@@ -67,12 +67,5 @@ func (h *Handlers) ListDeletedAssets(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not list deleted assets.")
 		return
 	}
-	items := make([]DeletedAsset, len(found))
-	for i, item := range found {
-		items[i] = DeletedAsset{
-			Id: item.ID, Name: item.Name, Kind: DeletedAssetKind(item.Kind),
-			DeletedAt: item.DeletedAt, RecoverableUntil: item.RecoverableUntil,
-		}
-	}
-	c.JSON(http.StatusOK, DeletedAssetList{Items: items})
+	c.JSON(http.StatusOK, DeletedWorkList{Items: found})
 }

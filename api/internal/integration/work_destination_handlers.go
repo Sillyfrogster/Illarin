@@ -10,24 +10,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) ListAssetUpdateDestinations(c *gin.Context) {
+func (h *Handlers) ListWorkUpdateDestinations(c *gin.Context) {
 	owner, ok := api.SignedIn(c, "reading your update destinations")
 	if !ok {
 		return
 	}
 	found, err := h.updateDestinations.List(c.Request.Context(), owner.ID)
 	if err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
-	listed := make([]AssetUpdateDestination, 0, len(found))
+	listed := make([]WorkUpdateDestination, 0, len(found))
 	for _, one := range found {
-		listed = append(listed, toAssetUpdateDestination(one))
+		listed = append(listed, toWorkUpdateDestination(one))
 	}
-	c.JSON(http.StatusOK, AssetUpdateDestinationList{Destinations: listed})
+	c.JSON(http.StatusOK, WorkUpdateDestinationList{Destinations: listed})
 }
 
-func (h *Handlers) GetAssetUpdateDestination(c *gin.Context) {
+func (h *Handlers) GetWorkUpdateDestination(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -38,18 +38,18 @@ func (h *Handlers) GetAssetUpdateDestination(c *gin.Context) {
 	}
 	found, err := h.updateDestinations.Get(c.Request.Context(), owner.ID, id)
 	if err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAssetUpdateDestination(found))
+	c.JSON(http.StatusOK, toWorkUpdateDestination(found))
 }
 
-func (h *Handlers) AddAssetUpdateDestination(c *gin.Context) {
+func (h *Handlers) AddWorkUpdateDestination(c *gin.Context) {
 	owner, ok := api.Verified(c, "configuring update destinations")
 	if !ok {
 		return
 	}
-	var request AddAssetUpdateDestinationRequest
+	var request AddWorkUpdateDestinationRequest
 	if !api.ReadBoundedJSON(c, &request, 4096, "The destination configuration is too large.") {
 		return
 	}
@@ -57,26 +57,26 @@ func (h *Handlers) AddAssetUpdateDestination(c *gin.Context) {
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Enter the destination address.", "address")
 		return
 	}
-	added, err := h.updateDestinations.Add(c.Request.Context(), owner.ID, string(request.Kind), request.Name, *request.Address)
+	added, err := h.updateDestinations.Add(c.Request.Context(), owner.ID, string(request.Type), request.Name, *request.Address)
 	if err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
-	answer := AddedAssetUpdateDestination{Destination: toAssetUpdateDestination(added.Destination)}
+	answer := AddedWorkUpdateDestination{Destination: toWorkUpdateDestination(added.Destination)}
 	if added.Secret != "" {
 		answer.Secret = &added.Secret
 	}
 	c.JSON(http.StatusCreated, answer)
 }
 
-func (h *Handlers) assetDestinationError(c *gin.Context, err error) {
+func (h *Handlers) workDestinationError(c *gin.Context, err error) {
 	var field FieldError
 	switch {
 	case errors.Is(err, ErrNotFound), errors.Is(err, work.ErrNotFound):
 		c.Status(http.StatusNotFound)
 	case errors.Is(err, ErrChanged):
 		api.Refuse(c, http.StatusConflict, "The destination changed. Check its configuration and try again.")
-	case errors.Is(err, work.ErrAssetFrozen):
+	case errors.Is(err, work.ErrWorkFrozen):
 		api.Refuse(c, http.StatusConflict, "This asset is frozen while it is withheld.")
 	case errors.Is(err, version.ErrUpdateDestinationIneligible):
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Choose only your own verified, active destinations.", "destinationIds")
@@ -87,7 +87,7 @@ func (h *Handlers) assetDestinationError(c *gin.Context, err error) {
 	}
 }
 
-func (h *Handlers) VerifyAssetUpdateDestination(c *gin.Context) {
+func (h *Handlers) VerifyWorkUpdateDestination(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -98,13 +98,13 @@ func (h *Handlers) VerifyAssetUpdateDestination(c *gin.Context) {
 	}
 	found, err := h.updateDestinations.Verify(c.Request.Context(), owner.ID, id)
 	if err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAssetUpdateDestination(found))
+	c.JSON(http.StatusOK, toWorkUpdateDestination(found))
 }
 
-func (h *Handlers) UpdateAssetUpdateDestination(c *gin.Context) {
+func (h *Handlers) UpdateWorkUpdateDestination(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -113,19 +113,19 @@ func (h *Handlers) UpdateAssetUpdateDestination(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request UpdateAssetUpdateDestinationRequest
+	var request UpdateWorkUpdateDestinationRequest
 	if !api.ReadBoundedJSON(c, &request, 4096, "The destination configuration is too large.") {
 		return
 	}
 	found, err := h.updateDestinations.Update(c.Request.Context(), owner.ID, id, request.Name, request.Address)
 	if err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAssetUpdateDestination(found))
+	c.JSON(http.StatusOK, toWorkUpdateDestination(found))
 }
 
-func (h *Handlers) DisableAssetUpdateDestination(c *gin.Context) {
+func (h *Handlers) DisableWorkUpdateDestination(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -136,13 +136,13 @@ func (h *Handlers) DisableAssetUpdateDestination(c *gin.Context) {
 	}
 	found, err := h.updateDestinations.Disable(c.Request.Context(), owner.ID, id)
 	if err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAssetUpdateDestination(found))
+	c.JSON(http.StatusOK, toWorkUpdateDestination(found))
 }
 
-func (h *Handlers) RemoveAssetUpdateDestination(c *gin.Context) {
+func (h *Handlers) RemoveWorkUpdateDestination(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -152,13 +152,13 @@ func (h *Handlers) RemoveAssetUpdateDestination(c *gin.Context) {
 		return
 	}
 	if err := h.updateDestinations.Remove(c.Request.Context(), owner.ID, id); err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) RotateAssetUpdateDestinationSecret(c *gin.Context) {
+func (h *Handlers) RotateWorkUpdateDestinationSecret(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -169,13 +169,13 @@ func (h *Handlers) RotateAssetUpdateDestinationSecret(c *gin.Context) {
 	}
 	added, err := h.updateDestinations.RotateSecret(c.Request.Context(), owner.ID, id)
 	if err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, AddedAssetUpdateDestination{Destination: toAssetUpdateDestination(added.Destination), Secret: &added.Secret})
+	c.JSON(http.StatusOK, AddedWorkUpdateDestination{Destination: toWorkUpdateDestination(added.Destination), Secret: &added.Secret})
 }
 
-func (h *Handlers) ListAssetUpdateDestinationChoices(c *gin.Context) {
+func (h *Handlers) ListWorkUpdateDestinationChoices(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -186,17 +186,17 @@ func (h *Handlers) ListAssetUpdateDestinationChoices(c *gin.Context) {
 	}
 	found, err := h.updateDestinations.UpdateDestinations(c.Request.Context(), owner.ID, id)
 	if err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
-	choices := make([]AssetUpdateDestinationChoice, 0, len(found))
+	choices := make([]WorkUpdateDestinationChoice, 0, len(found))
 	for _, one := range found {
-		choices = append(choices, AssetUpdateDestinationChoice{Id: one.ID, Name: one.Name, Kind: AssetUpdateDestinationKind(one.Kind), ByDefault: one.ByDefault})
+		choices = append(choices, WorkUpdateDestinationChoice{Id: one.ID, Name: one.Name, Type: WorkUpdateDestinationType(one.Type), ByDefault: one.ByDefault})
 	}
-	c.JSON(http.StatusOK, AssetUpdateDestinationChoices{Destinations: choices})
+	c.JSON(http.StatusOK, WorkUpdateDestinationChoices{Destinations: choices})
 }
 
-func (h *Handlers) SetAssetUpdateDestinationDefaults(c *gin.Context) {
+func (h *Handlers) SetWorkUpdateDestinationDefaults(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -205,7 +205,7 @@ func (h *Handlers) SetAssetUpdateDestinationDefaults(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request AssetUpdateDestinationDefaultsRequest
+	var request WorkUpdateDestinationDefaultsRequest
 	if !api.ReadBoundedJSON(c, &request, 4096, "The destination selection is too large.") {
 		return
 	}
@@ -214,26 +214,26 @@ func (h *Handlers) SetAssetUpdateDestinationDefaults(c *gin.Context) {
 		return
 	}
 	if err := h.updateDestinations.SetUpdateDestinations(c.Request.Context(), owner.ID, id, readIDs(&request.DestinationIds)); err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-func toAssetUpdateDestination(d Destination) AssetUpdateDestination {
-	answer := AssetUpdateDestination{
-		Id: d.ID, Name: d.Name, Kind: AssetUpdateDestinationKind(d.Kind), Host: d.Host,
-		Address: d.Address, State: AssetUpdateDestinationState(d.State), CreatedAt: d.CreatedAt,
+func toWorkUpdateDestination(d Destination) WorkUpdateDestination {
+	answer := WorkUpdateDestination{
+		Id: d.ID, Name: d.Name, Type: WorkUpdateDestinationType(d.Type), Host: d.Host,
+		Address: d.Address, State: WorkUpdateDestinationState(d.State), CreatedAt: d.CreatedAt,
 		SecretSetAt: d.SecretSetAt, PreviousSecretUntil: d.PreviousSecretUntil,
 		VerifiedAt: d.VerifiedAt, DisabledAt: d.DisabledAt,
 	}
 	if d.GuildID != nil && d.ChannelID != nil {
-		answer.Channel = &AssetUpdateChannel{GuildId: *d.GuildID, ChannelId: *d.ChannelID}
+		answer.Channel = &WorkUpdateChannel{GuildId: *d.GuildID, ChannelId: *d.ChannelID}
 	}
 	return answer
 }
 
-func (h *Handlers) ListAssetUpdateAnnouncements(c *gin.Context) {
+func (h *Handlers) ListWorkUpdateAnnouncements(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -244,32 +244,32 @@ func (h *Handlers) ListAssetUpdateAnnouncements(c *gin.Context) {
 	}
 	sent, err := h.updateDestinations.Announcements(c.Request.Context(), owner.ID, id)
 	if err != nil {
-		h.assetDestinationError(c, err)
+		h.workDestinationError(c, err)
 		return
 	}
-	listed := make([]AssetUpdateAnnouncement, 0, len(sent))
+	listed := make([]WorkUpdateAnnouncement, 0, len(sent))
 	for _, one := range sent {
-		listed = append(listed, toAssetUpdateAnnouncement(one))
+		listed = append(listed, toWorkUpdateAnnouncement(one))
 	}
-	c.JSON(http.StatusOK, AssetUpdateAnnouncementList{Announcements: listed})
+	c.JSON(http.StatusOK, WorkUpdateAnnouncementList{Announcements: listed})
 }
 
-func toAssetUpdateAnnouncement(one Announcement) AssetUpdateAnnouncement {
-	shown := AssetUpdateAnnouncement{
+func toWorkUpdateAnnouncement(one Announcement) WorkUpdateAnnouncement {
+	shown := WorkUpdateAnnouncement{
 		Id: one.ID, EventId: one.EventID, UpdateId: one.UpdateID, UpdateNumber: one.UpdateNumber,
-		Destination: one.Destination, Kind: AssetUpdateDestinationKind(one.Kind),
-		Removed: one.Removed, State: AssetUpdateAnnouncementState(one.State),
+		Destination: one.Destination, Type: WorkUpdateDestinationType(one.Type),
+		Removed: one.Removed, State: WorkUpdateAnnouncementState(one.State),
 		MessageId: one.MessageID, Run: one.Run, Attempts: one.Attempts,
 		OccurredAt: one.OccurredAt, DueAt: one.DueAt, SettledAt: one.SettledAt,
 	}
 	if one.SettledReason != "" {
-		reason := AssetUpdateAnnouncementSettledReason(one.SettledReason)
+		reason := WorkUpdateAnnouncementSettledReason(one.SettledReason)
 		shown.SettledReason = &reason
 	}
 	if one.Last != nil {
-		shown.Last = &AssetUpdateAnnouncementAttempt{
+		shown.Last = &WorkUpdateAnnouncementAttempt{
 			Run: one.Last.Run, Number: one.Last.Number,
-			Outcome: AssetUpdateAnnouncementAttemptOutcome(one.Last.Outcome),
+			Outcome: WorkUpdateAnnouncementAttemptOutcome(one.Last.Outcome),
 			Status:  one.Last.Status, Detail: one.Last.Detail,
 			TookMs: int(one.Last.Took.Milliseconds()), AttemptedAt: one.Last.Attempted,
 		}

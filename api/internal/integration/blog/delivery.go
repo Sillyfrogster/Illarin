@@ -57,7 +57,7 @@ type Delivery struct {
 	PostTitle     string
 	RevisionID    uuid.UUID
 	Destination   string
-	Kind          string
+	Type          string
 	Removed       bool
 	State         string
 	SettledReason string
@@ -147,7 +147,7 @@ func (s *Service) ReplayDelivery(
 	if held.Removed {
 		return Delivery{}, ErrDeliveryUnsendable
 	}
-	if held.Kind == KindDiscord && (held.State == DeliveryUnconfirmed || held.MessageID != "") {
+	if held.Type == TypeDiscord && (held.State == DeliveryUnconfirmed || held.MessageID != "") {
 		return Delivery{}, FieldError{Field: "delivery", Message: "Check the Discord message and use an explicit repair action."}
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -196,7 +196,7 @@ func (s *Service) QueueDeliveries(
 	chosen []Sending,
 ) error {
 	for _, one := range chosen {
-		if one.Kind == KindDiscord && event == EventPublished {
+		if one.Type == TypeDiscord && event == EventPublished {
 			summary, err := s.Summary(ctx, tx, eventID)
 			if err != nil {
 				return err
@@ -217,12 +217,12 @@ func (s *Service) QueueDeliveries(
 			select $1, $2, destination.id, $4, $6
 			  from publication_destinations destination
 			 where destination.id = $3 and $5 = any (destination.events)
-			   and (destination.kind <> $7 or not exists (
+			   and (destination.type <> $7 or not exists (
 			         select 1 from publication_deliveries already
 			           join publication_events sent on sent.id = already.event_id
 			          where sent.post_id = $8 and already.destination_id = destination.id))
 			on conflict do nothing
-		`, uuid.New(), eventID, one.ID, one.Name, event, one.Ping, KindDiscord, postID)
+		`, uuid.New(), eventID, one.ID, one.Name, event, one.Ping, TypeDiscord, postID)
 		if err != nil {
 			return fmt.Errorf("keep the delivery work: %w", err)
 		}
@@ -284,14 +284,14 @@ func (s *Service) sendLeased(ctx context.Context, work dispatch.Work, now time.T
 	if held.DestinationID == nil {
 		return s.ledger.Record(ctx, held.Work, dispatch.Stopped(SettledRemoved), now)
 	}
-	kind, state, err := s.destinationStanding(ctx, *held.DestinationID)
+	destinationType, state, err := s.destinationStanding(ctx, *held.DestinationID)
 	if err != nil {
 		return err
 	}
 	if state != DestinationActive {
 		return s.ledger.Record(ctx, held.Work, dispatch.Stopped(SettledDisabled), now)
 	}
-	if kind == KindDiscord {
+	if destinationType == TypeDiscord {
 		return s.announceOnDiscord(ctx, held, *held.DestinationID, now)
 	}
 	body, err := s.eventBody(ctx, held.EventID)
@@ -322,22 +322,22 @@ func (s *Service) sendLeased(ctx context.Context, work dispatch.Work, now time.T
 }
 
 func (s *Service) destinationStanding(ctx context.Context, id uuid.UUID) (string, string, error) {
-	var kind, state string
+	var destinationType, state string
 	err := s.pool.QueryRow(ctx, `
-		select kind, state from publication_destinations where id = $1
-	`, id).Scan(&kind, &state)
+		select type, state from publication_destinations where id = $1
+	`, id).Scan(&destinationType, &state)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", "", nil
 	}
 	if err != nil {
 		return "", "", fmt.Errorf("read whether a destination still receives: %w", err)
 	}
-	return kind, state, nil
+	return destinationType, state, nil
 }
 
 const selectDeliveries = `
 	select work.id, event.id, event.type, event.post_id, revision.title, event.revision_id,
-	       work.destination_name, coalesce(destination.kind, ''),
+	       work.destination_name, coalesce(destination.type, ''),
 	       work.destination_id is null, work.state,
 	       coalesce(work.settled_reason, ''), coalesce(work.message_id, ''),
 	       work.run, work.attempts,
@@ -368,7 +368,7 @@ func collectDeliveries(rows pgx.Rows) ([]Delivery, error) {
 		var attempted *time.Time
 		err := rows.Scan(
 			&one.ID, &one.EventID, &one.EventType, &one.PostID, &one.PostTitle, &one.RevisionID,
-			&one.Destination, &one.Kind, &one.Removed, &one.State,
+			&one.Destination, &one.Type, &one.Removed, &one.State,
 			&one.SettledReason, &one.MessageID, &one.Run, &one.Attempts,
 			&one.OccurredAt, &one.DueAt, &one.SettledAt,
 			&run, &number, &outcome, &status, &detail, &took, &attempted,

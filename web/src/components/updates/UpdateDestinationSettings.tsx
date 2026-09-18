@@ -18,8 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Gate } from "@/components/ui/gate";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import {
-  type AssetUpdateDestination,
   readUpdateDestinations,
+  type WorkUpdateDestination,
 } from "@/lib/api/asset-destinations";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -31,7 +31,7 @@ import {
 import { DestinationEditor } from "./DestinationEditor";
 
 const STATES: Record<
-  AssetUpdateDestination["state"],
+  WorkUpdateDestination["state"],
   { icon: typeof CircleCheck; tone: Tone; word: string }
 > = {
   active: { icon: CircleCheck, tone: "accent", word: "Ready" },
@@ -72,7 +72,7 @@ export function UpdateDestinationSettings() {
 
 function DestinationManager() {
   const [destinations, setDestinations] = useState<
-    AssetUpdateDestination[] | null
+    WorkUpdateDestination[] | null
   >(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<{
@@ -96,7 +96,7 @@ function DestinationManager() {
     return () => controller.abort();
   }, [load]);
 
-  function saved(destination: AssetUpdateDestination) {
+  function saved(destination: WorkUpdateDestination) {
     setEditing((current) =>
       current ? { ...current, id: destination.id } : current,
     );
@@ -223,7 +223,7 @@ function DestinationRow({
   onOpen,
   open,
 }: {
-  one: AssetUpdateDestination;
+  one: WorkUpdateDestination;
   onOpen: () => void;
   open: boolean;
 }) {

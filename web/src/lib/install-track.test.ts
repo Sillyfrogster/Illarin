@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import type { AssetInstance, QueuedDelivery } from "@/lib/api/query";
+import type { QueuedDelivery, WorkInstance } from "@/lib/api/query";
 import { installTrack } from "@/lib/install-track";
 
-function instance(overrides: Partial<AssetInstance> = {}): AssetInstance {
+function instance(overrides: Partial<WorkInstance> = {}): WorkInstance {
   return {
     instanceId: "i1",
     applicationName: "Lumiverse",

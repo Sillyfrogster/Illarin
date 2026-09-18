@@ -376,14 +376,14 @@ func inspectPNG(reader *rangeReaderAt, result *Inspection) error {
 			return fmt.Errorf("inspect PNG chunk at byte %d: %w", offset, err)
 		}
 		length := int64(binary.BigEndian.Uint32(header[:4]))
-		kind := string(header[4:])
+		workType := string(header[4:])
 		end := offset + 12 + length
 		if end < offset || end > reader.size {
-			return fmt.Errorf("inspect PNG: %s chunk at byte %d is truncated", kind, offset)
+			return fmt.Errorf("inspect PNG: %s chunk at byte %d is truncated", workType, offset)
 		}
 
-		chunk := PNGChunk{Type: kind, Offset: offset, Length: length}
-		if kind == "tEXt" {
+		chunk := PNGChunk{Type: workType, Offset: offset, Length: length}
+		if workType == "tEXt" {
 			data := make([]byte, length)
 			if _, err := reader.ReadAt(data, offset+8); err != nil {
 				return fmt.Errorf("read PNG text chunk at byte %d: %w", offset, err)
@@ -396,7 +396,7 @@ func inspectPNG(reader *rangeReaderAt, result *Inspection) error {
 		}
 		result.PNGChunks = append(result.PNGChunks, chunk)
 		offset = end
-		if kind == "IEND" {
+		if workType == "IEND" {
 			if offset != reader.size {
 				return fmt.Errorf("inspect PNG: %d bytes follow IEND", reader.size-offset)
 			}

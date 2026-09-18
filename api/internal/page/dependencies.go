@@ -17,25 +17,25 @@ type DependencyMatch struct {
 }
 
 type Dependency struct {
-	Name   string
-	Assets []DependencyMatch
+	Name  string
+	Works []DependencyMatch
 }
 
 // dependencySubject is the page whose dependencies are matched, and the format they are matched within
 type dependencySubject struct {
-	assetID    uuid.UUID
-	kind       string
+	workID     uuid.UUID
+	workType   string
 	format     string
-	visibility work.ContentVisibility
+	preference work.NSFWPreference
 }
 
-// extensionDependencies pairs each dependency the archive names with the listed assets whose identifier it refers to
+// extensionDependencies pairs each dependency the archive names with the listed works whose identifier it refers to
 func extensionDependencies(ctx context.Context, q db.DBTX, subject dependencySubject, blocks []block.Block) ([]Dependency, error) {
 	items := dependencyItems(blocks)
 	dependencies := make([]Dependency, len(items))
 	identifiers := make([]string, 0, len(items))
 	for i, item := range items {
-		dependencies[i] = Dependency{Name: item.Text, Assets: []DependencyMatch{}}
+		dependencies[i] = Dependency{Name: item.Text, Works: []DependencyMatch{}}
 		if item.Name != "" {
 			identifiers = append(identifiers, item.Name)
 		}
@@ -45,16 +45,16 @@ func extensionDependencies(ctx context.Context, q db.DBTX, subject dependencySub
 	}
 	rows, err := q.Query(ctx, `
 		select revision.identifier, listed.id, listed.name, coalesce(owner.username, 'unknown')
-		  from asset_public.assets listed
-		  join public.asset_revisions revision on revision.id = listed.current_revision_id
+		  from work_public.works listed
+		  join public.work_revisions revision on revision.id = listed.current_revision_id
 		  left join public.users owner on owner.id = listed.owner_id
 		 where revision.identifier = any($1::text[])
-		   and revision.format = $2 and listed.kind = $3 and listed.id <> $4
-		   and listed.lifecycle = 'published' and listed.discovery = 'listed'
+		   and revision.format = $2 and listed.type = $3 and listed.id <> $4
+		   and listed.lifecycle = 'published' and listed.visibility = 'listed'
 		   and listed.withheld_at is null and listed.deleted_at is null
 		   and ($5 <> 'hidden' or not listed.is_nsfw)
 		 order by listed.created_at, listed.id
-	`, identifiers, subject.format, subject.kind, subject.assetID, string(subject.visibility))
+	`, identifiers, subject.format, subject.workType, subject.workID, string(subject.preference))
 	if err != nil {
 		return nil, fmt.Errorf("match extension dependencies: %w", err)
 	}
@@ -73,7 +73,7 @@ func extensionDependencies(ctx context.Context, q db.DBTX, subject dependencySub
 	}
 	for i, item := range items {
 		if found, ok := matches[item.Name]; ok && item.Name != "" {
-			dependencies[i].Assets = found
+			dependencies[i].Works = found
 		}
 	}
 	return dependencies, nil

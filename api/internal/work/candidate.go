@@ -24,8 +24,8 @@ func (e *VersionConflict) Error() string {
 	return "This asset changed since you opened it. Keep your edits and reload the working copy to reconcile them."
 }
 
-func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.UUID) (string, error) {
-	kind, err := LockEditable(ctx, tx, ownerID, assetID)
+func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, workID uuid.UUID) (string, error) {
+	workType, err := LockEditable(ctx, tx, ownerID, workID)
 	if err != nil {
 		return "", err
 	}
@@ -33,18 +33,18 @@ func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, assetID uuid.U
 		return "", ErrVersionRequired
 	}
 	var current int64
-	if err := tx.QueryRow(ctx, `select working_copy_version from assets where id = $1`, assetID).Scan(&current); err != nil {
+	if err := tx.QueryRow(ctx, `select working_copy_version from works where id = $1`, workID).Scan(&current); err != nil {
 		return "", fmt.Errorf("read working-copy version: %w", err)
 	}
 	if c.Version != current {
 		return "", &VersionConflict{CurrentVersion: current}
 	}
-	return kind, nil
+	return workType, nil
 }
 
-func (c *Candidate) Commit(ctx context.Context, tx pgx.Tx, assetID uuid.UUID) error {
+func (c *Candidate) Commit(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
 	var version int64
-	if err := tx.QueryRow(ctx, `update assets set working_copy_version = working_copy_version + 1 where id = $1 returning working_copy_version`, assetID).Scan(&version); err != nil {
+	if err := tx.QueryRow(ctx, `update works set working_copy_version = working_copy_version + 1 where id = $1 returning working_copy_version`, workID).Scan(&version); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -58,16 +58,16 @@ func LockEditable(
 	ctx context.Context,
 	tx pgx.Tx,
 	ownerID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) (string, error) {
-	var kind string
+	var workType string
 	var withheld bool
 	err := tx.QueryRow(ctx, `
-		select kind, withheld_at is not null
-		  from assets
+		select type, withheld_at is not null
+		  from works
 		 where id = $1 and owner_id = $2 and deleted_at is null
 		 for update
-	`, assetID, ownerID).Scan(&kind, &withheld)
+	`, workID, ownerID).Scan(&workType, &withheld)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}
@@ -75,7 +75,7 @@ func LockEditable(
 		return "", fmt.Errorf("read block owner: %w", err)
 	}
 	if withheld {
-		return "", ErrAssetFrozen
+		return "", ErrWorkFrozen
 	}
-	return kind, nil
+	return workType, nil
 }

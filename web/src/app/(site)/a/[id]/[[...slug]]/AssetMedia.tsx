@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
 import { ImageZoom } from "@/components/ui/image-zoom";
-import type { AssetImage, BrowseKind, NsfwVisibility } from "@/lib/api/query";
+import type { BrowseKind, NsfwVisibility, WorkImage } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import {
@@ -18,7 +18,7 @@ import { CoverControl } from "./CoverControl";
 
 interface AssetMediaProps {
   id: string;
-  media: AssetImage[];
+  media: WorkImage[];
   kind: BrowseKind;
   kindLabel: string;
   name: string;
@@ -30,7 +30,7 @@ interface AssetMediaProps {
 /** The roles the header shows, leaving a gallery in the creator's own block. */
 const COVER_ROLES = new Set(["avatar", "avatar_alt"]);
 
-export function coverMedia(media: AssetImage[]): AssetImage[] {
+export function coverMedia(media: WorkImage[]): WorkImage[] {
   return media.filter((image) => COVER_ROLES.has(image.role));
 }
 

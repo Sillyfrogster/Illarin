@@ -25,7 +25,7 @@ import (
 
 var (
 	errIngestLeaseLost = errors.New("ingest lease lost")
-	errWrongKind       = errors.New("revision resolves to a different kind")
+	errWrongType       = errors.New("revision resolves to a different type")
 )
 
 func (s *Service) RunIngestWorkers(ctx context.Context, count int, report func(error)) {
@@ -74,7 +74,7 @@ type ingestJob struct {
 	Blurb      *string
 	Tags       []string
 	IsNSFW     *bool
-	Discovery  work.Discovery
+	Visibility work.Visibility
 	ByteSize   int64
 	Attempts   int
 	Target     *revisionTarget
@@ -82,18 +82,18 @@ type ingestJob struct {
 
 type revisionTarget struct {
 	Version int64
-	AssetID uuid.UUID
-	Kind    string
+	WorkID  uuid.UUID
+	Type    string
 }
 
 type preparedIngest struct {
-	Kind          string
+	Type          string
 	Format        string
 	Name          string
 	Blurb         string
 	Tags          []string
 	IsNSFW        bool
-	Discovery     work.Discovery
+	Visibility    work.Visibility
 	Blocks        []block.Block
 	SuppliedRoles []block.Role
 	Header        format.Header
@@ -117,7 +117,7 @@ type preparedImport struct {
 func (s *Service) readImport(
 	ctx context.Context,
 	inspected format.Inspection,
-	expectedKind string,
+	expectedType string,
 ) (preparedImport, error) {
 	resolution, claimed, err := s.reg.Resolve(inspected)
 	if err != nil {
@@ -159,10 +159,10 @@ func (s *Service) readImport(
 		}
 		return preparedImport{}, format.MalformedInput(err)
 	}
-	if parsed.Kind != declaration.Kind {
+	if parsed.Type != declaration.Type {
 		return preparedImport{}, format.InternalFailure(fmt.Errorf(
 			"module %q parsed kind %q instead of declared kind %q",
-			resolution.Module.ID(), parsed.Kind, declaration.Kind,
+			resolution.Module.ID(), parsed.Type, declaration.Type,
 		))
 	}
 	if parsed.Format != declaration.ID {
@@ -171,14 +171,14 @@ func (s *Service) readImport(
 			resolution.Module.ID(), parsed.Format,
 		))
 	}
-	if expectedKind != "" && parsed.Kind != expectedKind {
-		return preparedImport{}, errWrongKind
+	if expectedType != "" && parsed.Type != expectedType {
+		return preparedImport{}, errWrongType
 	}
-	if _, ok := block.Catalog(parsed.Kind); !ok {
-		return preparedImport{}, ErrKindNotBuildable
+	if _, ok := block.Definitions(parsed.Type); !ok {
+		return preparedImport{}, ErrTypeNotBuildable
 	}
 
-	extracted, err := s.assets.PrepareExtractedMedia(ctx, inspected, parsed.Media)
+	extracted, err := s.works.PrepareExtractedMedia(ctx, inspected, parsed.Media)
 	if err != nil {
 		return preparedImport{}, err
 	}
@@ -186,7 +186,7 @@ func (s *Service) readImport(
 	if err := block.ValidateContentLimits(elements); err != nil {
 		return preparedImport{}, format.LimitExceeded(err)
 	}
-	blocks, err := block.Place(parsed.Kind, elements)
+	blocks, err := block.Place(parsed.Type, elements)
 	if err != nil {
 		return preparedImport{}, fmt.Errorf("place imported content: %w", err)
 	}
@@ -260,20 +260,20 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		}
 		return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
 	}
-	expectedKind := ""
+	expectedType := ""
 	if job.Target != nil {
-		expectedKind = job.Target.Kind
+		expectedType = job.Target.Type
 	}
-	read, err := s.readImport(ctx, inspected, expectedKind)
+	read, err := s.readImport(ctx, inspected, expectedType)
 	if err != nil {
 		if err == format.ErrUnsupportedFormat {
 			return true, s.finishIngestFailure(ctx, job, format.FailureUnsupportedFormat)
 		}
 		reason := work.MediaIngestFailure(err)
-		if errors.Is(err, errWrongKind) {
-			reason = format.FailureWrongKind
+		if errors.Is(err, errWrongType) {
+			reason = format.FailureWrongType
 		}
-		if errors.Is(err, format.ErrUnsupportedFormat) || errors.Is(err, ErrKindNotBuildable) {
+		if errors.Is(err, format.ErrUnsupportedFormat) || errors.Is(err, ErrTypeNotBuildable) {
 			reason = format.FailureUnsupportedFormat
 		}
 		if classified, ok := format.FailureOf(err); ok {
@@ -288,8 +288,8 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 	}
 
 	prepared, err := prepareIngest(job, read.Parsed)
-	if errors.Is(err, errWrongKind) {
-		return true, s.finishIngestFailure(ctx, job, format.FailureWrongKind)
+	if errors.Is(err, errWrongType) {
+		return true, s.finishIngestFailure(ctx, job, format.FailureWrongType)
 	}
 	if err != nil {
 		return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
@@ -311,7 +311,7 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		if errors.As(err, &conflict) || errors.Is(err, work.ErrVersionRequired) {
 			return true, s.failIngest(ctx, job, "working_copy_conflict", "The working copy changed. Review it before accepting the upload again.")
 		}
-		if errors.Is(err, work.ErrAssetFrozen) || errors.Is(err, work.ErrNotFound) {
+		if errors.Is(err, work.ErrWorkFrozen) || errors.Is(err, work.ErrNotFound) {
 			return true, s.failIngest(ctx, job, "asset_unavailable", "This asset is no longer available for changes.")
 		}
 		if errors.Is(err, work.ErrStorageCap) {
@@ -363,22 +363,22 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 		 where operation.id = candidate.id
 		returning operation.id, operation.owner_id, operation.blob_id,
 		          operation.filename, operation.name, operation.blurb,
-		          operation.tags, operation.is_nsfw, operation.discovery,
+		          operation.tags, operation.is_nsfw, operation.visibility,
 		          operation.attempts,
 		          (select byte_size from blobs where id = operation.blob_id),
-		          operation.target_asset_id,
-		          (select kind from assets where id = operation.target_asset_id), coalesce(operation.candidate_version, 0)
+		          operation.target_work_id,
+		          (select type from works where id = operation.target_work_id), coalesce(operation.candidate_version, 0)
 	`, now, leaseToken, leaseExpires)
 
 	var job ingestJob
-	var name, blurb, targetKind pgtype.Text
+	var name, blurb, targetType pgtype.Text
 	var isNSFW pgtype.Bool
-	var targetAssetID pgtype.UUID
+	var targetWorkID pgtype.UUID
 	var candidateVersion int64
 	err := row.Scan(
 		&job.ID, &job.OwnerID, &job.BlobID, &job.Filename, &name, &blurb,
-		&job.Tags, &isNSFW, &job.Discovery, &job.Attempts, &job.ByteSize,
-		&targetAssetID, &targetKind, &candidateVersion,
+		&job.Tags, &isNSFW, &job.Visibility, &job.Attempts, &job.ByteSize,
+		&targetWorkID, &targetType, &candidateVersion,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ingestJob{}, false, nil
@@ -387,12 +387,12 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 		return ingestJob{}, false, fmt.Errorf("lease ingest: %w", err)
 	}
 	job.LeaseToken = leaseToken
-	if targetAssetID.Valid {
-		if !targetKind.Valid {
-			return ingestJob{}, false, fmt.Errorf("ingest %s targets a missing asset", job.ID)
+	if targetWorkID.Valid {
+		if !targetType.Valid {
+			return ingestJob{}, false, fmt.Errorf("ingest %s targets a missing work", job.ID)
 		}
 		job.Target = &revisionTarget{
-			AssetID: uuidFromPgtype(targetAssetID), Kind: targetKind.String, Version: candidateVersion,
+			WorkID: uuidFromPgtype(targetWorkID), Type: targetType.String, Version: candidateVersion,
 		}
 	}
 	job.Name = textToPointer(name)
@@ -404,12 +404,12 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 }
 
 func prepareIngest(job ingestJob, parsed format.Parsed) (preparedIngest, error) {
-	kind := parsed.Kind
-	if kind == "" {
-		return preparedIngest{}, errors.New("claimed format did not declare a kind")
+	workType := parsed.Type
+	if workType == "" {
+		return preparedIngest{}, errors.New("claimed format did not declare a type")
 	}
-	if job.Target != nil && kind != job.Target.Kind {
-		return preparedIngest{}, errWrongKind
+	if job.Target != nil && workType != job.Target.Type {
+		return preparedIngest{}, errWrongType
 	}
 
 	name := parsed.Header.Name
@@ -435,13 +435,13 @@ func prepareIngest(job ingestJob, parsed format.Parsed) (preparedIngest, error) 
 		isNSFW = *job.IsNSFW
 	}
 	return preparedIngest{
-		Kind: kind, Format: parsed.Format,
+		Type: workType, Format: parsed.Format,
 		Name: name, Blurb: blurb, Tags: tags, IsNSFW: isNSFW,
-		Discovery: job.Discovery,
-		Header:    parsed.Header,
-		Remainder: parsed.Remainder,
-		Protected: parsed.Protected,
-		CreatedAt: parsed.CreatedAt,
+		Visibility: job.Visibility,
+		Header:     parsed.Header,
+		Remainder:  parsed.Remainder,
+		Protected:  parsed.Protected,
+		CreatedAt:  parsed.CreatedAt,
 	}, nil
 }
 
@@ -529,20 +529,20 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 	for _, media := range prepared.Media {
 		candidates = append(candidates, media.BlobID)
 	}
-	if err := s.assets.EnsureAccountStorage(ctx, tx, job.OwnerID, candidates); err != nil {
+	if err := s.works.EnsureAccountStorage(ctx, tx, job.OwnerID, candidates); err != nil {
 		return err
 	}
 
-	assetID, err := s.writeIngestResult(ctx, tx, job, prepared)
+	workID, err := s.writeIngestResult(ctx, tx, job, prepared)
 	if err != nil {
 		return err
 	}
 	result, err := tx.Exec(ctx, `
 		update ingest_operations
-		   set status = 'success', asset_id = $3, blob_id = null,
+		   set status = 'success', work_id = $3, blob_id = null,
 		       lease_token = null, lease_expires_at = null, updated_at = $4
 		 where id = $1 and lease_token = $2 and status = 'processing'
-	`, job.ID, job.LeaseToken, assetID, s.now())
+	`, job.ID, job.LeaseToken, workID, s.now())
 	if err != nil {
 		return fmt.Errorf("finish ingest operation: %w", err)
 	}
@@ -551,7 +551,7 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 	}
 	if job.Target != nil {
 		candidate := &work.Candidate{Version: job.Target.Version}
-		if err := candidate.Commit(ctx, tx, job.Target.AssetID); err != nil {
+		if err := candidate.Commit(ctx, tx, job.Target.WorkID); err != nil {
 			return err
 		}
 	} else if err := tx.Commit(ctx); err != nil {
@@ -563,7 +563,7 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 func importProtectedPrompts(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	blocks []block.Block,
 	carried map[uuid.UUID]string,
 	imported format.ProtectedImport,
@@ -572,7 +572,7 @@ func importProtectedPrompts(
 		return nil
 	}
 	if err := private.ImportPromptFragments(
-		ctx, tx, assetID, blocks, carried, imported.Prompts, imported.Apps,
+		ctx, tx, workID, blocks, carried, imported.Prompts, imported.Apps,
 	); err != nil {
 		return fmt.Errorf("import protected prompts: %w", err)
 	}
@@ -599,24 +599,24 @@ func (s *Service) writeIngestResultWithDecisions(
 	blocks := prepared.Blocks
 	if job.Target != nil {
 		candidate := &work.Candidate{Version: job.Target.Version}
-		if _, err := candidate.Lock(ctx, tx, job.OwnerID, job.Target.AssetID); err != nil {
+		if _, err := candidate.Lock(ctx, tx, job.OwnerID, job.Target.WorkID); err != nil {
 			return uuid.Nil, err
 		}
-		existing, err := block.Read(ctx, tx, job.Target.AssetID)
+		existing, err := block.Read(ctx, tx, job.Target.WorkID)
 		if err != nil {
 			return uuid.Nil, err
 		}
-		carried, err := carriedPromptText(ctx, tx, job.Target.AssetID, existing, prepared.Remainder)
+		carried, err := carriedPromptText(ctx, tx, job.Target.WorkID, existing, prepared.Remainder)
 		if err != nil {
 			return uuid.Nil, err
 		}
 		blocks = mergeReplacementBlocks(existing, blocks, prepared.SuppliedRoles, decisions)
 		if !exposeProtected {
-			identities, err := stableItemNames(ctx, tx, job.Target.AssetID, prepared.Remainder)
+			identities, err := stableItemNames(ctx, tx, job.Target.WorkID, prepared.Remainder)
 			if err != nil {
 				return uuid.Nil, err
 			}
-			exposed, err := private.UnsealedReplacement(ctx, tx, job.Target.AssetID, blocks, identities, prepared.Protected.Prompts)
+			exposed, err := private.UnsealedReplacement(ctx, tx, job.Target.WorkID, blocks, identities, prepared.Protected.Prompts)
 			if err != nil {
 				return uuid.Nil, err
 			}
@@ -627,43 +627,43 @@ func (s *Service) writeIngestResultWithDecisions(
 		change := func() error {
 			return s.replaceContent(ctx, tx, job, prepared, existing, blocks, carried, decisions)
 		}
-		if err := s.assets.ChangeContent(ctx, tx, job.Target.AssetID, change); err != nil {
+		if err := s.works.ChangeContent(ctx, tx, job.Target.WorkID, change); err != nil {
 			return uuid.Nil, err
 		}
-		return job.Target.AssetID, nil
+		return job.Target.WorkID, nil
 	}
-	assetID := uuid.New()
+	workID := uuid.New()
 	isNSFW := prepared.IsNSFW
-	a := work.Asset{
-		ID: assetID, Kind: prepared.Kind, Format: prepared.Format,
+	a := work.Work{
+		ID: workID, Type: prepared.Type, Format: prepared.Format,
 		OriginFormat:   &prepared.Format,
-		AssetVersion:   prepared.Header.AssetVersion,
+		WorkVersion:    prepared.Header.WorkVersion,
 		CreditedAuthor: prepared.Header.CreditedAuthor, Nickname: prepared.Header.Nickname,
 		Name: prepared.Name, Blurb: prepared.Blurb, Tags: prepared.Tags,
-		IsNSFW: &isNSFW, Discovery: prepared.Discovery,
+		IsNSFW: &isNSFW, Visibility: prepared.Visibility,
 		Lifecycle: work.LifecycleDraft,
 	}
-	if _, err := work.InsertAsset(ctx, tx, a, job.OwnerID, prepared.CreatedAt); err != nil {
+	if _, err := work.InsertWork(ctx, tx, a, job.OwnerID, prepared.CreatedAt); err != nil {
 		return uuid.Nil, err
 	}
-	if err := block.Insert(ctx, tx, assetID, blocks); err != nil {
+	if err := block.Insert(ctx, tx, workID, blocks); err != nil {
 		return uuid.Nil, err
 	}
-	if err := replacePreservedData(ctx, tx, assetID, prepared.Remainder); err != nil {
+	if err := replacePreservedData(ctx, tx, workID, prepared.Remainder); err != nil {
 		return uuid.Nil, err
 	}
 	if err := importProtectedPrompts(
-		ctx, tx, assetID, blocks, nil, prepared.Protected,
+		ctx, tx, workID, blocks, nil, prepared.Protected,
 	); err != nil {
 		return uuid.Nil, err
 	}
-	if err := writeRevision(ctx, tx, assetID, 1, job, prepared); err != nil {
+	if err := writeRevision(ctx, tx, workID, 1, job, prepared); err != nil {
 		return uuid.Nil, err
 	}
-	if err := insertVaultPictures(ctx, tx, assetID, prepared.Vault); err != nil {
+	if err := insertVaultPictures(ctx, tx, workID, prepared.Vault); err != nil {
 		return uuid.Nil, err
 	}
-	return assetID, s.writeSummary(ctx, tx, assetID)
+	return workID, s.writeSummary(ctx, tx, workID)
 }
 
 func (s *Service) replaceContent(
@@ -678,40 +678,40 @@ func (s *Service) replaceContent(
 	if err := appendRevision(ctx, tx, job, prepared); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `delete from asset_blocks where asset_id = $1`, job.Target.AssetID); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_blocks where work_id = $1`, job.Target.WorkID); err != nil {
 		return fmt.Errorf("replace imported blocks: %w", err)
 	}
-	if err := block.Insert(ctx, tx, job.Target.AssetID, blocks); err != nil {
+	if err := block.Insert(ctx, tx, job.Target.WorkID, blocks); err != nil {
 		return err
 	}
-	remainder, err := retainUnrepresentableRemainder(ctx, tx, job.Target.AssetID, existing, prepared.Remainder, decisions)
+	remainder, err := retainUnrepresentableRemainder(ctx, tx, job.Target.WorkID, existing, prepared.Remainder, decisions)
 	if err != nil {
 		return err
 	}
-	if err := replacePreservedData(ctx, tx, job.Target.AssetID, remainder); err != nil {
+	if err := replacePreservedData(ctx, tx, job.Target.WorkID, remainder); err != nil {
 		return err
 	}
 	if len(prepared.Protected.Prompts) > 0 {
 		if err := importProtectedPrompts(
-			ctx, tx, job.Target.AssetID, blocks, carried, prepared.Protected,
+			ctx, tx, job.Target.WorkID, blocks, carried, prepared.Protected,
 		); err != nil {
 			return err
 		}
 	} else if err := private.SyncPromptFragments(
-		ctx, tx, job.Target.AssetID, blocks, nil,
+		ctx, tx, job.Target.WorkID, blocks, nil,
 	); err != nil {
 		return fmt.Errorf("reconcile protected prompts: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		update assets
-		   set origin_format = $2, asset_version = $3, credited_author = $4,
+		update works
+		   set origin_format = $2, work_version = $3, credited_author = $4,
 		       nickname = $5, updated_at = now()
 		 where id = $1
-	`, job.Target.AssetID, prepared.Format, prepared.Header.AssetVersion,
+	`, job.Target.WorkID, prepared.Format, prepared.Header.WorkVersion,
 		prepared.Header.CreditedAuthor, prepared.Header.Nickname); err != nil {
-		return fmt.Errorf("move asset origin: %w", err)
+		return fmt.Errorf("move work origin: %w", err)
 	}
-	if err := s.writeSummary(ctx, tx, job.Target.AssetID); err != nil {
+	if err := s.writeSummary(ctx, tx, job.Target.WorkID); err != nil {
 		return err
 	}
 	return nil
@@ -720,19 +720,19 @@ func (s *Service) replaceContent(
 func replacePreservedData(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	remainder []format.Remainder,
 ) error {
-	if _, err := tx.Exec(ctx, `delete from asset_preserved_data where asset_id = $1`, assetID); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_preserved_data where work_id = $1`, workID); err != nil {
 		return fmt.Errorf("replace preserved data: %w", err)
 	}
 	for _, item := range remainder {
 		if item.Namespace == "" || len(item.Payload) == 0 {
 			return errors.New("preserved data needs a namespace and payload")
 		}
-		owner := assetID
+		owner := workID
 		switch item.Owner {
-		case format.OwnerAsset:
+		case format.OwnerWork:
 		case format.OwnerElement, format.OwnerItem:
 			if item.OwnerID == uuid.Nil {
 				return fmt.Errorf("preserved %s names no %s to belong to", item.Namespace, item.Owner)
@@ -742,10 +742,10 @@ func replacePreservedData(
 			return fmt.Errorf("preserved %s belongs to %q", item.Namespace, item.Owner)
 		}
 		if _, err := tx.Exec(ctx, `
-			insert into asset_preserved_data
-			  (id, asset_id, owner_kind, owner_id, namespace, payload)
+			insert into work_preserved_data
+			  (id, work_id, owner_type, owner_id, namespace, payload)
 			values ($1, $2, $3, $4, $5, $6)
-		`, uuid.New(), assetID, string(item.Owner), owner, item.Namespace, item.Payload); err != nil {
+		`, uuid.New(), workID, string(item.Owner), owner, item.Namespace, item.Payload); err != nil {
 			return fmt.Errorf("preserve %s: %w", item.Namespace, err)
 		}
 	}
@@ -760,23 +760,23 @@ func appendRevision(
 ) error {
 	var next int
 	if err := tx.QueryRow(ctx, `
-		select coalesce(max(revision), 0) + 1 from asset_revisions where asset_id = $1
-	`, job.Target.AssetID).Scan(&next); err != nil {
+		select coalesce(max(revision), 0) + 1 from work_revisions where work_id = $1
+	`, job.Target.WorkID).Scan(&next); err != nil {
 		return fmt.Errorf("number the new revision: %w", err)
 	}
-	return writeRevision(ctx, tx, job.Target.AssetID, next, job, prepared)
+	return writeRevision(ctx, tx, job.Target.WorkID, next, job, prepared)
 }
 
 func writeRevision(
 	ctx context.Context,
 	tx pgx.Tx,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	number int,
 	job ingestJob,
 	prepared preparedIngest,
 ) error {
 	_, err := work.RecordRevision(ctx, tx, work.Revision{
-		AssetID: assetID, Number: number, BlobID: job.BlobID, MediaType: prepared.MediaType,
+		WorkID: workID, Number: number, BlobID: job.BlobID, MediaType: prepared.MediaType,
 		Format: prepared.Format, Identifier: prepared.Header.Identifier, Media: prepared.Media,
 	})
 	return err

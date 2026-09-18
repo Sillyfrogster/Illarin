@@ -13,7 +13,7 @@ var (
 	ErrProfileNotFound       = errors.New("profile does not exist")
 	ErrNotRestricted         = errors.New("profile is not restricted")
 	ErrInvalidReason         = errors.New("invalid restriction reason")
-	ErrAssetNotFound         = errors.New("asset not found")
+	ErrWorkNotFound          = errors.New("work not found")
 	ErrInvalidWithholdReason = errors.New("invalid withhold reason")
 )
 

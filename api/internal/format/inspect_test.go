@@ -345,12 +345,12 @@ func pngFile(chunks ...[]byte) []byte {
 	return file
 }
 
-func pngChunk(kind string, data []byte) []byte {
+func pngChunk(workType string, data []byte) []byte {
 	var chunk bytes.Buffer
 	_ = binary.Write(&chunk, binary.BigEndian, uint32(len(data)))
-	chunk.WriteString(kind)
+	chunk.WriteString(workType)
 	chunk.Write(data)
-	_ = binary.Write(&chunk, binary.BigEndian, crc32.ChecksumIEEE(append([]byte(kind), data...)))
+	_ = binary.Write(&chunk, binary.BigEndian, crc32.ChecksumIEEE(append([]byte(workType), data...)))
 	return chunk.Bytes()
 }
 

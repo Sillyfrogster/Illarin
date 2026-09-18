@@ -16,7 +16,7 @@ func TestACharacterBuiltFromNothingLandsOnItsTwoRequiredBlocks(t *testing.T) {
 
 	started := apitest.StartCharacter(t, r, session)
 
-	if started.Kind != "character" || started.Name != "" {
+	if started.Type != "character" || started.Name != "" {
 		t.Fatalf("started asset = %+v, want an unnamed character", started)
 	}
 	if len(started.Blocks) != 2 {
@@ -73,7 +73,7 @@ func TestACharacterBuiltFromNothingLandsOnItsTwoRequiredBlocks(t *testing.T) {
 	}
 }
 
-func TestAnAssetBuiltFromNothingStartsAsAnUnansweredDraft(t *testing.T) {
+func TestAnWorkBuiltFromNothingStartsAsAnUnansweredDraft(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 
@@ -134,7 +134,7 @@ func TestADraftIsInNoBrowseOrSearchResult(t *testing.T) {
 	}
 }
 
-func TestAKindIllarinCannotBuildIsRefusedRatherThanStarted(t *testing.T) {
+func TestATypeIllarinCannotBuildIsRefusedRatherThanStarted(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 
@@ -148,7 +148,7 @@ func TestAKindIllarinCannotBuildIsRefusedRatherThanStarted(t *testing.T) {
 	}
 }
 
-func TestStartingAnAssetNeedsAVerifiedAccount(t *testing.T) {
+func TestStartingAnWorkNeedsAVerifiedAccount(t *testing.T) {
 	t.Parallel()
 	r := harness.NewRouter(t)
 

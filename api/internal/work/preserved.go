@@ -17,19 +17,19 @@ type PreservedNamespace struct {
 func (s *Service) PreservedNamespaces(
 	ctx context.Context,
 	ownerID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) ([]PreservedNamespace, error) {
-	originFormat, err := s.preservedAssetOrigin(ctx, ownerID, assetID)
+	originFormat, err := s.preservedWorkOrigin(ctx, ownerID, workID)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := s.pool.Query(ctx, `
 		select namespace, sum(length(payload::text))::bigint, min(payload::text)
-		  from asset_preserved_data
-		 where asset_id = $1
+		  from work_preserved_data
+		 where work_id = $1
 		 group by namespace
 		 order by namespace
-	`, assetID)
+	`, workID)
 	if err != nil {
 		return nil, fmt.Errorf("read preserved namespaces: %w", err)
 	}
@@ -54,7 +54,7 @@ func (s *Service) PreservedNamespaces(
 func (s *Service) DeletePreservedNamespace(
 	ctx context.Context,
 	ownerID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 	namespace string,
 	candidate *Candidate,
 ) error {
@@ -64,44 +64,44 @@ func (s *Service) DeletePreservedNamespace(
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := candidate.Lock(ctx, tx, ownerID, assetID); err != nil {
+	if _, err := candidate.Lock(ctx, tx, ownerID, workID); err != nil {
 		return err
 	}
-	fingerprint, err := s.contentFingerprint(ctx, tx, assetID)
+	fingerprint, err := s.contentFingerprint(ctx, tx, workID)
 	if err != nil {
 		return err
 	}
 	result, err := tx.Exec(ctx, `
-		delete from asset_preserved_data where asset_id = $1 and namespace = $2
-	`, assetID, namespace)
+		delete from work_preserved_data where work_id = $1 and namespace = $2
+	`, workID, namespace)
 	if err != nil {
 		return fmt.Errorf("delete preserved %s: %w", namespace, err)
 	}
 	if result.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	if err := s.moveContentGeneration(ctx, tx, assetID, fingerprint); err != nil {
+	if err := s.moveContentGeneration(ctx, tx, workID, fingerprint); err != nil {
 		return err
 	}
-	return candidate.Commit(ctx, tx, assetID)
+	return candidate.Commit(ctx, tx, workID)
 }
 
-func (s *Service) preservedAssetOrigin(
+func (s *Service) preservedWorkOrigin(
 	ctx context.Context,
 	ownerID uuid.UUID,
-	assetID uuid.UUID,
+	workID uuid.UUID,
 ) (string, error) {
 	var origin *string
 	err := s.pool.QueryRow(ctx, `
 		select origin_format
-		  from assets
+		  from works
 		 where id = $1 and owner_id = $2 and deleted_at is null
-	`, assetID, ownerID).Scan(&origin)
+	`, workID, ownerID).Scan(&origin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}
 	if err != nil {
-		return "", fmt.Errorf("read asset origin: %w", err)
+		return "", fmt.Errorf("read work origin: %w", err)
 	}
 	if origin == nil {
 		return "", nil

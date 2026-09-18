@@ -9,9 +9,9 @@ import {
   SortableItemHandle,
 } from "@/components/ui/sortable";
 import {
-  type AssetElement,
-  type AssetImage,
   addAssetImage,
+  type WorkElement,
+  type WorkImage,
 } from "@/lib/api/query";
 import { useWorkingCopy } from "@/lib/working-copy";
 import { EntryTableEditor } from "./EntryTableEditor";
@@ -44,9 +44,9 @@ export function ElementFields({
 }: {
   assetId: string;
   chosen: string | null;
-  element: AssetElement;
-  images: AssetImage[];
-  onChange: (element: AssetElement) => void;
+  element: WorkElement;
+  images: WorkImage[];
+  onChange: (element: WorkElement) => void;
   onChoose: (key: string | null) => void;
   onImageAdded: () => void;
   pending: boolean;
@@ -238,7 +238,7 @@ function ImageEditor({
   pending,
 }: {
   assetId: string;
-  images: AssetImage[];
+  images: WorkImage[];
   isGallery: boolean;
   items: ImageItem[];
   mediaRole: "expression" | "gallery";
@@ -400,7 +400,7 @@ function ImageEditor({
   );
 }
 
-export function elementHint(type: AssetElement["type"]): string {
+export function elementHint(type: WorkElement["type"]): string {
   switch (type) {
     case "prose":
       return "Edit the text shown in this block.";

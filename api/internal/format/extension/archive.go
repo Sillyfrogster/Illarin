@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	Kind = "extension"
+	Type = "extension"
 
 	// MaxArchiveBytes is the largest extension archive Illarin accepts.
 	MaxArchiveBytes = 32 << 20

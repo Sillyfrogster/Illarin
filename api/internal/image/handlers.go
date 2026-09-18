@@ -45,9 +45,9 @@ func (h *Handlers) AddMedia(c *gin.Context) {
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
 	candidate := &work.Candidate{Version: version}
-	added, err := h.assets.AddMedia(c.Request.Context(), work.AddMediaInput{
+	added, err := h.works.AddMedia(c.Request.Context(), work.AddMediaInput{
 		OwnerID: owner.ID,
-		AssetID: id,
+		WorkID:  id,
 		Role:    work.MediaRole(metadata.Role),
 		File:    limitedFile,
 	}, candidate)
@@ -74,7 +74,7 @@ func (h *Handlers) ListMedia(c *gin.Context) {
 	if !ok {
 		return
 	}
-	found, err := h.assets.ListMedia(c.Request.Context(), id, viewerID)
+	found, err := h.works.ListMedia(c.Request.Context(), id, viewerID)
 	if errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no such asset")
 		return

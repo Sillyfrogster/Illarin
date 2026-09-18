@@ -82,10 +82,10 @@ func (SillyTavernModule) ID() string { return SillyTavernID }
 func (SillyTavernModule) Declaration() format.Declaration {
 	named := slotsByApp[SillyTavern]
 	return format.Declaration{
-		ID: SillyTavernID, Label: "SillyTavern preset", Kind: Kind,
+		ID: SillyTavernID, Label: "SillyTavern preset", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind:       format.RecognitionSignature,
+			Type:       format.RecognitionSignature,
 			Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				stPrompts: format.ValueArray, stOrder: format.ValueArray,
@@ -233,7 +233,7 @@ func (m SillyTavernModule) Parse(
 	}
 
 	return format.Parsed{
-		Kind: Kind, Format: SillyTavernID,
+		Type: Type, Format: SillyTavernID,
 		Elements: elements,
 		Remainder: sillyTavernPreservation.remainder(
 			source, leftovers,

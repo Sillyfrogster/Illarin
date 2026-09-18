@@ -24,23 +24,23 @@ func (s *Service) AcceptIngest(ctx context.Context, in IngestInput) (Operation, 
 	if in.Tags != nil {
 		tags = *in.Tags
 	}
-	discovery := in.Discovery
-	if discovery == "" {
-		discovery = work.DiscoveryListed
+	visibility := in.Visibility
+	if visibility == "" {
+		visibility = work.VisibilityListed
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Operation{}, fmt.Errorf("begin ingest acceptance: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	if err := s.assets.EnsureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
+	if err := s.works.EnsureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
 		return Operation{}, err
 	}
 	_, err = tx.Exec(ctx, `
 		insert into ingest_operations
-			(id, owner_id, blob_id, filename, status, name, blurb, tags, is_nsfw, discovery)
+			(id, owner_id, blob_id, filename, status, name, blurb, tags, is_nsfw, visibility)
 		values ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9)
-	`, id, in.OwnerID, stored.ID, in.Filename, in.Name, in.Blurb, tags, in.IsNSFW, discovery)
+	`, id, in.OwnerID, stored.ID, in.Filename, in.Name, in.Blurb, tags, in.IsNSFW, visibility)
 	if err != nil {
 		return Operation{}, fmt.Errorf("record ingest: %w", err)
 	}
@@ -51,14 +51,14 @@ func (s *Service) AcceptIngest(ctx context.Context, in IngestInput) (Operation, 
 }
 func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (Operation, error) {
 	var status Status
-	var assetID pgtype.UUID
+	var workID pgtype.UUID
 	var failureReason pgtype.Text
 	var failureMessage pgtype.Text
 	var replacementPreview []byte
 	err := s.pool.QueryRow(ctx, `
-		select status, asset_id, failure_reason, failure_message, replacement_preview
+		select status, work_id, failure_reason, failure_message, replacement_preview
 		  from ingest_operations where id = $1 and owner_id = $2
-	`, id, ownerID).Scan(&status, &assetID, &failureReason, &failureMessage, &replacementPreview)
+	`, id, ownerID).Scan(&status, &workID, &failureReason, &failureMessage, &replacementPreview)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Operation{}, ErrIngestNotFound
 	}
@@ -83,12 +83,12 @@ func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (Operati
 		}
 		operation.Preview = &staged.Preview
 	}
-	if assetID.Valid {
-		created, err := work.AssetByID(ctx, s.pool, uuidFromPgtype(assetID))
+	if workID.Valid {
+		created, err := work.WorkByID(ctx, s.pool, uuidFromPgtype(workID))
 		if err != nil {
 			return Operation{}, err
 		}
-		operation.Asset = &created
+		operation.Work = &created
 	}
 	return operation, nil
 }

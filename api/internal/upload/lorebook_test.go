@@ -42,7 +42,7 @@ func TestALorebookBlockSavesItsEntriesAndSaysHowManyItHolds(t *testing.T) {
 		t.Fatalf("save the book: status = %d: %s", response.Code, response.Body.String())
 	}
 
-	page := apitest.FetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedWork(t, r, session, started.ID)
 	var saved apitest.StartedBlock
 	for _, holder := range page.Blocks {
 		if holder.Definition == "lorebook" {
@@ -127,7 +127,7 @@ func TestAnExpressionSetKeepsTheNamesItsSourceSupplied(t *testing.T) {
 		t.Fatalf("save the expression set: status = %d: %s", response.Code, response.Body.String())
 	}
 
-	page := apitest.FetchStartedAsset(t, r, session, started.ID)
+	page := apitest.FetchStartedWork(t, r, session, started.ID)
 	for _, holder := range page.Blocks {
 		if holder.Definition != "expressions" {
 			continue

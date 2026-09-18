@@ -98,7 +98,7 @@ export default async function SettingsPage({
               className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
               id="update-destinations"
             >
-              Asset update destinations
+              Work update destinations
             </h2>
             <p className="mt-2 max-w-[52ch] font-prose text-ui text-mute">
               Connect a Discord channel or webhook, then choose defaults for

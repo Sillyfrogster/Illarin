@@ -12,16 +12,16 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 )
 
-func TestAReplacementWaitingForReviewIsFoundFromTheAssetItTargets(t *testing.T) {
+func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	t.Parallel()
-	r, session, assets := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
 	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, []byte("first bytes")), session))
-	if _, err := apitest.Uploads(assets).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process ingest: %v", err)
 	}
-	created := apitest.PollIngestAsset(t, r, session, upload.Header().Get("Location"))
+	created := apitest.PollIngestWork(t, r, session, upload.Header().Get("Location"))
 	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/assets/"+created.ID+"/publish", nil), session))
 	if published.Code != http.StatusOK {
@@ -40,7 +40,7 @@ func TestAReplacementWaitingForReviewIsFoundFromTheAssetItTargets(t *testing.T) 
 	if revision.Code != http.StatusAccepted {
 		t.Fatalf("upload a replacement = %d, want 202: %s", revision.Code, revision.Body.String())
 	}
-	if _, err := apitest.Uploads(assets).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
 

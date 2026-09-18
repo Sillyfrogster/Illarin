@@ -14,31 +14,31 @@ import (
 	"github.com/google/uuid"
 )
 
-func ReaderVisibility(
+func ReaderNSFWPreference(
 	c *gin.Context,
 	accounts *account.Service,
 	requested *string,
-) (work.ContentVisibility, bool) {
+) (work.NSFWPreference, bool) {
 	if requested != nil {
-		return work.ContentVisibility(*requested), true
+		return work.NSFWPreference(*requested), true
 	}
-	preference, err := accounts.NSFWVisibility(c.Request.Context(), api.SessionToken(c))
+	preference, err := accounts.NSFWPreference(c.Request.Context(), api.SessionToken(c))
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "could not read the content preference")
 		return "", false
 	}
-	return work.ContentVisibility(preference), true
+	return work.NSFWPreference(preference), true
 }
 
-func (h *Handlers) GetAsset(c *gin.Context) {
+func (h *Handlers) GetWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
 	q := api.ReadQuery(c)
-	params := GetAssetParams{
+	params := GetWorkParams{
 		WorkingCopy: api.QueryFlag(q, "workingCopy"),
-		Nsfw:        api.QueryText[GetAssetParamsNsfw](q, "nsfw"),
+		Nsfw:        api.QueryText[GetWorkParamsNsfw](q, "nsfw"),
 	}
 	if q.Refused(c) {
 		return
@@ -52,7 +52,7 @@ func (h *Handlers) GetAsset(c *gin.Context) {
 		value := string(*params.Nsfw)
 		requested = &value
 	}
-	visibility, ok := ReaderVisibility(c, h.accounts, requested)
+	preference, ok := ReaderNSFWPreference(c, h.accounts, requested)
 	if !ok {
 		return
 	}
@@ -60,7 +60,7 @@ func (h *Handlers) GetAsset(c *gin.Context) {
 	if params.WorkingCopy != nil && *params.WorkingCopy {
 		read = h.works.WorkingCopy
 	}
-	found, err := read(c.Request.Context(), id, viewerID, visibility)
+	found, err := read(c.Request.Context(), id, viewerID, preference)
 	if errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no such asset")
 		return
@@ -69,7 +69,7 @@ func (h *Handlers) GetAsset(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
 		return
 	}
-	page, err := ToPage(found, visibility)
+	page, err := ToPage(found, preference)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
 		return
@@ -80,33 +80,33 @@ func (h *Handlers) GetAsset(c *gin.Context) {
 		return
 	}
 	if viewerID != nil && !found.IsOwner && found.Lifecycle != work.LifecycleDraft {
-		watch, err := h.notifications.WatchOf(c.Request.Context(), *viewerID, found.ID)
+		follow, err := h.notifications.FollowOf(c.Request.Context(), *viewerID, found.ID)
 		if err != nil {
 			api.Refuse(c, http.StatusInternalServerError, "could not read the asset")
 			return
 		}
-		shown := notify.ToAPIWatch(watch)
-		page.Watch = &shown
+		shown := notify.ToAPIFollow(follow)
+		page.Follow = &shown
 	}
 	c.JSON(http.StatusOK, page)
 }
 
-func ToPage(found Detail, visibility work.ContentVisibility) (AssetDetail, error) {
-	tags := make([]AssetTag, 0, len(found.Tags))
+func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
+	tags := make([]WorkTag, 0, len(found.Tags))
 	for _, tag := range found.Tags {
-		tags = append(tags, AssetTag{Label: tag.Label, Value: tag.Value})
+		tags = append(tags, WorkTag{Label: tag.Label, Value: tag.Value})
 	}
 	media := ToImages(found.Media)
-	blocks, err := block.ToBlocks(found.Kind, found.Blocks)
+	blocks, err := block.ToBlocks(found.Type, found.Blocks)
 	if err != nil {
-		return AssetDetail{}, err
+		return WorkDetail{}, err
 	}
-	addable := toAPIAddableBlocks(found.Kind, found.IsOwner)
-	return AssetDetail{
+	addable := toAPIAddableBlocks(found.Type, found.IsOwner)
+	return WorkDetail{
 		WorkingCopyVersion:    found.WorkingCopyVersion,
 		UnpublishedChanges:    found.UnpublishedChanges,
 		Id:                    found.ID,
-		Kind:                  AssetDetailKind(found.Kind),
+		Type:                  WorkDetailType(found.Type),
 		Name:                  found.Name,
 		Blurb:                 found.Blurb,
 		Tags:                  tags,
@@ -115,8 +115,8 @@ func ToPage(found Detail, visibility work.ContentVisibility) (AssetDetail, error
 		ExtensionDependencies: toAPIExtensionDependencies(found.Dependencies),
 		InstalledAppVersions:  []string{},
 		IsNsfw:                found.IsNSFW,
-		Discovery:             AssetDetailDiscovery(found.Discovery),
-		Lifecycle:             AssetDetailLifecycle(found.Lifecycle),
+		Visibility:            WorkDetailVisibility(found.Visibility),
+		Lifecycle:             WorkDetailLifecycle(found.Lifecycle),
 		IsOwner:               found.IsOwner,
 		LinkedInstallOnly:     found.LinkedInstallOnly,
 		AllowedApps:           apiAllowedApps(found.AllowedApps),
@@ -131,7 +131,7 @@ func ToPage(found Detail, visibility work.ContentVisibility) (AssetDetail, error
 		Readiness:             ToReadiness(found.Readiness),
 		SealedBlocks:          countOrAbsent(found.SealedBlocks),
 		AddableBlocks:         addable,
-		Visibility:            AssetDetailVisibility(visibility),
+		NSFWPreference:        WorkDetailNSFWPreference(preference),
 		LatestUpdate:          toAPILatestUpdate(found.LatestUpdate),
 		Withhold:              toAPIWithhold(found.Withhold),
 	}, nil
@@ -140,21 +140,21 @@ func ToPage(found Detail, visibility work.ContentVisibility) (AssetDetail, error
 func toAPIExtensionDependencies(dependencies []Dependency) []ExtensionDependency {
 	out := make([]ExtensionDependency, 0, len(dependencies))
 	for _, dependency := range dependencies {
-		assets := make([]DependencyAsset, 0, len(dependency.Assets))
-		for _, found := range dependency.Assets {
-			assets = append(assets, DependencyAsset{Id: found.ID, Name: found.Name, Creator: found.Creator})
+		works := make([]DependencyWork, 0, len(dependency.Works))
+		for _, found := range dependency.Works {
+			works = append(works, DependencyWork{Id: found.ID, Name: found.Name, Creator: found.Creator})
 		}
-		out = append(out, ExtensionDependency{Name: dependency.Name, Assets: assets})
+		out = append(out, ExtensionDependency{Name: dependency.Name, Works: works})
 	}
 	return out
 }
 
-func ToImages(images []work.DetailImage) []AssetImage {
-	media := make([]AssetImage, 0, len(images))
+func ToImages(images []work.DetailImage) []WorkImage {
+	media := make([]WorkImage, 0, len(images))
 	for _, image := range images {
-		media = append(media, AssetImage{
+		media = append(media, WorkImage{
 			Id:        image.ID,
-			Role:      AssetImageRole(image.Role),
+			Role:      WorkImageRole(image.Role),
 			IsCover:   image.IsCover,
 			DetailUrl: image.DetailURL,
 			ThumbUrl:  image.ThumbURL,
@@ -174,18 +174,18 @@ func toAPILatestUpdate(recorded *work.Version) *RecordedVersion {
 	return &served
 }
 
-func apiAllowedApps(apps []string) []AssetDetailAllowedApps {
-	result := make([]AssetDetailAllowedApps, len(apps))
+func apiAllowedApps(apps []string) []WorkDetailAllowedApps {
+	result := make([]WorkDetailAllowedApps, len(apps))
 	for i, app := range apps {
-		result[i] = AssetDetailAllowedApps(app)
+		result[i] = WorkDetailAllowedApps(app)
 	}
 	return result
 }
 
-func apiEligibleApps(apps []string) []AssetDetailEligibleApps {
-	result := make([]AssetDetailEligibleApps, len(apps))
+func apiEligibleApps(apps []string) []WorkDetailEligibleApps {
+	result := make([]WorkDetailEligibleApps, len(apps))
 	for i, app := range apps {
-		result[i] = AssetDetailEligibleApps(app)
+		result[i] = WorkDetailEligibleApps(app)
 	}
 	return result
 }
@@ -259,11 +259,11 @@ func textOrNil(value string) *string {
 	return &value
 }
 
-func toAPIAddableBlocks(kind string, isOwner bool) *[]AddableBlock {
+func toAPIAddableBlocks(workType string, isOwner bool) *[]AddableBlock {
 	if !isOwner {
 		return nil
 	}
-	offers, ok := block.Offers(kind)
+	offers, ok := block.Offers(workType)
 	if !ok {
 		return nil
 	}
@@ -288,11 +288,11 @@ func toAPIAddableBlocks(kind string, isOwner bool) *[]AddableBlock {
 	return &addable
 }
 
-func toAPIWithhold(found *Withhold) *AssetWithhold {
+func toAPIWithhold(found *Withhold) *WorkWithhold {
 	if found == nil {
 		return nil
 	}
-	return &AssetWithhold{Reason: found.Reason, At: found.At}
+	return &WorkWithhold{Reason: found.Reason, At: found.At}
 }
 
 func countOrAbsent(count int) *int {

@@ -136,8 +136,8 @@ func (s *Sends) release(
 ) (*Work, error) {
 	queries := db.New(tx)
 	deliveryID := uuid.UUID(row.ID.Bytes)
-	assetID := uuid.UUID(row.AssetID.Bytes)
-	sendable, err := s.catalog.DeliverableAsset(ctx, tx, assetID)
+	workID := uuid.UUID(row.WorkID.Bytes)
+	sendable, err := s.works.DeliverableWork(ctx, tx, workID)
 	if errors.Is(err, ErrNotDeliverable) || errors.Is(err, pgx.ErrNoRows) {
 		return nil, stop(ctx, queries, row.ID, ReasonWithdrawn)
 	}
@@ -156,9 +156,9 @@ func (s *Sends) release(
 		return nil, fmt.Errorf("record the chosen format: %w", err)
 	}
 	return &Work{
-		ID: deliveryID, AssetID: assetID,
+		ID: deliveryID, WorkID: workID,
 		ContentGeneration: sendable.ContentGeneration,
-		Kind:              sendable.Kind, Name: sendable.Name,
+		Type:              sendable.Type, Name: sendable.Name,
 		Format: target, Label: label,
 		QueuedAt: row.QueuedAt.Time, LeaseExpiresAt: row.LeaseExpiresAt.Time,
 		Artifacts: s.artifacts(deliveryID, sendable),
@@ -182,13 +182,13 @@ func stop(
 func (s *Sends) artifacts(deliveryID uuid.UUID, sendable Deliverable) []Artifact {
 	artifacts := make([]Artifact, 0, len(sendable.Pictures)+1)
 	artifacts = append(artifacts, Artifact{
-		Kind: ArtifactExport,
-		URL:  s.catalog.SignedURL(deliveryPathStart + deliveryID.String() + "/export"),
+		Type: ArtifactExport,
+		URL:  s.works.SignedURL(deliveryPathStart + deliveryID.String() + "/export"),
 	})
 	for _, picture := range sendable.Pictures {
 		mediaID := picture.MediaID
 		artifacts = append(artifacts, Artifact{
-			Kind: ArtifactPicture, URL: picture.URL, MediaID: &mediaID,
+			Type: ArtifactPicture, URL: picture.URL, MediaID: &mediaID,
 			Role: picture.Role, IsCover: picture.IsCover,
 		})
 	}

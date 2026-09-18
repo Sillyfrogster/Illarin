@@ -9,13 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type assetIdentityInput struct {
+type workIdentityInput struct {
 	Name   string  `json:"name"`
 	Blurb  *string `json:"blurb"`
 	IsNsfw *bool   `json:"isNsfw"`
 }
 
-func (h *Handlers) SetAssetIdentity(c *gin.Context) {
+func (h *Handlers) SetWorkIdentity(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -28,7 +28,7 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request assetIdentityInput
+	var request workIdentityInput
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Send a name, a blurb, and an adult content answer of true, false or null.")
 		return
@@ -39,7 +39,7 @@ func (h *Handlers) SetAssetIdentity(c *gin.Context) {
 	}
 	candidate := &work.Candidate{Version: version}
 	err := h.works.SetIdentity(c.Request.Context(), Identity{
-		OwnerID: owner.ID, AssetID: id,
+		OwnerID: owner.ID, WorkID: id,
 		Name: request.Name, Blurb: *request.Blurb, IsNSFW: request.IsNsfw,
 	}, candidate)
 	if CandidateResult(c, candidate, err) {

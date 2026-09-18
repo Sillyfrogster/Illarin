@@ -19,7 +19,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var scopeOrder = []Scope{ScopeAssetReceive, ScopeLibrarySync}
+var scopeOrder = []Scope{ScopeWorkReceive, ScopeLibrarySync}
 
 var (
 	ErrInvalidName          = errors.New("application and instance names are required")
@@ -131,8 +131,8 @@ const (
 	opaqueCodeLength       = 43
 	maxUserCodeInputLength = 16
 
-	accessTokenKind  = string(credential.InstanceAccess)
-	refreshTokenKind = string(credential.InstanceRefresh)
+	accessTokenType  = string(credential.InstanceAccess)
+	refreshTokenType = string(credential.InstanceRefresh)
 )
 
 var (
@@ -325,16 +325,16 @@ func opaqueCodeHash(code string) ([]byte, bool) {
 	return hashOf(code), true
 }
 
-func newCredential(kind string) (token, prefix string, hash []byte, err error) {
-	minted, err := credential.Mint(credential.Kind(kind))
+func newCredential(secretType string) (token, prefix string, hash []byte, err error) {
+	minted, err := credential.Mint(credential.Type(secretType))
 	if err != nil {
 		return "", "", nil, err
 	}
 	return minted.Value, minted.Prefix, minted.Hash, nil
 }
 
-func credentialHash(token, kind string) ([]byte, bool) {
-	read, ok := credential.Read(token, credential.Kind(kind))
+func credentialHash(token, secretType string) ([]byte, bool) {
+	read, ok := credential.Read(token, credential.Type(secretType))
 	if !ok {
 		return nil, false
 	}

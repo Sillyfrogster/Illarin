@@ -2,7 +2,7 @@
 
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { AssetBlock } from "@/lib/api/query";
+import type { WorkBlock } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { elementLabel } from "@/lib/element-label";
 
@@ -14,7 +14,7 @@ export type Destination = {
   where: string;
 };
 
-export function destinationsIn(blocks: AssetBlock[]): Destination[] {
+export function destinationsIn(blocks: WorkBlock[]): Destination[] {
   return blocks.flatMap((block) => [
     {
       blockId: block.id,

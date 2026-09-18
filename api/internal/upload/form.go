@@ -17,15 +17,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func readMetadata(parts *multipart.Reader) (CreateAssetRequest, error) {
+func readMetadata(parts *multipart.Reader) (CreateWorkRequest, error) {
 	part, err := api.NextPart(parts, api.MetadataPart)
 	if err != nil {
-		return CreateAssetRequest{}, err
+		return CreateWorkRequest{}, err
 	}
 
-	var metadata CreateAssetRequest
+	var metadata CreateWorkRequest
 	if err := api.DecodeOneJSON(io.LimitReader(part, 1<<20), &metadata); err != nil {
-		return CreateAssetRequest{}, api.FormRefusal{
+		return CreateWorkRequest{}, api.FormRefusal{
 			Reason: "the " + api.MetadataPart + " part is not valid JSON",
 			Cause:  err,
 		}
@@ -34,7 +34,7 @@ func readMetadata(parts *multipart.Reader) (CreateAssetRequest, error) {
 }
 
 func ingestInput(
-	metadata CreateAssetRequest,
+	metadata CreateWorkRequest,
 	filename string,
 	file io.Reader,
 	ownerID uuid.UUID,
@@ -56,8 +56,8 @@ func ingestInput(
 	if metadata.IsNsfw != nil {
 		in.IsNSFW = metadata.IsNsfw
 	}
-	if metadata.Discovery != nil {
-		in.Discovery = work.Discovery(*metadata.Discovery)
+	if metadata.Visibility != nil {
+		in.Visibility = work.Visibility(*metadata.Visibility)
 	}
 	return in
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AssetBlock } from "@/lib/api/query";
+import type { WorkBlock } from "@/lib/api/query";
 import { contentItemCount, LAYOUTS } from "@/lib/page-arrangement";
 import { ChoiceField, Field, Note } from "./fields";
 import { useWorkspace } from "./state";
@@ -9,7 +9,7 @@ import { useWorkspace } from "./state";
 const KEEP =
   "inline-flex min-h-11 items-center self-start rounded-control bg-deep px-4 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45";
 
-export function contentDestinations(source: AssetBlock, blocks: AssetBlock[]) {
+export function contentDestinations(source: WorkBlock, blocks: WorkBlock[]) {
   const movable = source.elements.filter((element) => !element.pinned).length;
   if (movable === 0) return [];
   return blocks.filter(
@@ -19,7 +19,7 @@ export function contentDestinations(source: AssetBlock, blocks: AssetBlock[]) {
   );
 }
 
-export function RemoveBlock({ block }: { block: AssetBlock }) {
+export function RemoveBlock({ block }: { block: WorkBlock }) {
   const workspace = useWorkspace();
   const { arrangement } = workspace;
   const destinations = contentDestinations(block, workspace.blocks);
