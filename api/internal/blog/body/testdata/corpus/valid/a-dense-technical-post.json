@@ -170,7 +170,7 @@
           {
             "type": "text",
             "text": "publication reference",
-            "marks": [{"type": "link", "href": "https://illarin.xyz/developers/publication"}]
+            "marks": [{"type": "link", "href": "https://illarin.com/developers/publication"}]
           },
           {"type": "text", "text": "."}
         ]

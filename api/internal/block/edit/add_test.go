@@ -128,7 +128,7 @@ func TestAnAddedBlockIsFilledAndReadBack(t *testing.T) {
 
 	update := apitest.EditableBlock(added)
 	update.Elements[0].Content = json.RawMessage(
-		`{"links":[{"label":"The winter lorebook","url":"https://illarin.xyz/a/1","note":"Load it first"}]}`,
+		`{"links":[{"label":"The winter lorebook","url":"https://illarin.com/a/1","note":"Load it first"}]}`,
 	)
 	if response := apitest.SaveBlock(t, r, session, started.ID, added.ID, update); response.Code != http.StatusOK {
 		t.Fatalf("save links: status = %d, want 200: %s", response.Code, response.Body.String())

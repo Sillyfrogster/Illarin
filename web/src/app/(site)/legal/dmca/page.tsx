@@ -1,3 +1,4 @@
+import { CONTACT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/site-metadata";
 import { type LegalClause, LegalPage } from "../LegalPage";
 
@@ -11,8 +12,8 @@ const CLAUSES: LegalClause[] = [
     body: (
       <>
         <p>
-          Email <a href="mailto:team@illarin.xyz">team@illarin.xyz</a>. Email is
-          the only channel, and it is read by the person who runs Illarin.
+          Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Email
+          is the only channel, and it is read by the person who runs Illarin.
         </p>
         <p>
           <strong>Be straight with you about one thing:</strong> Illarin is a
@@ -123,7 +124,7 @@ const CLAUSES: LegalClause[] = [
         <p>
           For anything that is not copyright — a trademark, a right of
           publicity, an impersonation — write to{" "}
-          <a href="mailto:team@illarin.xyz">team@illarin.xyz</a> as well. Those
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> as well. Those
           are handled case by case rather than through the process above.
         </p>
       </>

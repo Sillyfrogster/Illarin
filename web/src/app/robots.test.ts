@@ -2,12 +2,12 @@ import { expect, test } from "bun:test";
 import { blogRobots } from "./blog/robots.txt/route";
 import { buildRobots } from "./robots";
 
-const robots = buildRobots("https://illarin.xyz");
+const robots = buildRobots("https://illarin.com");
 const rules = Array.isArray(robots.rules) ? robots.rules[0] : robots.rules;
 const disallowed = [rules.disallow ?? []].flat();
 
 test("points crawlers at the sitemap", () => {
-  expect(robots.sitemap).toBe("https://illarin.xyz/sitemap.xml");
+  expect(robots.sitemap).toBe("https://illarin.com/sitemap.xml");
 });
 
 test("the blog origin points crawlers at its own sitemap and nothing else", () => {

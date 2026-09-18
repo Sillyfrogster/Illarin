@@ -251,7 +251,7 @@ func TestIllarinAndTheThreeCategoriesAreSeeded(t *testing.T) {
 	stack := newPublicationStack(t)
 
 	illarin := stack.appBySlug(t, "illarin")
-	if illarin.Name != "Illarin" || illarin.Home != "https://illarin.xyz" {
+	if illarin.Name != "Illarin" || illarin.Home != "https://illarin.com" {
 		t.Fatalf("seeded app = %+v", illarin)
 	}
 

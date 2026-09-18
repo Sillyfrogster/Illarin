@@ -50,7 +50,7 @@ describe("restricted markdown", () => {
 
   test("reads emphasis, strong, inline code and a link", () => {
     const rich = readRichText(
-      "*soft* **loud** `exact` [home](https://illarin.xyz)",
+      "*soft* **loud** `exact` [home](https://illarin.com)",
     );
     expect(rich.blocks[0]).toEqual({
       kind: "paragraph",
@@ -63,7 +63,7 @@ describe("restricted markdown", () => {
         { kind: "text", text: " " },
         {
           kind: "link",
-          href: "https://illarin.xyz",
+          href: "https://illarin.com",
           children: [{ kind: "text", text: "home" }],
         },
       ],
@@ -262,8 +262,8 @@ describe("HTML shown as words", () => {
     expect(bare.formattingRemoved).toBe(true);
 
     for (const url of [
-      "https://illarin.xyz/a/1",
-      "http://illarin.xyz",
+      "https://illarin.com/a/1",
+      "http://illarin.com",
       "mailto:her@example.com",
       "/browse",
     ]) {

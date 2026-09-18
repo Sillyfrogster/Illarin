@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CONTACT_EMAIL } from "@/lib/contact";
 import { pageMetadata } from "@/lib/site-metadata";
 import { type LegalClause, LegalPage } from "../LegalPage";
 
@@ -16,7 +17,7 @@ const CLAUSES: LegalClause[] = [
           behind it. It charges nothing, sells nothing, and carries no
           advertising. &ldquo;We,&rdquo; &ldquo;us,&rdquo; and
           &ldquo;Illarin&rdquo; mean the person who runs it, reachable at{" "}
-          <a href="mailto:team@illarin.xyz">team@illarin.xyz</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
         </p>
       </>
     ),
@@ -326,7 +327,7 @@ const CLAUSES: LegalClause[] = [
       <>
         <p>
           Questions about these Terms go to{" "}
-          <a href="mailto:team@illarin.xyz">team@illarin.xyz</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
         </p>
       </>
     ),
@@ -341,7 +342,7 @@ export default function Terms() {
       title="Terms of Service"
       lede={
         <>
-          These Terms govern your use of Illarin at illarin.xyz. By creating an
+          These Terms govern your use of Illarin at illarin.com. By creating an
           account, uploading work, or otherwise using Illarin, you agree to
           them. If you don&rsquo;t agree, don&rsquo;t use Illarin.
         </>
