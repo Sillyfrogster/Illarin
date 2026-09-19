@@ -13,7 +13,7 @@ import {
   type WorkElement,
   type WorkImage,
 } from "@/lib/api/query";
-import { useWorkingCopy } from "@/lib/working-copy";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 import { EntryTableEditor } from "./EntryTableEditor";
 import { PackEditor } from "./PackEditor";
 import {
@@ -246,7 +246,7 @@ function ImageEditor({
   onChange: (items: ImageItem[]) => void;
   pending: boolean;
 }) {
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [previews, setPreviews] = useState<Record<string, string>>({});

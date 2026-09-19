@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { WORKING_COPY_STALE } from "@/lib/working-copy";
+import { DRAFTED_CHANGES_STALE } from "@/lib/drafted-changes";
 import { saveWorkDetails } from "./query";
 
 const ID = "00000000-0000-4000-8000-000000000024";
@@ -50,7 +50,7 @@ describe("details client", () => {
         isNsfw: false,
         name: "Fixture work",
       });
-      expect(sent?.headers.get("X-Working-Copy-Version")).toBe("7");
+      expect(sent?.headers.get("X-Drafted-Changes-Version")).toBe("7");
     });
   }
 
@@ -69,7 +69,7 @@ describe("details client", () => {
       mock(async () =>
         Response.json(
           {
-            code: "working_copy_conflict",
+            code: "drafted_changes_conflict",
             currentVersion: 8,
             error: "This working copy changed after you opened it.",
           },
@@ -87,7 +87,7 @@ describe("details client", () => {
       "This working copy changed after you opened it.",
     );
 
-    expect(events).toEqual([WORKING_COPY_STALE]);
+    expect(events).toEqual([DRAFTED_CHANGES_STALE]);
     expect(details.blurb).toBe("Keep this unsaved pitch.");
   });
 });

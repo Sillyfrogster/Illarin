@@ -10,12 +10,12 @@ import {
 } from "@/components/updates/UpdateAnnouncementChoice";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
-  publishWorkUpdate,
+  publishWorkVersion,
   type ReadinessItem,
   type VersionChangeGroup,
 } from "@/lib/api/query";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 import type { ReadinessTarget } from "@/lib/readiness";
-import { useWorkingCopy } from "@/lib/working-copy";
 import { Field, Note, TextAreaField, TextField } from "./fields";
 import { ReadinessList } from "./ReadinessList";
 import { useWorkspace } from "./state";
@@ -36,7 +36,7 @@ export function ReviewStep({
   unlisted: boolean;
 }) {
   const workspace = useWorkspace();
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const [summary, setSummary] = useState("");
   const [notes, setNotes] = useState("");
   const [label, setLabel] = useState("");
@@ -57,7 +57,7 @@ export function ReviewStep({
     setMessage("");
     setStale(false);
     setMissing([]);
-    const answer = await publishWorkUpdate(candidate, workspace.workId, {
+    const answer = await publishWorkVersion(candidate, workspace.workId, {
       announceUnlisted: announcement.announceUnlisted,
       destinationIds: announcement.destinationIds ?? undefined,
       notify: announcement.notify,
@@ -71,7 +71,7 @@ export function ReviewStep({
       return;
     }
     setMessage(answer.error);
-    setStale(answer.code === "working_copy_conflict");
+    setStale(answer.code === "drafted_changes_conflict");
     setNeedsConsent(answer.field === "announceUnlisted");
     setMissing(answer.readiness?.filter((item) => !item.met) ?? []);
   }
@@ -80,11 +80,12 @@ export function ReviewStep({
     <div className="flex flex-col gap-5">
       <RailBack onClick={onBack}>Publication</RailBack>
       <h3 className="font-display text-section font-medium text-ink">
-        Review this update
+        Review this version
       </h3>
       <Note>
-        Publishing makes these changes public. Working copy {candidate.version}.
-        The current published version remains in update history.
+        Publishing makes these changes public. Drafted changes{" "}
+        {candidate.version}. The current published version remains in version
+        history.
       </Note>
 
       {applied && applied.length > 0 ? (
@@ -168,7 +169,7 @@ export function ReviewStep({
         onClick={publish}
         variant="primary"
       >
-        {busy ? "Publishing…" : `Publish this ${typeName} update`}
+        {busy ? "Publishing…" : `Publish this ${typeName} version`}
       </Button>
     </div>
   );

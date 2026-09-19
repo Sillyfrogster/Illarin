@@ -3,7 +3,7 @@ import type { RecordedVersion } from "@/lib/api/query";
 export function versionTitle(version: RecordedVersion): string {
   if (version.initial) return "Initial recording";
   if (version.number === 1) return "First published";
-  return `Update ${version.number}`;
+  return `Version ${version.number}`;
 }
 
 export function versionSummary(

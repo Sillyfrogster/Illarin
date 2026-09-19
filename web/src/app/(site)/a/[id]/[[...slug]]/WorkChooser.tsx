@@ -44,7 +44,7 @@ import {
   type TravellingImage,
   travellingGallery,
 } from "@/lib/work-delivery";
-import { versionDate } from "@/lib/work-updates";
+import { versionDate } from "@/lib/work-versions";
 import { FollowOffer } from "./follow/FollowOffer";
 
 function fileWord(mediaType: string): string {

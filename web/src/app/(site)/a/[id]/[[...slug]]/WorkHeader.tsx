@@ -14,7 +14,7 @@ import { workDisplayName } from "@/lib/work-name";
 import { FollowControl } from "./follow/FollowControl";
 import { WorkFollowProvider } from "./follow/state";
 import { GetWork } from "./GetWork";
-import { UpdateHistory } from "./history/UpdateHistory";
+import { VersionHistory } from "./history/VersionHistory";
 import { WithholdNotice } from "./WithholdNotice";
 import type { WorkChooserProps } from "./WorkChooser";
 import { coverMedia, WorkMedia } from "./WorkMedia";
@@ -324,7 +324,7 @@ export function WorkHeader({
 
             {work.withhold ? <WithholdNotice withhold={work.withhold} /> : null}
 
-            <UpdateHistory
+            <VersionHistory
               work={work}
               download={download}
               typeName={typeLabel.toLowerCase()}

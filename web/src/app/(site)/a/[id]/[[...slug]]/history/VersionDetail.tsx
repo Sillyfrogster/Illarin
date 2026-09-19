@@ -11,6 +11,8 @@ import {
   withdrawWorkVersion,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
+import type { Candidate } from "@/lib/drafted-changes";
+import { workHref } from "@/lib/work-url";
 import {
   earlierVersions,
   isLongNote,
@@ -18,16 +20,14 @@ import {
   versionDate,
   versionSummary,
   versionTitle,
-} from "@/lib/work-updates";
-import { workHref } from "@/lib/work-url";
-import type { Candidate } from "@/lib/working-copy";
+} from "@/lib/work-versions";
 import { VersionChanges } from "./VersionChanges";
 
 export type HistoryOwner = {
   workName: string;
   canManage: boolean;
   isOwner: boolean;
-  workingCopyVersion: number;
+  draftedChangesVersion: number;
 };
 
 /** Shows a version's notes, changes, downloads and owner controls. */
@@ -236,20 +236,22 @@ function VersionManagement({
       {mode === "restore" ? (
         <div className="grid gap-4 pt-4 pb-1">
           <p className="text-meta text-mute">
-            This replaces the private working copy with this version, including
-            its pictures and page arrangement. Access, protection and delivery
-            choices stay current. Publishing it later requires fresh update
-            notes and validation.
+            This replaces your drafted changes with this version, including its
+            pictures and page arrangement. Access, protection and delivery
+            choices stay current. Publishing it later needs fresh version notes
+            and a fresh check.
           </p>
           <ActionRow
             busy={busy}
-            confirm="Replace working copy"
+            confirm="Replace drafted changes"
             onCancel={() => setMode("")}
             onConfirm={() =>
               runMutation(
                 () =>
                   restoreWorkVersion(
-                    { version: owner.workingCopyVersion } satisfies Candidate,
+                    {
+                      version: owner.draftedChangesVersion,
+                    } satisfies Candidate,
                     workId,
                     version.number,
                   ),

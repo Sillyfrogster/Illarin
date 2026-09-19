@@ -13,7 +13,7 @@ export function updateStanding(
     return "Illarin is reading the file you uploaded. Readers keep the published version while it works.";
   }
   if (changed) {
-    return "You have unpublished changes. Review them before publishing an update.";
+    return "You have drafted changes. Review them before publishing a version.";
   }
   return "All changes are published.";
 }
@@ -26,7 +26,7 @@ export function reviewBlockedReason(
     return "An uploaded file is waiting for your review. Accept or discard it before publishing.";
   }
   if (!changed) {
-    return "Nothing has changed since the last update. Edit the page or replace the file first.";
+    return "Nothing has changed since the last version. Edit the page or replace the file first.";
   }
   return "";
 }

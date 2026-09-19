@@ -67,17 +67,17 @@ export function notificationWords(entry: Notification): NotificationWords {
   }
 }
 
-/** Says how many updates a folded entry stands for. */
+/** Says how many versions a folded entry stands for. */
 function updateLead(entry: Notification): string {
   const arrivals = entry.update?.count ?? 1;
-  return arrivals > 1 ? `${arrivals} new updates to` : "New update to";
+  return arrivals > 1 ? `${arrivals} new versions of` : "New version of";
 }
 
 function updateDetail(entry: Notification): string {
   const update = entry.update;
   if (!update) return "";
   const label = update.versionLabel ? `, ${update.versionLabel}` : "";
-  return `Update ${update.number}${label}: ${update.summary}`;
+  return `Version ${update.number}${label}: ${update.summary}`;
 }
 
 /** Says how long ago an entry arrived, in words for the past week and as a date before that. */

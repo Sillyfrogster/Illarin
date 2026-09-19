@@ -237,13 +237,13 @@ export function sendActionLabel(
   if (isWaiting(instance.delivery)) return "Waiting to be collected";
   if (installs) {
     if (instance.updateAvailable) return `Update on ${instance.instanceName}`;
-    if (instance.installedGeneration !== null) {
+    if (instance.installedVersion !== null) {
       return `Install again on ${instance.instanceName}`;
     }
     return `Install on ${instance.instanceName}`;
   }
   if (instance.updateAvailable) return "Send the update";
-  if (instance.installedGeneration !== null) return "Send again";
+  if (instance.installedVersion !== null) return "Send again";
   return "Send";
 }
 
@@ -251,7 +251,7 @@ export function instanceStanding(instance: WorkInstance): string {
   if (instance.updateAvailable) {
     return "Installed, and a newer version exists here.";
   }
-  if (instance.installedGeneration !== null) {
+  if (instance.installedVersion !== null) {
     return "Installed and up to date.";
   }
   if (!instance.reportsLibrary) {

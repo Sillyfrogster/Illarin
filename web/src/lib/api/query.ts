@@ -3,8 +3,8 @@ import { readRefusal } from "@/lib/answer";
 import {
   acceptCandidateVersion,
   type Candidate,
-  reportStaleWorkingCopy,
-} from "@/lib/working-copy";
+  reportStaleDraftedChanges,
+} from "@/lib/drafted-changes";
 import { api } from "./client";
 import type {
   AddableBlock,
@@ -91,9 +91,9 @@ import type {
   WorkInstanceList,
   WorkList,
   WorkTag,
-  WorkUpdate,
-  WorkUpdateRequest,
+  WorkVersion,
   WorkVersionNotesRequest,
+  WorkVersionRequest,
 } from "./shapes";
 export type {
   AddableBlock,
@@ -108,8 +108,8 @@ export type {
   WorkInstance,
   WorkInstanceList,
   WorkTag,
-  WorkUpdate,
-  WorkUpdateRequest,
+  WorkVersion,
+  WorkVersionRequest,
   WorkVersionNotesRequest,
   BrowseWork,
   BrowseCursor,
@@ -225,7 +225,7 @@ export class SealedExposureError extends Error {
 }
 
 function writeRefusal(error: unknown, fallback: string): Error {
-  reportStaleWorkingCopy(error);
+  reportStaleDraftedChanges(error);
   const detail = error as
     | { error?: unknown; code?: unknown; prompts?: unknown }
     | undefined;
@@ -285,10 +285,10 @@ export async function fetchDeletedWorks(
 export async function fetchWork(
   id: string,
   cookie?: string,
-  workingCopy = false,
+  draftedChanges = false,
 ): Promise<WorkDetail | null> {
   const { data, error } = await api<WorkDetail>("GET", `/v1/works/${id}`, {
-    query: { workingCopy },
+    query: { draftedChanges },
     headers: cookie ? { cookie } : undefined,
   });
   if (error || !data) return null;
@@ -337,7 +337,7 @@ export async function saveWorkBlock(
     "PUT",
     `/v1/works/${workId}/blocks/${blockId}`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body: block,
     },
   );
@@ -358,7 +358,7 @@ export async function addWorkBlock(
     "POST",
     `/v1/works/${workId}/blocks`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body: { definition, elementType },
     },
   );
@@ -382,7 +382,7 @@ export async function addWorkImage(
     "POST",
     `/v1/works/${workId}/media`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body,
     },
   );
@@ -409,7 +409,7 @@ export async function arrangeWorkBlocks(
     "PUT",
     `/v1/works/${workId}/blocks`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body: arrangement,
     },
   );
@@ -442,7 +442,7 @@ export async function placeVaultPicture(
     "POST",
     `/v1/works/${workId}/vault/${pictureId}/place`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body: mediaId ? { mediaId } : undefined,
     },
   );
@@ -461,7 +461,7 @@ export async function discardVaultPicture(
   const { error, response } = await api<void>(
     "DELETE",
     `/v1/works/${workId}/vault/${pictureId}`,
-    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
+    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (error) {
@@ -477,7 +477,7 @@ export async function removeWorkBlock(
   const { error, response } = await api<void>(
     "DELETE",
     `/v1/works/${workId}/blocks/${blockId}`,
-    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
+    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (error) {
@@ -495,7 +495,7 @@ export async function moveWorkBlockContent(
     "POST",
     `/v1/works/${workId}/blocks/${blockId}/move-and-remove`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body: { destinationBlockId },
     },
   );
@@ -515,7 +515,7 @@ export async function saveWorkDetails(
     "PUT",
     `/v1/works/${id}/details`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body: details,
     },
   );
@@ -535,7 +535,7 @@ export async function publishWork(
   const { data, error, response } = await api<WorkDetail>(
     "POST",
     `/v1/works/${id}/publish`,
-    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
+    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (data) return { published: true };
@@ -557,7 +557,7 @@ export async function fetchWaitingReplacement(
 ): Promise<IngestOperation | null> {
   const { data, error } = await api<IngestOperation | null>(
     "GET",
-    `/v1/works/${id}/revisions`,
+    `/v1/works/${id}/original-file`,
   );
   if (error || !data) return null;
   return data;
@@ -572,9 +572,9 @@ export async function uploadWorkReplacement(
   body.append("file", file, file.name);
   const { data, error, response } = await api<IngestOperation>(
     "POST",
-    `/v1/works/${id}/revisions`,
+    `/v1/works/${id}/original-file`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body,
     },
   );
@@ -609,9 +609,9 @@ export async function acceptWorkReplacement(
 ): Promise<IngestOperation> {
   const { data, error, response } = await api<IngestOperation>(
     "POST",
-    `/v1/works/${id}/revisions/${operationId}/accept`,
+    `/v1/works/${id}/original-file/${operationId}/accept`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body: { unrepresentable, exposeProtected },
     },
   );
@@ -625,17 +625,17 @@ export async function acceptWorkReplacement(
 export async function cancelWorkReplacement(id: string, operationId: string) {
   const { error } = await api<void>(
     "DELETE",
-    `/v1/works/${id}/revisions/${operationId}`,
+    `/v1/works/${id}/original-file/${operationId}`,
   );
   if (error) throw new Error("That file could not be discarded. Try again.");
 }
 
-export async function publishWorkUpdate(
+export async function publishWorkVersion(
   candidate: Candidate,
   id: string,
-  update: WorkUpdateRequest,
+  version: WorkVersionRequest,
 ): Promise<
-  | { published: true; update: WorkUpdate }
+  | { published: true; version: WorkVersion }
   | {
       published: false;
       error: string;
@@ -644,17 +644,17 @@ export async function publishWorkUpdate(
       readiness?: ReadinessItem[];
     }
 > {
-  const { data, error, response } = await api<WorkUpdate>(
+  const { data, error, response } = await api<WorkVersion>(
     "POST",
-    `/v1/works/${id}/updates`,
+    `/v1/works/${id}/versions`,
     {
-      headers: { "X-Working-Copy-Version": String(candidate.version) },
-      body: update,
+      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      body: version,
     },
   );
   acceptCandidateVersion(candidate, response);
-  if (data) return { published: true, update: data };
-  reportStaleWorkingCopy(error);
+  if (data) return { published: true, version: data };
+  reportStaleDraftedChanges(error);
   const refusal = error as
     | {
         error?: unknown;
@@ -668,7 +668,7 @@ export async function publishWorkUpdate(
     error:
       typeof refusal?.error === "string"
         ? refusal.error
-        : "The update could not be published. Try again.",
+        : "The version could not be published. Try again.",
     code: typeof refusal?.code === "string" ? refusal.code : undefined,
     field: typeof refusal?.field === "string" ? refusal.field : undefined,
     readiness: refusal?.readiness,
@@ -691,7 +691,7 @@ export async function fetchWorkUpdates(
   try {
     const { data } = await api<RecordedVersionList>(
       "GET",
-      `/v1/works/${id}/updates`,
+      `/v1/works/${id}/versions`,
     );
     return data?.items ?? null;
   } catch {
@@ -706,8 +706,8 @@ export async function restoreWorkVersion(
 ) {
   const { error, response } = await api<void>(
     "POST",
-    `/v1/works/${id}/updates/${number}/restore`,
-    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
+    `/v1/works/${id}/versions/${number}/restore`,
+    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (error) throw writeRefusal(error, "That version could not be restored.");
@@ -720,7 +720,7 @@ export async function correctWorkVersionNotes(
 ) {
   const { error } = await api<void>(
     "PATCH",
-    `/v1/works/${id}/updates/${number}/notes`,
+    `/v1/works/${id}/versions/${number}/notes`,
     { body: correction },
   );
   if (error) throw writeRefusal(error, "Those notes could not be corrected.");
@@ -733,7 +733,7 @@ export async function withdrawWorkVersion(
 ) {
   const { error } = await api<void>(
     "POST",
-    `/v1/works/${id}/updates/${number}/withdraw`,
+    `/v1/works/${id}/versions/${number}/withdraw`,
     { body: { explanation } },
   );
   if (error) throw writeRefusal(error, "That version could not be withdrawn.");
@@ -757,7 +757,7 @@ export async function fetchRecordedVersionDownloads(
   try {
     ({ data, response } = await api<RecordedVersionDownloads>(
       "GET",
-      `/v1/works/${id}/updates/${number}/downloads`,
+      `/v1/works/${id}/versions/${number}/downloads`,
     ));
   } catch {
     return unreadable;
@@ -790,7 +790,7 @@ export async function compareWorkVersions(
   try {
     ({ data, response } = await api<VersionComparison>(
       "GET",
-      `/v1/works/${id}/updates/comparison`,
+      `/v1/works/${id}/versions/comparison`,
       { query: { from, to }, headers: cookie ? { cookie } : undefined },
     ));
   } catch {
@@ -818,7 +818,7 @@ export async function fetchProtectionMismatches(
 ): Promise<ProtectionMismatch[]> {
   const { data } = await api<ProtectionMismatchList>(
     "GET",
-    `/v1/works/${id}/updates/protection`,
+    `/v1/works/${id}/versions/protection`,
   );
   return data?.items ?? [];
 }
@@ -830,7 +830,7 @@ export async function resolvePromptCorrespondence(
 ) {
   const { error } = await api<void>(
     "PUT",
-    `/v1/works/${id}/updates/${number}/protection`,
+    `/v1/works/${id}/versions/${number}/protection`,
     { body: { matches } },
   );
   if (error) {
@@ -851,7 +851,7 @@ export async function deletePreservedNamespace(
   const { error, response } = await api<void>(
     "DELETE",
     `/v1/works/${id}/preserved/${encodeURIComponent(namespace)}`,
-    { headers: { "X-Working-Copy-Version": String(candidate.version) } },
+    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
   if (error) {

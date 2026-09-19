@@ -14,9 +14,12 @@ import {
   type ReadinessItem,
   type VersionChangeGroup,
 } from "@/lib/api/query";
+import {
+  DRAFTED_CHANGES_SAVED,
+  useDraftedChanges,
+} from "@/lib/drafted-changes";
 import type { PageTarget, ReadinessTarget } from "@/lib/readiness";
 import { reviewBlockedReason, updateStanding } from "@/lib/work-publication";
-import { useWorkingCopy, WORKING_COPY_SAVED } from "@/lib/working-copy";
 import { Note } from "./fields";
 import { ReadinessList } from "./ReadinessList";
 import { ReplacementStep } from "./ReplacementStep";
@@ -54,8 +57,8 @@ export function PublicationRail({
 
   useEffect(() => {
     const saved = () => void readStanding();
-    window.addEventListener(WORKING_COPY_SAVED, saved);
-    return () => window.removeEventListener(WORKING_COPY_SAVED, saved);
+    window.addEventListener(DRAFTED_CHANGES_SAVED, saved);
+    return () => window.removeEventListener(DRAFTED_CHANGES_SAVED, saved);
   }, [readStanding]);
 
   useEffect(() => {
@@ -142,7 +145,7 @@ export function PublicationRail({
           }
           disabled={blocked !== ""}
           icon={Send}
-          name="Review and publish an update"
+          name="Review and publish a version"
           onClick={() => setStep("review")}
         />
         <Path
@@ -189,7 +192,7 @@ function DraftPublication({
   readiness: ReadinessItem[];
 }) {
   const workspace = useWorkspace();
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const router = useRouter();
   const [items, setItems] = useState(readiness);
   const [busy, setBusy] = useState(false);

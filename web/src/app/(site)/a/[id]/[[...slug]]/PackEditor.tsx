@@ -9,7 +9,7 @@ import {
   type RecordListContent,
   type WorkImage,
 } from "@/lib/api/query";
-import { useWorkingCopy } from "@/lib/working-copy";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 import { CollectionStep } from "./workspace/CollectionStep";
 import { moveItem, replaceAt, without } from "./workspace/collection";
 import {
@@ -238,7 +238,7 @@ function AvatarField({
   pending: boolean;
   record: LumiaRecord;
 }) {
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState("");

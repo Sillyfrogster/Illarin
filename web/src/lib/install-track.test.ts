@@ -11,7 +11,7 @@ function instance(overrides: Partial<WorkInstance> = {}): WorkInstance {
     canReceive: true,
     reportsLibrary: true,
     delivery: null,
-    installedGeneration: null,
+    installedVersion: null,
     updateAvailable: false,
     ...overrides,
   };
@@ -66,7 +66,7 @@ test("an acknowledged first install waits for approval", () => {
         state: "delivered",
         settledAt: "2026-09-13T10:01:00Z",
       }),
-      installedGeneration: 1,
+      installedVersion: 1,
     }),
   );
   expect(track?.steps.map((step) => step.standing)).toEqual([
@@ -89,7 +89,7 @@ test("an update keeps the extension on and says so", () => {
         settledAt: "2026-09-13T10:01:00Z",
         updatesInstall: true,
       }),
-      installedGeneration: 2,
+      installedVersion: 2,
     }),
   );
   expect(track?.steps[2].label).toBe("Updated");
@@ -129,11 +129,11 @@ test("a stopped delivery shows its reason instead of progress", () => {
 });
 
 test("an install the library reports without a delivery on record is a standing line, not a track", () => {
-  const track = installTrack(instance({ installedGeneration: 1 }));
+  const track = installTrack(instance({ installedVersion: 1 }));
   expect(track?.steps).toEqual([]);
   expect(track?.note).toBe("Installed on desk.");
   expect(
-    installTrack(instance({ installedGeneration: 1, updateAvailable: true }))
+    installTrack(instance({ installedVersion: 1, updateAvailable: true }))
       ?.note,
   ).toBe("Installed on desk, and a newer version exists here.");
 });

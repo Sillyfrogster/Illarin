@@ -144,7 +144,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
         <WorkspaceDock
           detail={detail(props, workspace.isDraft, workspace.saveState)}
           onJump={() => setJumping(true)}
-          publicationLabel={workspace.isDraft ? "Publish" : "Review update"}
+          publicationLabel={workspace.isDraft ? "Publish" : "Review version"}
           waiting={vault.pictures.length}
         />
       ) : null}
@@ -152,9 +152,9 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
       <AnimatePresence>
         {pane?.kind === "conflict" ? (
           <WorkspaceRail
-            description="Your writing is still on the page. Copy anything worth keeping, then reload to work from the newer copy."
+            description="Your writing is still on the page. Copy anything worth keeping, then reload to work from the newer drafted changes."
             key="conflict"
-            title="A newer working copy exists"
+            title="Newer drafted changes exist"
             tone="stop"
           >
             <div className="flex flex-col gap-5">

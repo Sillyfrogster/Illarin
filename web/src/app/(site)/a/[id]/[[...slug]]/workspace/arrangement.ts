@@ -10,7 +10,7 @@ import {
   removeWorkBlock,
   type WorkBlock,
 } from "@/lib/api/query";
-import type { Candidate } from "@/lib/working-copy";
+import type { Candidate } from "@/lib/drafted-changes";
 import { arrangementRequest, moveBlock } from "./composition";
 
 export type Arrangement = {

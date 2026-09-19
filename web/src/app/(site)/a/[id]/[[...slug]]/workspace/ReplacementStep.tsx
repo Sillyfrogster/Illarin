@@ -15,13 +15,13 @@ import {
   uploadWorkReplacement,
   type VersionChangeGroup,
 } from "@/lib/api/query";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 import { replacementSubjectLabel } from "@/lib/replacement-subject";
 import {
   replacementAction,
   replacementReady,
   unsettledReplacement,
 } from "@/lib/work-publication";
-import { useWorkingCopy } from "@/lib/working-copy";
 import { UnsealConfirmation } from "../UnsealConfirmation";
 import { Note } from "./fields";
 import { ReplacementWarnings } from "./ReplacementWarnings";
@@ -43,7 +43,7 @@ export function ReplacementStep({
   onWaiting: (operation: IngestOperation | null) => void;
 }) {
   const workspace = useWorkspace();
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [operation, setOperation] = useState<IngestOperation | null>(waiting);
@@ -159,8 +159,8 @@ export function ReplacementStep({
         Replace the file
       </h3>
       <Note>
-        Import a replacement file into your working copy. Review its changes
-        before publishing an update.
+        Import a replacement file into your drafted changes. Review its changes
+        before publishing a version.
       </Note>
 
       {reading ? (

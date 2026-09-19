@@ -20,8 +20,8 @@ import {
 } from "@/lib/api/query";
 import { protectedAppLabel } from "@/lib/protected-apps";
 import { PHONE_WIDTH, useMediaQuery } from "@/lib/use-media-query";
-import { versionDate, versionSummary, versionTitle } from "@/lib/work-updates";
 import { workHref } from "@/lib/work-url";
+import { versionDate, versionSummary, versionTitle } from "@/lib/work-versions";
 import { type HistoryOwner, VersionDetail } from "./VersionDetail";
 import { VersionDownload } from "./VersionDownload";
 import { VersionList } from "./VersionList";
@@ -39,8 +39,8 @@ function versionInAddress(): number | null {
   return found ? Number(found[1]) : null;
 }
 
-/** Opens the latest update into the full version history. */
-export function UpdateHistory({
+/** Opens the latest version into the full version history. */
+export function VersionHistory({
   work,
   download,
   typeName,
@@ -53,7 +53,7 @@ export function UpdateHistory({
 }) {
   const router = useRouter();
   const phone = useMediaQuery(PHONE_WIDTH);
-  const latest = work.latestUpdate;
+  const latest = work.latestVersion;
   const [open, setOpen] = useState(false);
   const [chosen, setChosen] = useState<number | null>(null);
   const [versions, setVersions] = useState<Versions>({ state: "unread" });
@@ -96,7 +96,7 @@ export function UpdateHistory({
     workName: work.name,
     canManage: Boolean(work.isOwner && !work.withhold),
     isOwner: work.isOwner,
-    workingCopyVersion: work.workingCopyVersion ?? 0,
+    draftedChangesVersion: work.draftedChangesVersion ?? 0,
   };
   const published = work.lifecycle !== "draft";
 
@@ -120,7 +120,7 @@ export function UpdateHistory({
           </span>
           <span className="grid size-11 shrink-0 place-items-center rounded-full bg-plane text-accent transition-colors duration-200 group-hover:bg-action group-hover:text-on-accent motion-reduce:transition-none">
             <History aria-hidden="true" className="size-5" />
-            <span className="sr-only">Open the update history</span>
+            <span className="sr-only">Open the version history</span>
           </span>
         </span>
       </ExpandingPanelTrigger>
@@ -143,13 +143,13 @@ export function UpdateHistory({
           </span>
           <div className="min-w-0 flex-1">
             <ExpandingPanelTitle className="font-display text-section font-medium text-ink">
-              Update history
+              Version history
             </ExpandingPanelTitle>
             <p className="truncate font-ui text-meta text-mute">
               {work.name} · {typeLabel} by {work.creator}
             </p>
           </div>
-          <ExpandingPanelClose label="Close the update history" />
+          <ExpandingPanelClose label="Close the version history" />
         </header>
 
         <div className="grid min-h-0 flex-1 md:grid-cols-[18rem_minmax(0,1fr)]">

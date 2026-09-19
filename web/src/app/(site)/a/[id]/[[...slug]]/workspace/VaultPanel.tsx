@@ -10,7 +10,7 @@ import {
   placeVaultPicture,
   type VaultPicture,
 } from "@/lib/api/query";
-import { useWorkingCopy } from "@/lib/working-copy";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 import { Note, RemoveAction } from "./fields";
 import { useWorkspace } from "./state";
 
@@ -27,7 +27,7 @@ export function VaultPanel({
   onReload: () => void;
 }) {
   const workspace = useWorkspace();
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");

@@ -187,7 +187,7 @@ export function UpdateAnnouncementChoice({
 
             <Line>
               {chosen.length === 0
-                ? "No announcement will be sent. The update still appears on the page and in its history."
+                ? "No announcement will be sent. The version still appears on the page and in its history."
                 : "Selected destinations receive the name, update number, summary and history link. They do not receive the full notes or content changes."}
             </Line>
           </>
@@ -206,7 +206,7 @@ export function UpdateAnnouncementChoice({
       <Switch
         checked={quiet}
         disabled={disabled}
-        hint="Nothing is announced and nobody is notified. The update still appears on the page and in its history."
+        hint="Nothing is announced and nobody is notified. The version still appears on the page and in its history."
         onChange={setQuiet}
       >
         Publish quietly

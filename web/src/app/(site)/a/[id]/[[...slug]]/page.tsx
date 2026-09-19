@@ -4,13 +4,13 @@ import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { shellClasses } from "@/components/layout/Shell";
 import { fetchWork, type WorkDetail } from "@/lib/api/query";
+import { DraftedChangesProvider } from "@/lib/drafted-changes";
 import { ExtensionDependenciesProvider } from "@/lib/extension-dependencies";
 import { readableForMetadata } from "@/lib/site-metadata";
 import { workMetadata } from "@/lib/work-metadata";
 import { workHoldsNothing } from "@/lib/work-page-content";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { isWorkId, workRedirect } from "@/lib/work-url";
-import { WorkingCopyProvider } from "@/lib/working-copy";
 import { WorkBlocks } from "./WorkBlocks";
 import { WorkHeader } from "./WorkHeader";
 import { WorkspaceProvider } from "./workspace/state";
@@ -53,7 +53,7 @@ export default async function WorkPage({
   });
 
   return (
-    <WorkingCopyProvider key={work.id} version={work.workingCopyVersion}>
+    <DraftedChangesProvider key={work.id} version={work.draftedChangesVersion}>
       <WorkspaceProvider
         addableBlocks={work.addableBlocks ?? []}
         allowedApps={work.allowedApps}
@@ -103,6 +103,6 @@ export default async function WorkPage({
           withheld={Boolean(work.withhold)}
         />
       </WorkspaceProvider>
-    </WorkingCopyProvider>
+    </DraftedChangesProvider>
   );
 }

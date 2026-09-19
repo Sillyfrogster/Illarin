@@ -40,7 +40,7 @@ export function installTrack(instance: WorkInstance): InstallTrack | null {
 }
 
 function libraryStanding(instance: WorkInstance): Standing | null {
-  if (instance.installedGeneration === null) return null;
+  if (instance.installedVersion === null) return null;
   const here = instance.instanceName;
   return {
     steps: [],

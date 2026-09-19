@@ -96,9 +96,9 @@ test("an updated work names the update, its version and summary, and opens that 
       }),
     ),
   ).toEqual({
-    lead: "New update to",
+    lead: "New version of",
     subject: "Moonlit Archive",
-    detail: "Update 3, v2.1: Rewrote her opening",
+    detail: "Version 3, v2.1: Rewrote her opening",
     href: "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive?history#version-3",
   });
 });
@@ -116,7 +116,7 @@ test("an update without a version label leaves the label out", () => {
         },
       }),
     ).detail,
-  ).toBe("Update 2: Fixed a typo in her greeting");
+  ).toBe("Version 2: Fixed a typo in her greeting");
 });
 
 test("a folded entry says how many updates arrived and still shows the latest", () => {
@@ -132,9 +132,9 @@ test("a folded entry says how many updates arrived and still shows the latest", 
       },
     }),
   );
-  expect(words.lead).toBe("5 new updates to");
+  expect(words.lead).toBe("5 new versions of");
   expect(words.subject).toBe("Moonlit Archive");
-  expect(words.detail).toBe("Update 7, v3: Added a third greeting");
+  expect(words.detail).toBe("Version 7, v3: Added a third greeting");
   expect(words.href).toBe(
     "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive?history#version-7",
   );
@@ -149,8 +149,8 @@ test("an entry holding two updates counts them and one holding a single update d
         update: { number: 4, count, summary: "Rewrote her opening" },
       }),
     ).lead;
-  expect(folded(1)).toBe("New update to");
-  expect(folded(2)).toBe("2 new updates to");
+  expect(folded(1)).toBe("New version of");
+  expect(folded(2)).toBe("2 new versions of");
 });
 
 test("an entry that names no work still reads plainly and has nowhere to send the reader", () => {

@@ -8,11 +8,11 @@ import {
   type PreservedNamespace,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 import { describePreservedNamespace } from "@/lib/preserved";
-import { useWorkingCopy } from "@/lib/working-copy";
 
 export function PreservedPanel({ workId }: { workId: string }) {
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const [open, setOpen] = useState(false);
   const [namespaces, setNamespaces] = useState<PreservedNamespace[] | null>(
     null,

@@ -108,7 +108,7 @@ export function RecordedPromptsPanel({ workId }: { workId: string }) {
               {versions.map((version) => (
                 <li key={version.version.id}>
                   <h3>
-                    Update {version.version.number}
+                    Version {version.version.number}
                     {version.version.summary
                       ? `: ${version.version.summary}`
                       : ""}
@@ -152,7 +152,7 @@ export function RecordedPromptsPanel({ workId }: { workId: string }) {
                   >
                     {pending === version.version.number
                       ? "Saving matches…"
-                      : `Save matches for update ${version.version.number}`}
+                      : `Save matches for version ${version.version.number}`}
                   </button>
                 </li>
               ))}

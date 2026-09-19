@@ -19,7 +19,10 @@ import {
   type WorkDetailsRequest,
   type WorkElement,
 } from "@/lib/api/query";
-import { useWorkingCopy, WORKING_COPY_STALE } from "@/lib/working-copy";
+import {
+  DRAFTED_CHANGES_STALE,
+  useDraftedChanges,
+} from "@/lib/drafted-changes";
 import {
   type AllowedApp,
   hasSealedPrompts,
@@ -126,7 +129,7 @@ export function WorkspaceProvider({
   unpublishedChanges: boolean;
   children: ReactNode;
 }) {
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [sweep, setSweep] = useState(0);
@@ -155,8 +158,8 @@ export function WorkspaceProvider({
       setPane((open) =>
         open?.kind === "publication" ? open : { kind: "conflict" },
       );
-    window.addEventListener(WORKING_COPY_STALE, stale);
-    return () => window.removeEventListener(WORKING_COPY_STALE, stale);
+    window.addEventListener(DRAFTED_CHANGES_STALE, stale);
+    return () => window.removeEventListener(DRAFTED_CHANGES_STALE, stale);
   }, []);
 
   useEffect(() => {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import { addWorkImage } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { useWorkingCopy } from "@/lib/working-copy";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 
 /** CoverControl offers a display picture to every type of work. */
 export function CoverControl({
@@ -17,7 +17,7 @@ export function CoverControl({
   hasCover: boolean;
   typeLabel: string;
 }) {
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const router = useRouter();
   const file = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);

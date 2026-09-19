@@ -53,7 +53,7 @@ function instance(over: Partial<WorkInstance> = {}): WorkInstance {
     canReceive: true,
     reportsLibrary: true,
     delivery: null,
-    installedGeneration: null,
+    installedVersion: null,
     updateAvailable: false,
     ...over,
   };
@@ -158,13 +158,9 @@ test("no installation leaves the file as the only destination", () => {
 
 test("the send action says what sending would do this time", () => {
   expect(sendActionLabel(instance())).toBe("Send");
-  expect(sendActionLabel(instance({ installedGeneration: 2 }))).toBe(
-    "Send again",
-  );
+  expect(sendActionLabel(instance({ installedVersion: 2 }))).toBe("Send again");
   expect(
-    sendActionLabel(
-      instance({ installedGeneration: 2, updateAvailable: true }),
-    ),
+    sendActionLabel(instance({ installedVersion: 2, updateAvailable: true })),
   ).toBe("Send the update");
   expect(
     sendActionLabel(
@@ -196,14 +192,14 @@ test("a delivered delivery no longer blocks sending, and an extension is install
       expiresAt: "",
       updatesInstall: false,
     },
-    installedGeneration: 1,
+    installedVersion: 1,
   });
   expect(sendActionLabel(delivered)).toBe("Send again");
   expect(sendActionLabel(instance(), true)).toBe("Install on Desk");
   expect(sendActionLabel(delivered, true)).toBe("Install again on Desk");
   expect(
     sendActionLabel(
-      instance({ installedGeneration: 1, updateAvailable: true }),
+      instance({ installedVersion: 1, updateAvailable: true }),
       true,
     ),
   ).toBe("Update on Desk");
@@ -219,13 +215,11 @@ test("an installation that reports nothing does not pretend to know what it hold
     "This application does not report installed works. Installation status is unavailable.",
   );
   expect(instanceStanding(instance())).toBe("Not installed here yet.");
-  expect(instanceStanding(instance({ installedGeneration: 1 }))).toBe(
+  expect(instanceStanding(instance({ installedVersion: 1 }))).toBe(
     "Installed and up to date.",
   );
   expect(
-    instanceStanding(
-      instance({ installedGeneration: 1, updateAvailable: true }),
-    ),
+    instanceStanding(instance({ installedVersion: 1, updateAvailable: true })),
   ).toBe("Installed, and a newer version exists here.");
 });
 

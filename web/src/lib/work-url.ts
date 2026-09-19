@@ -30,7 +30,7 @@ export function workHref(id: string, name: string): string {
   return slug ? `/a/${id}/${slug}` : `/a/${id}`;
 }
 
-/** Opens the work page with its update history showing, at one version when given. */
+/** Opens the work page with its version history showing, at one version when given. */
 export function workHistoryHref(
   id: string,
   name: string,

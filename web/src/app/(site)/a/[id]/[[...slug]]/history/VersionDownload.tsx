@@ -14,7 +14,7 @@ import {
   type RecordedVersionDownloads,
 } from "@/lib/api/query";
 import { workHoldsNothing } from "@/lib/work-page-content";
-import { versionTitle } from "@/lib/work-updates";
+import { versionTitle } from "@/lib/work-versions";
 import { WorkChooser } from "../WorkChooser";
 
 type Reading =
