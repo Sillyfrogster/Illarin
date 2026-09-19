@@ -144,7 +144,7 @@ func TestWithdrawingAPostLeavesATombstoneAndKeepsEverythingElse(t *testing.T) {
 		t.Errorf("withdrawal changed the kept public edition to %q", gone.PublicRevision)
 	}
 	if len(gone.Document.Content) == 0 {
-		t.Error("withdrawal emptied the working copy")
+		t.Error("withdrawal emptied the drafted changes")
 	}
 	if len(stack.revisions(t, session, live.ID)) == 0 {
 		t.Error("withdrawal removed the editions the post had kept")

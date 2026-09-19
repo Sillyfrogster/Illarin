@@ -54,7 +54,7 @@ describe("details client", () => {
     });
   }
 
-  test("reports a working-copy conflict without changing the request", async () => {
+  test("reports a drafted-changes conflict without changing the request", async () => {
     const events: string[] = [];
     Object.defineProperty(globalThis, "window", {
       configurable: true,
@@ -71,7 +71,7 @@ describe("details client", () => {
           {
             code: "drafted_changes_conflict",
             currentVersion: 8,
-            error: "This working copy changed after you opened it.",
+            error: "These drafted changes changed after you opened them.",
           },
           { status: 409 },
         ),
@@ -84,7 +84,7 @@ describe("details client", () => {
     };
 
     await expect(saveWorkDetails({ version: 7 }, ID, details)).rejects.toThrow(
-      "This working copy changed after you opened it.",
+      "These drafted changes changed after you opened them.",
     );
 
     expect(events).toEqual([DRAFTED_CHANGES_STALE]);

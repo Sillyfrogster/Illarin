@@ -97,7 +97,7 @@ func (h *Handlers) SavePost(c *gin.Context) {
 	}
 	var request SavePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the working copy as JSON.")
+		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the drafted changes as JSON.")
 		return
 	}
 	document, err := json.Marshal(request.Document)
@@ -183,7 +183,7 @@ func (h *Handlers) PublishPost(c *gin.Context) {
 	var request PublishPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"Include the current working-copy version.", "version")
+			"Include the current drafted changes version.", "version")
 		return
 	}
 	published, err := h.publications.PublishPost(

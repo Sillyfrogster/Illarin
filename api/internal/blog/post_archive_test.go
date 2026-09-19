@@ -280,11 +280,11 @@ func TestTheArchiveHoldsOnlyPostsAReaderCanAlreadyOpen(t *testing.T) {
 
 	stack.saved(t, session, live.ID, finished(live, map[string]any{
 		"version": stack.working(t, session, live.ID).Version,
-		"title":   "A title only the working copy carries",
+		"title":   "A title only the drafted changes carry",
 	}))
 	after := stack.archive(t, "")
 	if after.Posts[0].Title != "The one public post" {
-		t.Errorf("the archive shows the working copy title %q", after.Posts[0].Title)
+		t.Errorf("the archive shows the drafted changes title %q", after.Posts[0].Title)
 	}
 }
 

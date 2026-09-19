@@ -95,7 +95,7 @@ func (h *Handlers) workingVersion(c *gin.Context) (int, bool) {
 	var request PostVersionRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"Include the current working-copy version.", "version")
+			"Include the current drafted changes version.", "version")
 		return 0, false
 	}
 	return request.Version, true

@@ -184,7 +184,7 @@ func (s *Service) RestoreRevision(
 		document, postbody.Version, kept.ReleaseAppID, kept.ReleaseVersion, kept.ReleaseAddress,
 		kept.HeaderMediaID, kept.HeaderAlt, kept.HeaderCaption, kept.SocialMediaID)
 	if err != nil {
-		return Post{}, fmt.Errorf("restore the edition into the working copy: %w", err)
+		return Post{}, fmt.Errorf("restore the edition into the drafted changes: %w", err)
 	}
 	if err := carryUsesBack(ctx, tx, id, revisionID); err != nil {
 		return Post{}, err
@@ -222,14 +222,14 @@ func carryUsesBack(ctx context.Context, tx pgx.Tx, postID, revisionID uuid.UUID)
 		delete from post_media_uses where post_id = $1 and revision_id is null
 	`, postID)
 	if err != nil {
-		return fmt.Errorf("clear what the working copy refers to: %w", err)
+		return fmt.Errorf("clear what the drafted changes refer to: %w", err)
 	}
 	_, err = tx.Exec(ctx, `
 		insert into post_media_uses (media_id, post_id, revision_id)
 		select media_id, post_id, null from post_media_uses where revision_id = $1
 	`, revisionID)
 	if err != nil {
-		return fmt.Errorf("carry the pictures back into the working copy: %w", err)
+		return fmt.Errorf("carry the pictures back into the drafted changes: %w", err)
 	}
 	return nil
 }

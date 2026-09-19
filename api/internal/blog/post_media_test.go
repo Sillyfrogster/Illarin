@@ -110,7 +110,7 @@ func TestAnAuthorPlacesAnUploadedPictureAndAReaderReceivesIt(t *testing.T) {
 		"document": bodyWithPicture(picture.ID, "The workspace with one draft in it"),
 	}))
 	if len(written.Media) != 1 || written.Media[0].ID != picture.ID {
-		t.Fatalf("the working copy carries %+v, want the placed picture", written.Media)
+		t.Fatalf("the drafted changes carry %+v, want the placed picture", written.Media)
 	}
 
 	stack.published(t, session, draft.ID)
@@ -218,10 +218,10 @@ func TestReplacingAPictureLeavesTheOneAPublishedEditionCarries(t *testing.T) {
 		"document": bodyWithPicture(second.ID, "The second picture"),
 	}))
 	if len(written.Media) != 1 || written.Media[0].ID != second.ID {
-		t.Fatalf("the working copy carries %+v, want only the new picture", written.Media)
+		t.Fatalf("the drafted changes carry %+v, want only the new picture", written.Media)
 	}
 	if answered := stack.fetch(t, published); answered.Code != http.StatusOK {
-		t.Fatalf("the published picture answers %d after the working copy moved on", answered.Code)
+		t.Fatalf("the published picture answers %d after the drafted changes moved on", answered.Code)
 	}
 	if live := stack.reader(t, draft.Slug); live.Media[0].ID != first.ID {
 		t.Errorf("the published edition now shows %s, want the picture it was published with",

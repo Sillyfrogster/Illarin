@@ -124,7 +124,7 @@ func (s publicationStack) save(
 	t.Helper()
 	body, err := json.Marshal(working)
 	if err != nil {
-		t.Fatalf("encode working copy: %v", err)
+		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+id, string(body),
@@ -278,12 +278,12 @@ func TestAnAdminWritesAndPublishesTheFirstPost(t *testing.T) {
 		t.Errorf("candidate address = %q", draft.Slug)
 	}
 	if draft.Version != 1 {
-		t.Errorf("a new working copy is version %d, want 1", draft.Version)
+		t.Errorf("new drafted changes are version %d, want 1", draft.Version)
 	}
 
 	written := stack.saved(t, session, draft.ID, finished(draft, nil))
 	if written.Version != 2 {
-		t.Errorf("saving left the working copy at version %d, want 2", written.Version)
+		t.Errorf("saving left the drafted changes at version %d, want 2", written.Version)
 	}
 	if stack.read(t, draft.Slug).Code != http.StatusNotFound {
 		t.Error("an unpublished post answers on its address")
@@ -415,7 +415,7 @@ func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
 	}
 }
 
-func TestAStaleSaveIsRefusedAndLeavesTheNewerWorkingCopy(t *testing.T) {
+func TestAStaleSaveIsRefusedAndLeavesTheNewerDraftedChanges(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
@@ -449,7 +449,7 @@ func TestAStaleSaveIsRefusedAndLeavesTheNewerWorkingCopy(t *testing.T) {
 		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), session,
 	))
 	if title := decodePost(t, current).Title; title != "The newer title" {
-		t.Errorf("the stale save overwrote the working copy: %q", title)
+		t.Errorf("the stale save overwrote the drafted changes: %q", title)
 	}
 }
 
@@ -570,7 +570,7 @@ func TestAPublishedRevisionIsTheOneReadersGetUntilItIsPublishedAgain(t *testing.
 		"summary": "Now with more detail.",
 	}))
 	if edited.Title != "Second edition" {
-		t.Fatalf("the working copy did not change: %q", edited.Title)
+		t.Fatalf("the drafted changes did not change: %q", edited.Title)
 	}
 	if still := stack.reader(t, draft.Slug); still.Title != "First edition" {
 		t.Errorf("a reader already sees %q", still.Title)
@@ -716,7 +716,7 @@ func TestRevokingAGrantEndsPostAccessAndLeavesThePublishedPost(t *testing.T) {
 	}
 }
 
-func TestARevisionIsNotRewrittenWhenTheWorkingCopyChanges(t *testing.T) {
+func TestARevisionIsNotRewrittenWhenTheDraftedChangesChanges(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
@@ -779,7 +779,7 @@ func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 	}
 }
 
-func TestPublishingRefusesAWorkingCopyWhoseTitleWentMissing(t *testing.T) {
+func TestPublishingRefusesDraftedChangesWhoseTitleWentMissing(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
@@ -851,7 +851,7 @@ func TestEveryStructureSurvivesTheRoundTripThroughStorage(t *testing.T) {
 		t.Fatalf("encode the public body: %v", err)
 	}
 	if !bytes.Equal(stored, public) {
-		t.Errorf("the published body differs from the working copy:\n%s\n%s", stored, public)
+		t.Errorf("the published body differs from the drafted changes:\n%s\n%s", stored, public)
 	}
 	types := map[string]bool{}
 	for _, block := range written.Document.Content {

@@ -163,7 +163,7 @@ function Edition({
         {chosen ? (
           <div className="mt-3 flex flex-col gap-3 rounded-control bg-plane p-3">
             <p className="font-prose text-meta text-ink">
-              This replaces your working copy with the selected revision. The
+              This replaces your drafted changes with the selected revision. The
               published post stays unchanged until you publish again.
             </p>
             <div className="flex flex-wrap items-center gap-2">

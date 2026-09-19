@@ -68,7 +68,7 @@ func refusalOf(t *testing.T, response *httptest.ResponseRecorder) publicationRef
 	return refused
 }
 
-func TestSavingAWorkingCopyIsNeverAPublicTransition(t *testing.T) {
+func TestSavingDraftedChangesIsNeverAPublicTransition(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "publication.writer")
@@ -85,7 +85,7 @@ func TestSavingAWorkingCopyIsNeverAPublicTransition(t *testing.T) {
 	})
 	body, err := json.Marshal(working)
 	if err != nil {
-		t.Fatalf("encode working copy: %v", err)
+		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	saved := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+draft.ID, string(body),
@@ -141,7 +141,7 @@ func TestAContributorReachesOnlyThePostsUnderTheirOwnGrant(t *testing.T) {
 	}
 }
 
-func TestAStaleWorkingCopyConflictsWithEnoughToReload(t *testing.T) {
+func TestAStaleDraftedChangesConflictsWithEnoughToReload(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	writer := stack.contributor(t, "writer@example.com", "publication.writer")
@@ -154,7 +154,7 @@ func TestAStaleWorkingCopyConflictsWithEnoughToReload(t *testing.T) {
 
 	body, err := json.Marshal(finished(draft, map[string]any{"title": "From another tab"}))
 	if err != nil {
-		t.Fatalf("encode working copy: %v", err)
+		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	stale := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+draft.ID, string(body),
@@ -184,7 +184,7 @@ func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
 	sent := bodyWithPicture(picture.ID, "The workspace")
 	body, err := json.Marshal(finished(draft, map[string]any{"document": sent}))
 	if err != nil {
-		t.Fatalf("encode working copy: %v", err)
+		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	saved := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+draft.ID, string(body),

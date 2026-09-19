@@ -419,7 +419,7 @@ func TestAWorkerThatKeepsFailingStopsTheScheduleInsteadOfRetryingForever(t *test
 	}
 }
 
-func TestAScheduledEditionKeepsItsPicturesAfterTheWorkingCopyDropsThem(t *testing.T) {
+func TestAScheduledEditionKeepsItsPicturesAfterTheDraftedChangesDropsThem(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")
@@ -524,7 +524,7 @@ func firstWords(document postDocument) string {
 	return string(written)
 }
 
-func TestSchedulingRefusesAWorkingCopySomeoneElseHasMovedPast(t *testing.T) {
+func TestSchedulingRefusesDraftedChangesSomeoneElseHasMovedPast(t *testing.T) {
 	t.Parallel()
 	stack := newPublicationStack(t)
 	session := stack.admin(t, "editor@example.com", "illarin.editor")

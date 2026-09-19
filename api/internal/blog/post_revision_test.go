@@ -162,7 +162,7 @@ func TestACheckpointKeepsTheEditionAndPublishesNothing(t *testing.T) {
 
 	after := stack.working(t, session, draft.ID)
 	if after.Version != written.Version {
-		t.Errorf("a checkpoint moved the working copy to version %d", after.Version)
+		t.Errorf("a checkpoint moved the drafted changes to version %d", after.Version)
 	}
 	if after.Status != "draft" {
 		t.Errorf("a checkpoint left the post %q", after.Status)
@@ -187,7 +187,7 @@ func TestEditingAPublishedPostLeavesReadersOnTheEditionTheyHave(t *testing.T) {
 	}))
 	reading := stack.reader(t, draft.Slug)
 	if reading.Title != "Illarin ships weekly" {
-		t.Fatalf("readers were given %q while the working copy was edited", reading.Title)
+		t.Fatalf("readers were given %q while the drafted changes were edited", reading.Title)
 	}
 	if strings.Contains(string(mustEncode(t, reading.Document)), "unfinished") {
 		t.Error("an unpublished edit reached a reader")
@@ -230,10 +230,10 @@ func TestRestoringAnEditionCopiesItForwardAndLeavesHistoryAlone(t *testing.T) {
 
 	back := stack.restored(t, session, draft.ID, before[0].ID, second.Version)
 	if back.Title != first.Title || back.Summary != first.Summary {
-		t.Errorf("the restored working copy reads %q / %q", back.Title, back.Summary)
+		t.Errorf("the restored drafted changes read %q / %q", back.Title, back.Summary)
 	}
 	if back.Version <= second.Version {
-		t.Errorf("restoring left the working copy at version %d", back.Version)
+		t.Errorf("restoring left the drafted changes at version %d", back.Version)
 	}
 	if back.Status != "published" || back.Slug != live.Slug {
 		t.Errorf("restoring changed the post to %q at %q", back.Status, back.Slug)
@@ -306,7 +306,7 @@ func TestStaleCheckpointRestoreAndPublishChangeNothing(t *testing.T) {
 
 	after := stack.working(t, session, draft.ID)
 	if after.Version != moved.Version || after.Title != moved.Title {
-		t.Errorf("a stale request changed the working copy to %q at %d", after.Title, after.Version)
+		t.Errorf("a stale request changed the drafted changes to %q at %d", after.Title, after.Version)
 	}
 	if now := stack.revisions(t, session, draft.ID); len(now) != len(kept) {
 		t.Errorf("a stale request kept %d editions, want %d", len(now), len(kept))
@@ -410,7 +410,7 @@ func TestAnEditionOfAnotherPostIsNotRestorable(t *testing.T) {
 		t.Fatalf("restoring another post's edition returned %d", response.Code)
 	}
 	if after := stack.working(t, session, second.ID); after.Title != written.Title {
-		t.Errorf("the working copy became %q", after.Title)
+		t.Errorf("the drafted changes became %q", after.Title)
 	}
 }
 
@@ -446,12 +446,12 @@ func TestRestoringBringsBackThePicturesTheEditionUsed(t *testing.T) {
 		"version": written.Version,
 	}))
 	if len(bare.Media) != 0 {
-		t.Fatalf("the working copy still refers to %+v", bare.Media)
+		t.Fatalf("the drafted changes still refer to %+v", bare.Media)
 	}
 
 	back := stack.restored(t, session, draft.ID, kept.ID, bare.Version)
 	if len(back.Media) != 1 || back.Media[0].ID != picture.ID {
-		t.Fatalf("the restored working copy refers to %+v", back.Media)
+		t.Fatalf("the restored drafted changes refer to %+v", back.Media)
 	}
 }
 

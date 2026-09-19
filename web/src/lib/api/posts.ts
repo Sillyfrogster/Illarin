@@ -10,7 +10,7 @@ import type {
 import type { PostDocument } from "@/lib/post-document";
 import { ask } from "./request";
 
-export type WorkingCopy = {
+export type DraftedChanges = {
   version: number;
   categoryId: string;
   title: string;
@@ -42,8 +42,8 @@ export function readPost(id: string) {
   return ask<Post>("GET", `/publication/posts/${id}`);
 }
 
-export function saveWorkingCopy(id: string, working: WorkingCopy) {
-  return ask<Post>("PUT", `/publication/posts/${id}`, { body: working });
+export function saveDraftedChanges(id: string, drafted: DraftedChanges) {
+  return ask<Post>("PUT", `/publication/posts/${id}`, { body: drafted });
 }
 
 export function uploadPostMedia(

@@ -97,7 +97,7 @@ func TestMarkdownAndJSONReachTheSameDocument(t *testing.T) {
 		"document": json.RawMessage(theSameThingAsJSON),
 	}))
 	if err != nil {
-		t.Fatalf("encode working copy: %v", err)
+		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	saved := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+written.ID, string(body),
@@ -166,7 +166,7 @@ func TestAnImportRefusesEveryThingItCannotCarryAtOnce(t *testing.T) {
 		}
 	}
 	if left := stack.working(t, writer.session, draft.ID); len(left.Document.Content) != 0 {
-		t.Errorf("a refused import still changed the working copy to %v", left.Document)
+		t.Errorf("a refused import still changed the drafted changes to %v", left.Document)
 	}
 }
 
@@ -286,7 +286,7 @@ func TestOnlyTheImportOperationTakesMarkdown(t *testing.T) {
 	draft := stack.draftBy(t, writer, "Lumiverse 3 is out")
 	body, err := json.Marshal(finished(draft, map[string]any{"document": theSameThing}))
 	if err != nil {
-		t.Fatalf("encode working copy: %v", err)
+		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	response := stack.sent(t, writer, jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+draft.ID, string(body),

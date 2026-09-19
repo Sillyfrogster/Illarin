@@ -137,7 +137,7 @@ test("a body of whitespace does not count as writing", () => {
   ).toBe(false);
 });
 
-test("a line the author has not typed into stays out of the working copy", () => {
+test("a line the author has not typed into stays out of the drafted changes", () => {
   const carried = fromEditor({
     type: "doc",
     content: [
@@ -151,7 +151,7 @@ test("a line the author has not typed into stays out of the working copy", () =>
   ]);
 });
 
-test("an empty list item and its list stay out of the working copy", () => {
+test("an empty list item and its list stay out of the drafted changes", () => {
   const carried = fromEditor({
     type: "doc",
     content: [
@@ -394,7 +394,7 @@ test("an inserted table and callout survive before anything is typed into them",
 });
 
 for (const [name, one] of corpus("invalid")) {
-  test(`${name} loses what Go refuses before it reaches a working copy`, () => {
+  test(`${name} loses what Go refuses before it reaches the drafted changes`, () => {
     const carried = fromEditor({
       type: "doc",
       content: one.document.content,

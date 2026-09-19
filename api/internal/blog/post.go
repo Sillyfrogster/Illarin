@@ -41,7 +41,7 @@ type Stale struct {
 	UpdatedAt time.Time
 }
 
-func (Stale) Error() string { return "the working copy has already moved on" }
+func (Stale) Error() string { return "the drafted changes have already moved on" }
 
 type Editor struct {
 	ID    uuid.UUID
@@ -220,13 +220,13 @@ func (s *Service) SavePost(
 	if in.Version != current.Version {
 		return Post{}, Stale{Version: current.Version, UpdatedAt: current.UpdatedAt}
 	}
-	edition, err := s.checkWorkingCopy(ctx, editor, current, in)
+	edition, err := s.checkDraftedChanges(ctx, editor, current, in)
 	if err != nil {
 		return Post{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Post{}, fmt.Errorf("begin working copy save: %w", err)
+		return Post{}, fmt.Errorf("begin saving the drafted changes: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	tag, err := tx.Exec(ctx, `
@@ -247,7 +247,7 @@ func (s *Service) SavePost(
 		return Post{}, FieldError{Field: "slug", Message: "Another post already has that address."}
 	}
 	if err != nil {
-		return Post{}, fmt.Errorf("save working copy: %w", err)
+		return Post{}, fmt.Errorf("save the drafted changes: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		moved, readErr := s.post(ctx, id)
@@ -260,7 +260,7 @@ func (s *Service) SavePost(
 		return Post{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Post{}, fmt.Errorf("commit working copy save: %w", err)
+		return Post{}, fmt.Errorf("commit the drafted changes: %w", err)
 	}
 	return s.post(ctx, id)
 }
@@ -344,7 +344,7 @@ type edition struct {
 	pictures       placed
 }
 
-func (s *Service) checkWorkingCopy(
+func (s *Service) checkDraftedChanges(
 	ctx context.Context,
 	editor Editor,
 	current Post,
@@ -1102,7 +1102,7 @@ func recordUses(
 			delete from post_media_uses where post_id = $1 and revision_id is null
 		`, postID)
 		if err != nil {
-			return fmt.Errorf("clear what the working copy refers to: %w", err)
+			return fmt.Errorf("clear what the drafted changes refer to: %w", err)
 		}
 	}
 	written := make(map[uuid.UUID]bool, len(ordered))

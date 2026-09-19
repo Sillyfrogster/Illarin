@@ -23,7 +23,7 @@ import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import {
   keepPostVersion,
   readPost,
-  saveWorkingCopy,
+  saveDraftedChanges,
   uploadPostMedia,
 } from "@/lib/api/posts";
 import { readWorkspace } from "@/lib/api/publication";
@@ -115,7 +115,7 @@ export function PostWriter({ id }: { id: string }) {
   const save = useCallback(async () => {
     if (!draft) return version.current;
     setState("saving");
-    const answer = await saveWorkingCopy(id, {
+    const answer = await saveDraftedChanges(id, {
       version: version.current,
       ...draft,
     });
@@ -422,7 +422,7 @@ export function PostWriter({ id }: { id: string }) {
 
         {rail === "history" && state !== "conflict" ? (
           <WorkspaceRail
-            description="Save checkpoints and restore earlier revisions to your working copy."
+            description="Save checkpoints and restore earlier revisions to your drafted changes."
             key="history"
             onClose={() => setRail(null)}
             title="Editorial history"
