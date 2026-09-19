@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { TextArea } from "@/components/ui/field";
-import { readPostDestinations } from "@/lib/api/posts";
-import type { PublicationDestinationChoice } from "@/lib/api/query";
-import { cn } from "@/lib/cn";
+import { readPostIntegrations } from "@/lib/api/posts";
+import type { BlogIntegrationChoice } from "@/lib/api/query";
 import {
-  eventWord,
+  announcementWord,
   offeredFor,
   type Transition,
   transitionEvent,
-} from "@/lib/publication-delivery";
+} from "@/lib/blog-announcement-attempt";
+import { cn } from "@/lib/cn";
 
 const QUIET: Record<Transition, string> = {
   publish:
@@ -24,11 +24,11 @@ const QUIET: Record<Transition, string> = {
 const SENT: Record<Transition, string> = {
   publish: "Each one receives a summary and a link, never the article itself.",
   changes:
-    "Each destination receives an update announcement for the new revision.",
+    "Each integration receives an update announcement for the new revision.",
   withdraw:
-    "Each destination receives a withdrawal notice without the private reason.",
+    "Each integration receives a withdrawal notice without the private reason.",
   republish:
-    "Each destination receives an announcement for the republished revision.",
+    "Each integration receives an announcement for the republished revision.",
 };
 
 export function AnnouncementChoice({
@@ -52,12 +52,12 @@ export function AnnouncementChoice({
   onPinging: (pinging: string[]) => void;
   onNote: (note: string) => void;
 }) {
-  const [offered, setOffered] = useState<PublicationDestinationChoice[]>([]);
+  const [offered, setOffered] = useState<BlogIntegrationChoice[]>([]);
 
   useEffect(() => {
     let live = true;
-    void readPostDestinations(postId).then((answer) => {
-      if (live && answer.value) setOffered(answer.value.destinations);
+    void readPostIntegrations(postId).then((answer) => {
+      if (live && answer.value) setOffered(answer.value.integrations);
     });
     return () => {
       live = false;
@@ -71,7 +71,7 @@ export function AnnouncementChoice({
     if (offered.length === 0) return null;
     return (
       <p className="font-prose text-meta text-mute">
-        No destination receives {eventWord(event)} announcements.
+        No integration receives {announcementWord(event)} announcements.
       </p>
     );
   }

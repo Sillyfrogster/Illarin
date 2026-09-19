@@ -27,19 +27,19 @@ import (
 
 // services holds the running parts the routes need
 type services struct {
-	Works              *work.Service
-	Pages              *page.Service
-	Blocks             *edit.Service
-	Versions           *version.Service
-	Uploads            *upload.Service
-	Downloads          *download.Service
-	Accounts           *account.Service
-	Apps               *connect.Apps
-	Sends              *connect.Sends
-	Publications       *blog.Service
-	UpdateDestinations *integration.Service
-	Notifications      *notify.Service
-	MaxUploadBytes     int64
+	Works          *work.Service
+	Pages          *page.Service
+	Blocks         *edit.Service
+	Versions       *version.Service
+	Uploads        *upload.Service
+	Downloads      *download.Service
+	Accounts       *account.Service
+	Apps           *connect.Apps
+	Sends          *connect.Sends
+	Publications   *blog.Service
+	Integrations   *integration.Service
+	Notifications  *notify.Service
+	MaxUploadBytes int64
 }
 
 // readiness answers whether the server can take traffic
@@ -80,7 +80,7 @@ func registerRoutes(r *gin.Engine, s services, d api.Deadlines, ready readiness)
 	connect.Register(routes, connect.NewHandlers(s.Apps, s.Sends, downloads))
 	blog.Register(routes, posts)
 	integration.Register(routes, integration.NewHandlers(
-		s.Publications, s.UpdateDestinations, posts.IntegrationAccess()))
+		s.Publications, s.Integrations, posts.IntegrationAccess()))
 	staff.Register(routes, staff.NewHandlers(staff.NewService(s.Works.Pool())))
 	return nil
 }

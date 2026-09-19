@@ -14,10 +14,10 @@ var ErrUnlistedConsentRequired = errors.New(
 	"announcing an unlisted work sends its direct link, which needs explicit consent",
 )
 
-var ErrDestinationIneligible = errors.New("choose only your own verified, active integrations")
+var ErrIntegrationIneligible = errors.New("choose only your own verified, active integrations")
 
 type Announcement struct {
-	DestinationIDs   *[]uuid.UUID
+	IntegrationIDs   *[]uuid.UUID
 	AnnounceUnlisted bool
 	Notify           bool
 }

@@ -7,18 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Trouble } from "@/components/ui/field";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import { readPostDeliveries } from "@/lib/api/posts";
-import type { Post, PostDelivery } from "@/lib/api/query";
+import type { BlogAnnouncementAttempt, Post } from "@/lib/api/query";
+import { attemptStanding, attemptState } from "@/lib/attempt-standing";
+import { announcementWord } from "@/lib/blog-announcement-attempt";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
 import { remainingDeletionWindow } from "@/lib/deletion-window";
-import { deliveryStanding, deliveryState } from "@/lib/delivery-standing";
 import { useBlogHost } from "@/lib/origins";
 import {
   type PublicationAction,
   publicationActions,
   writerStanding,
 } from "@/lib/post-writing";
-import { eventWord } from "@/lib/publication-delivery";
 import { howSoon } from "@/lib/schedule-time";
 import {
   DeleteStep,
@@ -270,12 +270,12 @@ function readersHave(post: Post): string {
 }
 
 function Sent({ postId }: { postId: string }) {
-  const [sent, setSent] = useState<PostDelivery[]>([]);
+  const [sent, setSent] = useState<BlogAnnouncementAttempt[]>([]);
 
   useEffect(() => {
     let live = true;
     void readPostDeliveries(postId).then((answer) => {
-      if (live && answer.value) setSent(answer.value.deliveries);
+      if (live && answer.value) setSent(answer.value.attempts);
     });
     return () => {
       live = false;
@@ -296,11 +296,13 @@ function Sent({ postId }: { postId: string }) {
             key={one.id}
           >
             <span className="min-w-0 text-ink wrap-anywhere">
-              {one.destination}
+              {one.integration}
             </span>
-            <span className="text-mute">{eventWord(one.eventType)}</span>
+            <span className="text-mute">
+              {announcementWord(one.announcementType)}
+            </span>
             <span className={cn(troubled(one) ? "text-stop" : "text-mute")}>
-              {deliveryStanding(one)}
+              {attemptStanding(one)}
             </span>
           </li>
         ))}
@@ -309,7 +311,7 @@ function Sent({ postId }: { postId: string }) {
   );
 }
 
-function troubled(one: PostDelivery): boolean {
-  const state = deliveryState(one);
+function troubled(one: BlogAnnouncementAttempt): boolean {
+  const state = attemptState(one);
   return state === "gaveUp" || state === "stopped";
 }

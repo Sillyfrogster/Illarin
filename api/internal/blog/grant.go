@@ -21,8 +21,8 @@ type Grant struct {
 	App                   App
 	Categories            []Category
 	DefaultCategory       Category
-	Destinations          []Choice
-	DestinationsInherited bool
+	Integrations          []Choice
+	IntegrationsInherited bool
 	GrantedBy             *uuid.UUID
 	GrantedAt             time.Time
 	RevokedAt             *time.Time
@@ -294,17 +294,17 @@ func (s *Service) grantsWhere(ctx context.Context, clause string, args ...any) (
 	if err != nil {
 		return nil, err
 	}
-	return s.withAllowedDestinations(ctx, found)
+	return s.withAllowedIntegrations(ctx, found)
 }
 
-func (s *Service) withAllowedDestinations(ctx context.Context, found []Grant) ([]Grant, error) {
+func (s *Service) withAllowedIntegrations(ctx context.Context, found []Grant) ([]Grant, error) {
 	for index := range found {
 		allowed, err := s.GrantChoices(ctx, found[index].ID)
 		if err != nil {
 			return nil, err
 		}
-		found[index].Destinations = allowed
-		if found[index].App.Destinations, err = s.AppChoices(ctx, found[index].App.ID); err != nil {
+		found[index].Integrations = allowed
+		if found[index].App.Integrations, err = s.AppChoices(ctx, found[index].App.ID); err != nil {
 			return nil, err
 		}
 	}
@@ -355,7 +355,7 @@ const selectGrants = `
 	       app.id, app.slug, app.name, app.home_url, app.position,
 	       app.retired_at is not null,
 	       fallback.id, fallback.slug, fallback.label, fallback.position,
-	       fallback.retired_at is not null, not grant_row.destinations_overridden,
+	       fallback.retired_at is not null, not grant_row.integrations_overridden,
 	       grant_row.granted_by, grant_row.granted_at, grant_row.revoked_at, grant_row.active
 	  from publication_grants grant_row
 	  join users holder on holder.id = grant_row.user_id
@@ -374,7 +374,7 @@ func collectGrants(rows pgx.Rows) ([]Grant, error) {
 			&one.App.Retired,
 			&one.DefaultCategory.ID, &one.DefaultCategory.Slug, &one.DefaultCategory.Label,
 			&one.DefaultCategory.Position, &one.DefaultCategory.Retired,
-			&one.DestinationsInherited,
+			&one.IntegrationsInherited,
 			&one.GrantedBy, &one.GrantedAt, &one.RevokedAt, &one.Active,
 		)
 		if err != nil {
@@ -405,7 +405,7 @@ type App struct {
 	Home         string
 	Position     int
 	Retired      bool
-	Destinations []Choice
+	Integrations []Choice
 }
 
 func (s *Service) Apps(ctx context.Context) ([]App, error) {
@@ -418,16 +418,16 @@ func (s *Service) Apps(ctx context.Context) ([]App, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.withAppDestinations(ctx, found)
+	return s.withAppIntegrations(ctx, found)
 }
 
-func (s *Service) withAppDestinations(ctx context.Context, found []App) ([]App, error) {
+func (s *Service) withAppIntegrations(ctx context.Context, found []App) ([]App, error) {
 	for index := range found {
 		allowed, err := s.AppChoices(ctx, found[index].ID)
 		if err != nil {
 			return nil, err
 		}
-		found[index].Destinations = allowed
+		found[index].Integrations = allowed
 	}
 	return found, nil
 }
@@ -449,7 +449,7 @@ func (s *Service) app(ctx context.Context, id uuid.UUID) (App, error) {
 	if len(found) == 0 {
 		return App{}, ErrAppNotFound
 	}
-	found, err = s.withAppDestinations(ctx, found)
+	found, err = s.withAppIntegrations(ctx, found)
 	if err != nil {
 		return App{}, err
 	}

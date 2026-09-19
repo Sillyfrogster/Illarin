@@ -19,18 +19,18 @@ import { Select } from "@/components/ui/select";
 import {
   approveContributor,
   revokeGrant,
-  setGrantDestinations,
+  setGrantIntegrations,
   updateGrant,
 } from "@/lib/api/publication";
 import type {
+  BlogIntegration,
   PublicationApp,
   PublicationCategory,
-  PublicationDestination,
   PublicationGrant,
 } from "@/lib/api/query";
 import { readableDate } from "@/lib/dates";
 import { grantAllowance, nothingIn } from "@/lib/publication-register";
-import { CategoryChoice, DestinationChoice } from "./choices";
+import { CategoryChoice, IntegrationChoice } from "./choices";
 
 export function ContributorRows({
   apps,
@@ -108,7 +108,7 @@ export function ContributorRows({
 export function ContributorStep({
   apps,
   categories,
-  destinations,
+  integrations,
   existing,
   onClose,
   onFailure,
@@ -117,7 +117,7 @@ export function ContributorStep({
 }: {
   apps: PublicationApp[];
   categories: PublicationCategory[];
-  destinations: PublicationDestination[];
+  integrations: BlogIntegration[];
   existing: PublicationGrant | null;
   onClose: () => void;
   onFailure: (message: string) => void;
@@ -131,14 +131,14 @@ export function ContributorStep({
   );
   const [fallback, setFallback] = useState(existing?.defaultCategory.id ?? "");
   const [follows, setFollows] = useState(
-    existing ? existing.destinationsInherited : true,
+    existing ? existing.integrationsInherited : true,
   );
   const [reaching, setReaching] = useState<string[]>(
-    existing ? existing.destinations.map((one) => one.id) : [],
+    existing ? existing.integrations.map((one) => one.id) : [],
   );
   const [sends, setSends] = useState<string[]>(
     existing
-      ? existing.destinations
+      ? existing.integrations
           .filter((one) => one.byDefault)
           .map((one) => one.id)
       : [],
@@ -171,9 +171,9 @@ export function ContributorStep({
       onFailure(written.error ?? "");
       return;
     }
-    const policed = await setGrantDestinations(written.value.id, {
-      defaultDestinationIds: follows ? [] : sends,
-      destinationIds: follows ? null : reaching,
+    const policed = await setGrantIntegrations(written.value.id, {
+      defaultIntegrationIds: follows ? [] : sends,
+      integrationIds: follows ? null : reaching,
     });
     setBusy(false);
     if (policed.error || !policed.value) {
@@ -273,12 +273,12 @@ export function ContributorStep({
           onFallback={setFallback}
         />
 
-        <DestinationChoice
+        <IntegrationChoice
           allowed={reaching}
           defaults={sends}
-          destinations={destinations}
+          integrations={integrations}
           inherit={{ label: appPolicy(existing, apps, appId), on: follows }}
-          legend="Announcement destinations"
+          legend="Announcement integrations"
           onAllowed={setReaching}
           onDefaults={setSends}
           onInherit={setFollows}

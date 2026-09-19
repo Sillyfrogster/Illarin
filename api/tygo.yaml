@@ -152,20 +152,20 @@ packages:
     enum_style: "union"
     preserve_comments: "none"
     frontmatter: |
-      import type { PublicationDestinationChoice as AnnouncementPublicationDestinationChoice } from "./announcements";
-      import type { PublicationDestinationType as AnnouncementPublicationDestinationType } from "./announcements";
-      import type { PublicationDestinationState as AnnouncementPublicationDestinationState } from "./announcements";
-      import type { PublicationEvent as AnnouncementPublicationEvent } from "./announcements";
+      import type { BlogIntegrationChoice as AnnouncementBlogIntegrationChoice } from "./announcements";
+      import type { BlogIntegrationType as AnnouncementBlogIntegrationType } from "./announcements";
+      import type { BlogIntegrationState as AnnouncementBlogIntegrationState } from "./announcements";
+      import type { BlogAnnouncementType as AnnouncementBlogAnnouncementType } from "./announcements";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
-      announcements.PublicationDestinationChoice: "AnnouncementPublicationDestinationChoice"
-      announcements.PublicationDestinationType: "AnnouncementPublicationDestinationType"
-      announcements.PublicationDestinationState: "AnnouncementPublicationDestinationState"
-      announcements.PublicationEvent: "AnnouncementPublicationEvent"
+      announcements.BlogIntegrationChoice: "AnnouncementBlogIntegrationChoice"
+      announcements.BlogIntegrationType: "AnnouncementBlogIntegrationType"
+      announcements.BlogIntegrationState: "AnnouncementBlogIntegrationState"
+      announcements.BlogAnnouncementType: "AnnouncementBlogAnnouncementType"
     include_files:
-      - "work_destination_shapes.go"
-      - "destination_shapes.go"
+      - "work_integration_shapes.go"
+      - "blog_integration_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
     output_path: "../web/src/lib/api/shapes/announcements.ts"
     enum_style: "union"
@@ -173,7 +173,7 @@ packages:
     type_mappings:
       uuid.UUID: "string"
     include_files:
-      - "choice_shapes.go"
+      - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/blog"
     output_path: "../web/src/lib/api/shapes/blog.ts"
     enum_style: "union"
@@ -185,13 +185,13 @@ packages:
       export type { PostSummaryResponse as PostSummary };
       export type { PublicPostResponse as PublicPost };
       import type { ProfileAvatar } from "./profile";
-      import type { PublicationDestinationChoice } from "./integration";
+      import type { BlogIntegrationChoice } from "./integration";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
       json.RawMessage: "unknown"
       profile.ProfileAvatar: "ProfileAvatar"
-      announcements.PublicationDestinationChoice: "PublicationDestinationChoice"
+      announcements.BlogIntegrationChoice: "BlogIntegrationChoice"
     include_files:
       - "post_deletion_handlers.go"
       - "post_history_handlers.go"

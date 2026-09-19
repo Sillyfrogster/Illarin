@@ -18,7 +18,7 @@ type WorkVersion struct {
 
 type WorkVersionRequest struct {
 	AnnounceUnlisted *bool        `json:"announceUnlisted,omitempty"`
-	DestinationIds   *[]uuid.UUID `json:"destinationIds,omitempty"`
+	IntegrationIds   *[]uuid.UUID `json:"integrationIds,omitempty"`
 	Notes            *string      `json:"notes,omitempty"`
 	Notify           *bool        `json:"notify,omitempty"`
 	Summary          string       `json:"summary"`

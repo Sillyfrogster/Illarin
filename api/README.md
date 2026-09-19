@@ -42,8 +42,8 @@ Features, one per thing the product has:
 - `image` — the pictures a work, a profile or a post owns.
 - `private` — private prompts.
 - `connect` — connected apps: connecting, permissions, sends, the app's library.
-- `integration` — outgoing announcements: `integration/blog` picks the
-  destinations, `integration/discord` and `integration/dispatch` send them.
+- `integration` — outgoing announcements: `integration/blog` picks the blog's
+  integrations, `integration/discord` and `integration/dispatch` send them.
 - `notify` — the inbox and what a person follows.
 - `blog` — posts, versions, schedule, writers, categories, feeds, link cards,
   import; `blog/body` is the post body format.

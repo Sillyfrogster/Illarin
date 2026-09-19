@@ -128,11 +128,11 @@ export function WorkChooser({
   const chosen =
     choices.find((choice) => choice.format === format) ?? choices[0];
   const goingToAnApp = Boolean(app);
-  const destinations = sendDestinations(connectedApps).filter(
+  const integrations = sendDestinations(connectedApps).filter(
     (one) => one.id !== DOWNLOAD_DESTINATION || !hasPrivatePrompts,
   );
   const goingTo =
-    destinations.find((one) => one.id === destination) ?? destinations[0];
+    integrations.find((one) => one.id === destination) ?? integrations[0];
   const connectedApp = connectedApps.find(
     (one) => one.connectedAppId === goingTo?.id && one.canReceive,
   );
@@ -245,7 +245,7 @@ export function WorkChooser({
         />
       ) : null}
 
-      {destinations.length > 1 ? (
+      {integrations.length > 1 ? (
         <>
           <label
             className="mt-5 block text-meta font-medium text-ink"
@@ -263,7 +263,7 @@ export function WorkChooser({
             }}
             value={goingTo?.id}
           >
-            {destinations.map((one) => (
+            {integrations.map((one) => (
               <option key={one.id} value={one.id}>
                 {one.label}
               </option>

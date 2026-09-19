@@ -54,8 +54,8 @@ export function PublishStep({
     setBusy(true);
     const version = await onSaveFirst();
     const announcement = {
-      destinationIds: sending ?? undefined,
-      roleDestinationIds: pinging.length > 0 ? pinging : undefined,
+      integrationIds: sending ?? undefined,
+      roleIntegrationIds: pinging.length > 0 ? pinging : undefined,
       note: note.trim() || undefined,
     };
     const answer =
@@ -123,7 +123,7 @@ export function WithdrawStep({ onFailure, onSettled, post }: StepProps) {
       post.version,
       reason.trim(),
       explanation.trim(),
-      { destinationIds: sending, note },
+      { integrationIds: sending, note },
     );
     setBusy(false);
     if (answer.error || !answer.value) {
@@ -199,7 +199,7 @@ export function RepublishStep({ onFailure, onSettled, post }: StepProps) {
     if (!chosen) return;
     setBusy(true);
     const answer = await republishPost(post.id, post.version, chosen, {
-      destinationIds: sending,
+      integrationIds: sending,
       note,
     });
     setBusy(false);

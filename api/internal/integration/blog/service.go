@@ -23,7 +23,7 @@ type Service struct {
 }
 
 func NewService(pool *pgxpool.Pool, sealing secrets.Key, sender Sender, summary func(context.Context, db.DBTX, uuid.UUID) (Event, error), audit func(context.Context, pgx.Tx, Change) error) *Service {
-	return &Service{pool: pool, sealing: sealing, sender: sender, ledger: dispatch.NewLedger(pool, deliveryTables), now: time.Now, Summary: summary, Audit: audit}
+	return &Service{pool: pool, sealing: sealing, sender: sender, ledger: dispatch.NewLedger(pool, attemptTables), now: time.Now, Summary: summary, Audit: audit}
 }
 
 type Change struct {
@@ -38,16 +38,16 @@ type Change struct {
 	ScheduleID *uuid.UUID
 	SubjectID  *uuid.UUID
 
-	DestinationID *uuid.UUID
-	DeliveryID    *uuid.UUID
+	IntegrationID *uuid.UUID
+	AttemptID     *uuid.UUID
 	Before        string
 	After         string
 }
 
 const (
-	EventPublished   = "publication.post.published.v1"
-	EventUpdated     = "publication.post.updated.v1"
-	EventWithdrawn   = "publication.post.withdrawn.v1"
+	PostPublished    = "publication.post.published.v1"
+	PostUpdated      = "publication.post.updated.v1"
+	PostWithdrawn    = "publication.post.withdrawn.v1"
 	CredentialSystem = "system"
 )
 

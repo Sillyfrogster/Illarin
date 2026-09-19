@@ -60,7 +60,7 @@ func NewPublicationService(pool *pgxpool.Pool, store storage.Store) *blog.Servic
 	)
 }
 
-func NewUpdateDestinations(pool *pgxpool.Pool) *integration.Service {
+func NewIntegrations(pool *pgxpool.Pool) *integration.Service {
 	return integration.NewService(pool, SealingKey(), Publishing(nil).Sender, "http://localhost:3000")
 }
 

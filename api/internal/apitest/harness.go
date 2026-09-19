@@ -32,19 +32,19 @@ func init() {
 
 // Services are the running parts a test router serves
 type Services struct {
-	Works              *work.Service
-	Pages              *page.Service
-	Blocks             *edit.Service
-	Versions           *version.Service
-	Uploads            *upload.Service
-	Downloads          *download.Service
-	Accounts           *account.Service
-	Apps               *connect.Apps
-	Sends              *connect.Sends
-	Publications       *blog.Service
-	UpdateDestinations *integration.Service
-	Notifications      *notify.Service
-	MaxUploadBytes     int64
+	Works          *work.Service
+	Pages          *page.Service
+	Blocks         *edit.Service
+	Versions       *version.Service
+	Uploads        *upload.Service
+	Downloads      *download.Service
+	Accounts       *account.Service
+	Apps           *connect.Apps
+	Sends          *connect.Sends
+	Publications   *blog.Service
+	Integrations   *integration.Service
+	Notifications  *notify.Service
+	MaxUploadBytes int64
 }
 
 // Register puts every route on a router, the way the server does
@@ -137,25 +137,25 @@ func NewServicesWithSends(
 	works := work.NewService(pool, Registry(t), blob)
 	accounts := NewAccounts(pool, sender, nil, MediaLibrary(blob))
 	apps := NewAppsService(pool)
-	updateDestinations := integration.NewService(
+	integrations := integration.NewService(
 		pool, SealingKey(), Publishing(to).Sender, "http://localhost:3000",
 	)
 	versions := version.NewService(pool, works)
-	versions.OnPublished(updateDestinations.Announce, version.TellFollowers)
+	versions.OnPublished(integrations.Announce, version.TellFollowers)
 	return Services{
-		Works:              works,
-		Pages:              page.NewService(pool, works),
-		Blocks:             edit.NewService(pool, works),
-		Versions:           versions,
-		Uploads:            upload.NewService(pool, works),
-		Downloads:          download.NewService(pool, works),
-		Accounts:           accounts,
-		Apps:               apps,
-		Sends:              connect.NewSends(pool, works, apps, settings),
-		Publications:       blog.NewService(pool, MediaLibrary(blob), Publishing(to)),
-		UpdateDestinations: updateDestinations,
-		Notifications:      NewNotifications(pool),
-		MaxUploadBytes:     maxUploadBytes,
+		Works:          works,
+		Pages:          page.NewService(pool, works),
+		Blocks:         edit.NewService(pool, works),
+		Versions:       versions,
+		Uploads:        upload.NewService(pool, works),
+		Downloads:      download.NewService(pool, works),
+		Accounts:       accounts,
+		Apps:           apps,
+		Sends:          connect.NewSends(pool, works, apps, settings),
+		Publications:   blog.NewService(pool, MediaLibrary(blob), Publishing(to)),
+		Integrations:   integrations,
+		Notifications:  NewNotifications(pool),
+		MaxUploadBytes: maxUploadBytes,
 	}
 }
 
@@ -168,23 +168,23 @@ func NewServicesOver(
 	provider account.DiscordProvider,
 ) Services {
 	apps := NewAppsService(pool)
-	destinations := NewUpdateDestinations(pool)
+	integrations := NewIntegrations(pool)
 	versions := version.NewService(pool, works)
-	versions.OnPublished(destinations.Announce, version.TellFollowers)
+	versions.OnPublished(integrations.Announce, version.TellFollowers)
 	return Services{
-		Works:              works,
-		Pages:              page.NewService(pool, works),
-		Blocks:             edit.NewService(pool, works),
-		Versions:           versions,
-		Uploads:            upload.NewService(pool, works),
-		Downloads:          download.NewService(pool, works),
-		Accounts:           NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
-		Apps:               apps,
-		Sends:              NewSendsService(pool, works, apps),
-		Publications:       NewPublicationService(pool, blobs),
-		UpdateDestinations: destinations,
-		Notifications:      NewNotifications(pool),
-		MaxUploadBytes:     1 << 20,
+		Works:          works,
+		Pages:          page.NewService(pool, works),
+		Blocks:         edit.NewService(pool, works),
+		Versions:       versions,
+		Uploads:        upload.NewService(pool, works),
+		Downloads:      download.NewService(pool, works),
+		Accounts:       NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
+		Apps:           apps,
+		Sends:          NewSendsService(pool, works, apps),
+		Publications:   NewPublicationService(pool, blobs),
+		Integrations:   integrations,
+		Notifications:  NewNotifications(pool),
+		MaxUploadBytes: 1 << 20,
 	}
 }
 

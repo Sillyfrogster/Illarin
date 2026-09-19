@@ -8,14 +8,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type UpdateDestinationChoice struct {
+type IntegrationChoice struct {
 	ID        uuid.UUID
 	Name      string
 	Type      string
 	ByDefault bool
 }
 
-func (s *Service) UpdateDestinations(ctx context.Context, ownerID, workID uuid.UUID) ([]UpdateDestinationChoice, error) {
+func (s *Service) Integrations(ctx context.Context, ownerID, workID uuid.UUID) ([]IntegrationChoice, error) {
 	var owned bool
 	err := s.pool.QueryRow(ctx, `
 		select exists (select 1 from works where id = $1 and owner_id = $2 and deleted_at is null)
@@ -27,20 +27,20 @@ func (s *Service) UpdateDestinations(ctx context.Context, ownerID, workID uuid.U
 		return nil, work.ErrNotFound
 	}
 	rows, err := s.pool.Query(ctx, `
-		select destination.id, destination.name, destination.type,
-		       exists (select 1 from work_update_destination_defaults chosen
-		                where chosen.work_id = $2 and chosen.destination_id = destination.id)
-		  from work_update_destinations destination
-		 where destination.owner_id = $1 and destination.state = 'active'
-		 order by destination.name, destination.id
+		select integration.id, integration.name, integration.type,
+		       exists (select 1 from work_integration_defaults chosen
+		                where chosen.work_id = $2 and chosen.integration_id = integration.id)
+		  from work_integrations integration
+		 where integration.owner_id = $1 and integration.state = 'active'
+		 order by integration.name, integration.id
 	`, ownerID, workID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	choices := make([]UpdateDestinationChoice, 0)
+	choices := make([]IntegrationChoice, 0)
 	for rows.Next() {
-		var one UpdateDestinationChoice
+		var one IntegrationChoice
 		if err := rows.Scan(&one.ID, &one.Name, &one.Type, &one.ByDefault); err != nil {
 			return nil, err
 		}
@@ -49,7 +49,7 @@ func (s *Service) UpdateDestinations(ctx context.Context, ownerID, workID uuid.U
 	return choices, rows.Err()
 }
 
-func (s *Service) SetUpdateDestinations(ctx context.Context, ownerID, workID uuid.UUID, ids []uuid.UUID) error {
+func (s *Service) SetIntegrations(ctx context.Context, ownerID, workID uuid.UUID, ids []uuid.UUID) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (s *Service) SetUpdateDestinations(ctx context.Context, ownerID, workID uui
 		return err
 	}
 	rows, err := tx.Query(ctx, `
-		select id from work_update_destinations
+		select id from work_integrations
 		 where owner_id = $1 and id = any($2::uuid[]) and state = 'active'
 		 order by id for share
 	`, ownerID, ids)
@@ -75,13 +75,13 @@ func (s *Service) SetUpdateDestinations(ctx context.Context, ownerID, workID uui
 		return err
 	}
 	if count != len(ids) {
-		return version.ErrDestinationIneligible
+		return version.ErrIntegrationIneligible
 	}
-	if _, err := tx.Exec(ctx, `delete from work_update_destination_defaults where work_id = $1`, workID); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_integration_defaults where work_id = $1`, workID); err != nil {
 		return err
 	}
 	for _, id := range ids {
-		if _, err := tx.Exec(ctx, `insert into work_update_destination_defaults (work_id, destination_id) values ($1, $2)`, workID, id); err != nil {
+		if _, err := tx.Exec(ctx, `insert into work_integration_defaults (work_id, integration_id) values ($1, $2)`, workID, id); err != nil {
 			return err
 		}
 	}

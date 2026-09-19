@@ -66,10 +66,10 @@ type standing struct {
 	withdrawn       bool
 	consent         bool
 	payload         []byte
-	destinationType string
+	integrationType string
 	state           string
 	sameOwner       bool
-	hasDestination  bool
+	hasIntegration  bool
 }
 
 func (s *Service) sendLeased(ctx context.Context, held dispatch.Work, now time.Time) error {
@@ -80,10 +80,10 @@ func (s *Service) sendLeased(ctx context.Context, held dispatch.Work, now time.T
 	if said, cancelled := found.cancels(); cancelled {
 		return s.ledger.Record(ctx, held, said, now)
 	}
-	if found.destinationType == Discord {
-		return s.announceOnDiscord(ctx, held, *held.DestinationID, found.payload, now)
+	if found.integrationType == Discord {
+		return s.announceOnDiscord(ctx, held, *held.IntegrationID, found.payload, now)
 	}
-	endpoint, err := s.configurationByID(ctx, *held.DestinationID)
+	endpoint, err := s.configurationByID(ctx, *held.IntegrationID)
 	if err != nil {
 		return err
 	}
@@ -103,26 +103,26 @@ func (s *Service) sendLeased(ctx context.Context, held dispatch.Work, now time.T
 	if !said.Gone {
 		return nil
 	}
-	return s.retire(ctx, *held.DestinationID)
+	return s.retire(ctx, *held.IntegrationID)
 }
 
 func (s *Service) recheck(ctx context.Context, held dispatch.Work) (standing, error) {
 	var found standing
-	var destinationType, state *string
+	var integrationType, state *string
 	var sameOwner *bool
 	err := s.pool.QueryRow(ctx, `
 		select owned.deleted_at is not null or owned.lifecycle <> 'published',
 		       owned.withheld_at is not null, owned.visibility = 'unlisted',
 		       version.withdrawn_at is not null, event.unlisted_consent, event.payload::text,
-		       destination.type, destination.state, destination.owner_id = owned.owner_id
-		  from work_update_events event
+		       integration.type, integration.state, integration.owner_id = owned.owner_id
+		  from work_announcements event
 		  join works owned on owned.id = event.work_id
 		  join work_versions version on version.id = event.version_id
-		  left join work_update_destinations destination on destination.id = $2
+		  left join work_integrations integration on integration.id = $2
 		 where event.id = $1
-	`, held.EventID, held.DestinationID).Scan(
+	`, held.AnnouncementID, held.IntegrationID).Scan(
 		&found.unpublished, &found.withheld, &found.unlisted, &found.withdrawn, &found.consent,
-		&found.payload, &destinationType, &state, &sameOwner,
+		&found.payload, &integrationType, &state, &sameOwner,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		found.unpublished = true
@@ -131,8 +131,8 @@ func (s *Service) recheck(ctx context.Context, held dispatch.Work) (standing, er
 	if err != nil {
 		return found, fmt.Errorf("recheck an announcement before sending it: %w", err)
 	}
-	if destinationType != nil && state != nil && sameOwner != nil {
-		found.hasDestination, found.destinationType, found.state, found.sameOwner = true, *destinationType, *state, *sameOwner
+	if integrationType != nil && state != nil && sameOwner != nil {
+		found.hasIntegration, found.integrationType, found.state, found.sameOwner = true, *integrationType, *state, *sameOwner
 	}
 	return found, nil
 }
@@ -147,7 +147,7 @@ func (f standing) cancels() (dispatch.Verdict, bool) {
 		return cancelled(SettledWithdrawn), true
 	case f.unlisted && !f.consent:
 		return cancelled(SettledUnlisted), true
-	case !f.hasDestination || !f.sameOwner:
+	case !f.hasIntegration || !f.sameOwner:
 		return dispatch.Stopped(dispatch.Removed), true
 	case f.state != Active:
 		return dispatch.Stopped(dispatch.Disabled), true
@@ -162,7 +162,7 @@ func cancelled(reason string) dispatch.Verdict {
 func (s *Service) announceOnDiscord(
 	ctx context.Context,
 	held dispatch.Work,
-	destinationID uuid.UUID,
+	integrationID uuid.UUID,
 	payload []byte,
 	now time.Time,
 ) error {
@@ -173,7 +173,7 @@ func (s *Service) announceOnDiscord(
 	if err := json.Unmarshal(payload, &summary); err != nil {
 		return fmt.Errorf("read the announcement to render: %w", err)
 	}
-	endpoint, err := s.configurationByID(ctx, destinationID)
+	endpoint, err := s.configurationByID(ctx, integrationID)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func (s *Service) announceOnDiscord(
 		return err
 	}
 	if said.Gone {
-		return s.retire(ctx, destinationID)
+		return s.retire(ctx, integrationID)
 	}
 	return nil
 }
@@ -223,7 +223,7 @@ func noticeOf(said sent) discord.Announcement {
 func (s *Service) configurationByID(ctx context.Context, id uuid.UUID) (configuration, error) {
 	var owner uuid.UUID
 	err := s.pool.QueryRow(ctx, `
-		select owner_id from work_update_destinations where id = $1
+		select owner_id from work_integrations where id = $1
 	`, id).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return configuration{}, ErrNotFound
@@ -237,22 +237,22 @@ func (s *Service) configurationByID(ctx context.Context, id uuid.UUID) (configur
 func (s *Service) retire(ctx context.Context, id uuid.UUID) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin retiring a destination: %w", err)
+		return fmt.Errorf("begin retiring a integration: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
-		update work_update_destinations
+		update work_integrations
 		   set state = $2, disabled_at = now(), version = version + 1, updated_at = now()
 		 where id = $1 and state <> $2
 	`, id, Disabled)
 	if err != nil {
-		return fmt.Errorf("retire the destination: %w", err)
+		return fmt.Errorf("retire the integration: %w", err)
 	}
 	if err := s.ledger.StopTo(ctx, tx, id, dispatch.Stopped(dispatch.Gone)); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit retiring a destination: %w", err)
+		return fmt.Errorf("commit retiring a integration: %w", err)
 	}
 	return nil
 }

@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import {
   type AnnouncementChoice,
   NO_CHOICE,
-  UpdateAnnouncementChoice,
-} from "@/components/updates/UpdateAnnouncementChoice";
+  WorkAnnouncementChoice,
+} from "@/components/updates/WorkAnnouncementChoice";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
   publishWorkVersion,
@@ -59,7 +59,7 @@ export function ReviewStep({
     setMissing([]);
     const answer = await publishWorkVersion(candidate, workspace.workId, {
       announceUnlisted: announcement.announceUnlisted,
-      destinationIds: announcement.destinationIds ?? undefined,
+      integrationIds: announcement.integrationIds ?? undefined,
       notify: announcement.notify,
       notes: notes.trim(),
       summary: summary.trim(),
@@ -127,7 +127,7 @@ export function ReviewStep({
         />
       </Field>
 
-      <UpdateAnnouncementChoice
+      <WorkAnnouncementChoice
         workId={workspace.workId}
         choice={announcement}
         disabled={busy}

@@ -20,19 +20,19 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 )
 
-type destination struct {
-	ID          string     `json:"id"`
-	Type        string     `json:"type"`
-	Name        string     `json:"name"`
-	Host        string     `json:"host"`
-	Address     string     `json:"address"`
-	State       string     `json:"state"`
-	Events      []string   `json:"events"`
-	Channel     *channel   `json:"channel"`
-	SecretSetAt time.Time  `json:"secretSetAt"`
-	OldUntil    *time.Time `json:"previousSecretUntil"`
-	VerifiedAt  *string    `json:"verifiedAt"`
-	DisabledAt  *string    `json:"disabledAt"`
+type integrationRow struct {
+	ID            string     `json:"id"`
+	Type          string     `json:"type"`
+	Name          string     `json:"name"`
+	Host          string     `json:"host"`
+	Address       string     `json:"address"`
+	State         string     `json:"state"`
+	Announcements []string   `json:"announcements"`
+	Channel       *channel   `json:"channel"`
+	SecretSetAt   time.Time  `json:"secretSetAt"`
+	OldUntil      *time.Time `json:"previousSecretUntil"`
+	VerifiedAt    *string    `json:"verifiedAt"`
+	DisabledAt    *string    `json:"disabledAt"`
 }
 
 type channel struct {
@@ -43,31 +43,31 @@ type channel struct {
 	RoleName  string `json:"roleName"`
 }
 
-type addedDestination struct {
-	Destination destination `json:"destination"`
-	Secret      string      `json:"secret"`
+type addedIntegration struct {
+	Integration integrationRow `json:"integration"`
+	Secret      string         `json:"secret"`
 }
 
-type destinationList struct {
-	Destinations []destination `json:"destinations"`
+type integrationList struct {
+	Integrations []integrationRow `json:"integrations"`
 }
 
-type destinationChoice struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Type      string   `json:"type"`
-	State     string   `json:"state"`
-	Events    []string `json:"events"`
-	Role      string   `json:"role"`
-	ByDefault bool     `json:"byDefault"`
+type integrationChoice struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Type          string   `json:"type"`
+	State         string   `json:"state"`
+	Announcements []string `json:"announcements"`
+	Role          string   `json:"role"`
+	ByDefault     bool     `json:"byDefault"`
 }
 
 type destinationChoiceList struct {
-	Destinations []destinationChoice `json:"destinations"`
+	Integrations []integrationChoice `json:"integrations"`
 	Inherited    bool                `json:"inherited"`
 }
 
-type deliveryAttempt struct {
+type announcementTry struct {
 	Run         int       `json:"run"`
 	Number      int       `json:"number"`
 	Outcome     string    `json:"outcome"`
@@ -77,32 +77,32 @@ type deliveryAttempt struct {
 	AttemptedAt time.Time `json:"attemptedAt"`
 }
 
-type postDelivery struct {
-	ID            string           `json:"id"`
-	EventID       string           `json:"eventId"`
-	EventType     string           `json:"eventType"`
-	PostID        string           `json:"postId"`
-	PostTitle     string           `json:"postTitle"`
-	RevisionID    string           `json:"revisionId"`
-	Destination   string           `json:"destination"`
-	Type          string           `json:"type"`
-	MessageID     string           `json:"messageId"`
-	Removed       bool             `json:"removed"`
-	State         string           `json:"state"`
-	SettledReason string           `json:"settledReason"`
-	Run           int              `json:"run"`
-	Attempts      int              `json:"attempts"`
-	OccurredAt    time.Time        `json:"occurredAt"`
-	DueAt         time.Time        `json:"dueAt"`
-	Last          *deliveryAttempt `json:"last"`
-}
-
-type deliveryList struct {
-	Deliveries []postDelivery `json:"deliveries"`
+type postAttempt struct {
+	ID               string           `json:"id"`
+	AnnouncementID   string           `json:"announcementId"`
+	AnnouncementType string           `json:"announcementType"`
+	PostID           string           `json:"postId"`
+	PostTitle        string           `json:"postTitle"`
+	RevisionID       string           `json:"revisionId"`
+	Integration      string           `json:"integration"`
+	Type             string           `json:"type"`
+	MessageID        string           `json:"messageId"`
+	Removed          bool             `json:"removed"`
+	State            string           `json:"state"`
+	SettledReason    string           `json:"settledReason"`
+	Run              int              `json:"run"`
+	Tries            int              `json:"tries"`
+	OccurredAt       time.Time        `json:"occurredAt"`
+	DueAt            time.Time        `json:"dueAt"`
+	Last             *announcementTry `json:"last"`
 }
 
 type attemptList struct {
-	Attempts []deliveryAttempt `json:"attempts"`
+	Attempts []postAttempt `json:"attempts"`
+}
+
+type tryList struct {
+	Tries []announcementTry `json:"tries"`
 }
 
 type arrived struct {
@@ -282,14 +282,14 @@ func (t throughLoopback) send(
 	}, nil
 }
 
-type destinationStack struct {
+type integrationStack struct {
 	publicationStack
 	to      *receiver
 	discord *discordServer
 	editor  *http.Cookie
 }
 
-func newDestinationStack(t *testing.T) destinationStack {
+func newIntegrationStack(t *testing.T) integrationStack {
 	t.Helper()
 	return newDestinationStackThrough(t, nil)
 }
@@ -297,7 +297,7 @@ func newDestinationStack(t *testing.T) destinationStack {
 func newDestinationStackThrough(
 	t *testing.T,
 	resolves func(host string) ([]netip.Addr, error),
-) destinationStack {
+) integrationStack {
 	t.Helper()
 	pool := testdb.Connect(t)
 	outbox := &apitest.VerificationOutbox{}
@@ -310,7 +310,7 @@ func newDestinationStackThrough(
 	router := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
 	session := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
 	apitest.HoldsAuthority(t, pool, "publication.authority")
-	stack := destinationStack{
+	stack := integrationStack{
 		publicationStack: publicationStack{
 			router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
 		},
@@ -321,47 +321,47 @@ func newDestinationStackThrough(
 	return stack
 }
 
-func (s destinationStack) add(
+func (s integrationStack) add(
 	t *testing.T,
 	session *http.Cookie,
 	name, address string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/destinations",
+		http.MethodPost, "/v1/blog/integrations",
 		fmt.Sprintf(`{"name":%q,"address":%q}`, name, address),
 	), session))
 }
 
-func (s destinationStack) added(t *testing.T, name, address string) addedDestination {
+func (s integrationStack) added(t *testing.T, name, address string) addedIntegration {
 	t.Helper()
 	response := s.add(t, s.authority, name, address)
 	if response.Code != http.StatusCreated {
-		t.Fatalf("add destination status = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("add integration status = %d: %s", response.Code, response.Body.String())
 	}
-	var made addedDestination
+	var made addedIntegration
 	if err := json.Unmarshal(response.Body.Bytes(), &made); err != nil {
-		t.Fatalf("decode destination: %v", err)
+		t.Fatalf("decode integration: %v", err)
 	}
 	return made
 }
 
-func (s destinationStack) verify(
+func (s integrationStack) verify(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/destinations/"+id+"/verification", "",
+		http.MethodPost, "/v1/blog/integrations/"+id+"/verification", "",
 	), session))
 }
 
-func (s destinationStack) active(t *testing.T, name string) addedDestination {
+func (s integrationStack) active(t *testing.T, name string) addedIntegration {
 	t.Helper()
 	s.to.answers(echoesTheChallenge)
 	made := s.added(t, name, s.to.address())
-	response := s.verify(t, s.authority, made.Destination.ID)
+	response := s.verify(t, s.authority, made.Integration.ID)
 	if response.Code != http.StatusOK {
 		t.Fatalf("verify status = %d: %s", response.Code, response.Body.String())
 	}
@@ -370,71 +370,71 @@ func (s destinationStack) active(t *testing.T, name string) addedDestination {
 	return made
 }
 
-func (s destinationStack) destinations(t *testing.T, session *http.Cookie) destinationList {
+func (s integrationStack) integrations(t *testing.T, session *http.Cookie) integrationList {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/destinations", nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/integrations", nil), session,
 	))
 	if response.Code != http.StatusOK {
-		t.Fatalf("list destinations status = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("list integrations status = %d: %s", response.Code, response.Body.String())
 	}
-	var listed destinationList
+	var listed integrationList
 	if err := json.Unmarshal(response.Body.Bytes(), &listed); err != nil {
-		t.Fatalf("decode destinations: %v", err)
+		t.Fatalf("decode integrations: %v", err)
 	}
 	return listed
 }
 
-func (s destinationStack) allowOnApp(t *testing.T, appID, destinationID string) {
+func (s integrationStack) allowOnApp(t *testing.T, appID, integrationID string) {
 	t.Helper()
 	_, err := s.pool.Exec(context.Background(), `
-		insert into publication_app_destinations (app_id, destination_id, by_default)
+		insert into publication_app_integrations (app_id, integration_id, by_default)
 		values ($1, $2, true)
-	`, appID, destinationID)
+	`, appID, integrationID)
 	if err != nil {
 		t.Fatalf("allow on app: %v", err)
 	}
 }
 
-func (s destinationStack) postChoices(
+func (s integrationStack) postChoices(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
 ) destinationChoiceList {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+id+"/destinations", nil,
+		http.MethodGet, "/v1/blog/posts/"+id+"/integrations", nil,
 	), session))
 	if response.Code != http.StatusOK {
-		t.Fatalf("read post destinations status = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("read post integrations status = %d: %s", response.Code, response.Body.String())
 	}
 	var listed destinationChoiceList
 	if err := json.Unmarshal(response.Body.Bytes(), &listed); err != nil {
-		t.Fatalf("decode post destinations: %v", err)
+		t.Fatalf("decode post integrations: %v", err)
 	}
 	return listed
 }
 
-func (s destinationStack) deliveries(
+func (s integrationStack) attempts(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
-) deliveryList {
+) attemptList {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+id+"/deliveries", nil,
+		http.MethodGet, "/v1/blog/posts/"+id+"/announcement-attempts", nil,
 	), session))
 	if response.Code != http.StatusOK {
-		t.Fatalf("read deliveries status = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("read attempts status = %d: %s", response.Code, response.Body.String())
 	}
-	var listed deliveryList
+	var listed attemptList
 	if err := json.Unmarshal(response.Body.Bytes(), &listed); err != nil {
-		t.Fatalf("decode deliveries: %v", err)
+		t.Fatalf("decode attempts: %v", err)
 	}
 	return listed
 }
 
-func (s destinationStack) publishTo(
+func (s integrationStack) publishTo(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -447,21 +447,21 @@ func (s destinationStack) publishTo(
 	), session))
 }
 
-func (s destinationStack) sendQueued(t *testing.T) int {
+func (s integrationStack) sendQueued(t *testing.T) int {
 	t.Helper()
 	return s.sendQueuedAt(t, time.Now())
 }
 
-func (s destinationStack) sendQueuedAt(t *testing.T, at time.Time) int {
+func (s integrationStack) sendQueuedAt(t *testing.T, at time.Time) int {
 	t.Helper()
-	made, err := s.handlers.Publications.SendDueDeliveries(t.Context(), at)
+	made, err := s.handlers.Publications.SendDueAttempts(t.Context(), at)
 	if err != nil {
-		t.Fatalf("send queued deliveries: %v", err)
+		t.Fatalf("send queued attempts: %v", err)
 	}
 	return made
 }
 
-func (s destinationStack) readyPost(t *testing.T) blogPost {
+func (s integrationStack) readyPost(t *testing.T) blogPost {
 	t.Helper()
 	draft := s.illarinDraft(t, s.editor, "Illarin keeps its own writing now")
 	return s.saved(t, s.editor, draft.ID, finished(draft, nil))
@@ -469,7 +469,7 @@ func (s destinationStack) readyPost(t *testing.T) blogPost {
 
 func TestOnlyThePublicationAuthorityReachesDestinations(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	member := stack.member(t, "writer@example.com", "outside.writer")
 
 	response := stack.add(t, member, "Their webhook", stack.to.address())
@@ -478,7 +478,7 @@ func TestOnlyThePublicationAuthorityReachesDestinations(t *testing.T) {
 		t.Errorf("add status = %d, want 403", response.Code)
 	}
 	listing := apitest.Send(t, stack.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/destinations", nil), member,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/integrations", nil), member,
 	))
 	if listing.Code != http.StatusForbidden {
 		t.Errorf("list status = %d, want 403", listing.Code)
@@ -487,7 +487,7 @@ func TestOnlyThePublicationAuthorityReachesDestinations(t *testing.T) {
 
 func TestAnEndpointOutsideTheAddressPolicyIsRefused(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 
 	for _, address := range []string{
 		"http://hooks.example.com/publication",
@@ -497,7 +497,7 @@ func TestAnEndpointOutsideTheAddressPolicyIsRefused(t *testing.T) {
 		"https://127.0.0.1/publication",
 	} {
 		response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-			http.MethodPost, "/v1/publication/destinations",
+			http.MethodPost, "/v1/blog/integrations",
 			fmt.Sprintf(`{"name":"Somewhere","address":%q}`, address),
 		), stack.authority))
 		if response.Code != http.StatusBadRequest {
@@ -508,18 +508,18 @@ func TestAnEndpointOutsideTheAddressPolicyIsRefused(t *testing.T) {
 
 func TestASigningSecretIsShownOnceAndNeverAgain(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 
 	made := stack.added(t, "Release feed", stack.to.address())
 
 	if !strings.HasPrefix(made.Secret, dispatch.Prefix) {
 		t.Errorf("secret = %q, want the %s mark", made.Secret, dispatch.Prefix)
 	}
-	listed := stack.destinations(t, stack.authority)
-	if len(listed.Destinations) != 1 {
-		t.Fatalf("listed %d destinations, want 1", len(listed.Destinations))
+	listed := stack.integrations(t, stack.authority)
+	if len(listed.Integrations) != 1 {
+		t.Fatalf("listed %d integrations, want 1", len(listed.Integrations))
 	}
-	shown := listed.Destinations[0]
+	shown := listed.Integrations[0]
 	body, _ := json.Marshal(listed)
 	if strings.Contains(string(body), made.Secret) {
 		t.Error("the listing carried the signing secret")
@@ -537,14 +537,14 @@ func TestASigningSecretIsShownOnceAndNeverAgain(t *testing.T) {
 
 func TestTheEndpointAndSecretAreSealedInTheDatabase(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 
 	made := stack.added(t, "Release feed", stack.to.address())
 
 	var address, secret []byte
 	err := stack.pool.QueryRow(context.Background(), `
-		select address, signing_secret from publication_destinations where id = $1
-	`, made.Destination.ID).Scan(&address, &secret)
+		select address, signing_secret from blog_integrations where id = $1
+	`, made.Integration.ID).Scan(&address, &secret)
 	if err != nil {
 		t.Fatalf("read the sealed configuration: %v", err)
 	}
@@ -558,37 +558,37 @@ func TestTheEndpointAndSecretAreSealedInTheDatabase(t *testing.T) {
 
 func TestAnEndpointIsActiveOnlyAfterItReturnsTheChallenge(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.added(t, "Release feed", stack.to.address())
 
 	stack.to.answers(func(arrived) (int, string) { return http.StatusOK, "something else" })
-	refused := stack.verify(t, stack.authority, made.Destination.ID)
+	refused := stack.verify(t, stack.authority, made.Integration.ID)
 
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("verify status = %d, want 400: %s", refused.Code, refused.Body.String())
 	}
-	if stack.destinations(t, stack.authority).Destinations[0].State != "unverified" {
-		t.Error("a wrong answer activated the destination")
+	if stack.integrations(t, stack.authority).Integrations[0].State != "unverified" {
+		t.Error("a wrong answer activated the integration")
 	}
 
 	stack.to.answers(echoesTheChallenge)
-	accepted := stack.verify(t, stack.authority, made.Destination.ID)
+	accepted := stack.verify(t, stack.authority, made.Integration.ID)
 
 	if accepted.Code != http.StatusOK {
 		t.Fatalf("verify status = %d, want 200: %s", accepted.Code, accepted.Body.String())
 	}
-	if stack.destinations(t, stack.authority).Destinations[0].State != "active" {
-		t.Error("the destination did not become active")
+	if stack.integrations(t, stack.authority).Integrations[0].State != "active" {
+		t.Error("the integration did not become active")
 	}
 }
 
 func TestTheVerificationRequestIsSigned(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	stack.to.answers(echoesTheChallenge)
 	made := stack.added(t, "Release feed", stack.to.address())
 
-	if response := stack.verify(t, stack.authority, made.Destination.ID); response.Code != 200 {
+	if response := stack.verify(t, stack.authority, made.Integration.ID); response.Code != 200 {
 		t.Fatalf("verify status = %d: %s", response.Code, response.Body.String())
 	}
 
@@ -601,13 +601,13 @@ func TestTheVerificationRequestIsSigned(t *testing.T) {
 
 func TestAPublishedPostReachesTheChosenEndpoint(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
 
 	response := stack.publishTo(t, stack.editor, ready.ID, ready.Version, fmt.Sprintf(
-		`{"version":%d,"destinationIds":[%q],"note":"Read it in ten minutes."}`,
-		ready.Version, made.Destination.ID,
+		`{"version":%d,"integrationIds":[%q],"note":"Read it in ten minutes."}`,
+		ready.Version, made.Integration.ID,
 	))
 
 	if response.Code != http.StatusOK {
@@ -618,7 +618,7 @@ func TestAPublishedPostReachesTheChosenEndpoint(t *testing.T) {
 		t.Fatalf("%d requests were made inside the publish transaction", len(before))
 	}
 	if sent := stack.sendQueued(t); sent != 1 {
-		t.Fatalf("the worker settled %d deliveries, want 1", sent)
+		t.Fatalf("the worker settled %d attempts, want 1", sent)
 	}
 	arrivals := stack.to.arrivals()
 	if len(arrivals) != 1 {
@@ -640,36 +640,36 @@ func TestAPublishedPostReachesTheChosenEndpoint(t *testing.T) {
 	if strings.Contains(body, "Illarin now keeps its own writing.") {
 		t.Errorf("the event carries the post body: %s", body)
 	}
-	sent := stack.deliveries(t, stack.editor, ready.ID)
-	if len(sent.Deliveries) != 1 {
-		t.Fatalf("the post shows %d deliveries, want 1", len(sent.Deliveries))
+	sent := stack.attempts(t, stack.editor, ready.ID)
+	if len(sent.Attempts) != 1 {
+		t.Fatalf("the post shows %d attempts, want 1", len(sent.Attempts))
 	}
-	if sent.Deliveries[0].State != "delivered" {
-		t.Errorf("delivery state = %q, want delivered", sent.Deliveries[0].State)
+	if sent.Attempts[0].State != "delivered" {
+		t.Errorf("attempt state = %q, want delivered", sent.Attempts[0].State)
 	}
-	if sent.Deliveries[0].Last.Outcome != "delivered" {
-		t.Errorf("attempt outcome = %q, want delivered", sent.Deliveries[0].Last.Outcome)
+	if sent.Attempts[0].Last.Outcome != "delivered" {
+		t.Errorf("attempt outcome = %q, want delivered", sent.Attempts[0].Last.Outcome)
 	}
 }
 
 func TestPublishingChangesToALivePostSendsNothing(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
-	live := stack.publishedTo(t, stack.readyPost(t), made.Destination.ID, "")
+	live := stack.publishedTo(t, stack.readyPost(t), made.Integration.ID, "")
 	if sent := stack.sendQueued(t); sent != 1 {
-		t.Fatalf("the first publication settled %d deliveries, want 1", sent)
+		t.Fatalf("the first publication settled %d attempts, want 1", sent)
 	}
 
 	again := stack.publishTo(t, stack.editor, live.ID, live.Version, fmt.Sprintf(
-		`{"version":%d,"destinationIds":[%q]}`, live.Version, made.Destination.ID,
+		`{"version":%d,"integrationIds":[%q]}`, live.Version, made.Integration.ID,
 	))
 
 	if again.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", again.Code, again.Body.String())
 	}
 	if sent := stack.sendQueued(t); sent != 0 {
-		t.Fatalf("publishing changes settled %d deliveries, want 0", sent)
+		t.Fatalf("publishing changes settled %d attempts, want 0", sent)
 	}
 	if arrivals := stack.to.arrivals(); len(arrivals) != 1 {
 		t.Fatalf("the receiver was sent %d requests, want 1", len(arrivals))
@@ -678,51 +678,51 @@ func TestPublishingChangesToALivePostSendsNothing(t *testing.T) {
 
 func TestTheWebhookIdIsTheDeliveryAndTheBodyIsWhatWasSigned(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.sendQueued(t)
 
-	sent := stack.deliveries(t, stack.editor, ready.ID)
+	sent := stack.attempts(t, stack.editor, ready.ID)
 	arrivals := stack.to.arrivals()
 
-	if got := arrivals[0].Headers.Get(dispatch.IDHeader); got != sent.Deliveries[0].ID {
-		t.Errorf("%s = %q, want the delivery id %q", dispatch.IDHeader, got, sent.Deliveries[0].ID)
+	if got := arrivals[0].Headers.Get(dispatch.IDHeader); got != sent.Attempts[0].ID {
+		t.Errorf("%s = %q, want the attempt id %q", dispatch.IDHeader, got, sent.Attempts[0].ID)
 	}
 }
 
 func TestQuietPublicationSendsNothing(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
 
 	response := stack.publishTo(t, stack.editor, ready.ID, ready.Version,
-		fmt.Sprintf(`{"version":%d,"destinationIds":[]}`, ready.Version))
+		fmt.Sprintf(`{"version":%d,"integrationIds":[]}`, ready.Version))
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", response.Code, response.Body.String())
 	}
 	if sent := stack.sendQueued(t); sent != 0 {
-		t.Errorf("the worker settled %d deliveries, want 0", sent)
+		t.Errorf("the worker settled %d attempts, want 0", sent)
 	}
 	if arrivals := stack.to.arrivals(); len(arrivals) != 0 {
 		t.Errorf("the receiver was sent %d requests, want 0", len(arrivals))
 	}
-	if listed := stack.deliveries(t, stack.editor, ready.ID); len(listed.Deliveries) != 0 {
-		t.Errorf("the post shows %d deliveries, want 0", len(listed.Deliveries))
+	if listed := stack.attempts(t, stack.editor, ready.ID); len(listed.Attempts) != 0 {
+		t.Errorf("the post shows %d attempts, want 0", len(listed.Attempts))
 	}
 }
 
 func TestPublicationSurvivesAnEndpointThatRefusesEverything(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	stack.to.answers(func(arrived) (int, string) { return http.StatusInternalServerError, "" })
 	ready := stack.readyPost(t)
 
-	published := stack.publishedTo(t, ready, made.Destination.ID, "")
+	published := stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.sendQueued(t)
 
 	if published.Status != "published" {
@@ -734,45 +734,45 @@ func TestPublicationSurvivesAnEndpointThatRefusesEverything(t *testing.T) {
 	if reading.Code != http.StatusOK {
 		t.Errorf("the post is not readable: %d", reading.Code)
 	}
-	sent := stack.deliveries(t, stack.editor, ready.ID)
-	if sent.Deliveries[0].State != "pending" {
-		t.Errorf("delivery state = %q, want pending for another attempt", sent.Deliveries[0].State)
+	sent := stack.attempts(t, stack.editor, ready.ID)
+	if sent.Attempts[0].State != "pending" {
+		t.Errorf("attempt state = %q, want pending for another attempt", sent.Attempts[0].State)
 	}
-	if *sent.Deliveries[0].Last.Status != http.StatusInternalServerError {
-		t.Errorf("attempt status = %d, want 500", *sent.Deliveries[0].Last.Status)
+	if *sent.Attempts[0].Last.Status != http.StatusInternalServerError {
+		t.Errorf("attempt status = %d, want 500", *sent.Attempts[0].Last.Status)
 	}
 }
 
 func TestADeliveryRecordCarriesNoSecretOrAddress(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	stack.to.answers(func(arrived) (int, string) { return http.StatusTeapot, "go away" })
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.sendQueued(t)
 
-	body, err := json.Marshal(stack.deliveries(t, stack.editor, ready.ID))
+	body, err := json.Marshal(stack.attempts(t, stack.editor, ready.ID))
 
 	if err != nil {
-		t.Fatalf("encode deliveries: %v", err)
+		t.Fatalf("encode attempts: %v", err)
 	}
 	for _, secret := range []string{made.Secret, stack.to.address(), "go away"} {
 		if strings.Contains(string(body), secret) {
-			t.Errorf("the delivery record carries %q", secret)
+			t.Errorf("the attempt record carries %q", secret)
 		}
 	}
 }
 
 func TestAContributorSeesSafeDestinationIdentitiesOnly(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	writer := stack.member(t, "writer@example.com", "outside.writer")
 	app := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	announcement := stack.categoryBySlug(t, "announcement")
 	grant := stack.approved(t, "outside.writer", app.ID, []string{announcement.ID}, announcement.ID)
-	stack.allowOnApp(t, app.ID, made.Destination.ID)
+	stack.allowOnApp(t, app.ID, made.Integration.ID)
 	draft := stack.started(t, writer, fmt.Sprintf(
 		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse 2.0 is out"}`,
 		grant.ID, announcement.ID,
@@ -780,13 +780,13 @@ func TestAContributorSeesSafeDestinationIdentitiesOnly(t *testing.T) {
 
 	choices := stack.postChoices(t, writer, draft.ID)
 
-	if len(choices.Destinations) != 1 {
-		t.Fatalf("the contributor sees %d destinations, want 1", len(choices.Destinations))
+	if len(choices.Integrations) != 1 {
+		t.Fatalf("the contributor sees %d integrations, want 1", len(choices.Integrations))
 	}
-	if choices.Destinations[0].Name != "Release feed" {
-		t.Errorf("name = %q, want the safe identity", choices.Destinations[0].Name)
+	if choices.Integrations[0].Name != "Release feed" {
+		t.Errorf("name = %q, want the safe identity", choices.Integrations[0].Name)
 	}
-	if !choices.Destinations[0].ByDefault {
+	if !choices.Integrations[0].ByDefault {
 		t.Error("the app default did not reach the contributor")
 	}
 	body, _ := json.Marshal(choices)
@@ -796,7 +796,7 @@ func TestAContributorSeesSafeDestinationIdentitiesOnly(t *testing.T) {
 		}
 	}
 	listing := apitest.Send(t, stack.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/destinations", nil), writer,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/integrations", nil), writer,
 	))
 	if listing.Code != http.StatusForbidden {
 		t.Errorf("the contributor read the configuration: %d", listing.Code)
@@ -805,7 +805,7 @@ func TestAContributorSeesSafeDestinationIdentitiesOnly(t *testing.T) {
 
 func TestAContributorCannotSendOutsideWhatTheGrantAllows(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	writer := stack.member(t, "writer@example.com", "outside.writer")
 	app := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
@@ -817,7 +817,7 @@ func TestAContributorCannotSendOutsideWhatTheGrantAllows(t *testing.T) {
 	ready := stack.saved(t, writer, draft.ID, finished(draft, nil))
 
 	response := stack.publishTo(t, writer, ready.ID, ready.Version, fmt.Sprintf(
-		`{"version":%d,"destinationIds":[%q]}`, ready.Version, made.Destination.ID,
+		`{"version":%d,"integrationIds":[%q]}`, ready.Version, made.Integration.ID,
 	))
 
 	if response.Code != http.StatusForbidden {
@@ -827,11 +827,11 @@ func TestAContributorCannotSendOutsideWhatTheGrantAllows(t *testing.T) {
 
 func TestADisabledEndpointStopsReceiving(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete,
-		"/v1/publication/destinations/"+made.Destination.ID+"/verification", nil,
+		"/v1/blog/integrations/"+made.Integration.ID+"/verification", nil,
 	), stack.authority))
 	if response.Code != http.StatusOK {
 		t.Fatalf("disable status = %d: %s", response.Code, response.Body.String())
@@ -839,34 +839,34 @@ func TestADisabledEndpointStopsReceiving(t *testing.T) {
 	ready := stack.readyPost(t)
 
 	refused := stack.publishTo(t, stack.editor, ready.ID, ready.Version, fmt.Sprintf(
-		`{"version":%d,"destinationIds":[%q]}`, ready.Version, made.Destination.ID,
+		`{"version":%d,"integrationIds":[%q]}`, ready.Version, made.Integration.ID,
 	))
 
 	if refused.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", refused.Code, refused.Body.String())
 	}
-	if listed := stack.deliveries(t, stack.editor, ready.ID); len(listed.Deliveries) != 0 {
-		t.Errorf("a disabled destination was queued %d deliveries", len(listed.Deliveries))
+	if listed := stack.attempts(t, stack.editor, ready.ID); len(listed.Attempts) != 0 {
+		t.Errorf("a disabled integration was queued %d attempts", len(listed.Attempts))
 	}
 	if arrivals := stack.to.arrivals(); len(arrivals) != 0 {
-		t.Errorf("a disabled destination was sent %d requests", len(arrivals))
+		t.Errorf("a disabled integration was sent %d requests", len(arrivals))
 	}
 }
 
 func TestANewAddressTakesTheEndpointBackToUnverified(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 
 	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPatch, "/v1/publication/destinations/"+made.Destination.ID,
+		http.MethodPatch, "/v1/blog/integrations/"+made.Integration.ID,
 		`{"address":"https://hooks.example.com/elsewhere"}`,
 	), stack.authority))
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("update status = %d: %s", response.Code, response.Body.String())
 	}
-	shown := stack.destinations(t, stack.authority).Destinations[0]
+	shown := stack.integrations(t, stack.authority).Integrations[0]
 	if shown.State != "unverified" {
 		t.Errorf("state = %q, want unverified", shown.State)
 	}
@@ -877,11 +877,11 @@ func TestANewAddressTakesTheEndpointBackToUnverified(t *testing.T) {
 
 func TestTheNoteBelongsToTheTransitionAndNotToThePost(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
 
-	published := stack.publishedTo(t, ready, made.Destination.ID, "Read it in ten minutes.")
+	published := stack.publishedTo(t, ready, made.Integration.ID, "Read it in ten minutes.")
 
 	reading := apitest.Send(t, stack.router, httptest.NewRequest(
 		http.MethodGet, "/v1/posts/"+published.Slug, nil,
@@ -891,7 +891,7 @@ func TestTheNoteBelongsToTheTransitionAndNotToThePost(t *testing.T) {
 	}
 	var note string
 	err := stack.pool.QueryRow(context.Background(), `
-		select note from publication_events where post_id = $1
+		select note from blog_announcements where post_id = $1
 	`, ready.ID).Scan(&note)
 	if err != nil {
 		t.Fatalf("read the event note: %v", err)
@@ -901,14 +901,14 @@ func TestTheNoteBelongsToTheTransitionAndNotToThePost(t *testing.T) {
 	}
 }
 
-func (s destinationStack) publishedTo(
+func (s integrationStack) publishedTo(
 	t *testing.T,
 	ready blogPost,
-	destinationID, note string,
+	integrationID, note string,
 ) blogPost {
 	t.Helper()
 	response := s.publishTo(t, s.editor, ready.ID, ready.Version, fmt.Sprintf(
-		`{"version":%d,"destinationIds":[%q],"note":%q}`, ready.Version, destinationID, note,
+		`{"version":%d,"integrationIds":[%q],"note":%q}`, ready.Version, integrationID, note,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", response.Code, response.Body.String())
@@ -942,15 +942,15 @@ func checkSignature(t *testing.T, one arrived, secret string) {
 
 func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
 	at := time.Now().Add(time.Hour)
 
 	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/posts/"+ready.ID+"/schedule", fmt.Sprintf(
-			`{"version":%d,"at":%q,"destinationIds":[%q],"note":"Out at noon."}`,
-			ready.Version, at.Format(time.RFC3339), made.Destination.ID,
+			`{"version":%d,"at":%q,"integrationIds":[%q],"note":"Out at noon."}`,
+			ready.Version, at.Format(time.RFC3339), made.Integration.ID,
 		),
 	), stack.editor))
 
@@ -965,7 +965,7 @@ func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
 		t.Fatalf("the scheduler settled %d editions, want 1", settled)
 	}
 	if sent := stack.sendQueued(t); sent != 1 {
-		t.Fatalf("the worker settled %d deliveries, want 1", sent)
+		t.Fatalf("the worker settled %d attempts, want 1", sent)
 	}
 	arrivals := stack.to.arrivals()
 	if len(arrivals) != 1 {
@@ -978,13 +978,13 @@ func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
 
 func TestAPublicationWithNoChoiceTakesTheDefaults(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	writer := stack.member(t, "writer@example.com", "outside.writer")
 	app := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
 	announcement := stack.categoryBySlug(t, "announcement")
 	grant := stack.approved(t, "outside.writer", app.ID, []string{announcement.ID}, announcement.ID)
-	stack.allowOnApp(t, app.ID, made.Destination.ID)
+	stack.allowOnApp(t, app.ID, made.Integration.ID)
 	draft := stack.started(t, writer, fmt.Sprintf(
 		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse 2.0 is out"}`, grant.ID, announcement.ID,
 	))
@@ -997,23 +997,23 @@ func TestAPublicationWithNoChoiceTakesTheDefaults(t *testing.T) {
 		t.Fatalf("publish status = %d: %s", response.Code, response.Body.String())
 	}
 	if sent := stack.sendQueued(t); sent != 1 {
-		t.Errorf("the worker settled %d deliveries, want the app default", sent)
+		t.Errorf("the worker settled %d attempts, want the app default", sent)
 	}
 }
 
-func TestAContributorNeverSeesAnotherPostsDeliveries(t *testing.T) {
+func TestAContributorNeverSeesAnotherPostsAnnouncementAttempts(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	outsider := stack.member(t, "writer@example.com", "outside.writer")
 
 	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+ready.ID+"/deliveries", nil,
+		http.MethodGet, "/v1/blog/posts/"+ready.ID+"/announcement-attempts", nil,
 	), outsider))
 
 	if response.Code != http.StatusForbidden {
-		t.Errorf("read deliveries status = %d, want 403", response.Code)
+		t.Errorf("read attempts status = %d, want 403", response.Code)
 	}
 }

@@ -1,11 +1,11 @@
 import type {
+  BlogAnnouncementAttempt,
+  BlogIntegrationChoiceList,
   Post,
   PostAction,
-  PostDelivery,
   PostMedia,
   PostMediaPurpose,
   PostRevision,
-  PublicationDestinationChoiceList,
 } from "@/lib/api/query";
 import type { PostDocument } from "@/lib/post-document";
 import { ask } from "./request";
@@ -70,8 +70,8 @@ export function correctPostByline(id: string, handle: string) {
 }
 
 export type Announcement = {
-  destinationIds?: string[] | null;
-  roleDestinationIds?: string[];
+  integrationIds?: string[] | null;
+  roleIntegrationIds?: string[];
   note?: string;
 };
 
@@ -88,17 +88,17 @@ export function publishPost(
   });
 }
 
-export function readPostDestinations(id: string) {
-  return ask<PublicationDestinationChoiceList>(
+export function readPostIntegrations(id: string) {
+  return ask<BlogIntegrationChoiceList>(
     "GET",
-    `/publication/posts/${id}/destinations`,
+    `/blog/posts/${id}/integrations`,
   );
 }
 
 export function readPostDeliveries(id: string) {
-  return ask<{ deliveries: PostDelivery[] }>(
+  return ask<{ attempts: BlogAnnouncementAttempt[] }>(
     "GET",
-    `/publication/posts/${id}/deliveries`,
+    `/blog/posts/${id}/announcement-attempts`,
   );
 }
 

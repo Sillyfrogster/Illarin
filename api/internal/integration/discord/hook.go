@@ -15,7 +15,7 @@ var snowflake = regexp.MustCompile(`^[0-9]{17,20}$`)
 var tokenShape = regexp.MustCompile(`^[A-Za-z0-9_-]{16,120}$`)
 
 var ErrNotACapability = errors.New(
-	"a Discord destination is an incoming webhook address on discord.com",
+	"a Discord integration is an incoming webhook address on discord.com",
 )
 
 var ErrNotAWebhook = errors.New("Discord did not answer with a channel webhook")

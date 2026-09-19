@@ -132,7 +132,7 @@ type announcement struct {
 	ThreadID  string `json:"thread_id"`
 }
 
-func (s destinationStack) sentToDiscord(t *testing.T) announcement {
+func (s integrationStack) sentToDiscord(t *testing.T) announcement {
 	t.Helper()
 	arrivals := s.discord.announcements()
 	if len(arrivals) != 1 {
@@ -145,18 +145,18 @@ func (s destinationStack) sentToDiscord(t *testing.T) announcement {
 	return read
 }
 
-func (s destinationStack) addChannel(
+func (s integrationStack) addChannel(
 	t *testing.T,
 	session *http.Cookie,
 	body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/channels", body,
+		http.MethodPost, "/v1/blog/channels", body,
 	), session))
 }
 
-func (s destinationStack) channelWithRole(t *testing.T, role string) destination {
+func (s integrationStack) channelWithRole(t *testing.T, role string) integrationRow {
 	t.Helper()
 	body := fmt.Sprintf(`{"name":"Announcements","address":%q}`, discordCapability())
 	if role != "" {
@@ -169,14 +169,14 @@ func (s destinationStack) channelWithRole(t *testing.T, role string) destination
 	if response.Code != http.StatusCreated {
 		t.Fatalf("add channel status = %d: %s", response.Code, response.Body.String())
 	}
-	var made destination
+	var made integrationRow
 	if err := json.Unmarshal(response.Body.Bytes(), &made); err != nil {
 		t.Fatalf("decode channel: %v", err)
 	}
 	return made
 }
 
-func (s destinationStack) announcedPost(t *testing.T, choice string) (blogPost, []postDelivery) {
+func (s integrationStack) announcedPost(t *testing.T, choice string) (blogPost, []postAttempt) {
 	t.Helper()
 	post := s.readyPost(t)
 	response := s.publishTo(t, s.editor, post.ID, post.Version, choosing(post, choice))
@@ -184,7 +184,7 @@ func (s destinationStack) announcedPost(t *testing.T, choice string) (blogPost, 
 		t.Fatalf("publish status = %d: %s", response.Code, response.Body.String())
 	}
 	s.sendQueued(t)
-	return post, s.deliveries(t, s.editor, post.ID).Deliveries
+	return post, s.attempts(t, s.editor, post.ID).Attempts
 }
 
 func choosing(post blogPost, choice string) string {
@@ -193,7 +193,7 @@ func choosing(post blogPost, choice string) string {
 
 func TestOnlyThePublicationAuthorityConfiguresADiscordChannel(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	member := stack.member(t, "writer@example.com", "outside.writer")
 
 	response := stack.addChannel(t, member, fmt.Sprintf(
@@ -207,7 +207,7 @@ func TestOnlyThePublicationAuthorityConfiguresADiscordChannel(t *testing.T) {
 
 func TestOnlyADiscordWebhookAddressBecomesAChannel(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 
 	for _, address := range []string{
 		"https://example.com/api/webhooks/1234567890123456789/token",
@@ -226,7 +226,7 @@ func TestOnlyADiscordWebhookAddressBecomesAChannel(t *testing.T) {
 
 func TestAChannelIsOnlyConfiguredWhenDiscordConfirmsIt(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	stack.discord.answersReadWith(func() (int, string) { return http.StatusUnauthorized, `{}` })
 
 	refused := stack.addChannel(t, stack.authority, fmt.Sprintf(
@@ -236,14 +236,14 @@ func TestAChannelIsOnlyConfiguredWhenDiscordConfirmsIt(t *testing.T) {
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("add channel status = %d, want 400: %s", refused.Code, refused.Body.String())
 	}
-	if listed := stack.destinations(t, stack.authority); len(listed.Destinations) != 0 {
-		t.Errorf("a refused capability left %d destinations", len(listed.Destinations))
+	if listed := stack.integrations(t, stack.authority); len(listed.Integrations) != 0 {
+		t.Errorf("a refused capability left %d integrations", len(listed.Integrations))
 	}
 }
 
 func TestAMissingWebhookSaysWhatToDoAboutIt(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	stack.discord.answersReadWith(func() (int, string) { return http.StatusNotFound, `{}` })
 
 	refused := stack.addChannel(t, stack.authority, fmt.Sprintf(
@@ -260,7 +260,7 @@ func TestAMissingWebhookSaysWhatToDoAboutIt(t *testing.T) {
 
 func TestAWebhookOutsideAGuildChannelIsRefused(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	stack.discord.answersReadWith(func() (int, string) {
 		return http.StatusOK, `{"id":"1234567890123456789","name":"Somewhere"}`
 	})
@@ -276,12 +276,12 @@ func TestAWebhookOutsideAGuildChannelIsRefused(t *testing.T) {
 
 func TestAChannelKeepsOnlySafeIdentityAndIsReadyToAnnounce(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 
 	made := stack.channelWithRole(t, "Blog readers")
 
 	if made.Type != "discord" || made.State != "active" {
-		t.Errorf("channel = %s in %s, want an active discord destination", made.Type, made.State)
+		t.Errorf("channel = %s in %s, want an active discord integration", made.Type, made.State)
 	}
 	if made.Channel == nil {
 		t.Fatal("the channel identity is missing")
@@ -292,16 +292,16 @@ func TestAChannelKeepsOnlySafeIdentityAndIsReadyToAnnounce(t *testing.T) {
 	if made.Channel.RoleName != "Blog readers" {
 		t.Errorf("role name = %q", made.Channel.RoleName)
 	}
-	if len(made.Events) != 1 || made.Events[0] != "publication.post.published.v1" {
-		t.Errorf("events = %v, want first publications alone", made.Events)
+	if len(made.Announcements) != 1 || made.Announcements[0] != "publication.post.published.v1" {
+		t.Errorf("events = %v, want first publications alone", made.Announcements)
 	}
-	body, _ := json.Marshal(stack.destinations(t, stack.authority))
+	body, _ := json.Marshal(stack.integrations(t, stack.authority))
 	if strings.Contains(string(body), discordToken) {
 		t.Error("the listing carried the Discord capability token")
 	}
 	var sealed []byte
 	err := stack.pool.QueryRow(t.Context(), `
-		select address from publication_destinations where id = $1
+		select address from blog_integrations where id = $1
 	`, made.ID).Scan(&sealed)
 	if err != nil {
 		t.Fatalf("read the sealed capability: %v", err)
@@ -313,7 +313,7 @@ func TestAChannelKeepsOnlySafeIdentityAndIsReadyToAnnounce(t *testing.T) {
 
 func TestOnlyASnowflakeRoleIsApproved(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 
 	refused := stack.addChannel(t, stack.authority, fmt.Sprintf(
 		`{"name":"Announcements","address":%q,"roleId":"everyone","roleName":"Everyone"}`,
@@ -327,7 +327,7 @@ func TestOnlyASnowflakeRoleIsApproved(t *testing.T) {
 
 func TestADiscordChannelHasNoSigningSecretToRotate(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")
 
 	response := stack.rotate(t, stack.authority, made.ID)
@@ -339,16 +339,16 @@ func TestADiscordChannelHasNoSigningSecretToRotate(t *testing.T) {
 
 func TestAContributorSeesTheChannelNameAndItsRoleAndNothingElse(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "Blog readers")
 	post := stack.readyPost(t)
 
 	offered := stack.postChoices(t, stack.editor, post.ID)
 
-	if len(offered.Destinations) != 1 {
-		t.Fatalf("offered %d destinations, want 1", len(offered.Destinations))
+	if len(offered.Integrations) != 1 {
+		t.Fatalf("offered %d integrations, want 1", len(offered.Integrations))
 	}
-	one := offered.Destinations[0]
+	one := offered.Integrations[0]
 	if one.ID != made.ID || one.Type != "discord" || one.Name != "Announcements" {
 		t.Errorf("offered = %+v", one)
 	}
@@ -365,18 +365,18 @@ func TestAContributorSeesTheChannelNameAndItsRoleAndNothingElse(t *testing.T) {
 
 func TestAFirstPublicationAnnouncesWhatIllarinDecidedToSay(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")
 
 	post, sent := stack.announcedPost(t, fmt.Sprintf(
-		`"destinationIds":[%q],"note":"Worth a read."`, made.ID,
+		`"integrationIds":[%q],"note":"Worth a read."`, made.ID,
 	))
 
 	if len(sent) != 1 || sent[0].State != "delivered" {
-		t.Fatalf("deliveries = %+v, want one delivered", sent)
+		t.Fatalf("attempts = %+v, want one delivered", sent)
 	}
 	if sent[0].Type != "discord" || sent[0].MessageID != discordMessageID {
-		t.Errorf("delivery = %+v, want the Discord message it made", sent[0])
+		t.Errorf("attempt = %+v, want the Discord message it made", sent[0])
 	}
 	read := stack.sentToDiscord(t)
 	if len(read.Embeds) != 1 {
@@ -408,11 +408,11 @@ func TestAFirstPublicationAnnouncesWhatIllarinDecidedToSay(t *testing.T) {
 
 func TestAnAnnouncementNeverCarriesContributorSuppliedDiscordFields(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")
 
 	stack.announcedPost(t, fmt.Sprintf(
-		`"destinationIds":[%q],"username":"Someone","embeds":[],"threadId":"1"`,
+		`"integrationIds":[%q],"username":"Someone","embeds":[],"threadId":"1"`,
 		made.ID,
 	))
 
@@ -424,11 +424,11 @@ func TestAnAnnouncementNeverCarriesContributorSuppliedDiscordFields(t *testing.T
 
 func TestMentionsAreClosedUnlessTheApprovedRoleIsChosen(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "Blog readers")
 
 	stack.announcedPost(t, fmt.Sprintf(
-		`"destinationIds":[%q],"note":"@everyone <@&999999999999999999>"`, made.ID,
+		`"integrationIds":[%q],"note":"@everyone <@&999999999999999999>"`, made.ID,
 	))
 
 	read := stack.sentToDiscord(t)
@@ -442,11 +442,11 @@ func TestMentionsAreClosedUnlessTheApprovedRoleIsChosen(t *testing.T) {
 
 func TestChoosingTheRoleMentionsThatOneAndOnlyThatOne(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "Blog readers")
 
 	stack.announcedPost(t, fmt.Sprintf(
-		`"destinationIds":[%q],"roleDestinationIds":[%q]`, made.ID, made.ID,
+		`"integrationIds":[%q],"roleIntegrationIds":[%q]`, made.ID, made.ID,
 	))
 
 	read := stack.sentToDiscord(t)
@@ -460,12 +460,12 @@ func TestChoosingTheRoleMentionsThatOneAndOnlyThatOne(t *testing.T) {
 
 func TestARoleCannotBeChosenWhereTheAuthorityApprovedNone(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")
 	post := stack.readyPost(t)
 
 	response := stack.publishTo(t, stack.editor, post.ID, post.Version, choosing(post, fmt.Sprintf(
-		`"destinationIds":[%q],"roleDestinationIds":[%q]`, made.ID, made.ID,
+		`"integrationIds":[%q],"roleIntegrationIds":[%q]`, made.ID, made.ID,
 	)))
 
 	if response.Code != http.StatusForbidden {
@@ -475,12 +475,12 @@ func TestARoleCannotBeChosenWhereTheAuthorityApprovedNone(t *testing.T) {
 
 func TestARoleCannotBeChosenOnADestinationNothingIsSentTo(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "Blog readers")
 	post := stack.readyPost(t)
 
 	response := stack.publishTo(t, stack.editor, post.ID, post.Version, choosing(post, fmt.Sprintf(
-		`"destinationIds":[],"roleDestinationIds":[%q]`, made.ID,
+		`"integrationIds":[],"roleIntegrationIds":[%q]`, made.ID,
 	)))
 
 	if response.Code != http.StatusForbidden {
@@ -490,10 +490,10 @@ func TestARoleCannotBeChosenOnADestinationNothingIsSentTo(t *testing.T) {
 
 func TestQuietPublicationAnnouncesNothingOnDiscord(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	stack.channelWithRole(t, "")
 
-	stack.announcedPost(t, `"destinationIds":[]`)
+	stack.announcedPost(t, `"integrationIds":[]`)
 
 	if arrivals := stack.discord.announcements(); len(arrivals) != 0 {
 		t.Errorf("Discord was sent %d announcements, want 0", len(arrivals))
@@ -502,19 +502,19 @@ func TestQuietPublicationAnnouncesNothingOnDiscord(t *testing.T) {
 
 func TestAnAcceptedAnnouncementDiscordNeverConfirmsIsNotCalledDelivered(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")
 	stack.discord.answersSendWith(func(arrived) (int, string) { return http.StatusNoContent, "" })
 
 	_, sent := stack.announcedPost(t, fmt.Sprintf(
-		`"destinationIds":[%q]`, made.ID,
+		`"integrationIds":[%q]`, made.ID,
 	))
 
 	if len(sent) != 1 {
-		t.Fatalf("deliveries = %d, want 1", len(sent))
+		t.Fatalf("attempts = %d, want 1", len(sent))
 	}
 	if sent[0].State != "unconfirmed" || sent[0].SettledReason != "unconfirmed" {
-		t.Errorf("delivery = %+v, want it recorded as unconfirmed", sent[0])
+		t.Errorf("attempt = %+v, want it recorded as unconfirmed", sent[0])
 	}
 	if sent[0].MessageID != "" {
 		t.Errorf("message id = %q, want none", sent[0].MessageID)
@@ -529,13 +529,13 @@ func TestAnAcceptedAnnouncementDiscordNeverConfirmsIsNotCalledDelivered(t *testi
 
 func TestAPostAnnouncesOnDiscordOnceAcrossItsWholeLife(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")
-	chosen := fmt.Sprintf(`"destinationIds":[%q]`, made.ID)
+	chosen := fmt.Sprintf(`"integrationIds":[%q]`, made.ID)
 
 	post, sent := stack.announcedPost(t, chosen)
 	if len(sent) != 1 {
-		t.Fatalf("the first publication made %d deliveries, want 1", len(sent))
+		t.Fatalf("the first publication made %d attempts, want 1", len(sent))
 	}
 
 	live := stack.working(t, stack.editor, post.ID)
@@ -549,9 +549,9 @@ func TestAPostAnnouncesOnDiscordOnceAcrossItsWholeLife(t *testing.T) {
 	}
 	stack.sendQueued(t)
 
-	after := stack.deliveries(t, stack.editor, post.ID).Deliveries
+	after := stack.attempts(t, stack.editor, post.ID).Attempts
 	if len(after) != 1 {
-		t.Errorf("the post made %d deliveries, want the one announcement", len(after))
+		t.Errorf("the post made %d attempts, want the one announcement", len(after))
 	}
 	if arrivals := stack.discord.announcements(); len(arrivals) != 1 {
 		t.Errorf("Discord was sent %d announcements, want 1", len(arrivals))
@@ -560,9 +560,9 @@ func TestAPostAnnouncesOnDiscordOnceAcrossItsWholeLife(t *testing.T) {
 
 func TestAWithdrawnAndRepublishedPostAnnouncesNothingFurther(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")
-	chosen := fmt.Sprintf(`"destinationIds":[%q]`, made.ID)
+	chosen := fmt.Sprintf(`"integrationIds":[%q]`, made.ID)
 
 	post, _ := stack.announcedPost(t, chosen)
 	live := stack.working(t, stack.editor, post.ID)
@@ -588,18 +588,18 @@ func TestAWithdrawnAndRepublishedPostAnnouncesNothingFurther(t *testing.T) {
 
 func TestADiscordAnnouncementNeverDelaysPublication(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")
 	stack.discord.answersSendWith(func(arrived) (int, string) {
 		return http.StatusInternalServerError, `{}`
 	})
 
 	post, sent := stack.announcedPost(t, fmt.Sprintf(
-		`"destinationIds":[%q]`, made.ID,
+		`"integrationIds":[%q]`, made.ID,
 	))
 
 	if len(sent) != 1 || sent[0].State == "delivered" {
-		t.Fatalf("deliveries = %+v, want one that has not arrived", sent)
+		t.Fatalf("attempts = %+v, want one that has not arrived", sent)
 	}
 	live := stack.working(t, stack.editor, post.ID)
 	if live.Status != "published" {

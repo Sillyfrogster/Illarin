@@ -55,12 +55,12 @@ describe("details client", () => {
   }
 
   test("reports a drafted-changes conflict without changing the request", async () => {
-    const events: string[] = [];
+    const announcements: string[] = [];
     Object.defineProperty(globalThis, "window", {
       configurable: true,
       value: {
         dispatchEvent(event: Event) {
-          events.push(event.type);
+          announcements.push(event.type);
           return true;
         },
       },
@@ -87,7 +87,7 @@ describe("details client", () => {
       "These drafted changes changed after you opened them.",
     );
 
-    expect(events).toEqual([DRAFTED_CHANGES_STALE]);
+    expect(announcements).toEqual([DRAFTED_CHANGES_STALE]);
     expect(details.blurb).toBe("Keep this unsaved pitch.");
   });
 });

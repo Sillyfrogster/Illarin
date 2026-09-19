@@ -4,29 +4,29 @@ import { Hash, Webhook } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  readWorkUpdateDestinationChoices,
-  type WorkUpdateDestinationChoice,
-} from "@/lib/api/work-destinations";
+  readWorkIntegrationChoices,
+  type WorkIntegrationChoice,
+} from "@/lib/api/integrations";
 import { cn } from "@/lib/cn";
 
 export type AnnouncementChoice = {
-  destinationIds: string[] | null;
+  integrationIds: string[] | null;
   announceUnlisted: boolean;
   notify: boolean;
 };
 
 export const NO_CHOICE: AnnouncementChoice = {
-  destinationIds: null,
+  integrationIds: null,
   announceUnlisted: false,
   notify: true,
 };
 
-/** A quiet choice sends nothing anywhere, with no destination and no notification. */
+/** A quiet choice sends nothing anywhere, with no integration and no notification. */
 function isQuiet(choice: AnnouncementChoice): boolean {
-  return !choice.notify && (choice.destinationIds ?? []).length === 0;
+  return !choice.notify && (choice.integrationIds ?? []).length === 0;
 }
 
-export function UpdateAnnouncementChoice({
+export function WorkAnnouncementChoice({
   workId,
   choice,
   disabled,
@@ -41,34 +41,32 @@ export function UpdateAnnouncementChoice({
   onChange: (choice: AnnouncementChoice) => void;
   unlisted: boolean;
 }) {
-  const [offered, setOffered] = useState<WorkUpdateDestinationChoice[] | null>(
-    null,
-  );
+  const [offered, setOffered] = useState<WorkIntegrationChoice[] | null>(null);
   const [error, setError] = useState("");
   const report = useRef(onChange);
   report.current = onChange;
 
   const defaults = useCallback(
-    (destinations: WorkUpdateDestinationChoice[]) =>
+    (integrations: WorkIntegrationChoice[]) =>
       unlisted
         ? []
-        : destinations.filter((one) => one.byDefault).map((one) => one.id),
+        : integrations.filter((one) => one.byDefault).map((one) => one.id),
     [unlisted],
   );
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
       setError("");
-      const answer = await readWorkUpdateDestinationChoices(workId, signal);
+      const answer = await readWorkIntegrationChoices(workId, signal);
       if (signal?.aborted) return;
       if (!answer.value) {
-        setError(answer.error || "Could not read your destinations.");
+        setError(answer.error || "Could not read your integrations.");
         return;
       }
-      setOffered(answer.value.destinations);
+      setOffered(answer.value.integrations);
       report.current({
         announceUnlisted: false,
-        destinationIds: defaults(answer.value.destinations),
+        integrationIds: defaults(answer.value.integrations),
         notify: true,
       });
     },
@@ -81,17 +79,17 @@ export function UpdateAnnouncementChoice({
     return () => controller.abort();
   }, [load]);
 
-  const chosen = choice.destinationIds ?? [];
+  const chosen = choice.integrationIds ?? [];
   const consentWanted = unlisted && chosen.length > 0;
   const quiet = isQuiet(choice);
 
   function setQuiet(on: boolean) {
     onChange(
       on
-        ? { announceUnlisted: false, destinationIds: [], notify: false }
+        ? { announceUnlisted: false, integrationIds: [], notify: false }
         : {
             announceUnlisted: false,
-            destinationIds: defaults(offered ?? []),
+            integrationIds: defaults(offered ?? []),
             notify: true,
           },
     );
@@ -116,16 +114,16 @@ export function UpdateAnnouncementChoice({
 
         {error ? (
           <Line>
-            {error} A listed work will use its saved announcement destinations.
+            {error} A listed work will use its saved announcement integrations.
             An unlisted work will publish without an announcement.
           </Line>
         ) : offered === null ? (
           <output className="text-meta text-mute">
-            Loading your destinations…
+            Loading your integrations…
           </output>
         ) : offered.length === 0 ? (
           <Line>
-            No active destinations are available. This update will publish
+            No active integrations are available. This update will publish
             without an announcement.
           </Line>
         ) : (
@@ -134,7 +132,7 @@ export function UpdateAnnouncementChoice({
               className="grid gap-1 rounded-control bg-deep p-1.5"
               disabled={disabled}
             >
-              <legend className="sr-only">Destinations for this update</legend>
+              <legend className="sr-only">Integrations for this version</legend>
               {offered.map((one) => {
                 const on = chosen.includes(one.id);
                 const Icon = one.type === "discord" ? Hash : Webhook;
@@ -152,7 +150,7 @@ export function UpdateAnnouncementChoice({
                       onChange={(event) =>
                         onChange({
                           ...choice,
-                          destinationIds: event.target.checked
+                          integrationIds: event.target.checked
                             ? [...chosen, one.id]
                             : chosen.filter((id) => id !== one.id),
                         })
@@ -188,18 +186,16 @@ export function UpdateAnnouncementChoice({
             <Line>
               {chosen.length === 0
                 ? "No announcement will be sent. The version still appears on the page and in its history."
-                : "Selected destinations receive the name, update number, summary and history link. They do not receive the full notes or content changes."}
+                : "Selected integrations receive the name, version number, summary and history link. They do not receive the full notes or content changes."}
             </Line>
           </>
         )}
 
         <Link
           className="inline-flex min-h-11 items-center self-start text-meta text-accent underline-offset-4 hover:underline"
-          href="/settings/update-destinations"
+          href="/settings/integrations"
         >
-          {offered?.length === 0
-            ? "Connect a destination"
-            : "Your destinations"}
+          {offered?.length === 0 ? "Add an integration" : "Your integrations"}
         </Link>
       </section>
 

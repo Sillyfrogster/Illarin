@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { Shell } from "@/components/layout/Shell";
-import { UpdateDestinationSettings } from "@/components/updates/UpdateDestinationSettings";
+import { IntegrationSettings } from "@/components/updates/IntegrationSettings";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
-  "Update destinations",
-  "Where Illarin announces the updates you publish.",
+  "Integrations",
+  "Where Illarin announces the versions you publish.",
 );
 
-export default function UpdateDestinationsPage() {
+export default function IntegrationsPage() {
   return (
     <Shell className="pt-10 pb-chapter lg:pt-14">
       <Link
@@ -19,15 +19,15 @@ export default function UpdateDestinationsPage() {
       </Link>
       <header className="mt-4 max-w-[56ch]">
         <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
-          Update destinations
+          Integrations
         </h1>
         <p className="mt-4 font-prose text-lede text-mute">
-          Connect a Discord channel or your own endpoint, then choose it when
-          publishing an update. Connecting a destination does not send an
-          announcement.
+          An integration is a place Illarin announces to: a Discord channel or
+          your own webhook. Choose one when you publish a version. Adding one
+          announces nothing on its own.
         </p>
       </header>
-      <UpdateDestinationSettings />
+      <IntegrationSettings />
     </Shell>
   );
 }

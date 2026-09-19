@@ -286,7 +286,7 @@ func toAPIApp(found App) PublicationApp {
 		Home:         found.Home,
 		Position:     found.Position,
 		Retired:      found.Retired,
-		Destinations: announcements.ChoiceRows(found.Destinations),
+		Integrations: announcements.ChoiceRows(found.Integrations),
 	}
 }
 
@@ -343,8 +343,8 @@ func toAPIGrant(found Grant, holder account.PublicProfile) PublicationGrant {
 		App:                   toAPIApp(found.App),
 		Categories:            toAPICategories(found.Categories),
 		DefaultCategory:       toAPICategory(found.DefaultCategory),
-		Destinations:          announcements.ChoiceRows(found.Destinations),
-		DestinationsInherited: found.DestinationsInherited,
+		Integrations:          announcements.ChoiceRows(found.Integrations),
+		IntegrationsInherited: found.IntegrationsInherited,
 		GrantedAt:             found.GrantedAt,
 		RevokedAt:             found.RevokedAt,
 		Active:                found.Active,
@@ -363,13 +363,13 @@ type OrderPublicationCategoriesRequest struct {
 }
 
 type PublicationApp struct {
-	Destinations []announcements.PublicationDestinationChoice `json:"destinations"`
-	Home         string                                       `json:"home"`
-	Id           uuid.UUID                                    `json:"id"`
-	Name         string                                       `json:"name"`
-	Position     int                                          `json:"position"`
-	Retired      bool                                         `json:"retired"`
-	Slug         string                                       `json:"slug"`
+	Integrations []announcements.BlogIntegrationChoice `json:"integrations"`
+	Home         string                                `json:"home"`
+	Id           uuid.UUID                             `json:"id"`
+	Name         string                                `json:"name"`
+	Position     int                                   `json:"position"`
+	Retired      bool                                  `json:"retired"`
+	Slug         string                                `json:"slug"`
 }
 
 type PublicationCategory struct {
@@ -385,16 +385,16 @@ type PublicationCategoryList struct {
 }
 
 type PublicationGrant struct {
-	Active                bool                                         `json:"active"`
-	App                   PublicationApp                               `json:"app"`
-	Categories            []PublicationCategory                        `json:"categories"`
-	DefaultCategory       PublicationCategory                          `json:"defaultCategory"`
-	Destinations          []announcements.PublicationDestinationChoice `json:"destinations"`
-	DestinationsInherited bool                                         `json:"destinationsInherited"`
-	GrantedAt             time.Time                                    `json:"grantedAt"`
-	Holder                PublicationGrantHolder                       `json:"holder"`
-	Id                    uuid.UUID                                    `json:"id"`
-	RevokedAt             *time.Time                                   `json:"revokedAt,omitempty"`
+	Active                bool                                  `json:"active"`
+	App                   PublicationApp                        `json:"app"`
+	Categories            []PublicationCategory                 `json:"categories"`
+	DefaultCategory       PublicationCategory                   `json:"defaultCategory"`
+	Integrations          []announcements.BlogIntegrationChoice `json:"integrations"`
+	IntegrationsInherited bool                                  `json:"integrationsInherited"`
+	GrantedAt             time.Time                             `json:"grantedAt"`
+	Holder                PublicationGrantHolder                `json:"holder"`
+	Id                    uuid.UUID                             `json:"id"`
+	RevokedAt             *time.Time                            `json:"revokedAt,omitempty"`
 }
 
 type PublicationGrantHolder struct {

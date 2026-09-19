@@ -2,14 +2,14 @@ package blog_test
 
 import "time"
 
-type destinationChoice struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Type      string   `json:"type"`
-	State     string   `json:"state"`
-	Events    []string `json:"events"`
-	Role      string   `json:"role"`
-	ByDefault bool     `json:"byDefault"`
+type integrationChoice struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Type          string   `json:"type"`
+	State         string   `json:"state"`
+	Announcements []string `json:"announcements"`
+	Role          string   `json:"role"`
+	ByDefault     bool     `json:"byDefault"`
 }
 
 type deliveryAttempt struct {

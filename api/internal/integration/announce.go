@@ -43,7 +43,7 @@ type sentUpdate struct {
 type announced struct {
 	owner           uuid.UUID
 	name            string
-	destinationType string
+	integrationType string
 	visibility      string
 }
 
@@ -57,7 +57,7 @@ func (s *Service) Announce(
 	var held announced
 	err := tx.QueryRow(ctx, `
 		select owner_id, name, type, visibility from works where id = $1
-	`, published.WorkID).Scan(&held.owner, &held.name, &held.destinationType, &held.visibility)
+	`, published.WorkID).Scan(&held.owner, &held.name, &held.integrationType, &held.visibility)
 	if err != nil {
 		return fmt.Errorf("read the work being announced: %w", err)
 	}
@@ -71,7 +71,7 @@ func (s *Service) Announce(
 	body, err := json.Marshal(sent{
 		ID: eventID, Type: EventUpdatePublished, OccurredAt: occurred,
 		Work: sentWork{
-			ID: published.WorkID, Type: held.destinationType, Name: held.name,
+			ID: published.WorkID, Type: held.integrationType, Name: held.name,
 			URL: s.workAddress(published.WorkID),
 		},
 		Update: sentUpdate{
@@ -85,7 +85,7 @@ func (s *Service) Announce(
 		return fmt.Errorf("write the update announcement: %w", err)
 	}
 	_, err = tx.Exec(ctx, `
-		insert into work_update_events
+		insert into work_announcements
 		       (id, work_id, version_id, type, occurred_at, unlisted_consent, payload)
 		values ($1, $2, $3, $4, $5, $6, $7)
 	`, eventID, published.WorkID, published.ID, EventUpdatePublished, occurred,
@@ -95,8 +95,8 @@ func (s *Service) Announce(
 	}
 	for _, one := range picked {
 		_, err := tx.Exec(ctx, `
-			insert into work_update_deliveries
-			       (id, event_id, destination_id, destination_name, destination_type, due_at)
+			insert into work_announcement_attempts
+			       (id, announcement_id, integration_id, integration_name, integration_type, due_at)
 			values ($1, $2, $3, $4, $5, $6)
 		`, uuid.New(), eventID, one.ID, one.Name, one.Type, occurred)
 		if err != nil {
@@ -119,25 +119,25 @@ func (s *Service) pick(
 	unlisted bool,
 	choice version.Announcement,
 ) ([]picked, error) {
-	if choice.DestinationIDs == nil {
+	if choice.IntegrationIDs == nil {
 		if unlisted {
 			return nil, nil
 		}
 		return collectPicked(tx.Query(ctx, `
-			select destination.id, destination.name, destination.type
-			  from work_update_destination_defaults chosen
-			  join work_update_destinations destination on destination.id = chosen.destination_id
-			 where chosen.work_id = $1 and destination.owner_id = $2 and destination.state = $3
-			 order by destination.name, destination.id
-			 for share of destination
+			select integration.id, integration.name, integration.type
+			  from work_integration_defaults chosen
+			  join work_integrations integration on integration.id = chosen.integration_id
+			 where chosen.work_id = $1 and integration.owner_id = $2 and integration.state = $3
+			 order by integration.name, integration.id
+			 for share of integration
 		`, workID, owner, Active))
 	}
-	wanted := distinct(*choice.DestinationIDs)
+	wanted := distinct(*choice.IntegrationIDs)
 	if len(wanted) > 0 && unlisted && !choice.AnnounceUnlisted {
 		return nil, version.ErrUnlistedConsentRequired
 	}
 	found, err := collectPicked(tx.Query(ctx, `
-		select id, name, type from work_update_destinations
+		select id, name, type from work_integrations
 		 where owner_id = $1 and id = any($2::uuid[]) and state = $3
 		 order by name, id
 		 for share
@@ -146,7 +146,7 @@ func (s *Service) pick(
 		return nil, err
 	}
 	if len(found) != len(wanted) {
-		return nil, version.ErrDestinationIneligible
+		return nil, version.ErrIntegrationIneligible
 	}
 	if err := remember(ctx, tx, workID, wanted); err != nil {
 		return nil, err
@@ -155,16 +155,16 @@ func (s *Service) pick(
 }
 
 func remember(ctx context.Context, tx pgx.Tx, workID uuid.UUID, ids []uuid.UUID) error {
-	_, err := tx.Exec(ctx, `delete from work_update_destination_defaults where work_id = $1`, workID)
+	_, err := tx.Exec(ctx, `delete from work_integration_defaults where work_id = $1`, workID)
 	if err != nil {
-		return fmt.Errorf("forget the remembered destinations: %w", err)
+		return fmt.Errorf("forget the remembered integrations: %w", err)
 	}
 	for _, id := range ids {
 		_, err := tx.Exec(ctx, `
-			insert into work_update_destination_defaults (work_id, destination_id) values ($1, $2)
+			insert into work_integration_defaults (work_id, integration_id) values ($1, $2)
 		`, workID, id)
 		if err != nil {
-			return fmt.Errorf("remember a destination: %w", err)
+			return fmt.Errorf("remember a integration: %w", err)
 		}
 	}
 	return nil
@@ -185,19 +185,19 @@ func distinct(ids []uuid.UUID) []uuid.UUID {
 
 func collectPicked(rows pgx.Rows, err error) ([]picked, error) {
 	if err != nil {
-		return nil, fmt.Errorf("read the destinations an update goes to: %w", err)
+		return nil, fmt.Errorf("read the integrations an update goes to: %w", err)
 	}
 	defer rows.Close()
 	found := make([]picked, 0, 4)
 	for rows.Next() {
 		var one picked
 		if err := rows.Scan(&one.ID, &one.Name, &one.Type); err != nil {
-			return nil, fmt.Errorf("read one destination an update goes to: %w", err)
+			return nil, fmt.Errorf("read one integration an update goes to: %w", err)
 		}
 		found = append(found, one)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read the destinations an update goes to: %w", err)
+		return nil, fmt.Errorf("read the integrations an update goes to: %w", err)
 	}
 	return found, nil
 }

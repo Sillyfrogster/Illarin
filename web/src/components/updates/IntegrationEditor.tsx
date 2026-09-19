@@ -13,36 +13,33 @@ import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import { RevealOnce } from "@/components/ui/reveal-once";
 import { TravellingHighlight } from "@/components/ui/travelling-highlight";
 import {
-  addUpdateDestination,
-  changeUpdateDestination,
-  disableUpdateDestination,
-  removeUpdateDestination,
-  rotateUpdateDestinationSecret,
-  verifyUpdateDestination,
-  type WorkUpdateDestination,
-} from "@/lib/api/work-destinations";
+  addIntegration,
+  changeIntegration,
+  disableIntegration,
+  removeIntegration,
+  rotateIntegrationSecret,
+  verifyIntegration,
+  type WorkIntegration,
+} from "@/lib/api/integrations";
 import { cn } from "@/lib/cn";
-import {
-  destinationRotating,
-  destinationStanding,
-} from "@/lib/update-destinations";
+import { integrationRotating, integrationStanding } from "@/lib/integrations";
 
-export function DestinationEditor({
+export function IntegrationEditor({
   existing,
   busy,
   onBusy,
   onSaved,
   onRemoved,
 }: {
-  existing: WorkUpdateDestination | null;
+  existing: WorkIntegration | null;
   busy: boolean;
   onBusy: (busy: boolean) => void;
-  onSaved: (destination: WorkUpdateDestination) => void;
+  onSaved: (integration: WorkIntegration) => void;
   onRemoved: (id: string) => void;
 }) {
   const [current, setCurrent] = useState(existing);
-  const [destinationType, setDestinationType] = useState<
-    WorkUpdateDestination["type"]
+  const [integrationType, setIntegrationType] = useState<
+    WorkIntegration["type"]
   >(existing?.type ?? "discord");
   const [name, setName] = useState(existing?.name ?? "");
   const [address, setAddress] = useState("");
@@ -64,7 +61,7 @@ export function DestinationEditor({
     setWorking("");
   }
 
-  function receive(saved: WorkUpdateDestination) {
+  function receive(saved: WorkIntegration) {
     setCurrent(saved);
     onSaved(saved);
   }
@@ -74,37 +71,37 @@ export function DestinationEditor({
     if (busy) return;
     start("save");
     const answer = current
-      ? await changeUpdateDestination(current.id, {
+      ? await changeIntegration(current.id, {
           name: name.trim(),
           address: address.trim() || undefined,
         })
-      : await addUpdateDestination({
+      : await addIntegration({
           name: name.trim(),
-          type: destinationType,
+          type: integrationType,
           address: address.trim(),
         });
     finish();
     if (!answer.value) {
-      setError(answer.error || "Could not save the destination.");
+      setError(answer.error || "Could not save the integration.");
       return;
     }
     setAddress("");
-    if ("destination" in answer.value) {
-      receive(answer.value.destination);
+    if ("integration" in answer.value) {
+      receive(answer.value.integration);
       setSecret(answer.value.secret ?? "");
       setCopied(false);
     } else receive(answer.value);
     setNotice(
-      destinationType === "discord"
+      integrationType === "discord"
         ? "Discord channel saved."
-        : "Destination saved.",
+        : "Integration saved.",
     );
   }
 
   async function verify() {
     if (!current || busy) return;
     start("verify");
-    const answer = await verifyUpdateDestination(current.id);
+    const answer = await verifyIntegration(current.id);
     finish();
     if (!answer.value) {
       setError(
@@ -114,32 +111,32 @@ export function DestinationEditor({
       return;
     }
     receive(answer.value);
-    setNotice("Verified. This destination is ready to select for your work.");
+    setNotice("Verified. This integration is ready to choose for your work.");
   }
 
   async function disable() {
     if (!current || busy) return;
     start("disable");
-    const answer = await disableUpdateDestination(current.id);
+    const answer = await disableIntegration(current.id);
     finish();
     if (!answer.value) {
-      setError(answer.error || "Could not disable the destination.");
+      setError(answer.error || "Could not disable the integration.");
       return;
     }
     receive(answer.value);
-    setNotice("Destination disabled.");
+    setNotice("Integration disabled.");
   }
 
   async function rotate() {
     if (!current || busy) return;
     start("rotate");
-    const answer = await rotateUpdateDestinationSecret(current.id);
+    const answer = await rotateIntegrationSecret(current.id);
     finish();
     if (!answer.value) {
       setError(answer.error || "Could not rotate the signing secret.");
       return;
     }
-    receive(answer.value.destination);
+    receive(answer.value.integration);
     setSecret(answer.value.secret ?? "");
     setCopied(false);
     setNotice(
@@ -150,7 +147,7 @@ export function DestinationEditor({
   async function remove() {
     if (!current || busy) return;
     start("remove");
-    const answer = await removeUpdateDestination(current.id);
+    const answer = await removeIntegration(current.id);
     finish();
     if (answer.error) {
       setError(answer.error);
@@ -186,17 +183,17 @@ export function DestinationEditor({
         <fieldset className="grid min-w-0 gap-5" disabled={busy}>
           {!current ? (
             <TypeChoice
-              destinationType={destinationType}
-              onChange={setDestinationType}
+              integrationType={integrationType}
+              onChange={setIntegrationType}
             />
           ) : null}
           <Field
-            htmlFor="update-destination-name"
-            label="Destination name"
-            hint="A name you will recognize when publishing an update."
+            htmlFor="integration-name"
+            label="Integration name"
+            hint="A name you will recognize when publishing a version."
           >
             <TextInput
-              id="update-destination-name"
+              id="integration-name"
               maxLength={48}
               onChange={(event) => setName(event.target.value)}
               required
@@ -206,41 +203,41 @@ export function DestinationEditor({
           {current ? (
             <div className="grid gap-1 rounded-control bg-deep px-3.5 py-3 text-meta text-mute">
               <span>
-                Saved {destinationType === "discord" ? "channel" : "endpoint"},
+                Saved {integrationType === "discord" ? "channel" : "endpoint"},
                 masked
               </span>
               <code className="break-all text-ink">{current.address}</code>
             </div>
           ) : null}
           <Field
-            htmlFor="update-destination-address"
+            htmlFor="integration-address"
             label={
               current
                 ? "Replacement address"
-                : destinationType === "discord"
+                : integrationType === "discord"
                   ? "Discord webhook address"
                   : "Endpoint address"
             }
             hint={
               current
                 ? "Leave blank to keep the saved address. Replacing a generic endpoint requires verification again."
-                : destinationType === "discord"
+                : integrationType === "discord"
                   ? "Copy the webhook URL from your Discord channel's Integrations settings."
                   : "A public HTTPS endpoint on port 443."
             }
           >
             <TextInput
               autoComplete="off"
-              id="update-destination-address"
+              id="integration-address"
               maxLength={300}
               onChange={(event) => setAddress(event.target.value)}
               required={!current}
               spellCheck={false}
-              type={destinationType === "discord" ? "password" : "url"}
+              type={integrationType === "discord" ? "password" : "url"}
               value={address}
             />
           </Field>
-          {destinationType === "discord" ? (
+          {integrationType === "discord" ? (
             <StepNote>
               User, role and everyone mentions are disabled. Setup checks the
               channel without posting a message.
@@ -273,14 +270,14 @@ export function DestinationEditor({
             ? "Saving…"
             : current
               ? "Save changes"
-              : destinationType === "discord"
+              : integrationType === "discord"
                 ? "Connect this channel"
                 : "Create the endpoint"}
         </button>
       </form>
       {current ? (
         <div className="grid gap-4 border-t border-rule/45 pt-5">
-          <StepNote>{destinationStanding(current)}</StepNote>
+          <StepNote>{integrationStanding(current)}</StepNote>
           <div className="flex flex-wrap gap-2">
             <StepAction
               busy={busy}
@@ -304,7 +301,7 @@ export function DestinationEditor({
             ) : null}
             {current.type === "webhook" ? (
               <StepAction
-                busy={busy || destinationRotating(current)}
+                busy={busy || integrationRotating(current)}
                 icon={KeyRound}
                 onClick={() => void rotate()}
               >
@@ -313,7 +310,7 @@ export function DestinationEditor({
             ) : null}
           </div>
           <Consequence
-            action="Remove destination"
+            action="Remove integration"
             busy={busy}
             confirm="Remove permanently"
             onConfirm={() => void remove()}
@@ -328,24 +325,24 @@ export function DestinationEditor({
 }
 
 function TypeChoice({
-  destinationType,
+  integrationType,
   onChange,
 }: {
-  destinationType: WorkUpdateDestination["type"];
-  onChange: (destinationType: WorkUpdateDestination["type"]) => void;
+  integrationType: WorkIntegration["type"];
+  onChange: (integrationType: WorkIntegration["type"]) => void;
 }) {
-  const [lit, setLit] = useState<string>(destinationType);
+  const [lit, setLit] = useState<string>(integrationType);
   return (
     <fieldset>
-      <legend className="mb-3 text-ui text-ink">Destination type</legend>
+      <legend className="mb-3 text-ui text-ink">Integration type</legend>
       <TravellingHighlight
-        chosen={destinationType}
+        chosen={integrationType}
         className="inline-flex rounded-control bg-deep p-1"
         onLit={setLit}
       >
         {(["discord", "webhook"] as const).map((value) => (
           <button
-            aria-pressed={destinationType === value}
+            aria-pressed={integrationType === value}
             className={cn(
               "min-h-11 rounded-control px-4 text-ui font-medium outline-offset-3",
               lit === value ? "text-on-accent" : "text-mute",

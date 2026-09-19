@@ -84,12 +84,12 @@ func TestAQuietOrContentFreeUpdateTellsNoOne(t *testing.T) {
 	}
 
 	s.describe(t, "A change everyone should hear about.")
-	s.publishUpdate(t, `{"summary":"No destinations, still told","destinationIds":[]}`)
+	s.publishUpdate(t, `{"summary":"No integrations, still told","integrationIds":[]}`)
 	s.fanOut(t, time.Now())
 	page := s.inbox(t, follower, "")
 	if len(page.Items) != 1 || page.Items[0].Update == nil || page.Items[0].Update.Number != 4 ||
-		page.Items[0].Update.Summary != "No destinations, still told" {
-		t.Fatalf("an update with no destinations gave the follower %+v, want update 4", page.Items)
+		page.Items[0].Update.Summary != "No integrations, still told" {
+		t.Fatalf("an update with no integrations gave the follower %+v, want update 4", page.Items)
 	}
 }
 

@@ -57,7 +57,7 @@ func Register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
 	connect.Register(routes, connect.NewHandlers(s.Apps, s.Sends, downloads))
 	blog.Register(routes, posts)
 	integration.Register(routes, integration.NewHandlers(
-		s.Publications, s.UpdateDestinations, posts.IntegrationAccess()))
+		s.Publications, s.Integrations, posts.IntegrationAccess()))
 	staff.Register(routes, staff.NewHandlers(staff.NewService(s.Works.Pool())))
 	return nil
 }

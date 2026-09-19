@@ -174,26 +174,26 @@ func sameSet(present, given []uuid.UUID) bool {
 	return len(remaining) == 0
 }
 
-type Destination = announcements.Destination
+type Integration = announcements.Integration
 type Channel = announcements.Channel
-type DestinationEdit = announcements.DestinationEdit
-type DestinationUpdate = announcements.DestinationUpdate
-type AddedDestination = announcements.AddedDestination
+type IntegrationEdit = announcements.IntegrationEdit
+type IntegrationUpdate = announcements.IntegrationUpdate
+type AddedIntegration = announcements.AddedIntegration
 type Choice = announcements.Choice
 
-var PostEvents = announcements.PostEvents
-var ErrEventUnknown = announcements.ErrEventUnknown
+var AnnouncementTypes = announcements.AnnouncementTypes
+var ErrAnnouncementTypeUnknown = announcements.ErrAnnouncementTypeUnknown
 var ErrNotWebhook = announcements.ErrNotWebhook
 
 const TypeWebhook = announcements.TypeWebhook
 const TypeDiscord = announcements.TypeDiscord
-const DestinationUnverified = announcements.DestinationUnverified
-const DestinationActive = announcements.DestinationActive
-const DestinationDisabled = announcements.DestinationDisabled
+const IntegrationUnverified = announcements.IntegrationUnverified
+const IntegrationActive = announcements.IntegrationActive
+const IntegrationDisabled = announcements.IntegrationDisabled
 
-var ErrDestinationNotFound = announcements.ErrDestinationNotFound
-var ErrDestinationRefused = announcements.ErrDestinationRefused
-var ErrDestinationInactive = announcements.ErrDestinationInactive
+var ErrIntegrationNotFound = announcements.ErrIntegrationNotFound
+var ErrIntegrationRefused = announcements.ErrIntegrationRefused
+var ErrIntegrationInactive = announcements.ErrIntegrationInactive
 var ErrNotProven = announcements.ErrNotProven
 
 const EventVerification = announcements.EventVerification
@@ -208,8 +208,8 @@ type RotatedSecret = announcements.RotatedSecret
 
 const SecretOverlap = announcements.SecretOverlap
 
-var DeliveryDelays = announcements.DeliveryDelays
-var DeliveryAttempts = announcements.DeliveryAttempts
+var TryDelays = announcements.TryDelays
+var MaxTries = announcements.MaxTries
 
 const SettledArrived = announcements.SettledArrived
 const SettledExhausted = announcements.SettledExhausted
@@ -221,30 +221,30 @@ const SettledMoved = announcements.SettledMoved
 const SettledUnconfirmed = announcements.SettledUnconfirmed
 
 type Sender = announcements.Sender
-type Delivery = announcements.Delivery
-type DeliveryAttempt = announcements.DeliveryAttempt
+type Attempt = announcements.Attempt
+type Try = announcements.Try
 
-var ErrDeliveryNotFound = announcements.ErrDeliveryNotFound
-var ErrDeliveryUnsettled = announcements.ErrDeliveryUnsettled
-var ErrDeliveryUnsendable = announcements.ErrDeliveryUnsendable
+var ErrAttemptNotFound = announcements.ErrAttemptNotFound
+var ErrAttemptUnsettled = announcements.ErrAttemptUnsettled
+var ErrAttemptUnsendable = announcements.ErrAttemptUnsendable
 
-const DeliveryPending = announcements.DeliveryPending
-const DeliverySending = announcements.DeliverySending
-const DeliveryDelivered = announcements.DeliveryDelivered
-const DeliveryFailed = announcements.DeliveryFailed
-const DeliveryUnconfirmed = announcements.DeliveryUnconfirmed
+const AttemptPending = announcements.AttemptPending
+const AttemptSending = announcements.AttemptSending
 const AttemptDelivered = announcements.AttemptDelivered
-const AttemptRefused = announcements.AttemptRefused
-const AttemptUnreachable = announcements.AttemptUnreachable
+const AttemptFailed = announcements.AttemptFailed
 const AttemptUnconfirmed = announcements.AttemptUnconfirmed
-const DeliveryPoll = announcements.DeliveryPoll
+const TryDelivered = announcements.TryDelivered
+const TryRefused = announcements.TryRefused
+const TryUnreachable = announcements.TryUnreachable
+const TryUnconfirmed = announcements.TryUnconfirmed
+const AttemptPoll = announcements.AttemptPoll
 
 type Announcement = announcements.Announcement
-type DestinationPolicy = announcements.DestinationPolicy
+type IntegrationPolicy = announcements.IntegrationPolicy
 
 var ErrRoleRefused = announcements.ErrRoleRefused
 
-func (s *Service) PostDestinations(
+func (s *Service) PostIntegrations(
 	ctx context.Context,
 	editor Editor,
 	postID uuid.UUID,
@@ -263,11 +263,11 @@ func (s *Service) PostDestinations(
 	return announcements.ActiveAmong(allowed), nil
 }
 
-func (s *Service) PostDeliveries(
+func (s *Service) PostAttempts(
 	ctx context.Context,
 	editor Editor,
 	postID uuid.UUID,
-) ([]Delivery, error) {
+) ([]Attempt, error) {
 	post, err := s.post(ctx, postID)
 	if err != nil {
 		return nil, err
@@ -275,15 +275,15 @@ func (s *Service) PostDeliveries(
 	if err := s.mayManage(ctx, editor, post); err != nil {
 		return nil, err
 	}
-	return s.Service.PostDeliveries(ctx, postID)
+	return s.Service.PostAttempts(ctx, postID)
 }
 
-func (s *Service) SetGrantDestinations(ctx context.Context, actor, grantID uuid.UUID, in DestinationPolicy) error {
+func (s *Service) SetGrantIntegrations(ctx context.Context, actor, grantID uuid.UUID, in IntegrationPolicy) error {
 	current, err := s.grant(ctx, grantID)
 	if err != nil {
 		return err
 	}
-	return s.Service.SetGrantDestinations(ctx, actor, grantID, current.App.ID, current.Holder.ID, in)
+	return s.Service.SetGrantIntegrations(ctx, actor, grantID, current.App.ID, current.Holder.ID, in)
 }
 
 const CredentialSession = "session"
@@ -304,11 +304,11 @@ func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
 		insert into publication_audits
 		       (id, actor_id, credential, action, app_id, category_id, grant_id,
 		        post_id, revision_id, schedule_id, subject_id,
-		        destination_id, delivery_id, before_state, after_state)
+		        integration_id, attempt_id, before_state, after_state)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`, uuid.New(), actor, made.Credential, made.Action, made.AppID, made.CategoryID,
 		made.GrantID, made.PostID, made.RevisionID, made.ScheduleID,
-		made.SubjectID, made.DestinationID, made.DeliveryID,
+		made.SubjectID, made.IntegrationID, made.AttemptID,
 		nullable(made.Before), nullable(made.After))
 	if err != nil {
 		return fmt.Errorf("record publication audit: %w", err)
@@ -317,11 +317,11 @@ func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
 }
 
 type sent = announcements.Event
-type sentPost = announcements.EventPost
-type sentCategory = announcements.EventCategory
-type sentApp = announcements.EventApp
-type sentRelease = announcements.EventRelease
-type sentByline = announcements.EventByline
+type sentPost = announcements.AnnouncementPost
+type sentCategory = announcements.AnnouncementCategory
+type sentApp = announcements.AnnouncementApp
+type sentRelease = announcements.AnnouncementRelease
+type sentByline = announcements.AnnouncementByline
 
 func (s *Service) summary(ctx context.Context, eventID uuid.UUID) (sent, error) {
 	return s.summaryWith(ctx, s.pool, eventID)
@@ -337,7 +337,7 @@ func (s *Service) summaryWith(ctx context.Context, q db.DBTX, eventID uuid.UUID)
 		       post.id, revision.id, revision.title, revision.summary,
 		       category.slug, category.label, post.slug,
 		       revision.social_media_id, post.published_at, post.updated_public_at
-		  from publication_events event
+		  from blog_announcements event
 		  join posts post on post.id = event.post_id
 		  join post_revisions revision on revision.id = event.revision_id
 		  join publication_categories category on category.id = revision.category_id
@@ -349,10 +349,10 @@ func (s *Service) summaryWith(ctx context.Context, q db.DBTX, eventID uuid.UUID)
 		&socialID, &post.PublishedAt, &post.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return sent{}, fmt.Errorf("no such publication event")
+		return sent{}, fmt.Errorf("no such announcement")
 	}
 	if err != nil {
-		return sent{}, fmt.Errorf("read the publication event: %w", err)
+		return sent{}, fmt.Errorf("read the announcement: %w", err)
 	}
 	post.Category = sentCategory{Slug: categorySlug, Label: categoryLabel}
 	post.URL = s.postAddress(slug)

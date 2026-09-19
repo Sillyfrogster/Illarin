@@ -65,10 +65,10 @@ export default async function SettingsPage({
             </a>
             <a
               className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
-              href="#update-destinations"
+              href="#update-integrations"
             >
               <Send aria-hidden="true" className="size-4 text-accent" />
-              Update destinations
+              Update integrations
             </a>
           </nav>
         </aside>
@@ -91,22 +91,22 @@ export default async function SettingsPage({
             <ConnectedApps />
           </div>
           <section
-            aria-labelledby="update-destinations"
+            aria-labelledby="update-integrations"
             className="mt-12 border-t border-rule pt-8"
           >
             <h2
               className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
-              id="update-destinations"
+              id="update-integrations"
             >
-              Work update destinations
+              Integrations
             </h2>
             <p className="mt-2 max-w-[52ch] font-prose text-ui text-mute">
-              Connect a Discord channel or webhook, then choose defaults for
-              each work.
+              A Discord channel or webhook Illarin announces your new versions
+              to, and which one each work uses.
             </p>
             <Button asChild className="mt-5" variant="secondary">
-              <Link href="/settings/update-destinations">
-                Manage destinations
+              <Link href="/settings/integrations">
+                Manage integrations
                 <ArrowUpRight aria-hidden="true" />
               </Link>
             </Button>

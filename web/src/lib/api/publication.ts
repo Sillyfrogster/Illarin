@@ -1,14 +1,14 @@
 import type {
-  AddedPublicationDestination,
-  PostDelivery,
-  PostDeliveryAttempt,
-  PostDeliveryState,
+  AddedBlogIntegration,
+  BlogAnnouncementAttempt,
+  BlogAnnouncementAttemptState,
+  BlogAnnouncementTry,
+  BlogAnnouncementType,
+  BlogIntegration,
   PublicationCategory,
-  PublicationDestination,
-  PublicationEvent,
   PublicationGrant,
   PublicationWorkspace,
-  RotatedPublicationSecret,
+  RotatedBlogSecret,
 } from "@/lib/api/query";
 import { ask } from "./request";
 
@@ -29,7 +29,7 @@ export type DiscordRepairResult = {
 export function repairDiscordAnnouncement(id: string, repair: DiscordRepair) {
   return ask<DiscordRepairResult>(
     "POST",
-    `/publication/deliveries/${id}/repair`,
+    `/blog/announcement-attempts/${id}/repair`,
     { body: repair },
   );
 }
@@ -86,32 +86,31 @@ export function revokeGrant(id: string) {
   return ask<void>("DELETE", `/publication/grants/${id}`);
 }
 
-export function readDestinations() {
-  return ask<{ destinations: PublicationDestination[] }>(
-    "GET",
-    "/publication/destinations",
-  );
+export function readIntegrations() {
+  return ask<{ integrations: BlogIntegration[] }>("GET", "/blog/integrations");
 }
 
-export function addDestination(endpoint: {
+export function addIntegration(endpoint: {
   name: string;
   address: string;
-  events: PublicationEvent[];
+  announcements: BlogAnnouncementType[];
 }) {
-  return ask<AddedPublicationDestination>("POST", "/publication/destinations", {
+  return ask<AddedBlogIntegration>("POST", "/blog/integrations", {
     body: endpoint,
   });
 }
 
-export function updateDestination(
+export function updateIntegration(
   id: string,
-  change: { name?: string; address?: string; events?: PublicationEvent[] },
+  change: {
+    name?: string;
+    address?: string;
+    announcements?: BlogAnnouncementType[];
+  },
 ) {
-  return ask<PublicationDestination>(
-    "PATCH",
-    `/publication/destinations/${id}`,
-    { body: change },
-  );
+  return ask<BlogIntegration>("PATCH", `/blog/integrations/${id}`, {
+    body: change,
+  });
 }
 
 export function addChannel(channel: {
@@ -120,7 +119,7 @@ export function addChannel(channel: {
   roleId: string;
   roleName: string;
 }) {
-  return ask<PublicationDestination>("POST", "/publication/channels", {
+  return ask<BlogIntegration>("POST", "/blog/channels", {
     body: channel,
   });
 }
@@ -129,67 +128,62 @@ export function updateChannel(
   id: string,
   change: { name: string; address?: string; roleId: string; roleName: string },
 ) {
-  return ask<PublicationDestination>("PATCH", `/publication/channels/${id}`, {
+  return ask<BlogIntegration>("PATCH", `/blog/channels/${id}`, {
     body: change,
   });
 }
 
-export function verifyDestination(id: string) {
-  return ask<PublicationDestination>(
-    "POST",
-    `/publication/destinations/${id}/verification`,
-  );
+export function verifyIntegration(id: string) {
+  return ask<BlogIntegration>("POST", `/blog/integrations/${id}/verification`);
 }
 
-export function disableDestination(id: string) {
-  return ask<PublicationDestination>(
+export function disableIntegration(id: string) {
+  return ask<BlogIntegration>(
     "DELETE",
-    `/publication/destinations/${id}/verification`,
+    `/blog/integrations/${id}/verification`,
   );
 }
 
-export function rotateDestinationSecret(id: string) {
-  return ask<RotatedPublicationSecret>(
-    "POST",
-    `/publication/destinations/${id}/secret`,
-  );
+export function rotateIntegrationSecret(id: string) {
+  return ask<RotatedBlogSecret>("POST", `/blog/integrations/${id}/secret`);
 }
 
-export function readDeliveries(state?: PostDeliveryState) {
+export function readDeliveries(state?: BlogAnnouncementAttemptState) {
   const narrowed = state ? `?state=${state}` : "";
-  return ask<{ deliveries: PostDelivery[] }>(
+  return ask<{ attempts: BlogAnnouncementAttempt[] }>(
     "GET",
-    `/publication/deliveries${narrowed}`,
+    `/blog/announcement-attempts${narrowed}`,
   );
 }
 
-export function readDeliveryAttempts(id: string) {
-  return ask<{ attempts: PostDeliveryAttempt[] }>(
+export function readAnnouncementTries(id: string) {
+  return ask<{ tries: BlogAnnouncementTry[] }>(
     "GET",
-    `/publication/deliveries/${id}/attempts`,
+    `/blog/announcement-attempts/${id}/tries`,
   );
 }
 
-export function replayDelivery(id: string) {
-  return ask<PostDelivery>("POST", `/publication/deliveries/${id}/replay`);
+export function replayAnnouncementAttempt(id: string) {
+  return ask<BlogAnnouncementAttempt>(
+    "POST",
+    `/blog/announcement-attempts/${id}/replay`,
+  );
 }
 
-export function removeDestination(id: string) {
-  return ask<void>("DELETE", `/publication/destinations/${id}`);
+export function removeIntegration(id: string) {
+  return ask<void>("DELETE", `/blog/integrations/${id}`);
 }
 
-export function setGrantDestinations(
+export function setGrantIntegrations(
   grantId: string,
   policy: {
-    destinationIds: string[] | null;
-    defaultDestinationIds: string[];
+    integrationIds: string[] | null;
+    defaultIntegrationIds: string[];
   },
 ) {
-  return ask<PublicationGrant>(
-    "PUT",
-    `/publication/grants/${grantId}/destinations`,
-    { body: policy },
-  );
+  return ask<PublicationGrant>("PUT", `/blog/grants/${grantId}/integrations`, {
+    body: policy,
+  });
 }
 
 export function readWorkspace() {

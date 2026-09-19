@@ -1,14 +1,14 @@
-import type { WorkUpdateDestination } from "@/lib/api/work-destinations";
+import type { WorkIntegration } from "@/lib/api/integrations";
 import { readableDate } from "@/lib/dates";
 
-export function destinationRotating(one: WorkUpdateDestination): boolean {
+export function integrationRotating(one: WorkIntegration): boolean {
   return Boolean(
     one.previousSecretUntil && new Date(one.previousSecretUntil) > new Date(),
   );
 }
 
-export function destinationStanding(one: WorkUpdateDestination): string {
-  if (destinationRotating(one) && one.previousSecretUntil) {
+export function integrationStanding(one: WorkIntegration): string {
+  if (integrationRotating(one) && one.previousSecretUntil) {
     return `Both signing secrets are accepted until ${readableDate(one.previousSecretUntil)}.`;
   }
   if (one.state === "disabled") {
@@ -25,7 +25,7 @@ export function destinationStanding(one: WorkUpdateDestination): string {
   return `Answered the challenge on ${readableDate(one.verifiedAt)}.`;
 }
 
-export function destinationWhere(one: WorkUpdateDestination): string {
+export function integrationWhere(one: WorkIntegration): string {
   if (one.type === "discord") return "Discord channel";
   return one.host;
 }

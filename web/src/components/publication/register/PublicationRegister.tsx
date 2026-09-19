@@ -9,46 +9,44 @@ import { RailBack, WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import {
   readCategories,
   readDeliveries,
-  readDestinations,
   readGrants,
+  readIntegrations,
   readWorkspace,
 } from "@/lib/api/publication";
 import type {
-  PostDelivery,
-  PostDeliveryState,
+  BlogAnnouncementAttempt,
+  BlogAnnouncementAttemptState,
+  BlogIntegration,
   PublicationApp,
   PublicationCategory,
-  PublicationDestination,
   PublicationGrant,
 } from "@/lib/api/query";
+import { attemptState } from "@/lib/attempt-standing";
 import { cn } from "@/lib/cn";
-import { deliveryState } from "@/lib/delivery-standing";
 import {
   REGISTERS,
   type Register,
   registerName,
   registerStandings,
 } from "@/lib/publication-register";
+import { AttemptRows } from "./AttemptRows";
 import { CategoryRows, CategoryStep } from "./CategoryRows";
 import { ContributorRows, ContributorStep } from "./ContributorRows";
-import { DeliveryRows } from "./DeliveryRows";
-import { DestinationRows, DestinationStep } from "./DestinationRows";
+import { IntegrationRows, IntegrationStep } from "./IntegrationRows";
 import { SecretStep } from "./SecretStep";
 
 type Step =
   | { what: "contributor"; grant: PublicationGrant | null }
   | { what: "category"; category: PublicationCategory }
-  | { what: "destination"; destination: PublicationDestination | null }
-  | { what: "secret"; destination: PublicationDestination };
+  | { what: "integration"; integration: BlogIntegration | null }
+  | { what: "secret"; integration: BlogIntegration };
 
 export function PublicationRegister() {
   const [apps, setApps] = useState<PublicationApp[] | null>(null);
   const [categories, setCategories] = useState<PublicationCategory[]>([]);
   const [grants, setGrants] = useState<PublicationGrant[]>([]);
-  const [destinations, setDestinations] = useState<PublicationDestination[]>(
-    [],
-  );
-  const [deliveries, setDeliveries] = useState<PostDelivery[]>([]);
+  const [integrations, setIntegrations] = useState<BlogIntegration[]>([]);
+  const [attempts, setAttempts] = useState<BlogAnnouncementAttempt[]>([]);
   const [stopped, setStopped] = useState(0);
   const [register, setRegister] = useState<Register>("contributors");
   const [view, setView] = useState("all");
@@ -57,12 +55,12 @@ export function PublicationRegister() {
   const [refusal, setRefusal] = useState("");
 
   const load = useCallback(async () => {
-    const [workspace, categoriesIn, grantsIn, destinationsIn, sent, short] =
+    const [workspace, categoriesIn, grantsIn, integrationsIn, sent, short] =
       await Promise.all([
         readWorkspace(),
         readCategories(),
         readGrants(),
-        readDestinations(),
+        readIntegrations(),
         readDeliveries(),
         readDeliveries("failed"),
       ]);
@@ -70,7 +68,7 @@ export function PublicationRegister() {
       workspace.error ??
       categoriesIn.error ??
       grantsIn.error ??
-      destinationsIn.error ??
+      integrationsIn.error ??
       sent.error ??
       "";
     if (trouble) {
@@ -80,9 +78,9 @@ export function PublicationRegister() {
     setFailure("");
     setCategories(categoriesIn.value?.categories ?? []);
     setGrants(grantsIn.value?.grants ?? []);
-    setDestinations(destinationsIn.value?.destinations ?? []);
-    setDeliveries(sent.value?.deliveries ?? []);
-    setStopped(countStopped(short.value?.deliveries ?? []));
+    setIntegrations(integrationsIn.value?.integrations ?? []);
+    setAttempts(sent.value?.attempts ?? []);
+    setStopped(countStopped(short.value?.attempts ?? []));
     setView("all");
     setApps(
       knownApps(workspace.value?.apps ?? [], grantsIn.value?.grants ?? []),
@@ -94,7 +92,7 @@ export function PublicationRegister() {
   }, [load]);
 
   const narrow = useCallback(
-    async (next: string, state?: PostDeliveryState) => {
+    async (next: string, state?: BlogAnnouncementAttemptState) => {
       setView(next);
       const answer = await readDeliveries(state);
       if (answer.error) {
@@ -102,7 +100,7 @@ export function PublicationRegister() {
         return;
       }
       setFailure("");
-      setDeliveries(answer.value?.deliveries ?? []);
+      setAttempts(answer.value?.attempts ?? []);
     },
     [],
   );
@@ -111,11 +109,11 @@ export function PublicationRegister() {
     () =>
       registerStandings({
         categories,
-        destinations,
+        integrations,
         grants,
         stopped,
       }),
-    [categories, destinations, grants, stopped],
+    [categories, integrations, grants, stopped],
   );
 
   function open(next: Step | null) {
@@ -128,15 +126,15 @@ export function PublicationRegister() {
     setStep(null);
   }
 
-  function replaceDestination(saved: PublicationDestination) {
-    setDestinations((held) =>
+  function replaceIntegration(saved: BlogIntegration) {
+    setIntegrations((held) =>
       held.some((one) => one.id === saved.id)
         ? held.map((one) => (one.id === saved.id ? saved : one))
         : [...held, saved],
     );
     setStep((open) =>
-      open?.what === "destination" && open.destination?.id === saved.id
-        ? { destination: saved, what: "destination" }
+      open?.what === "integration" && open.integration?.id === saved.id
+        ? { integration: saved, what: "integration" }
         : open,
     );
   }
@@ -197,20 +195,20 @@ export function PublicationRegister() {
           />
         ) : null}
 
-        {register === "destinations" ? (
-          <DestinationRows
-            destinations={destinations}
+        {register === "integrations" ? (
+          <IntegrationRows
+            integrations={integrations}
             onFailure={setFailure}
-            onOpen={(destination) => open({ destination, what: "destination" })}
-            onSaved={replaceDestination}
+            onOpen={(integration) => open({ integration, what: "integration" })}
+            onSaved={replaceIntegration}
           />
         ) : null}
 
-        {register === "deliveries" ? (
-          <DeliveryRows
-            deliveries={deliveries}
+        {register === "attempts" ? (
+          <AttemptRows
+            attempts={attempts}
             onChanged={(changed) => {
-              setDeliveries((held) =>
+              setAttempts((held) =>
                 held.map((one) => (one.id === changed.id ? changed : one)),
               );
               setStopped((held) => Math.max(0, held - 1));
@@ -242,12 +240,12 @@ export function PublicationRegister() {
                 <RailBack
                   onClick={() =>
                     open({
-                      destination: step.destination,
-                      what: "destination",
+                      integration: step.integration,
+                      what: "integration",
                     })
                   }
                 >
-                  {step.destination.name}
+                  {step.integration.name}
                 </RailBack>
               </div>
             ) : null}
@@ -256,7 +254,7 @@ export function PublicationRegister() {
               <ContributorStep
                 apps={apps}
                 categories={categories}
-                destinations={destinations}
+                integrations={integrations}
                 existing={step.grant}
                 onClose={close}
                 onFailure={setRefusal}
@@ -289,36 +287,36 @@ export function PublicationRegister() {
               />
             ) : null}
 
-            {step.what === "destination" ? (
-              <DestinationStep
-                existing={step.destination}
+            {step.what === "integration" ? (
+              <IntegrationStep
+                existing={step.integration}
                 onClose={close}
                 onFailure={setRefusal}
                 onRemoved={() => {
-                  const gone = step.destination?.id;
-                  setDestinations((held) =>
+                  const gone = step.integration?.id;
+                  setIntegrations((held) =>
                     held.filter((one) => one.id !== gone),
                   );
                   void load();
                 }}
                 onRotate={() =>
-                  step.destination
+                  step.integration
                     ? open({
-                        destination: step.destination,
+                        integration: step.integration,
                         what: "secret",
                       })
                     : undefined
                 }
-                onSaved={replaceDestination}
+                onSaved={replaceIntegration}
               />
             ) : null}
 
             {step.what === "secret" ? (
               <SecretStep
-                destination={step.destination}
+                integration={step.integration}
                 onClose={close}
                 onFailure={setRefusal}
-                onRotated={replaceDestination}
+                onRotated={replaceIntegration}
               />
             ) : null}
           </WorkspaceRail>
@@ -339,17 +337,17 @@ function knownApps(
   return [...known.values()];
 }
 
-function countStopped(deliveries: PostDelivery[]): number {
-  return deliveries.filter(
-    (one) => deliveryState(one) === "gaveUp" && !one.removed,
+function countStopped(attempts: BlogAnnouncementAttempt[]): number {
+  return attempts.filter(
+    (one) => attemptState(one) === "gaveUp" && !one.removed,
   ).length;
 }
 
 function stepKey(step: Step): string {
   if (step.what === "contributor") return `contributor-${step.grant?.id ?? ""}`;
   if (step.what === "category") return `category-${step.category.id}`;
-  if (step.what === "secret") return `secret-${step.destination.id}`;
-  return `destination-${step.destination?.id ?? ""}`;
+  if (step.what === "secret") return `secret-${step.integration.id}`;
+  return `integration-${step.integration?.id ?? ""}`;
 }
 
 function stepTitle(step: Step): string {
@@ -360,9 +358,9 @@ function stepTitle(step: Step): string {
   }
   if (step.what === "category") return `Rename ${step.category.label}`;
   if (step.what === "secret") {
-    return `A new signing secret for ${step.destination.name}`;
+    return `A new signing secret for ${step.integration.name}`;
   }
-  return step.destination ? step.destination.name : "Add a destination";
+  return step.integration ? step.integration.name : "Add an integration";
 }
 
 function stepHint(step: Step): string | undefined {

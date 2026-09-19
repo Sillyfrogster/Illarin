@@ -2,10 +2,10 @@ package blog
 
 import "github.com/Sillyfrogster/Illarin/api/internal/api"
 
-// The field name a destination choice answered to before the rename, kept for sixty days
-var destinationChoiceAliases = map[string]string{"type": "kind"}
+// The field names an integration choice answered to before the renames, kept for sixty days
+var integrationChoiceAliases = map[string]string{"type": "kind", "announcements": "events"}
 
-func (c PublicationDestinationChoice) MarshalJSON() ([]byte, error) {
-	type plain PublicationDestinationChoice
-	return api.MarshalAliased(plain(c), destinationChoiceAliases)
+func (c BlogIntegrationChoice) MarshalJSON() ([]byte, error) {
+	type plain BlogIntegrationChoice
+	return api.MarshalAliased(plain(c), integrationChoiceAliases)
 }

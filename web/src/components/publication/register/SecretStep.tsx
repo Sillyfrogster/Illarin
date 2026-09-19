@@ -4,31 +4,28 @@ import { KeyRound } from "lucide-react";
 import { useState } from "react";
 import { StepForm, StepNote } from "@/components/register/StepParts";
 import { RevealOnce } from "@/components/ui/reveal-once";
-import { rotateDestinationSecret } from "@/lib/api/publication";
-import type {
-  PublicationDestination,
-  RotatedPublicationSecret,
-} from "@/lib/api/query";
+import { rotateIntegrationSecret } from "@/lib/api/publication";
+import type { BlogIntegration, RotatedBlogSecret } from "@/lib/api/query";
 import { readableMoment } from "@/lib/dates";
 
 export function SecretStep({
-  destination,
+  integration,
   onClose,
   onFailure,
   onRotated,
 }: {
-  destination: PublicationDestination;
+  integration: BlogIntegration;
   onClose: () => void;
   onFailure: (message: string) => void;
-  onRotated: (destination: PublicationDestination) => void;
+  onRotated: (integration: BlogIntegration) => void;
 }) {
-  const [turned, setTurned] = useState<RotatedPublicationSecret | null>(null);
+  const [turned, setTurned] = useState<RotatedBlogSecret | null>(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function rotate() {
     setBusy(true);
-    const answer = await rotateDestinationSecret(destination.id);
+    const answer = await rotateIntegrationSecret(integration.id);
     setBusy(false);
     if (answer.error || !answer.value) {
       onFailure(answer.error ?? "");
@@ -36,7 +33,7 @@ export function SecretStep({
       return;
     }
     onFailure("");
-    onRotated(answer.value.destination);
+    onRotated(answer.value.integration);
     setTurned(answer.value);
   }
 
@@ -79,7 +76,7 @@ export function SecretStep({
         ))}
       </ol>
       <StepNote>
-        Current secret created {readableMoment(destination.secretSetAt)}.
+        Current secret created {readableMoment(integration.secretSetAt)}.
       </StepNote>
     </StepForm>
   );

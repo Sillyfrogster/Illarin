@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	EventPublished = "publication.post.published.v1"
-	EventUpdated   = "publication.post.updated.v1"
+	PostPublished = "publication.post.published.v1"
+	PostUpdated   = "publication.post.updated.v1"
 )
 
 type PublicPost struct {
@@ -141,19 +141,19 @@ func (s *Service) makePublic(
 			return err
 		}
 	}
-	event := EventUpdated
+	event := PostUpdated
 	if firstTime {
-		event = EventPublished
+		event = PostPublished
 	}
 	eventID := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into publication_events (id, post_id, revision_id, type, note)
+		insert into blog_announcements (id, post_id, revision_id, type, note)
 		values ($1, $2, $3, $4, $5)
 	`, eventID, locked.ID, revisionID, event, choice.Note)
 	if err != nil {
-		return fmt.Errorf("record the publication event: %w", err)
+		return fmt.Errorf("record the announcement: %w", err)
 	}
-	return s.QueueDeliveries(ctx, tx, locked.ID, eventID, event, choice.Chosen)
+	return s.QueueAttempts(ctx, tx, locked.ID, eventID, event, choice.Chosen)
 }
 
 func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, error) {
@@ -669,7 +669,7 @@ func (s *Service) retiredAddress(ctx context.Context, slug string) (Tombstone, e
 	return found, nil
 }
 
-const EventWithdrawn = "publication.post.withdrawn.v1"
+const PostWithdrawn = "publication.post.withdrawn.v1"
 
 const StatusWithdrawn = "withdrawn"
 
@@ -753,13 +753,13 @@ func (s *Service) WithdrawPost(
 	}
 	eventID := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into publication_events (id, post_id, revision_id, type, note)
+		insert into blog_announcements (id, post_id, revision_id, type, note)
 		values ($1, $2, $3, $4, $5)
-	`, eventID, id, public, EventWithdrawn, note)
+	`, eventID, id, public, PostWithdrawn, note)
 	if err != nil {
-		return Post{}, fmt.Errorf("record the withdrawal event: %w", err)
+		return Post{}, fmt.Errorf("record the unpublishing announcement: %w", err)
 	}
-	if err := s.QueueDeliveries(ctx, tx, id, eventID, EventWithdrawn, chosen); err != nil {
+	if err := s.QueueAttempts(ctx, tx, id, eventID, PostWithdrawn, chosen); err != nil {
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{
@@ -829,13 +829,13 @@ func (s *Service) RepublishPost(
 	}
 	eventID := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into publication_events (id, post_id, revision_id, type, note)
+		insert into blog_announcements (id, post_id, revision_id, type, note)
 		values ($1, $2, $3, $4, $5)
-	`, eventID, id, revisionID, EventPublished, note)
+	`, eventID, id, revisionID, PostPublished, note)
 	if err != nil {
-		return Post{}, fmt.Errorf("record the republication event: %w", err)
+		return Post{}, fmt.Errorf("record the republishing announcement: %w", err)
 	}
-	if err := s.QueueDeliveries(ctx, tx, id, eventID, EventPublished, chosen); err != nil {
+	if err := s.QueueAttempts(ctx, tx, id, eventID, PostPublished, chosen); err != nil {
 		return Post{}, err
 	}
 	err = recordPublicationAudit(ctx, tx, change{

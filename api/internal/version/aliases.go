@@ -36,3 +36,11 @@ func (c VersionChange) MarshalJSON() ([]byte, error) {
 	type plain VersionChange
 	return api.MarshalAliased(plain(c), versionChangeAliases)
 }
+
+// The field name a publish request answered to before the rename, kept for sixty days
+var publishAliases = map[string]string{"integrationIds": "destinationIds"}
+
+func (r *WorkVersionRequest) UnmarshalJSON(data []byte) error {
+	type plain WorkVersionRequest
+	return api.UnmarshalAliased(data, (*plain)(r), publishAliases)
+}

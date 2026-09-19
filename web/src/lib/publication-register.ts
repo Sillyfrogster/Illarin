@@ -1,31 +1,31 @@
 import type {
-  PostDelivery,
+  BlogAnnouncementAttempt,
+  BlogIntegration,
   PublicationCategory,
-  PublicationDestination,
   PublicationGrant,
 } from "@/lib/api/query";
+import { attemptState } from "@/lib/attempt-standing";
+import { ANNOUNCEMENT_WORDS } from "@/lib/blog-announcement-attempt";
 import { readableDate } from "@/lib/dates";
-import { deliveryState } from "@/lib/delivery-standing";
-import { EVENT_WORDS } from "@/lib/publication-delivery";
 
 export type Register =
   | "contributors"
   | "categories"
-  | "destinations"
-  | "deliveries";
+  | "integrations"
+  | "attempts";
 
 export const REGISTERS: Register[] = [
   "contributors",
   "categories",
-  "destinations",
-  "deliveries",
+  "integrations",
+  "attempts",
 ];
 
 const NAMES: Record<Register, string> = {
   contributors: "Contributors",
   categories: "Categories",
-  destinations: "Destinations",
-  deliveries: "Announcements",
+  integrations: "Integrations",
+  attempts: "Announcements",
 };
 
 export function registerName(register: Register): string {
@@ -37,14 +37,14 @@ export type RegisterStanding = { count: number | null; attention: boolean };
 export function registerStandings(held: {
   grants: PublicationGrant[];
   categories: PublicationCategory[];
-  destinations: PublicationDestination[];
+  integrations: BlogIntegration[];
   stopped: number;
 }): Record<Register, RegisterStanding> {
   return {
     contributors: kept(held.grants.filter((one) => one.active).length),
     categories: kept(held.categories.filter((one) => !one.retired).length),
-    destinations: kept(held.destinations.length),
-    deliveries: {
+    integrations: kept(held.integrations.length),
+    attempts: {
       attention: held.stopped > 0,
       count: held.stopped > 0 ? held.stopped : null,
     },
@@ -62,8 +62,8 @@ export function nothingIn(register: Register): string {
   if (register === "categories") {
     return "The blog has no categories, so no post can be filed.";
   }
-  if (register === "destinations") {
-    return "No announcement destinations configured. Posts can still be published.";
+  if (register === "integrations") {
+    return "No announcement integrations configured. Posts can still be published.";
   }
   return "No announcements sent yet.";
 }
@@ -86,7 +86,7 @@ export function grantAllowance(grant: PublicationGrant): string {
   return `${app} · ${categories} · ${grant.defaultCategory.label} by default`;
 }
 
-export function destinationStanding(one: PublicationDestination): string {
+export function integrationStanding(one: BlogIntegration): string {
   if (
     one.previousSecretUntil &&
     new Date(one.previousSecretUntil) > new Date()
@@ -105,16 +105,18 @@ export function destinationStanding(one: PublicationDestination): string {
   return `Verified on ${readableDate(one.verifiedAt)}.`;
 }
 
-export function destinationTakes(one: PublicationDestination): string {
+export function integrationTakes(one: BlogIntegration): string {
   if (one.channel) {
     const role = one.channel.roleName;
     return role ? `First publication · @${role}` : "First publication";
   }
-  if (one.events.length === 0) return "No events selected.";
-  return one.events.map((event) => EVENT_WORDS[event].word).join(" · ");
+  if (one.announcements.length === 0) return "No announcements chosen.";
+  return one.announcements
+    .map((event) => ANNOUNCEMENT_WORDS[event].word)
+    .join(" · ");
 }
 
-export function destinationActions(one: PublicationDestination): {
+export function integrationActions(one: BlogIntegration): {
   rotate: boolean;
   switchOff: boolean;
   verify: boolean;
@@ -126,6 +128,6 @@ export function destinationActions(one: PublicationDestination): {
   };
 }
 
-export function canReplay(one: PostDelivery): boolean {
-  return deliveryState(one) === "gaveUp" && !one.removed;
+export function canReplay(one: BlogAnnouncementAttempt): boolean {
+  return attemptState(one) === "gaveUp" && !one.removed;
 }

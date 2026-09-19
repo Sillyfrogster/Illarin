@@ -3,13 +3,13 @@
 import { Hash, Webhook } from "lucide-react";
 import type { ReactNode } from "react";
 import type {
+  BlogAnnouncementType,
+  BlogIntegration,
+  BlogIntegrationType,
   PublicationCategory,
-  PublicationDestination,
-  PublicationDestinationType,
-  PublicationEvent,
 } from "@/lib/api/query";
+import { ANNOUNCEMENT_WORDS, EVENTS } from "@/lib/blog-announcement-attempt";
 import { cn } from "@/lib/cn";
-import { EVENT_WORDS, EVENTS } from "@/lib/publication-delivery";
 
 const BOX =
   "size-5 shrink-0 appearance-none rounded-[5px] bg-deep outline-offset-3 inset-ring-1 inset-ring-rule checked:bg-action checked:inset-ring-0 checked:bg-[length:14px] checked:bg-center checked:bg-no-repeat disabled:opacity-40";
@@ -184,10 +184,10 @@ export function CategoryChoice({
   );
 }
 
-export function DestinationChoice({
+export function IntegrationChoice({
   allowed,
   defaults,
-  destinations,
+  integrations,
   inherit,
   legend,
   onAllowed,
@@ -196,14 +196,14 @@ export function DestinationChoice({
 }: {
   allowed: string[];
   defaults: string[];
-  destinations: PublicationDestination[];
+  integrations: BlogIntegration[];
   inherit?: { label: string; on: boolean };
   legend: string;
   onAllowed: (allowed: string[]) => void;
   onDefaults: (defaults: string[]) => void;
   onInherit?: (on: boolean) => void;
 }) {
-  const offered = destinations.filter((one) => one.state !== "disabled");
+  const offered = integrations.filter((one) => one.state !== "disabled");
 
   function toggle(id: string, on: boolean) {
     onAllowed(on ? [...allowed, id] : allowed.filter((held) => held !== id));
@@ -237,7 +237,7 @@ export function DestinationChoice({
                 <Fallback
                   checked={defaults.includes(one.id)}
                   disabled={!on}
-                  name={`${one.id}-default-destination`}
+                  name={`${one.id}-default-integration`}
                   onChange={(next) =>
                     onDefaults(
                       next
@@ -255,36 +255,36 @@ export function DestinationChoice({
   );
 }
 
-export function EventChoice({
+export function AnnouncementChoice({
   chosen,
   onChosen,
 }: {
-  chosen: PublicationEvent[];
-  onChosen: (chosen: PublicationEvent[]) => void;
+  chosen: BlogAnnouncementType[];
+  onChosen: (chosen: BlogAnnouncementType[]) => void;
 }) {
-  function toggle(event: PublicationEvent, on: boolean) {
+  function toggle(event: BlogAnnouncementType, on: boolean) {
     onChosen(
       EVENTS.filter((one) => (one === event ? on : chosen.includes(one))),
     );
   }
 
   return (
-    <Choice legend="Announcement events">
+    <Choice legend="Announcements it receives">
       <ul className="flex list-none flex-col">
         {EVENTS.map((one) => (
           <li key={one}>
             <Allow
               checked={chosen.includes(one)}
               onChange={(on) => toggle(one, on)}
-              under={EVENT_WORDS[one].what}
-              word={EVENT_WORDS[one].word}
+              under={ANNOUNCEMENT_WORDS[one].what}
+              word={ANNOUNCEMENT_WORDS[one].word}
             />
           </li>
         ))}
       </ul>
       {chosen.length === 0 ? (
         <p className="mt-2 max-w-[52ch] font-prose text-meta text-stop">
-          Select at least one event, or disable the destination.
+          Choose at least one announcement, or switch the integration off.
         </p>
       ) : null}
     </Choice>
@@ -293,7 +293,7 @@ export function EventChoice({
 
 const TYPES: {
   icon: typeof Hash;
-  kind: PublicationDestinationType;
+  kind: BlogIntegrationType;
   what: string;
   word: string;
 }[] = [
@@ -306,20 +306,20 @@ const TYPES: {
   {
     icon: Webhook,
     kind: "webhook",
-    what: "Your endpoint receives signed summaries of selected publication events.",
+    what: "Your endpoint receives signed summaries of the announcements you choose.",
     word: "Webhook",
   },
 ];
 
-export function DestinationKind({
+export function IntegrationKind({
   chosen,
   onChosen,
 }: {
-  chosen: PublicationDestinationType;
-  onChosen: (kind: PublicationDestinationType) => void;
+  chosen: BlogIntegrationType;
+  onChosen: (kind: BlogIntegrationType) => void;
 }) {
   return (
-    <Choice legend="Destination type">
+    <Choice legend="Integration type">
       <div className="flex flex-col gap-2">
         {TYPES.map((one) => (
           <label
@@ -335,7 +335,7 @@ export function DestinationKind({
               <input
                 checked={one.kind === chosen}
                 className="sr-only"
-                name="destination-kind"
+                name="integration-kind"
                 onChange={() => onChosen(one.kind)}
                 type="radio"
               />

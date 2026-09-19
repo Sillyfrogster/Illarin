@@ -15,7 +15,7 @@ import (
 
 const roleNameLimit = 48
 
-var ErrNotDiscord = errors.New("the destination is not a Discord channel")
+var ErrNotDiscord = errors.New("the integration is not a Discord channel")
 
 type ChannelEdit struct {
 	Name     string
@@ -28,49 +28,49 @@ func (s *Service) AddChannel(
 	ctx context.Context,
 	actor uuid.UUID,
 	in ChannelEdit,
-) (Destination, error) {
-	name := checkDestinationName(in.Name)
+) (Integration, error) {
+	name := checkIntegrationName(in.Name)
 	if name == "" {
-		return Destination{}, FieldError{Field: "name", Message: "Give the destination a name."}
+		return Integration{}, FieldError{Field: "name", Message: "Give the integration a name."}
 	}
 	role, err := checkRole(in.RoleID, in.RoleName)
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	capability, found, err := s.askDiscord(ctx, in.Address)
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	sealed, err := s.sealing.Seal([]byte(capability.URL))
 	if err != nil {
-		return Destination{}, fmt.Errorf("seal the Discord capability: %w", err)
+		return Integration{}, fmt.Errorf("seal the Discord capability: %w", err)
 	}
 	id := uuid.New()
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Destination{}, fmt.Errorf("begin Discord destination: %w", err)
+		return Integration{}, fmt.Errorf("begin Discord integration: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
-		insert into publication_destinations
-		       (id, type, name, host, address, events, state, verified_at,
+		insert into blog_integrations
+		       (id, type, name, host, address, announcements, state, verified_at,
 		        guild_id, channel_id, webhook_name, role_id, role_name, created_by)
 		values ($1, $2, $3, $4, $5, $6, $7, now(), $8, $9, $10, $11, $12, $13)
-	`, id, TypeDiscord, name, discordHost, sealed, []string{EventPublished}, DestinationActive,
+	`, id, TypeDiscord, name, discordHost, sealed, []string{PostPublished}, IntegrationActive,
 		found.GuildID, found.ChannelID, found.Name, role.id, role.name, actor)
 	if err != nil {
-		return Destination{}, fmt.Errorf("record the Discord destination: %w", err)
+		return Integration{}, fmt.Errorf("record the Discord integration: %w", err)
 	}
 	err = s.Audit(ctx, tx, Change{
-		Actor: actor, Action: "destination.added", DestinationID: &id,
+		Actor: actor, Action: "integration.added", IntegrationID: &id,
 	})
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Destination{}, fmt.Errorf("commit Discord destination: %w", err)
+		return Integration{}, fmt.Errorf("commit Discord integration: %w", err)
 	}
-	return s.Destination(ctx, id)
+	return s.Integration(ctx, id)
 }
 
 func (s *Service) UpdateChannel(
@@ -78,30 +78,30 @@ func (s *Service) UpdateChannel(
 	actor uuid.UUID,
 	id uuid.UUID,
 	in ChannelEdit,
-) (Destination, error) {
-	current, err := s.Destination(ctx, id)
+) (Integration, error) {
+	current, err := s.Integration(ctx, id)
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	if current.Type != TypeDiscord {
-		return Destination{}, ErrNotDiscord
+		return Integration{}, ErrNotDiscord
 	}
-	name := checkDestinationName(in.Name)
+	name := checkIntegrationName(in.Name)
 	if name == "" {
-		return Destination{}, FieldError{Field: "name", Message: "Give the destination a name."}
+		return Integration{}, FieldError{Field: "name", Message: "Give the integration a name."}
 	}
 	role, err := checkRole(in.RoleID, in.RoleName)
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Destination{}, fmt.Errorf("begin Discord destination update: %w", err)
+		return Integration{}, fmt.Errorf("begin Discord integration update: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	if strings.TrimSpace(in.Address) == "" {
 		_, err = tx.Exec(ctx, `
-			update publication_destinations
+			update blog_integrations
 			   set name = $2, role_id = $3, role_name = $4, updated_at = now()
 			 where id = $1
 		`, id, name, role.id, role.name)
@@ -109,73 +109,73 @@ func (s *Service) UpdateChannel(
 		var capability discord.Capability
 		var found discord.Webhook
 		if capability, found, err = s.askDiscord(ctx, in.Address); err != nil {
-			return Destination{}, err
+			return Integration{}, err
 		}
 		var sealed []byte
 		if sealed, err = s.sealing.Seal([]byte(capability.URL)); err != nil {
-			return Destination{}, fmt.Errorf("seal the Discord capability: %w", err)
+			return Integration{}, fmt.Errorf("seal the Discord capability: %w", err)
 		}
 		_, err = tx.Exec(ctx, `
-			update publication_destinations
+			update blog_integrations
 			   set name = $2, address = $3, guild_id = $4, channel_id = $5, webhook_name = $6,
 			       role_id = $7, role_name = $8, state = $9, verified_at = now(),
 			       disabled_at = null, updated_at = now()
 			 where id = $1
 		`, id, name, sealed, found.GuildID, found.ChannelID, found.Name,
-			role.id, role.name, DestinationActive)
+			role.id, role.name, IntegrationActive)
 	}
 	if err != nil {
-		return Destination{}, fmt.Errorf("update the Discord destination: %w", err)
+		return Integration{}, fmt.Errorf("update the Discord integration: %w", err)
 	}
 	err = s.Audit(ctx, tx, Change{
-		Actor: actor, Action: "destination.updated", DestinationID: &id,
+		Actor: actor, Action: "integration.updated", IntegrationID: &id,
 	})
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Destination{}, fmt.Errorf("commit Discord destination update: %w", err)
+		return Integration{}, fmt.Errorf("commit Discord integration update: %w", err)
 	}
-	return s.Destination(ctx, id)
+	return s.Integration(ctx, id)
 }
 
 func (s *Service) provenByDiscord(
 	ctx context.Context,
 	actor uuid.UUID,
 	id uuid.UUID,
-) (Destination, error) {
+) (Integration, error) {
 	capability, _, err := s.channelOf(ctx, id)
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	_, found, err := s.askDiscord(ctx, capability.URL)
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Destination{}, fmt.Errorf("begin Discord verification: %w", err)
+		return Integration{}, fmt.Errorf("begin Discord verification: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
-		update publication_destinations
+		update blog_integrations
 		   set state = $2, guild_id = $3, channel_id = $4, webhook_name = $5,
 		       verified_at = now(), disabled_at = null, updated_at = now()
 		 where id = $1
-	`, id, DestinationActive, found.GuildID, found.ChannelID, found.Name)
+	`, id, IntegrationActive, found.GuildID, found.ChannelID, found.Name)
 	if err != nil {
-		return Destination{}, fmt.Errorf("put the Discord destination back in service: %w", err)
+		return Integration{}, fmt.Errorf("put the Discord integration back in service: %w", err)
 	}
 	err = s.Audit(ctx, tx, Change{
-		Actor: actor, Action: "destination.verified", DestinationID: &id,
+		Actor: actor, Action: "integration.verified", IntegrationID: &id,
 	})
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Destination{}, fmt.Errorf("commit Discord verification: %w", err)
+		return Integration{}, fmt.Errorf("commit Discord verification: %w", err)
 	}
-	return s.Destination(ctx, id)
+	return s.Integration(ctx, id)
 }
 
 const discordHost = "discord.com"
@@ -221,17 +221,17 @@ func checkRole(roleID, roleName string) (approved, error) {
 func (s *Service) announceOnDiscord(
 	ctx context.Context,
 	held carried,
-	destinationID uuid.UUID,
+	integrationID uuid.UUID,
 	now time.Time,
 ) error {
 	if held.Reclaimed {
 		return s.ledger.Record(ctx, held.Work, dispatch.DiscordUnconfirmed, now)
 	}
-	summary, err := s.Summary(ctx, s.pool, held.EventID)
+	summary, err := s.Summary(ctx, s.pool, held.AnnouncementID)
 	if err != nil {
 		return err
 	}
-	capability, role, err := s.channelOf(ctx, destinationID)
+	capability, role, err := s.channelOf(ctx, integrationID)
 	if err != nil {
 		return err
 	}
@@ -257,7 +257,7 @@ func (s *Service) announceOnDiscord(
 		return err
 	}
 	if said.Gone {
-		return s.retireDestination(ctx, destinationID)
+		return s.retireIntegration(ctx, integrationID)
 	}
 	return nil
 }
@@ -287,10 +287,10 @@ func (s *Service) channelOf(
 	var sealed []byte
 	var role *string
 	err := s.pool.QueryRow(ctx, `
-		select address, role_id from publication_destinations where id = $1
+		select address, role_id from blog_integrations where id = $1
 	`, id).Scan(&sealed, &role)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return discord.Capability{}, "", ErrDestinationNotFound
+		return discord.Capability{}, "", ErrIntegrationNotFound
 	}
 	if err != nil {
 		return discord.Capability{}, "", fmt.Errorf("read the Discord configuration: %w", err)

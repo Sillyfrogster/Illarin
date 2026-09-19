@@ -24,7 +24,7 @@ var Delays = []time.Duration{
 	24 * time.Hour,
 }
 
-var Attempts = len(Delays)
+var MaxTries = len(Delays)
 
 const jitter = 0.1
 
@@ -50,9 +50,9 @@ const (
 	Moved     = "moved"
 )
 
-// Delay says how long to wait before the attempt numbered made, counting from zero.
+// Delay says how long to wait before the try numbered made, counting from zero
 func Delay(made int, spread float64) (time.Duration, bool) {
-	if made < 0 || made >= Attempts {
+	if made < 0 || made >= MaxTries {
 		return 0, false
 	}
 	agreed := Delays[made]
@@ -75,7 +75,7 @@ type Verdict struct {
 var ArrivedVerdict = Verdict{Outcome: OutcomeDelivered, Reason: Arrived}
 
 var Unreachable = Verdict{
-	Outcome: OutcomeUnreachable, Detail: "Illarin could not reach the destination.", Retry: true,
+	Outcome: OutcomeUnreachable, Detail: "Illarin could not reach the integration.", Retry: true,
 }
 
 var DiscordUnconfirmed = Verdict{
@@ -83,7 +83,7 @@ var DiscordUnconfirmed = Verdict{
 	Detail: "Discord may have posted this announcement, but did not confirm it. Check the channel before sending again; another send may create a duplicate.",
 }
 
-// ReadAnswer turns an endpoint's response into what happens to the delivery next.
+// ReadAnswer turns an endpoint's response into what happens to the attempt next.
 func ReadAnswer(answer Answer) Verdict {
 	said := fmt.Sprintf("It answered %d.", answer.Status)
 	switch {
@@ -91,7 +91,7 @@ func ReadAnswer(answer Answer) Verdict {
 		return ArrivedVerdict
 	case answer.Status == http.StatusTooManyRequests:
 		return Verdict{
-			Outcome: OutcomeRefused, Detail: "The destination asked Illarin to retry later.",
+			Outcome: OutcomeRefused, Detail: "The integration asked Illarin to retry later.",
 			Retry: true, After: answer.RetryAfter,
 		}
 	case answer.Status == http.StatusGone:
@@ -113,7 +113,7 @@ func ReadAnswer(answer Answer) Verdict {
 func ReadAnnouncement(answer Answer) (Verdict, string) {
 	if answer.Status == http.StatusNotFound {
 		return Verdict{Outcome: OutcomeRefused, Reason: Disabled, Gone: true,
-			Detail: "The Discord webhook is missing. This destination has been disabled."}, ""
+			Detail: "The Discord webhook is missing. This integration has been disabled."}, ""
 	}
 	if answer.Status >= http.StatusInternalServerError || answer.Status == http.StatusRequestTimeout {
 		return DiscordUnconfirmed, ""
@@ -128,7 +128,7 @@ func ReadAnnouncement(answer Answer) (Verdict, string) {
 	return ArrivedVerdict, message
 }
 
-// Stopped is the verdict for work Illarin ends because of the destination.
+// Stopped is the verdict for work Illarin ends because of the integration.
 func Stopped(reason string) Verdict {
 	return Cancelled(reason, whyStopped[reason])
 }
@@ -139,10 +139,10 @@ func Cancelled(reason, detail string) Verdict {
 }
 
 var whyStopped = map[string]string{
-	Removed:  "The destination was removed.",
-	Disabled: "The destination was disabled.",
-	Moved:    "The destination moved to another address.",
-	Gone:     "The destination no longer exists and receives no further announcements.",
+	Removed:  "The integration was removed.",
+	Disabled: "The integration was disabled.",
+	Moved:    "The integration moved to another address.",
+	Gone:     "The integration no longer exists and receives no further announcements.",
 }
 
 func MessageID(body []byte) string {

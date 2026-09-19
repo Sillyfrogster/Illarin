@@ -1,10 +1,10 @@
 import type {
-  PublicationDestinationChoice,
-  PublicationEvent,
+  BlogAnnouncementType,
+  BlogIntegrationChoice,
 } from "@/lib/api/query";
 
-export const EVENT_WORDS: Record<
-  PublicationEvent,
+export const ANNOUNCEMENT_WORDS: Record<
+  BlogAnnouncementType,
   { word: string; what: string }
 > = {
   "publication.post.published.v1": {
@@ -21,30 +21,30 @@ export const EVENT_WORDS: Record<
   },
 };
 
-export const EVENTS: PublicationEvent[] = [
+export const EVENTS: BlogAnnouncementType[] = [
   "publication.post.published.v1",
   "publication.post.updated.v1",
   "publication.post.withdrawn.v1",
 ];
 
-export function eventWord(type: string): string {
+export function announcementWord(type: string): string {
   const held = EVENTS.find((one) => one === type);
-  return held ? EVENT_WORDS[held].word : "Publication";
+  return held ? ANNOUNCEMENT_WORDS[held].word : "Publication";
 }
 
 export type Transition = "publish" | "changes" | "withdraw" | "republish";
 
-export function transitionEvent(transition: Transition): PublicationEvent {
+export function transitionEvent(transition: Transition): BlogAnnouncementType {
   if (transition === "changes") return "publication.post.updated.v1";
   if (transition === "withdraw") return "publication.post.withdrawn.v1";
   return "publication.post.published.v1";
 }
 
 export function offeredFor(
-  destination: PublicationDestinationChoice,
-  event: PublicationEvent,
+  integration: BlogIntegrationChoice,
+  event: BlogAnnouncementType,
   announced: boolean,
 ): boolean {
-  if (!destination.events.includes(event)) return false;
-  return destination.type !== "discord" || !announced;
+  if (!integration.announcements.includes(event)) return false;
+  return integration.type !== "discord" || !announced;
 }

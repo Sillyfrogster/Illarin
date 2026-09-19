@@ -27,7 +27,7 @@ func (h *Handlers) SchedulePost(c *gin.Context) {
 	}
 	scheduled, err := h.publications.SchedulePost(
 		c.Request.Context(), editor, id, request.Version, request.At,
-		announcementOf(request.DestinationIds, request.RoleDestinationIds, request.Note),
+		announcementOf(request.IntegrationIds, request.RoleIntegrationIds, request.Note),
 	)
 	if err != nil {
 		h.scheduleError(c, err)
@@ -53,7 +53,7 @@ func (h *Handlers) ReplacePostSchedule(c *gin.Context) {
 	}
 	replaced, err := h.publications.ReplaceSchedule(
 		c.Request.Context(), editor, id, request.RevisionId, request.At,
-		announcementOf(request.DestinationIds, request.RoleDestinationIds, request.Note),
+		announcementOf(request.IntegrationIds, request.RoleIntegrationIds, request.Note),
 	)
 	if err != nil {
 		h.scheduleError(c, err)
@@ -136,29 +136,29 @@ const (
 
 type ReplacePostScheduleRequest struct {
 	At                 time.Time    `json:"at"`
-	DestinationIds     *[]uuid.UUID `json:"destinationIds,omitempty"`
+	IntegrationIds     *[]uuid.UUID `json:"integrationIds,omitempty"`
 	Note               *string      `json:"note,omitempty"`
 	RevisionId         uuid.UUID    `json:"revisionId"`
-	RoleDestinationIds *[]uuid.UUID `json:"roleDestinationIds,omitempty"`
+	RoleIntegrationIds *[]uuid.UUID `json:"roleIntegrationIds,omitempty"`
 }
 
 type SchedulePostRequest struct {
 	At                 time.Time    `json:"at"`
-	DestinationIds     *[]uuid.UUID `json:"destinationIds,omitempty"`
+	IntegrationIds     *[]uuid.UUID `json:"integrationIds,omitempty"`
 	Note               *string      `json:"note,omitempty"`
-	RoleDestinationIds *[]uuid.UUID `json:"roleDestinationIds,omitempty"`
+	RoleIntegrationIds *[]uuid.UUID `json:"roleIntegrationIds,omitempty"`
 	Version            int          `json:"version"`
 }
 
 func announcementOf(
-	destinations *[]uuid.UUID,
+	integrations *[]uuid.UUID,
 	roles *[]uuid.UUID,
 	note *string,
 ) Announcement {
 	made := Announcement{Ping: readIDs(roles)}
-	if destinations != nil {
-		chosen := readIDs(destinations)
-		made.Destinations = &chosen
+	if integrations != nil {
+		chosen := readIDs(integrations)
+		made.Integrations = &chosen
 	}
 	if note != nil {
 		made.Note = *note

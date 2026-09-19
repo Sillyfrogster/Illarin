@@ -583,17 +583,17 @@ func (s publicationStack) gone(t *testing.T, slug string) (tombstone, string) {
 func (s publicationStack) events(t *testing.T, postID string) []string {
 	t.Helper()
 	rows, err := s.pool.Query(context.Background(), `
-		select type from publication_events where post_id = $1 order by occurred_at, id
+		select type from blog_announcements where post_id = $1 order by occurred_at, id
 	`, postID)
 	if err != nil {
-		t.Fatalf("read publication events: %v", err)
+		t.Fatalf("read the announcements: %v", err)
 	}
 	defer rows.Close()
 	recorded := make([]string, 0, 4)
 	for rows.Next() {
 		var one string
 		if err := rows.Scan(&one); err != nil {
-			t.Fatalf("read a publication event: %v", err)
+			t.Fatalf("read an announcement: %v", err)
 		}
 		recorded = append(recorded, one)
 	}

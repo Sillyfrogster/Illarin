@@ -16,26 +16,26 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 )
 
-func (s destinationStack) activeFor(t *testing.T, name string, events []string) addedDestination {
+func (s integrationStack) activeFor(t *testing.T, name string, events []string) addedIntegration {
 	t.Helper()
 	s.to.answers(echoesTheChallenge)
 	body, err := json.Marshal(map[string]any{
 		"name": name, "address": s.to.address(), "events": events,
 	})
 	if err != nil {
-		t.Fatalf("encode destination: %v", err)
+		t.Fatalf("encode integration: %v", err)
 	}
 	response := apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/destinations", string(body),
+		http.MethodPost, "/v1/blog/integrations", string(body),
 	), s.authority))
 	if response.Code != http.StatusCreated {
-		t.Fatalf("add destination status = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("add integration status = %d: %s", response.Code, response.Body.String())
 	}
-	var made addedDestination
+	var made addedIntegration
 	if err := json.Unmarshal(response.Body.Bytes(), &made); err != nil {
-		t.Fatalf("decode destination: %v", err)
+		t.Fatalf("decode integration: %v", err)
 	}
-	if proven := s.verify(t, s.authority, made.Destination.ID); proven.Code != http.StatusOK {
+	if proven := s.verify(t, s.authority, made.Integration.ID); proven.Code != http.StatusOK {
 		t.Fatalf("verify status = %d: %s", proven.Code, proven.Body.String())
 	}
 	s.to.answers(nil)
@@ -43,31 +43,31 @@ func (s destinationStack) activeFor(t *testing.T, name string, events []string) 
 	return made
 }
 
-func (s destinationStack) answersWith(status int) {
+func (s integrationStack) answersWith(status int) {
 	s.to.answers(func(arrived) (int, string) { return status, "" })
 }
 
-func (s destinationStack) rotate(
+func (s integrationStack) rotate(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/destinations/"+id+"/secret", "",
+		http.MethodPost, "/v1/blog/integrations/"+id+"/secret", "",
 	), session))
 }
 
-func (s destinationStack) rotated(t *testing.T, id string) struct {
-	Destination destination `json:"destination"`
-	Secret      string      `json:"secret"`
-	OldUntil    time.Time   `json:"previousSecretUntil"`
+func (s integrationStack) rotated(t *testing.T, id string) struct {
+	Integration integrationRow `json:"integration"`
+	Secret      string         `json:"secret"`
+	OldUntil    time.Time      `json:"previousSecretUntil"`
 } {
 	t.Helper()
 	var shown struct {
-		Destination destination `json:"destination"`
-		Secret      string      `json:"secret"`
-		OldUntil    time.Time   `json:"previousSecretUntil"`
+		Integration integrationRow `json:"integration"`
+		Secret      string         `json:"secret"`
+		OldUntil    time.Time      `json:"previousSecretUntil"`
 	}
 	response := s.rotate(t, s.authority, id)
 	if response.Code != http.StatusOK {
@@ -79,48 +79,22 @@ func (s destinationStack) rotated(t *testing.T, id string) struct {
 	return shown
 }
 
-func (s destinationStack) allDeliveries(
+func (s integrationStack) allDeliveries(
 	t *testing.T,
 	session *http.Cookie,
 	query string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/publication/deliveries"+query, nil,
+		http.MethodGet, "/v1/blog/announcement-attempts"+query, nil,
 	), session))
 }
 
-func (s destinationStack) diagnosed(t *testing.T, query string) deliveryList {
+func (s integrationStack) diagnosed(t *testing.T, query string) attemptList {
 	t.Helper()
 	response := s.allDeliveries(t, s.authority, query)
 	if response.Code != http.StatusOK {
-		t.Fatalf("list deliveries status = %d: %s", response.Code, response.Body.String())
-	}
-	var listed deliveryList
-	if err := json.Unmarshal(response.Body.Bytes(), &listed); err != nil {
-		t.Fatalf("decode deliveries: %v", err)
-	}
-	return listed
-}
-
-func (s destinationStack) replay(
-	t *testing.T,
-	session *http.Cookie,
-	id string,
-) *httptest.ResponseRecorder {
-	t.Helper()
-	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/deliveries/"+id+"/replay", "",
-	), session))
-}
-
-func (s destinationStack) attempts(t *testing.T, session *http.Cookie, id string) attemptList {
-	t.Helper()
-	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/publication/deliveries/"+id+"/attempts", nil,
-	), session))
-	if response.Code != http.StatusOK {
-		t.Fatalf("read attempts status = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("list attempts status = %d: %s", response.Code, response.Body.String())
 	}
 	var listed attemptList
 	if err := json.Unmarshal(response.Body.Bytes(), &listed); err != nil {
@@ -129,31 +103,57 @@ func (s destinationStack) attempts(t *testing.T, session *http.Cookie, id string
 	return listed
 }
 
-func (s destinationStack) onlyDelivery(t *testing.T, postID string) postDelivery {
+func (s integrationStack) replay(
+	t *testing.T,
+	session *http.Cookie,
+	id string,
+) *httptest.ResponseRecorder {
 	t.Helper()
-	listed := s.deliveries(t, s.editor, postID)
-	if len(listed.Deliveries) != 1 {
-		t.Fatalf("the post shows %d deliveries, want 1", len(listed.Deliveries))
+	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
+		http.MethodPost, "/v1/blog/announcement-attempts/"+id+"/replay", "",
+	), session))
+}
+
+func (s integrationStack) tries(t *testing.T, session *http.Cookie, id string) tryList {
+	t.Helper()
+	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
+		http.MethodGet, "/v1/blog/announcement-attempts/"+id+"/tries", nil,
+	), session))
+	if response.Code != http.StatusOK {
+		t.Fatalf("read attempts status = %d: %s", response.Code, response.Body.String())
 	}
-	return listed.Deliveries[0]
+	var listed tryList
+	if err := json.Unmarshal(response.Body.Bytes(), &listed); err != nil {
+		t.Fatalf("decode attempts: %v", err)
+	}
+	return listed
+}
+
+func (s integrationStack) onlyAttempt(t *testing.T, postID string) postAttempt {
+	t.Helper()
+	listed := s.attempts(t, s.editor, postID)
+	if len(listed.Attempts) != 1 {
+		t.Fatalf("the post shows %d attempts, want 1", len(listed.Attempts))
+	}
+	return listed.Attempts[0]
 }
 
 func TestADeliveryWaitsTheAgreedGapBeforeEachAttempt(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.answersWith(http.StatusServiceUnavailable)
 
 	at := time.Now().UTC()
-	for place, gap := range blog.DeliveryDelays[1:] {
+	for place, gap := range blog.TryDelays[1:] {
 		if attempted := stack.sendQueuedAt(t, at); attempted != 1 {
 			t.Fatalf("attempt %d made %d requests, want 1", place+1, attempted)
 		}
-		waiting := stack.onlyDelivery(t, ready.ID)
+		waiting := stack.onlyAttempt(t, ready.ID)
 		if waiting.State != "pending" {
-			t.Fatalf("after attempt %d the delivery is %q, want pending", place+1, waiting.State)
+			t.Fatalf("after attempt %d the attempt is %q, want pending", place+1, waiting.State)
 		}
 		waited := waiting.DueAt.Sub(at)
 		if waited < gap*9/10 || waited > gap*11/10 {
@@ -169,12 +169,12 @@ func TestADeliveryWaitsTheAgreedGapBeforeEachAttempt(t *testing.T) {
 		t.Fatalf("the last attempt made %d requests, want 1", last)
 	}
 
-	spent := stack.onlyDelivery(t, ready.ID)
+	spent := stack.onlyAttempt(t, ready.ID)
 	if spent.State != "failed" || spent.SettledReason != "exhausted" {
 		t.Errorf("the run ended %q/%q, want failed/exhausted", spent.State, spent.SettledReason)
 	}
-	if spent.Attempts != blog.DeliveryAttempts {
-		t.Errorf("the run made %d attempts, want %d", spent.Attempts, blog.DeliveryAttempts)
+	if spent.Tries != blog.MaxTries {
+		t.Errorf("the run made %d attempts, want %d", spent.Tries, blog.MaxTries)
 	}
 	if again := stack.sendQueuedAt(t, at.Add(365*24*time.Hour)); again != 0 {
 		t.Errorf("a spent run made %d further requests", again)
@@ -201,17 +201,17 @@ func TestWhatAnEndpointAnswersDecidesWhetherIllarinTriesAgain(t *testing.T) {
 		{http.StatusBadGateway, "pending", ""},
 	} {
 		t.Run(fmt.Sprint(one.status), func(t *testing.T) {
-			stack := newDestinationStack(t)
+			stack := newIntegrationStack(t)
 			made := stack.active(t, "Release feed")
 			ready := stack.readyPost(t)
-			stack.publishedTo(t, ready, made.Destination.ID, "")
+			stack.publishedTo(t, ready, made.Integration.ID, "")
 			stack.answersWith(one.status)
 
 			stack.sendQueued(t)
 
-			settled := stack.onlyDelivery(t, ready.ID)
+			settled := stack.onlyAttempt(t, ready.ID)
 			if settled.State != one.state {
-				t.Errorf("%d left the delivery %q, want %q", one.status, settled.State, one.state)
+				t.Errorf("%d left the attempt %q, want %q", one.status, settled.State, one.state)
 			}
 			if settled.SettledReason != one.reason {
 				t.Errorf("%d settled as %q, want %q", one.status, settled.SettledReason, one.reason)
@@ -222,27 +222,27 @@ func TestWhatAnEndpointAnswersDecidesWhetherIllarinTriesAgain(t *testing.T) {
 
 func TestAnEndpointAnsweringGoneReceivesNothingFurther(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	first := stack.readyPost(t)
 	second := stack.readyPost(t)
-	stack.publishedTo(t, first, made.Destination.ID, "")
-	stack.publishedTo(t, second, made.Destination.ID, "")
+	stack.publishedTo(t, first, made.Integration.ID, "")
+	stack.publishedTo(t, second, made.Integration.ID, "")
 	stack.answersWith(http.StatusGone)
 
 	stack.sendQueued(t)
 
-	gone := stack.onlyDelivery(t, first.ID)
+	gone := stack.onlyAttempt(t, first.ID)
 	if gone.State != "failed" || gone.SettledReason != "gone" {
-		t.Errorf("the delivery ended %q/%q, want failed/gone", gone.State, gone.SettledReason)
+		t.Errorf("the attempt ended %q/%q, want failed/gone", gone.State, gone.SettledReason)
 	}
-	stopped := stack.onlyDelivery(t, second.ID)
+	stopped := stack.onlyAttempt(t, second.ID)
 	if stopped.State != "failed" || stopped.SettledReason != "disabled" {
 		t.Errorf("the waiting work ended %q/%q, want failed/disabled",
 			stopped.State, stopped.SettledReason)
 	}
-	if shown := stack.destinations(t, stack.authority).Destinations[0]; shown.State != "disabled" {
-		t.Errorf("the destination is %q, want disabled", shown.State)
+	if shown := stack.integrations(t, stack.authority).Integrations[0]; shown.State != "disabled" {
+		t.Errorf("the integration is %q, want disabled", shown.State)
 	}
 	if arrivals := stack.to.arrivals(); len(arrivals) != 1 {
 		t.Errorf("the receiver was sent %d requests, want 1", len(arrivals))
@@ -251,40 +251,40 @@ func TestAnEndpointAnsweringGoneReceivesNothingFurther(t *testing.T) {
 
 func TestAnEndpointAskingIllarinToWaitIsWaitedFor(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.to.answers(func(arrived) (int, string) { return http.StatusTooManyRequests, "" })
 	held := stack.handlers.Publications
 
 	at := time.Now().UTC()
-	if _, err := held.SendDueDeliveries(t.Context(), at); err != nil {
-		t.Fatalf("send queued deliveries: %v", err)
+	if _, err := held.SendDueAttempts(t.Context(), at); err != nil {
+		t.Fatalf("send queued attempts: %v", err)
 	}
 
-	asked := stack.onlyDelivery(t, ready.ID)
+	asked := stack.onlyAttempt(t, ready.ID)
 	if asked.State != "pending" {
-		t.Fatalf("the delivery is %q, want pending", asked.State)
+		t.Fatalf("the attempt is %q, want pending", asked.State)
 	}
-	if asked.Last.Detail != "The destination asked Illarin to retry later." {
+	if asked.Last.Detail != "The integration asked Illarin to retry later." {
 		t.Errorf("attempt detail = %q", asked.Last.Detail)
 	}
 }
 
 func TestARetryAfterHeaderIsHonoredOverTheAgreedGap(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.to.answers(func(arrived) (int, string) { return http.StatusTooManyRequests, "" })
 	stack.to.holds("Retry-After", "600")
 
 	at := time.Now().UTC()
 	stack.sendQueuedAt(t, at)
 
-	asked := stack.onlyDelivery(t, ready.ID)
+	asked := stack.onlyAttempt(t, ready.ID)
 	if waited := asked.DueAt.Sub(at); waited < 9*time.Minute {
 		t.Errorf("the next attempt waits %s, want the 10 minutes it asked for", waited)
 	}
@@ -292,24 +292,24 @@ func TestARetryAfterHeaderIsHonoredOverTheAgreedGap(t *testing.T) {
 
 func TestOneDeliveryKeepsItsWebhookIdAndSignsEachAttemptAfresh(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.answersWith(http.StatusServiceUnavailable)
 
 	at := time.Now().UTC()
 	stack.sendQueuedAt(t, at)
-	stack.sendQueuedAt(t, stack.onlyDelivery(t, ready.ID).DueAt)
+	stack.sendQueuedAt(t, stack.onlyAttempt(t, ready.ID).DueAt)
 
 	arrivals := stack.to.arrivals()
 	if len(arrivals) != 2 {
 		t.Fatalf("the receiver was sent %d requests, want 2", len(arrivals))
 	}
-	work := stack.onlyDelivery(t, ready.ID)
+	work := stack.onlyAttempt(t, ready.ID)
 	for _, one := range arrivals {
 		if got := one.Headers.Get(dispatch.IDHeader); got != work.ID {
-			t.Errorf("%s = %q, want the delivery id %q", dispatch.IDHeader, got, work.ID)
+			t.Errorf("%s = %q, want the attempt id %q", dispatch.IDHeader, got, work.ID)
 		}
 		checkSignature(t, one, made.Secret)
 	}
@@ -327,10 +327,10 @@ func TestOneDeliveryKeepsItsWebhookIdAndSignsEachAttemptAfresh(t *testing.T) {
 
 func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 
-	turned := stack.rotated(t, made.Destination.ID)
+	turned := stack.rotated(t, made.Integration.ID)
 
 	if turned.Secret == made.Secret {
 		t.Fatal("the rotation handed back the same secret")
@@ -339,7 +339,7 @@ func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
 		t.Errorf("the overlap ends at %s, which is not ahead", turned.OldUntil)
 	}
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.sendQueued(t)
 
 	arrivals := stack.to.arrivals()
@@ -366,7 +366,7 @@ func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
 	}
 	stack.to.forget()
 	after := stack.readyPost(t)
-	stack.publishedTo(t, after, made.Destination.ID, "")
+	stack.publishedTo(t, after, made.Integration.ID, "")
 	stack.sendQueued(t)
 
 	later := stack.to.arrivals()
@@ -382,17 +382,17 @@ func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
 	if dispatch.Accepts(header, made.Secret, id, sent, later[0].Body) {
 		t.Error("the old secret still produces an accepted signature")
 	}
-	if shown := stack.destinations(t, stack.authority).Destinations[0]; shown.OldUntil != nil {
-		t.Error("the destination still names an overlap")
+	if shown := stack.integrations(t, stack.authority).Integrations[0]; shown.OldUntil != nil {
+		t.Error("the integration still names an overlap")
 	}
 }
 
 func TestOnlyTheAuthorityRotatesASigningSecret(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 
-	response := stack.rotate(t, stack.editor, made.Destination.ID)
+	response := stack.rotate(t, stack.editor, made.Integration.ID)
 
 	if response.Code != http.StatusForbidden {
 		t.Errorf("rotate status = %d, want 403", response.Code)
@@ -409,12 +409,12 @@ func TestAHostThatLeavesPublicSpaceIsRefusedOnTheNextAttempt(t *testing.T) {
 	})
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	resolved = private
 
 	stack.sendQueued(t)
 
-	refused := stack.onlyDelivery(t, ready.ID)
+	refused := stack.onlyAttempt(t, ready.ID)
 	if refused.Last.Outcome != "unreachable" {
 		t.Errorf("attempt outcome = %q, want unreachable", refused.Last.Outcome)
 	}
@@ -432,13 +432,13 @@ func TestAHostThatLeavesPublicSpaceIsRefusedOnTheNextAttempt(t *testing.T) {
 
 func TestAnExhaustedDeliveryReplaysWithoutErasingWhatItTried(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.answersWith(http.StatusServiceUnavailable)
 	spendTheRun(t, stack, ready.ID)
-	spent := stack.onlyDelivery(t, ready.ID)
+	spent := stack.onlyAttempt(t, ready.ID)
 
 	stack.answersWith(http.StatusOK)
 	response := stack.replay(t, stack.authority, spent.ID)
@@ -446,47 +446,47 @@ func TestAnExhaustedDeliveryReplaysWithoutErasingWhatItTried(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("replay status = %d: %s", response.Code, response.Body.String())
 	}
-	queued := stack.onlyDelivery(t, ready.ID)
+	queued := stack.onlyAttempt(t, ready.ID)
 	if queued.State != "pending" {
-		t.Errorf("the replayed delivery is %q, want pending", queued.State)
+		t.Errorf("the replayed attempt is %q, want pending", queued.State)
 	}
 	if queued.Run != spent.Run+1 {
 		t.Errorf("the replay opened run %d, want %d", queued.Run, spent.Run+1)
 	}
-	if queued.EventID != spent.EventID {
-		t.Error("the replay changed the event the delivery carries")
+	if queued.AnnouncementID != spent.AnnouncementID {
+		t.Error("the replay changed the event the attempt carries")
 	}
 	stack.sendQueued(t)
 
-	arrived := stack.onlyDelivery(t, ready.ID)
+	arrived := stack.onlyAttempt(t, ready.ID)
 	if arrived.State != "delivered" || arrived.SettledReason != "arrived" {
 		t.Errorf("the replay ended %q/%q, want delivered/arrived",
 			arrived.State, arrived.SettledReason)
 	}
-	made1 := stack.attempts(t, stack.authority, spent.ID)
-	if len(made1.Attempts) != blog.DeliveryAttempts+1 {
-		t.Fatalf("the delivery shows %d attempts, want %d",
-			len(made1.Attempts), blog.DeliveryAttempts+1)
+	made1 := stack.tries(t, stack.authority, spent.ID)
+	if len(made1.Tries) != blog.MaxTries+1 {
+		t.Fatalf("the attempt shows %d attempts, want %d",
+			len(made1.Tries), blog.MaxTries+1)
 	}
-	last := made1.Attempts[len(made1.Attempts)-1]
+	last := made1.Tries[len(made1.Tries)-1]
 	if last.Run != spent.Run+1 || last.Outcome != "delivered" {
 		t.Errorf("the last attempt is run %d and %q, want run %d delivered",
 			last.Run, last.Outcome, spent.Run+1)
 	}
-	if made1.Attempts[0].Run != spent.Run {
-		t.Errorf("the first attempt moved to run %d", made1.Attempts[0].Run)
+	if made1.Tries[0].Run != spent.Run {
+		t.Errorf("the first attempt moved to run %d", made1.Tries[0].Run)
 	}
 }
 
 func TestAContributorReadsItsOwnDeliveriesAndReplaysNothing(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.answersWith(http.StatusServiceUnavailable)
 	spendTheRun(t, stack, ready.ID)
-	spent := stack.onlyDelivery(t, ready.ID)
+	spent := stack.onlyAttempt(t, ready.ID)
 
 	if response := stack.replay(t, stack.editor, spent.ID); response.Code != http.StatusForbidden {
 		t.Errorf("replay status = %d, want 403", response.Code)
@@ -494,9 +494,9 @@ func TestAContributorReadsItsOwnDeliveriesAndReplaysNothing(t *testing.T) {
 	if listing := stack.allDeliveries(t, stack.editor, ""); listing.Code != http.StatusForbidden {
 		t.Errorf("list status = %d, want 403", listing.Code)
 	}
-	own := stack.deliveries(t, stack.editor, ready.ID)
-	if len(own.Deliveries) != 1 {
-		t.Fatalf("the contributor sees %d of its own deliveries, want 1", len(own.Deliveries))
+	own := stack.attempts(t, stack.editor, ready.ID)
+	if len(own.Attempts) != 1 {
+		t.Fatalf("the contributor sees %d of its own attempts, want 1", len(own.Attempts))
 	}
 	body, _ := json.Marshal(own)
 	for _, hidden := range []string{made.Secret, stack.to.address()} {
@@ -508,13 +508,13 @@ func TestAContributorReadsItsOwnDeliveriesAndReplaysNothing(t *testing.T) {
 
 func TestAnUnsettledDeliveryIsNotReplayed(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.answersWith(http.StatusServiceUnavailable)
 	stack.sendQueued(t)
-	waiting := stack.onlyDelivery(t, ready.ID)
+	waiting := stack.onlyAttempt(t, ready.ID)
 
 	response := stack.replay(t, stack.authority, waiting.ID)
 
@@ -525,26 +525,26 @@ func TestAnUnsettledDeliveryIsNotReplayed(t *testing.T) {
 
 func TestExhaustedWorkStaysVisibleToTheAuthority(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
+	stack.publishedTo(t, ready, made.Integration.ID, "")
 	stack.answersWith(http.StatusServiceUnavailable)
 	spendTheRun(t, stack, ready.ID)
 
 	listed := stack.diagnosed(t, "?state=failed")
 
-	if len(listed.Deliveries) != 1 {
-		t.Fatalf("the authority sees %d exhausted deliveries, want 1", len(listed.Deliveries))
+	if len(listed.Attempts) != 1 {
+		t.Fatalf("the authority sees %d exhausted attempts, want 1", len(listed.Attempts))
 	}
-	shown := listed.Deliveries[0]
+	shown := listed.Attempts[0]
 	if shown.SettledReason != "exhausted" {
 		t.Errorf("settled reason = %q, want exhausted", shown.SettledReason)
 	}
 	if shown.PostTitle != "Illarin keeps its own writing now" {
 		t.Errorf("post title = %q, want the one the edition carries", shown.PostTitle)
 	}
-	if len(stack.diagnosed(t, "?state=delivered").Deliveries) != 0 {
+	if len(stack.diagnosed(t, "?state=delivered").Attempts) != 0 {
 		t.Error("the delivered listing carried exhausted work")
 	}
 	body, _ := json.Marshal(listed)
@@ -557,56 +557,56 @@ func TestExhaustedWorkStaysVisibleToTheAuthority(t *testing.T) {
 
 func TestAnInterruptedAttemptIsTakenOverWithoutSpendingItsPlace(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
-	stack.publishedTo(t, ready, made.Destination.ID, "")
-	work := stack.onlyDelivery(t, ready.ID)
+	stack.publishedTo(t, ready, made.Integration.ID, "")
+	work := stack.onlyAttempt(t, ready.ID)
 	stack.answersWith(http.StatusServiceUnavailable)
 
 	interrupt(t, stack, work.ID)
 	at := time.Now().UTC()
 	if taken := stack.sendQueuedAt(t, at); taken != 1 {
-		t.Fatalf("the worker took over %d deliveries, want 1", taken)
+		t.Fatalf("the worker took over %d attempts, want 1", taken)
 	}
 
-	waiting := stack.onlyDelivery(t, ready.ID)
+	waiting := stack.onlyAttempt(t, ready.ID)
 	if waiting.State != "pending" {
-		t.Fatalf("the delivery is %q, want pending", waiting.State)
+		t.Fatalf("the attempt is %q, want pending", waiting.State)
 	}
-	if waiting.Attempts != 2 {
-		t.Errorf("the delivery counts %d attempts, want 2", waiting.Attempts)
+	if waiting.Tries != 2 {
+		t.Errorf("the attempt counts %d attempts, want 2", waiting.Tries)
 	}
 	if waiting.Last.Number != 2 {
 		t.Errorf("the recorded attempt is number %d, want 2", waiting.Last.Number)
 	}
-	gap := blog.DeliveryDelays[1]
+	gap := blog.TryDelays[1]
 	if waited := waiting.DueAt.Sub(at); waited < gap*9/10 || waited > gap*11/10 {
 		t.Errorf("the next attempt waits %s, want the first gap of %s", waited, gap)
 	}
 }
 
-func interrupt(t *testing.T, stack destinationStack, deliveryID string) {
+func interrupt(t *testing.T, stack integrationStack, attemptID string) {
 	t.Helper()
 	_, err := stack.pool.Exec(context.Background(), `
-		update publication_deliveries
-		   set state = 'sending', attempts = attempts + 1,
+		update blog_announcement_attempts
+		   set state = 'sending', tries = tries + 1,
 		       lease_token = gen_random_uuid(), lease_expires_at = now() - interval '1 minute'
 		 where id = $1
-	`, deliveryID)
+	`, attemptID)
 	if err != nil {
-		t.Fatalf("interrupt the delivery: %v", err)
+		t.Fatalf("interrupt the attempt: %v", err)
 	}
 }
 
-func spendTheRun(t *testing.T, stack destinationStack, postID string) {
+func spendTheRun(t *testing.T, stack integrationStack, postID string) {
 	t.Helper()
 	at := time.Now().UTC()
-	for range blog.DeliveryAttempts {
+	for range blog.MaxTries {
 		if made := stack.sendQueuedAt(t, at); made != 1 {
 			t.Fatalf("an attempt made %d requests, want 1", made)
 		}
-		at = stack.onlyDelivery(t, postID).DueAt
+		at = stack.onlyAttempt(t, postID).DueAt
 	}
 }
 

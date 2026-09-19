@@ -1,6 +1,6 @@
 import { shortMoment } from "@/lib/dates";
 
-export type DeliveryState =
+export type AttemptState =
   | "waiting"
   | "arrived"
   | "unconfirmed"
@@ -10,7 +10,7 @@ export type DeliveryState =
 /** Sending is the same for a blog post and a work update, so both read alike. */
 export type Sending = {
   state: string;
-  attempts: number;
+  tries: number;
   dueAt: string;
   occurredAt: string;
   settledReason?: string;
@@ -29,7 +29,7 @@ const OUR_DOING = new Set([
   "deleted",
 ]);
 
-export function deliveryState(one: Sending): DeliveryState {
+export function attemptState(one: Sending): AttemptState {
   if (one.state === "delivered") return "arrived";
   if (one.state === "unconfirmed") return "unconfirmed";
   if (one.state !== "failed") return "waiting";
@@ -37,10 +37,10 @@ export function deliveryState(one: Sending): DeliveryState {
 }
 
 const STOPPED_WORDS: Record<string, string> = {
-  gone: "The endpoint returned 410 Gone. Delivery to it has stopped.",
-  removed: "The destination was removed.",
-  disabled: "The destination was switched off.",
-  moved: "The destination moved to another address.",
+  gone: "The endpoint returned 410 Gone. Illarin has stopped announcing to it.",
+  removed: "The integration was removed.",
+  disabled: "The integration was switched off.",
+  moved: "The integration moved to another address.",
   withheld: "Cancelled: this work is withheld.",
   withdrawn: "Cancelled: this update was withdrawn.",
   unlisted:
@@ -48,7 +48,7 @@ const STOPPED_WORDS: Record<string, string> = {
   deleted: "Cancelled: this work is no longer published.",
 };
 
-export function deliveryStanding(one: Sending, now = new Date()): string {
+export function attemptStanding(one: Sending, now = new Date()): string {
   if (one.state === "delivered") {
     return `Delivered ${shortMoment(one.settledAt ?? one.occurredAt)}`;
   }
@@ -59,14 +59,14 @@ export function deliveryStanding(one: Sending, now = new Date()): string {
     const stopped = STOPPED_WORDS[one.settledReason ?? ""];
     if (stopped) return stopped;
     if (one.settledReason === "exhausted") {
-      return `Stopped after ${tries(one.attempts)}`;
+      return `Stopped after ${tries(one.tries)}`;
     }
-    return `Delivery rejected. ${one.last?.detail ?? "The destination rejected the announcement."}`;
+    return `Refused. ${one.last?.detail ?? "The integration refused the announcement."}`;
   }
-  if (one.attempts === 0) return "Queued";
+  if (one.tries === 0) return "Queued";
   const waited = new Date(one.dueAt).getTime() - now.getTime();
   if (waited <= 0) return "Sending";
-  return `Attempt ${one.attempts + 1} ${inWords(waited)}, after ${tries(one.attempts)}`;
+  return `Attempt ${one.tries + 1} ${inWords(waited)}, after ${tries(one.tries)}`;
 }
 
 const minute = 60 * 1000;

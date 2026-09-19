@@ -2,20 +2,20 @@
 
 import { useEffect, useState } from "react";
 import {
-  readWorkUpdateAnnouncements,
-  type WorkUpdateAnnouncement,
-} from "@/lib/api/work-destinations";
+  readWorkAnnouncementAttempts,
+  type WorkAnnouncementAttempt,
+} from "@/lib/api/integrations";
+import { attemptStanding, attemptState } from "@/lib/attempt-standing";
 import { cn } from "@/lib/cn";
-import { deliveryStanding, deliveryState } from "@/lib/delivery-standing";
 
 export function AnnouncementStatus({ workId }: { workId: string }) {
-  const [sent, setSent] = useState<WorkUpdateAnnouncement[]>([]);
+  const [sent, setSent] = useState<WorkAnnouncementAttempt[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
-    void readWorkUpdateAnnouncements(workId, controller.signal).then(
+    void readWorkAnnouncementAttempts(workId, controller.signal).then(
       (answer) => {
-        if (answer.value) setSent(answer.value.announcements);
+        if (answer.value) setSent(answer.value.tries);
       },
     );
     return () => controller.abort();
@@ -38,11 +38,11 @@ export function AnnouncementStatus({ workId }: { workId: string }) {
             key={one.id}
           >
             <span className="min-w-0 text-ink wrap-anywhere">
-              {one.destination}
+              {one.integration}
             </span>
-            <span className="text-mute">Update {one.updateNumber}</span>
+            <span className="text-mute">Update {one.versionNumber}</span>
             <span className={cn(troubled(one) ? "text-stop" : "text-mute")}>
-              {deliveryStanding(one)}
+              {attemptStanding(one)}
             </span>
           </li>
         ))}
@@ -55,7 +55,7 @@ export function AnnouncementStatus({ workId }: { workId: string }) {
   );
 }
 
-function troubled(one: WorkUpdateAnnouncement): boolean {
-  const standing = deliveryState(one);
+function troubled(one: WorkAnnouncementAttempt): boolean {
+  const standing = attemptState(one);
   return standing === "gaveUp" || standing === "stopped";
 }

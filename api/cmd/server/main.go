@@ -153,9 +153,9 @@ func run() error {
 	}
 	publishing := blog.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
 	publications := blog.NewService(pool, images, publishing)
-	updateDestinations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
+	integrations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	versions := version.NewService(pool, svc)
-	versions.OnPublished(updateDestinations.Announce, version.TellFollowers)
+	versions.OnPublished(integrations.Announce, version.TellFollowers)
 	apps := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	sends := connect.NewSends(pool, svc, apps, connect.DefaultSettings())
 	notifications := notify.NewService(pool)
@@ -174,13 +174,13 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		updateDestinations.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("update destination sweeper: %v", err)
+		integrations.RunSweeper(runtimeContext, func(err error) {
+			log.Printf("update integration sweeper: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
-		updateDestinations.RunAnnouncements(runtimeContext, func(err error) {
+		integrations.RunAnnouncements(runtimeContext, func(err error) {
 			log.Printf("update announcement: %v", err)
 		})
 	}()
@@ -204,7 +204,7 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		publications.RunDeliveries(runtimeContext, func(err error) {
+		publications.RunAttempts(runtimeContext, func(err error) {
 			log.Printf("publication delivery: %v", err)
 		})
 	}()
@@ -212,19 +212,19 @@ func run() error {
 	r := gin.New()
 	r.Use(api.Recovery(log.Default()))
 	running := services{
-		Works:              svc,
-		Pages:              page.NewService(pool, svc),
-		Blocks:             edit.NewService(pool, svc),
-		Versions:           versions,
-		Uploads:            uploads,
-		Downloads:          download.NewService(pool, svc),
-		Accounts:           accounts,
-		Apps:               apps,
-		Sends:              sends,
-		Publications:       publications,
-		UpdateDestinations: updateDestinations,
-		Notifications:      notifications,
-		MaxUploadBytes:     cfg.MaxUploadBytes,
+		Works:          svc,
+		Pages:          page.NewService(pool, svc),
+		Blocks:         edit.NewService(pool, svc),
+		Versions:       versions,
+		Uploads:        uploads,
+		Downloads:      download.NewService(pool, svc),
+		Accounts:       accounts,
+		Apps:           apps,
+		Sends:          sends,
+		Publications:   publications,
+		Integrations:   integrations,
+		Notifications:  notifications,
+		MaxUploadBytes: cfg.MaxUploadBytes,
 	}
 	ready := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {

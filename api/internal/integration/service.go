@@ -23,7 +23,7 @@ const (
 	Unverified = "unverified"
 )
 
-var ErrNotFound = errors.New("no such work update destination")
+var ErrNotFound = errors.New("no such work update integration")
 
 type FieldError struct {
 	Field   string
@@ -47,18 +47,18 @@ type Service struct {
 	now     func() time.Time
 }
 
-var deliveryTables = dispatch.Tables{
-	Deliveries: "work_update_deliveries", Attempts: "work_update_delivery_attempts",
+var attemptTables = dispatch.Tables{
+	Attempts: "work_announcement_attempts", Tries: "work_announcement_tries",
 }
 
 func NewService(pool *pgxpool.Pool, sealing secrets.Key, sender Sender, site string) *Service {
 	return &Service{
 		pool: pool, sealing: sealing, sender: sender, site: strings.TrimRight(site, "/"),
-		ledger: dispatch.NewLedger(pool, deliveryTables), now: time.Now,
+		ledger: dispatch.NewLedger(pool, attemptTables), now: time.Now,
 	}
 }
 
-type Destination struct {
+type Integration struct {
 	version             int64
 	ID                  uuid.UUID
 	Type                string
@@ -76,26 +76,26 @@ type Destination struct {
 }
 
 type Added struct {
-	Destination Destination
+	Integration Integration
 	Secret      string
 }
 
-func (s *Service) Add(ctx context.Context, owner uuid.UUID, destinationType, name, address string) (Added, error) {
+func (s *Service) Add(ctx context.Context, owner uuid.UUID, integrationType, name, address string) (Added, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || utf8.RuneCountInString(name) > 48 {
-		return Added{}, FieldError{"name", "Name the destination in 1 to 48 characters."}
+		return Added{}, FieldError{"name", "Name the integration in 1 to 48 characters."}
 	}
-	if destinationType != Webhook && destinationType != Discord {
-		return Added{}, FieldError{"type", "Choose a webhook or Discord destination."}
+	if integrationType != Webhook && integrationType != Discord {
+		return Added{}, FieldError{"type", "Choose a webhook or Discord integration."}
 	}
-	prepared, err := s.prepareAddress(ctx, destinationType, address)
+	prepared, err := s.prepareAddress(ctx, integrationType, address)
 	if err != nil {
 		return Added{}, err
 	}
 	var secret string
 	var sealedSecret []byte
 	var secretAt *time.Time
-	if destinationType == Webhook {
+	if integrationType == Webhook {
 		secret, err = dispatch.MintSecret()
 		if err != nil {
 			return Added{}, err
@@ -109,28 +109,28 @@ func (s *Service) Add(ctx context.Context, owner uuid.UUID, destinationType, nam
 	}
 	id := uuid.New()
 	_, err = s.pool.Exec(ctx, `
-		insert into work_update_destinations
+		insert into work_integrations
 		    (id, owner_id, type, name, host, address, signing_secret, signing_secret_set_at,
 		     state, guild_id, channel_id, verified_at)
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	`, id, owner, destinationType, name, prepared.host, prepared.sealed, sealedSecret, secretAt,
+	`, id, owner, integrationType, name, prepared.host, prepared.sealed, sealedSecret, secretAt,
 		prepared.state, prepared.guildID, prepared.channelID, prepared.verifiedAt)
 	if err != nil {
-		return Added{}, fmt.Errorf("create work update destination: %w", err)
+		return Added{}, fmt.Errorf("create work update integration: %w", err)
 	}
 	found, err := s.Get(ctx, owner, id)
-	return Added{Destination: found, Secret: secret}, err
+	return Added{Integration: found, Secret: secret}, err
 }
 
-func (s *Service) List(ctx context.Context, owner uuid.UUID) ([]Destination, error) {
-	rows, err := s.pool.Query(ctx, selectDestinations+` where owner_id = $1 order by name, id`, owner)
+func (s *Service) List(ctx context.Context, owner uuid.UUID) ([]Integration, error) {
+	rows, err := s.pool.Query(ctx, selectIntegrations+` where owner_id = $1 order by name, id`, owner)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	found := make([]Destination, 0)
+	found := make([]Integration, 0)
 	for rows.Next() {
-		one, err := readDestination(rows)
+		one, err := readIntegration(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -139,22 +139,22 @@ func (s *Service) List(ctx context.Context, owner uuid.UUID) ([]Destination, err
 	return found, rows.Err()
 }
 
-func (s *Service) Get(ctx context.Context, owner, id uuid.UUID) (Destination, error) {
-	return readDestination(s.pool.QueryRow(ctx, selectDestinations+` where owner_id = $1 and id = $2`, owner, id))
+func (s *Service) Get(ctx context.Context, owner, id uuid.UUID) (Integration, error) {
+	return readIntegration(s.pool.QueryRow(ctx, selectIntegrations+` where owner_id = $1 and id = $2`, owner, id))
 }
 
-const selectDestinations = `
+const selectIntegrations = `
 	select id, type, name, host, state, guild_id, channel_id, signing_secret_set_at,
 	       previous_secret_until, verified_at, disabled_at, created_at, version
-	  from work_update_destinations
+	  from work_integrations
 `
 
-func readDestination(row pgx.Row) (Destination, error) {
-	var d Destination
+func readIntegration(row pgx.Row) (Integration, error) {
+	var d Integration
 	err := row.Scan(&d.ID, &d.Type, &d.Name, &d.Host, &d.State, &d.GuildID, &d.ChannelID,
 		&d.SecretSetAt, &d.PreviousSecretUntil, &d.VerifiedAt, &d.DisabledAt, &d.CreatedAt, &d.version)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Destination{}, ErrNotFound
+		return Integration{}, ErrNotFound
 	}
 	d.Address = "https://" + d.Host + "/…"
 	return d, err

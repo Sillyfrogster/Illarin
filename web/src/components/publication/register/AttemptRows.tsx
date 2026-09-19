@@ -18,34 +18,40 @@ import {
 } from "@/components/register/RowParts";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import { Select } from "@/components/ui/select";
-import { readDeliveryAttempts, replayDelivery } from "@/lib/api/publication";
+import {
+  readAnnouncementTries,
+  replayAnnouncementAttempt,
+} from "@/lib/api/publication";
 import type {
-  PostDelivery,
-  PostDeliveryAttempt,
-  PostDeliveryState,
+  BlogAnnouncementAttempt,
+  BlogAnnouncementAttemptState,
+  BlogAnnouncementTry,
 } from "@/lib/api/query";
+import {
+  type AttemptState,
+  attemptStanding,
+  attemptState,
+} from "@/lib/attempt-standing";
+import { announcementWord } from "@/lib/blog-announcement-attempt";
 import { cn } from "@/lib/cn";
 import { shortMoment } from "@/lib/dates";
-import {
-  type DeliveryState,
-  deliveryStanding,
-  deliveryState,
-} from "@/lib/delivery-standing";
-import { eventWord } from "@/lib/publication-delivery";
 import { canReplay, nothingDelivered } from "@/lib/publication-register";
 import { DiscordRepairControls } from "./DiscordRepairControls";
 
-export const VIEWS: { key: string; state?: PostDeliveryState; word: string }[] =
-  [
-    { key: "all", word: "All announcements" },
-    { key: "failed", state: "failed", word: "Failed" },
-    { key: "pending", state: "pending", word: "Pending" },
-    { key: "delivered", state: "delivered", word: "Delivered" },
-    { key: "unconfirmed", state: "unconfirmed", word: "Unconfirmed" },
-  ];
+export const VIEWS: {
+  key: string;
+  state?: BlogAnnouncementAttemptState;
+  word: string;
+}[] = [
+  { key: "all", word: "All announcements" },
+  { key: "failed", state: "failed", word: "Failed" },
+  { key: "pending", state: "pending", word: "Pending" },
+  { key: "delivered", state: "delivered", word: "Delivered" },
+  { key: "unconfirmed", state: "unconfirmed", word: "Unconfirmed" },
+];
 
 const MARKS: Record<
-  DeliveryState,
+  AttemptState,
   { icon: typeof Clock; tone: "accent" | "quiet" | "stop" }
 > = {
   arrived: { icon: CircleCheck, tone: "accent" },
@@ -55,32 +61,32 @@ const MARKS: Record<
   waiting: { icon: Clock, tone: "quiet" },
 };
 
-export function DeliveryRows({
-  deliveries,
+export function AttemptRows({
+  attempts,
   onChanged,
   onFailure,
   onView,
   view,
 }: {
-  deliveries: PostDelivery[];
-  onChanged: (delivery: PostDelivery) => void;
+  attempts: BlogAnnouncementAttempt[];
+  onChanged: (attempt: BlogAnnouncementAttempt) => void;
   onFailure: (message: string) => void;
-  onView: (view: string, state?: PostDeliveryState) => void;
+  onView: (view: string, state?: BlogAnnouncementAttemptState) => void;
   view: string;
 }) {
-  const [tried, setTried] = useState<Record<string, PostDeliveryAttempt[]>>({});
+  const [tried, setTried] = useState<Record<string, BlogAnnouncementTry[]>>({});
   const [working, setWorking] = useState("");
 
-  async function look(one: PostDelivery) {
+  async function look(one: BlogAnnouncementAttempt) {
     if (tried[one.id]) return;
-    const answer = await readDeliveryAttempts(one.id);
-    const made = answer.value?.attempts;
+    const answer = await readAnnouncementTries(one.id);
+    const made = answer.value?.tries;
     if (made) setTried((held) => ({ ...held, [one.id]: made }));
   }
 
-  async function again(one: PostDelivery) {
+  async function again(one: BlogAnnouncementAttempt) {
     setWorking(one.id);
-    const answer = await replayDelivery(one.id);
+    const answer = await replayAnnouncementAttempt(one.id);
     setWorking("");
     if (answer.error || !answer.value) {
       onFailure(answer.error ?? "");
@@ -98,12 +104,12 @@ export function DeliveryRows({
           <span className="flex min-w-0 items-center gap-2">
             <label
               className="shrink-0 font-ui text-meta text-mute"
-              htmlFor="delivery-view"
+              htmlFor="attempt-view"
             >
               Showing
             </label>
             <Select
-              id="delivery-view"
+              id="attempt-view"
               onChange={(event) => {
                 const next = VIEWS.find(
                   (one) => one.key === event.target.value,
@@ -124,12 +130,12 @@ export function DeliveryRows({
         title="Announcements"
       />
 
-      {deliveries.length === 0 ? (
+      {attempts.length === 0 ? (
         <Nothing>{nothingDelivered(view)}</Nothing>
       ) : (
         <Rows>
-          {deliveries.map((one) => {
-            const state = deliveryState(one);
+          {attempts.map((one) => {
+            const state = attemptState(one);
             const mark = MARKS[state];
             const attempts = tried[one.id];
             return (
@@ -146,8 +152,8 @@ export function DeliveryRows({
                 }
                 facts={
                   <>
-                    <span>{one.destination}</span>
-                    <span>{eventWord(one.eventType)}</span>
+                    <span>{one.integration}</span>
+                    <span>{announcementWord(one.announcementType)}</span>
                   </>
                 }
                 key={one.id}
@@ -160,19 +166,19 @@ export function DeliveryRows({
                     />
                   </RowMark>
                 }
-                standing={deliveryStanding(one)}
+                standing={attemptStanding(one)}
                 title={one.postTitle}
               >
                 {one.type === "discord" && one.settledAt && !one.removed ? (
-                  <DiscordRepairControls delivery={one} />
+                  <DiscordRepairControls attempt={one} />
                 ) : null}
-                {one.attempts > 0 ? (
+                {one.tries > 0 ? (
                   <div
                     className="relative mt-3"
                     onClickCapture={() => void look(one)}
                   >
                     <MorphingDisclosure
-                      summary={`${one.attempts === 1 ? "1 attempt" : `${one.attempts} attempts`}${one.run > 1 ? ` over ${one.run} runs` : ""}`}
+                      summary={`${one.tries === 1 ? "1 try" : `${one.tries} tries`}${one.run > 1 ? ` over ${one.run} runs` : ""}`}
                     >
                       {attempts ? (
                         <ol className="mt-3 flex list-none flex-col">
@@ -193,7 +199,7 @@ export function DeliveryRows({
                                     : "text-stop",
                                 )}
                               >
-                                {made.detail || "Delivery accepted."}
+                                {made.detail || "The announcement arrived."}
                               </span>
                               <span className="shrink-0 text-mute tabular-nums">
                                 {shortMoment(made.attemptedAt)} · {made.tookMs}
@@ -204,7 +210,7 @@ export function DeliveryRows({
                         </ol>
                       ) : (
                         <p className="mt-3 font-prose text-meta text-mute">
-                          Loading delivery attempts…
+                          Loading the tries…
                         </p>
                       )}
                     </MorphingDisclosure>

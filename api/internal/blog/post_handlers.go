@@ -188,7 +188,7 @@ func (h *Handlers) PublishPost(c *gin.Context) {
 	}
 	published, err := h.publications.PublishPost(
 		c.Request.Context(), editor, id, request.Version,
-		announcementOf(request.DestinationIds, request.RoleDestinationIds, request.Note),
+		announcementOf(request.IntegrationIds, request.RoleIntegrationIds, request.Note),
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -353,12 +353,12 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	case errors.Is(err, ErrRevisionNotFound):
 		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound,
 			"This post has no such revision.")
-	case errors.Is(err, ErrDestinationRefused):
+	case errors.Is(err, ErrIntegrationRefused):
 		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
-			"This post may not send to that destination.")
+			"This post may not send to that integration.")
 	case errors.Is(err, ErrRoleRefused):
 		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
-			"This post may not mention that destination's role.")
+			"This post may not mention that integration's role.")
 	case errors.Is(err, ErrNotPostEditor):
 		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
 			"Only this post's contributor or an Illarin admin can do that.")
@@ -825,9 +825,9 @@ type PublicationAppList struct {
 }
 
 type PublishPostRequest struct {
-	DestinationIds     *[]uuid.UUID `json:"destinationIds,omitempty"`
+	IntegrationIds     *[]uuid.UUID `json:"integrationIds,omitempty"`
 	Note               *string      `json:"note,omitempty"`
-	RoleDestinationIds *[]uuid.UUID `json:"roleDestinationIds,omitempty"`
+	RoleIntegrationIds *[]uuid.UUID `json:"roleIntegrationIds,omitempty"`
 	Version            int          `json:"version"`
 }
 

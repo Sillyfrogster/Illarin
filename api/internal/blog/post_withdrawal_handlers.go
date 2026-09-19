@@ -30,7 +30,7 @@ func (h *Handlers) WithdrawPost(c *gin.Context) {
 	}
 	withdrawn, err := h.publications.WithdrawPost(
 		c.Request.Context(), editor, id, request.Version, request.Reason, explanation,
-		announcementOf(request.DestinationIds, nil, request.Note),
+		announcementOf(request.IntegrationIds, nil, request.Note),
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -55,7 +55,7 @@ func (h *Handlers) RepublishPost(c *gin.Context) {
 	}
 	back, err := h.publications.RepublishPost(
 		c.Request.Context(), editor, id, request.RevisionId, request.Version,
-		announcementOf(request.DestinationIds, nil, request.Note),
+		announcementOf(request.IntegrationIds, nil, request.Note),
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -97,14 +97,14 @@ type PostWithdrawal struct {
 }
 
 type RepublishPostRequest struct {
-	DestinationIds *[]uuid.UUID `json:"destinationIds,omitempty"`
+	IntegrationIds *[]uuid.UUID `json:"integrationIds,omitempty"`
 	Note           *string      `json:"note,omitempty"`
 	RevisionId     uuid.UUID    `json:"revisionId"`
 	Version        int          `json:"version"`
 }
 
 type WithdrawPostRequest struct {
-	DestinationIds *[]uuid.UUID `json:"destinationIds,omitempty"`
+	IntegrationIds *[]uuid.UUID `json:"integrationIds,omitempty"`
 	Explanation    *string      `json:"explanation,omitempty"`
 	Note           *string      `json:"note,omitempty"`
 	Reason         string       `json:"reason"`

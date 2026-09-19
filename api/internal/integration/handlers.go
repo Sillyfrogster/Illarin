@@ -10,42 +10,42 @@ import (
 type BlogAccess = blog.IntegrationAccess
 
 type Handlers struct {
-	publications       *blog.Service
-	updateDestinations *Service
-	access             BlogAccess
+	publications *blog.Service
+	integrations *Service
+	access       BlogAccess
 }
 
-func NewHandlers(publications *blog.Service, destinations *Service, access BlogAccess) *Handlers {
-	return &Handlers{publications: publications, updateDestinations: destinations, access: access}
+func NewHandlers(publications *blog.Service, integrations *Service, access BlogAccess) *Handlers {
+	return &Handlers{publications: publications, integrations: integrations, access: access}
 }
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
-	routes.Handle(http.MethodGet, "/v1/works/:id/update-destinations", d.JSON, h.ListWorkUpdateDestinationChoices)
-	routes.Handle(http.MethodPut, "/v1/works/:id/update-destinations", d.JSON, h.SetWorkUpdateDestinationDefaults)
-	routes.Handle(http.MethodGet, "/v1/works/:id/announcements", d.JSON, h.ListWorkUpdateAnnouncements)
-	routes.Handle(http.MethodGet, "/v1/account/update-destinations", d.JSON, h.ListWorkUpdateDestinations)
-	routes.Handle(http.MethodPost, "/v1/account/update-destinations", d.Verify, h.AddWorkUpdateDestination)
-	routes.Handle(http.MethodDelete, "/v1/account/update-destinations/:id", d.JSON, h.RemoveWorkUpdateDestination)
-	routes.Handle(http.MethodGet, "/v1/account/update-destinations/:id", d.JSON, h.GetWorkUpdateDestination)
-	routes.Handle(http.MethodPatch, "/v1/account/update-destinations/:id", d.Verify, h.UpdateWorkUpdateDestination)
-	routes.Handle(http.MethodDelete, "/v1/account/update-destinations/:id/verification", d.JSON, h.DisableWorkUpdateDestination)
-	routes.Handle(http.MethodPost, "/v1/account/update-destinations/:id/verification", d.Verify, h.VerifyWorkUpdateDestination)
-	routes.Handle(http.MethodPost, "/v1/account/update-destinations/:id/secret", d.JSON, h.RotateWorkUpdateDestinationSecret)
-	routes.Handle(http.MethodGet, "/v1/publication/destinations", d.JSON, h.ListPublicationDestinations)
-	routes.Handle(http.MethodPost, "/v1/publication/destinations", d.JSON, h.AddPublicationDestination)
-	routes.Handle(http.MethodDelete, "/v1/publication/destinations/:id", d.JSON, h.RemovePublicationDestination)
-	routes.Handle(http.MethodPatch, "/v1/publication/destinations/:id", d.JSON, h.UpdatePublicationDestination)
-	routes.Handle(http.MethodDelete, "/v1/publication/destinations/:id/verification", d.JSON, h.DisablePublicationDestination)
-	routes.Handle(http.MethodPost, "/v1/publication/destinations/:id/verification", d.Verify, h.VerifyPublicationDestination)
-	routes.Handle(http.MethodPost, "/v1/publication/destinations/:id/secret", d.JSON, h.RotatePublicationDestinationSecret)
-	routes.Handle(http.MethodPost, "/v1/publication/channels", d.Verify, h.AddPublicationChannel)
-	routes.Handle(http.MethodPatch, "/v1/publication/channels/:id", d.Verify, h.UpdatePublicationChannel)
-	routes.Handle(http.MethodGet, "/v1/publication/deliveries", d.JSON, h.ListPublicationDeliveries)
-	routes.Handle(http.MethodGet, "/v1/publication/deliveries/:id/attempts", d.JSON, h.ListPublicationDeliveryAttempts)
-	routes.Handle(http.MethodPost, "/v1/publication/deliveries/:id/replay", d.JSON, h.ReplayPublicationDelivery)
-	routes.Handle(http.MethodPost, "/v1/publication/deliveries/:id/repair", d.Verify, h.RepairDiscordAnnouncement)
-	routes.Handle(http.MethodPut, "/v1/publication/grants/:id/destinations", d.JSON, h.SetPublicationGrantDestinations)
-	routes.Handle(http.MethodGet, "/v1/publication/posts/:id/destinations", d.JSON, h.ListPostDestinations)
-	routes.Handle(http.MethodGet, "/v1/publication/posts/:id/deliveries", d.JSON, h.ListPostDeliveries)
+	routes.Handle(http.MethodGet, "/v1/works/:id/integrations", d.JSON, h.ListWorkIntegrationChoices)
+	routes.Handle(http.MethodPut, "/v1/works/:id/integrations", d.JSON, h.SetWorkIntegrationDefaults)
+	routes.Handle(http.MethodGet, "/v1/works/:id/announcement-attempts", d.JSON, h.ListWorkAnnouncementAttempts)
+	routes.Handle(http.MethodGet, "/v1/account/integrations", d.JSON, h.ListWorkIntegrations)
+	routes.Handle(http.MethodPost, "/v1/account/integrations", d.Verify, h.AddWorkIntegration)
+	routes.Handle(http.MethodDelete, "/v1/account/integrations/:id", d.JSON, h.RemoveWorkIntegration)
+	routes.Handle(http.MethodGet, "/v1/account/integrations/:id", d.JSON, h.GetWorkIntegration)
+	routes.Handle(http.MethodPatch, "/v1/account/integrations/:id", d.Verify, h.UpdateWorkIntegration)
+	routes.Handle(http.MethodDelete, "/v1/account/integrations/:id/verification", d.JSON, h.DisableWorkIntegration)
+	routes.Handle(http.MethodPost, "/v1/account/integrations/:id/verification", d.Verify, h.VerifyWorkIntegration)
+	routes.Handle(http.MethodPost, "/v1/account/integrations/:id/secret", d.JSON, h.RotateWorkIntegrationSecret)
+	routes.Handle(http.MethodGet, "/v1/blog/integrations", d.JSON, h.ListBlogIntegrations)
+	routes.Handle(http.MethodPost, "/v1/blog/integrations", d.JSON, h.AddBlogIntegration)
+	routes.Handle(http.MethodDelete, "/v1/blog/integrations/:id", d.JSON, h.RemoveBlogIntegration)
+	routes.Handle(http.MethodPatch, "/v1/blog/integrations/:id", d.JSON, h.UpdateBlogIntegration)
+	routes.Handle(http.MethodDelete, "/v1/blog/integrations/:id/verification", d.JSON, h.DisableBlogIntegration)
+	routes.Handle(http.MethodPost, "/v1/blog/integrations/:id/verification", d.Verify, h.VerifyBlogIntegration)
+	routes.Handle(http.MethodPost, "/v1/blog/integrations/:id/secret", d.JSON, h.RotateBlogIntegrationSecret)
+	routes.Handle(http.MethodPost, "/v1/blog/channels", d.Verify, h.AddBlogChannel)
+	routes.Handle(http.MethodPatch, "/v1/blog/channels/:id", d.Verify, h.UpdateBlogChannel)
+	routes.Handle(http.MethodGet, "/v1/blog/announcement-attempts", d.JSON, h.ListBlogAnnouncementAttempts)
+	routes.Handle(http.MethodGet, "/v1/blog/announcement-attempts/:id/tries", d.JSON, h.ListBlogAnnouncementTries)
+	routes.Handle(http.MethodPost, "/v1/blog/announcement-attempts/:id/replay", d.JSON, h.ReplayBlogAnnouncementAttempt)
+	routes.Handle(http.MethodPost, "/v1/blog/announcement-attempts/:id/repair", d.Verify, h.RepairDiscordAnnouncement)
+	routes.Handle(http.MethodPut, "/v1/blog/grants/:id/integrations", d.JSON, h.SetBlogGrantIntegrations)
+	routes.Handle(http.MethodGet, "/v1/blog/posts/:id/integrations", d.JSON, h.ListPostIntegrations)
+	routes.Handle(http.MethodGet, "/v1/blog/posts/:id/announcement-attempts", d.JSON, h.ListPostAnnouncementAttempts)
 	registerAliases(routes, h)
 }

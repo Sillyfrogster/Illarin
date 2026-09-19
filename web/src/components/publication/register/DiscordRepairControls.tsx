@@ -10,16 +10,16 @@ import {
   type DiscordRepairResult,
   repairDiscordAnnouncement,
 } from "@/lib/api/publication";
-import type { PostDelivery } from "@/lib/api/query";
+import type { BlogAnnouncementAttempt } from "@/lib/api/query";
 
 export function DiscordRepairControls({
-  delivery,
+  attempt,
 }: {
-  delivery: PostDelivery;
+  attempt: BlogAnnouncementAttempt;
 }) {
   const prefix = useId();
   const [action, setAction] = useState<DiscordRepair["action"]>("edit");
-  const [messageId, setMessageId] = useState(delivery.messageId ?? "");
+  const [messageId, setMessageId] = useState(attempt.messageId ?? "");
   const [text, setText] = useState("");
   const [reviewing, setReviewing] = useState(false);
   const [request, setRequest] = useState<DiscordRepair | null>(null);
@@ -38,7 +38,7 @@ export function DiscordRepairControls({
     setRequest(repair);
     setBusy(true);
     try {
-      const answer = await repairDiscordAnnouncement(delivery.id, repair);
+      const answer = await repairDiscordAnnouncement(attempt.id, repair);
       setError(answer.error ?? "");
       if (answer.value) setResult(answer.value);
     } catch {
@@ -61,9 +61,8 @@ export function DiscordRepairControls({
           }}
         >
           <p className="font-prose text-meta text-mute">
-            Check {delivery.destination} first. This changes Discord only.
-            Copies readers have already received remain outside Illarin’s
-            control.
+            Check {attempt.integration} first. This changes Discord only. Copies
+            readers have already received remain outside Illarin’s control.
           </p>
           <fieldset
             disabled={reviewing || busy}
@@ -91,7 +90,7 @@ export function DiscordRepairControls({
                 <TextInput
                   id={`${prefix}-message`}
                   value={messageId}
-                  readOnly={Boolean(delivery.messageId)}
+                  readOnly={Boolean(attempt.messageId)}
                   required
                   pattern="[0-9]{17,20}"
                   onChange={(event) => setMessageId(event.target.value)}
@@ -128,8 +127,8 @@ export function DiscordRepairControls({
               {action === "correction"
                 ? "This sends a new message. If an earlier request reached Discord without confirmation, another message may create a duplicate."
                 : action === "delete"
-                  ? `Delete message ${messageId} from ${delivery.destination}? This cannot be undone.`
-                  : `Replace the note on message ${messageId} in ${delivery.destination}?`}
+                  ? `Delete message ${messageId} from ${attempt.integration}? This cannot be undone.`
+                  : `Replace the note on message ${messageId} in ${attempt.integration}?`}
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">

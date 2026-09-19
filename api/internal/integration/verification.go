@@ -11,12 +11,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-var ErrChanged = errors.New("the destination changed while this request was running")
+var ErrChanged = errors.New("the integration changed while this request was running")
 
 const EventVerification = "asset.endpoint.verification.v1"
 
 type configuration struct {
-	destinationType string
+	integrationType string
 	version         int64
 	address         string
 	secrets         []string
@@ -28,8 +28,8 @@ func (s *Service) configuration(ctx context.Context, owner, id uuid.UUID) (confi
 	var until *time.Time
 	err := s.pool.QueryRow(ctx, `
 		select type, version, address, signing_secret, previous_secret, previous_secret_until
-		  from work_update_destinations where owner_id = $1 and id = $2
-	`, owner, id).Scan(&found.destinationType, &found.version, &address, &secret, &old, &until)
+		  from work_integrations where owner_id = $1 and id = $2
+	`, owner, id).Scan(&found.integrationType, &found.version, &address, &secret, &old, &until)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return found, ErrNotFound
 	}
@@ -58,34 +58,34 @@ func (s *Service) configuration(ctx context.Context, owner, id uuid.UUID) (confi
 	return found, nil
 }
 
-func (s *Service) Verify(ctx context.Context, owner, id uuid.UUID) (Destination, error) {
+func (s *Service) Verify(ctx context.Context, owner, id uuid.UUID) (Integration, error) {
 	held, err := s.configuration(ctx, owner, id)
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	var guildID, channelID *string
-	if held.destinationType == Discord {
+	if held.integrationType == Discord {
 		_, found, err := discord.VerifyCapability(ctx, s.sender, held.address)
 		if err != nil {
-			return Destination{}, FieldError{"address", err.Error()}
+			return Integration{}, FieldError{"address", err.Error()}
 		}
 		guildID, channelID = &found.GuildID, &found.ChannelID
 	} else {
 		if err := dispatch.VerifyEndpoint(ctx, s.sender, EventVerification, held.address, held.secrets, time.Now().UTC()); err != nil {
-			return Destination{}, FieldError{"address", err.Error()}
+			return Integration{}, FieldError{"address", err.Error()}
 		}
 	}
 	result, err := s.pool.Exec(ctx, `
-		update work_update_destinations
+		update work_integrations
 		   set state = 'active', verified_at = now(), disabled_at = null, version = version+1,
 		       updated_at = now(), guild_id = $4, channel_id = $5
 		 where owner_id = $1 and id = $2 and version = $3
 	`, owner, id, held.version, guildID, channelID)
 	if err != nil {
-		return Destination{}, err
+		return Integration{}, err
 	}
 	if result.RowsAffected() != 1 {
-		return Destination{}, ErrChanged
+		return Integration{}, ErrChanged
 	}
 	return s.Get(ctx, owner, id)
 }

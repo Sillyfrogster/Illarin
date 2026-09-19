@@ -14,7 +14,7 @@ import (
 const SecretOverlap = dispatch.SecretOverlap
 
 type RotatedSecret struct {
-	Destination Destination
+	Integration Integration
 	Secret      string
 	OldUntil    time.Time
 }
@@ -24,7 +24,7 @@ func (s *Service) RotateSecret(
 	actor uuid.UUID,
 	id uuid.UUID,
 ) (RotatedSecret, error) {
-	current, err := s.Destination(ctx, id)
+	current, err := s.Integration(ctx, id)
 	if err != nil {
 		return RotatedSecret{}, err
 	}
@@ -47,7 +47,7 @@ func (s *Service) RotateSecret(
 	}
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
-		update publication_destinations
+		update blog_integrations
 		   set signing_secret = $2, signing_secret_set_at = $3,
 		       previous_secret = signing_secret, previous_secret_until = $4,
 		       updated_at = $3
@@ -57,7 +57,7 @@ func (s *Service) RotateSecret(
 		return RotatedSecret{}, fmt.Errorf("rotate the signing secret: %w", err)
 	}
 	err = s.Audit(ctx, tx, Change{
-		Actor: actor, Action: "destination.secret.rotated", DestinationID: &id,
+		Actor: actor, Action: "integration.secret.rotated", IntegrationID: &id,
 	})
 	if err != nil {
 		return RotatedSecret{}, err
@@ -65,16 +65,16 @@ func (s *Service) RotateSecret(
 	if err := tx.Commit(ctx); err != nil {
 		return RotatedSecret{}, fmt.Errorf("commit secret rotation: %w", err)
 	}
-	found, err := s.Destination(ctx, id)
+	found, err := s.Integration(ctx, id)
 	if err != nil {
 		return RotatedSecret{}, err
 	}
-	return RotatedSecret{Destination: found, Secret: secret, OldUntil: until}, nil
+	return RotatedSecret{Integration: found, Secret: secret, OldUntil: until}, nil
 }
 
 func (s *Service) ForgetOldSecrets(ctx context.Context, now time.Time) (int64, error) {
 	command, err := s.pool.Exec(ctx, `
-		update publication_destinations
+		update blog_integrations
 		   set previous_secret = null, previous_secret_until = null, updated_at = now()
 		 where previous_secret_until is not null and previous_secret_until <= $1
 	`, now)
@@ -89,13 +89,13 @@ func (s *Service) endpointOf(ctx context.Context, id uuid.UUID) (string, []strin
 	var until *time.Time
 	err := s.pool.QueryRow(ctx, `
 		select address, signing_secret, previous_secret, previous_secret_until
-		  from publication_destinations where id = $1
+		  from blog_integrations where id = $1
 	`, id).Scan(&sealedAddress, &sealedSecret, &sealedOld, &until)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil, ErrDestinationNotFound
+		return "", nil, ErrIntegrationNotFound
 	}
 	if err != nil {
-		return "", nil, fmt.Errorf("read the destination configuration: %w", err)
+		return "", nil, fmt.Errorf("read the integration configuration: %w", err)
 	}
 	address, err := s.sealing.Open(sealedAddress)
 	if err != nil {
@@ -116,32 +116,32 @@ func (s *Service) endpointOf(ctx context.Context, id uuid.UUID) (string, []strin
 	return string(address), secrets, nil
 }
 
-func (s *Service) retireDestination(ctx context.Context, id uuid.UUID) error {
+func (s *Service) retireIntegration(ctx context.Context, id uuid.UUID) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin retiring a destination: %w", err)
+		return fmt.Errorf("begin retiring a integration: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
-		update publication_destinations
+		update blog_integrations
 		   set state = $2, disabled_at = now(), updated_at = now()
 		 where id = $1 and state <> $2
-	`, id, DestinationDisabled)
+	`, id, IntegrationDisabled)
 	if err != nil {
-		return fmt.Errorf("retire the destination: %w", err)
+		return fmt.Errorf("retire the integration: %w", err)
 	}
-	if err := s.stopDeliveriesTo(ctx, tx, id, SettledDisabled); err != nil {
+	if err := s.stopAttemptsTo(ctx, tx, id, SettledDisabled); err != nil {
 		return err
 	}
 	err = s.Audit(ctx, tx, Change{
 		Actor: uuid.Nil, Credential: CredentialSystem,
-		Action: "destination.gone", DestinationID: &id,
+		Action: "integration.gone", IntegrationID: &id,
 	})
 	if err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit retiring a destination: %w", err)
+		return fmt.Errorf("commit retiring a integration: %w", err)
 	}
 	return nil
 }

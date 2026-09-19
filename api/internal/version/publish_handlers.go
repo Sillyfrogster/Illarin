@@ -42,8 +42,8 @@ func (h *Handlers) PublishWorkVersion(c *gin.Context) {
 	case errors.Is(err, ErrUnlistedConsentRequired):
 		refuseInvalid(c, "announceUnlisted",
 			"This work is unlisted. Confirm that its direct link may be sent, or publish quietly.")
-	case errors.Is(err, ErrDestinationIneligible):
-		refuseInvalid(c, "destinationIds", "Choose only your own verified, active destinations.")
+	case errors.Is(err, ErrIntegrationIneligible):
+		refuseInvalid(c, "integrationIds", "Choose only your own verified, active integrations.")
 	case errors.Is(err, ErrSummaryRequired):
 		api.Refuse(c, http.StatusBadRequest, "Say what changed in this version.")
 	case errors.Is(err, ErrSummaryTooLong):
@@ -78,9 +78,9 @@ func (h *Handlers) PublishWorkVersion(c *gin.Context) {
 
 func announcementChoice(request WorkVersionRequest) Announcement {
 	choice := Announcement{Notify: request.Notify == nil || *request.Notify}
-	if request.DestinationIds != nil {
-		chosen := append([]uuid.UUID(nil), *request.DestinationIds...)
-		choice.DestinationIDs = &chosen
+	if request.IntegrationIds != nil {
+		chosen := append([]uuid.UUID(nil), *request.IntegrationIds...)
+		choice.IntegrationIDs = &chosen
 	}
 	if request.AnnounceUnlisted != nil {
 		choice.AnnounceUnlisted = *request.AnnounceUnlisted

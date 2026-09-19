@@ -625,14 +625,14 @@ func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
 	stack.saved(t, session, draft.ID, finished(draft, nil))
 	stack.published(t, session, draft.ID)
 
-	var eventType string
+	var announcementType string
 	err := stack.pool.QueryRow(context.Background(),
-		`select type from publication_events where post_id = $1`, draft.ID).Scan(&eventType)
+		`select type from blog_announcements where post_id = $1`, draft.ID).Scan(&announcementType)
 	if err != nil {
-		t.Fatalf("read the publication event: %v", err)
+		t.Fatalf("read the announcement: %v", err)
 	}
-	if eventType != "publication.post.published.v1" {
-		t.Errorf("event type = %q", eventType)
+	if announcementType != "publication.post.published.v1" {
+		t.Errorf("event type = %q", announcementType)
 	}
 
 	var action, credential, before, after string
@@ -760,7 +760,7 @@ func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 	var revisions, events, bylines int
 	err := stack.pool.QueryRow(context.Background(), `
 		select (select count(*) from post_revisions where post_id = $1),
-		       (select count(*) from publication_events where post_id = $1),
+		       (select count(*) from blog_announcements where post_id = $1),
 		       (select count(*) from post_bylines where post_id = $1)
 	`, draft.ID).Scan(&revisions, &events, &bylines)
 	if err != nil {

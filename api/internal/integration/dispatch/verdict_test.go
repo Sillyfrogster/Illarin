@@ -6,10 +6,10 @@ import (
 	"time"
 )
 
-func TestTheScheduleSpansTenAttemptsWithinTenPercentJitter(t *testing.T) {
+func TestTheScheduleSpansTenTriesWithinTenPercentJitter(t *testing.T) {
 	t.Parallel()
-	if Attempts != 10 {
-		t.Fatalf("Attempts = %d, want 10", Attempts)
+	if MaxTries != 10 {
+		t.Fatalf("MaxTries = %d, want 10", MaxTries)
 	}
 	for made, agreed := range Delays {
 		low, held := Delay(made, 0)
@@ -22,7 +22,7 @@ func TestTheScheduleSpansTenAttemptsWithinTenPercentJitter(t *testing.T) {
 				made, low, high, agreed/10, agreed)
 		}
 	}
-	if _, held := Delay(Attempts, 0.5); held {
+	if _, held := Delay(MaxTries, 0.5); held {
 		t.Error("an attempt past the schedule was given a delay")
 	}
 	if _, held := Delay(-1, 0.5); held {

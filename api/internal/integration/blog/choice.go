@@ -13,26 +13,26 @@ import (
 const noteLimit = 500
 
 type Announcement struct {
-	Destinations *[]uuid.UUID
+	Integrations *[]uuid.UUID
 	Ping         []uuid.UUID
 	Note         string
 }
 
-var ErrRoleRefused = errors.New("the destination has no role this post may ping")
+var ErrRoleRefused = errors.New("the integration has no role this post may ping")
 
-type DestinationPolicy struct {
+type IntegrationPolicy struct {
 	Allowed  *[]uuid.UUID
 	Defaults []uuid.UUID
 }
 
 func (s *Service) AppChoices(ctx context.Context, appID uuid.UUID) ([]Choice, error) {
 	return choicesFrom(ctx, s.pool, `
-		select destination.id, destination.name, destination.type, destination.state,
-		       destination.events, destination.role_name, allowed.by_default
-		  from publication_app_destinations allowed
-		  join publication_destinations destination on destination.id = allowed.destination_id
+		select integration.id, integration.name, integration.type, integration.state,
+		       integration.announcements, integration.role_name, allowed.by_default
+		  from publication_app_integrations allowed
+		  join blog_integrations integration on integration.id = allowed.integration_id
 		 where allowed.app_id = $1
-		 order by destination.name, destination.created_at
+		 order by integration.name, integration.created_at
 	`, appID)
 }
 
@@ -40,21 +40,21 @@ func (s *Service) GrantChoices(ctx context.Context, grantID uuid.UUID) ([]Choice
 	var overridden bool
 	var appID uuid.UUID
 	err := s.pool.QueryRow(ctx, `
-		select destinations_overridden, app_id from publication_grants where id = $1
+		select integrations_overridden, app_id from publication_grants where id = $1
 	`, grantID).Scan(&overridden, &appID)
 	if err != nil {
-		return nil, fmt.Errorf("read the destination policy behind a grant: %w", err)
+		return nil, fmt.Errorf("read the integration policy behind a grant: %w", err)
 	}
 	if !overridden {
 		return s.AppChoices(ctx, appID)
 	}
 	return choicesFrom(ctx, s.pool, `
-		select destination.id, destination.name, destination.type, destination.state,
-		       destination.events, destination.role_name, allowed.by_default
-		  from publication_grant_destinations allowed
-		  join publication_destinations destination on destination.id = allowed.destination_id
+		select integration.id, integration.name, integration.type, integration.state,
+		       integration.announcements, integration.role_name, allowed.by_default
+		  from publication_grant_integrations allowed
+		  join blog_integrations integration on integration.id = allowed.integration_id
 		 where allowed.grant_id = $1
-		 order by destination.name, destination.created_at
+		 order by integration.name, integration.created_at
 	`, grantID)
 }
 
@@ -63,29 +63,29 @@ func (s *Service) PostChoices(ctx context.Context, grantID *uuid.UUID) ([]Choice
 		return s.GrantChoices(ctx, *grantID)
 	}
 	return choicesFrom(ctx, s.pool, `
-		select destination.id, destination.name, destination.type, destination.state,
-		       destination.events, destination.role_name, false
-		  from publication_destinations destination
-		 order by destination.name, destination.created_at
+		select integration.id, integration.name, integration.type, integration.state,
+		       integration.announcements, integration.role_name, false
+		  from blog_integrations integration
+		 order by integration.name, integration.created_at
 	`)
 }
 
 func (s *Service) checkPolicy(
 	ctx context.Context,
-	in DestinationPolicy,
+	in IntegrationPolicy,
 ) (map[uuid.UUID]bool, error) {
 	allowed := make(map[uuid.UUID]bool)
 	if in.Allowed == nil {
 		if len(in.Defaults) > 0 {
 			return nil, FieldError{
-				Field:   "defaultDestinationIds",
+				Field:   "defaultIntegrationIds",
 				Message: "A default belongs to a set this policy names.",
 			}
 		}
 		return allowed, nil
 	}
 	for _, id := range *in.Allowed {
-		if _, err := s.Destination(ctx, id); err != nil {
+		if _, err := s.Integration(ctx, id); err != nil {
 			return nil, err
 		}
 		allowed[id] = false
@@ -93,8 +93,8 @@ func (s *Service) checkPolicy(
 	for _, id := range in.Defaults {
 		if _, held := allowed[id]; !held {
 			return nil, FieldError{
-				Field:   "defaultDestinationIds",
-				Message: "A default has to be one of the allowed destinations.",
+				Field:   "defaultIntegrationIds",
+				Message: "A default has to be one of the allowed integrations.",
 			}
 		}
 		allowed[id] = true
@@ -124,8 +124,8 @@ func (s *Service) Chosen(
 		return nil, "", err
 	}
 	picked := defaultsAmong(allowed)
-	if in.Destinations != nil {
-		if picked, err = named(allowed, *in.Destinations); err != nil {
+	if in.Integrations != nil {
+		if picked, err = named(allowed, *in.Integrations); err != nil {
 			return nil, "", err
 		}
 	}
@@ -146,7 +146,7 @@ func named(allowed []Choice, wanted []uuid.UUID) ([]Choice, error) {
 	for _, id := range wanted {
 		one, held := byID[id]
 		if !held {
-			return nil, ErrDestinationRefused
+			return nil, ErrIntegrationRefused
 		}
 		if seen[id] {
 			continue
@@ -180,7 +180,7 @@ func pinged(picked []Choice, wanted []uuid.UUID) ([]Sending, error) {
 func ActiveAmong(held []Choice) []Choice {
 	ready := make([]Choice, 0, len(held))
 	for _, one := range held {
-		if one.State == DestinationActive {
+		if one.State == IntegrationActive {
 			ready = append(ready, one)
 		}
 	}
@@ -205,7 +205,7 @@ func choicesFrom(
 ) ([]Choice, error) {
 	rows, err := pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("read the destinations a post may send to: %w", err)
+		return nil, fmt.Errorf("read the integrations a post may send to: %w", err)
 	}
 	return collectChoices(rows)
 }
@@ -217,10 +217,10 @@ func CollectSending(rows pgx.Rows) ([]Sending, error) {
 		var one Sending
 		var role *string
 		err := rows.Scan(
-			&one.ID, &one.Name, &one.Type, &one.State, &one.Events, &role, &one.Ping,
+			&one.ID, &one.Name, &one.Type, &one.State, &one.Announcements, &role, &one.Ping,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("read a destination a post captured: %w", err)
+			return nil, fmt.Errorf("read a integration a post captured: %w", err)
 		}
 		if role != nil {
 			one.Role = *role
@@ -228,7 +228,7 @@ func CollectSending(rows pgx.Rows) ([]Sending, error) {
 		found = append(found, one)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read the destinations a post captured: %w", err)
+		return nil, fmt.Errorf("read the integrations a post captured: %w", err)
 	}
 	return found, nil
 }
@@ -240,10 +240,10 @@ func collectChoices(rows pgx.Rows) ([]Choice, error) {
 		var one Choice
 		var role *string
 		err := rows.Scan(
-			&one.ID, &one.Name, &one.Type, &one.State, &one.Events, &role, &one.ByDefault,
+			&one.ID, &one.Name, &one.Type, &one.State, &one.Announcements, &role, &one.ByDefault,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("read a destination a post may send to: %w", err)
+			return nil, fmt.Errorf("read a integration a post may send to: %w", err)
 		}
 		if role != nil {
 			one.Role = *role
@@ -251,50 +251,50 @@ func collectChoices(rows pgx.Rows) ([]Choice, error) {
 		found = append(found, one)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read the destinations a post may send to: %w", err)
+		return nil, fmt.Errorf("read the integrations a post may send to: %w", err)
 	}
 	return found, nil
 }
 
-func (s *Service) SetGrantDestinations(ctx context.Context, actor, grantID, appID, holderID uuid.UUID, in DestinationPolicy) error {
+func (s *Service) SetGrantIntegrations(ctx context.Context, actor, grantID, appID, holderID uuid.UUID, in IntegrationPolicy) error {
 	allowed, err := s.checkPolicy(ctx, in)
 	if err != nil {
 		return err
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin grant destination policy: %w", err)
+		return fmt.Errorf("begin grant integration policy: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	if _, err := tx.Exec(ctx, `
-		delete from publication_grant_destinations where grant_id = $1
+		delete from publication_grant_integrations where grant_id = $1
 	`, grantID); err != nil {
-		return fmt.Errorf("clear the grant destination policy: %w", err)
+		return fmt.Errorf("clear the grant integration policy: %w", err)
 	}
 	_, err = tx.Exec(ctx, `
-		update publication_grants set destinations_overridden = $2 where id = $1
+		update publication_grants set integrations_overridden = $2 where id = $1
 	`, grantID, in.Allowed != nil)
 	if err != nil {
-		return fmt.Errorf("record the grant destination override: %w", err)
+		return fmt.Errorf("record the grant integration override: %w", err)
 	}
 	for id, byDefault := range allowed {
 		_, err := tx.Exec(ctx, `
-			insert into publication_grant_destinations (grant_id, destination_id, by_default)
+			insert into publication_grant_integrations (grant_id, integration_id, by_default)
 			values ($1, $2, $3)
 		`, grantID, id, byDefault)
 		if err != nil {
-			return fmt.Errorf("allow a grant destination: %w", err)
+			return fmt.Errorf("allow a grant integration: %w", err)
 		}
 	}
 	err = s.Audit(ctx, tx, Change{
-		Actor: actor, Action: "grant.destinations.set",
+		Actor: actor, Action: "grant.integrations.set",
 		AppID: &appID, GrantID: &grantID, SubjectID: &holderID,
 	})
 	if err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit grant destination policy: %w", err)
+		return fmt.Errorf("commit grant integration policy: %w", err)
 	}
 	return nil
 }

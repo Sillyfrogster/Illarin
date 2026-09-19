@@ -174,7 +174,7 @@ func (s *Service) ReplaceSchedule(
 		return Post{}, fmt.Errorf("replace the scheduled edition: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		delete from post_schedule_destinations where schedule_id = $1
+		delete from post_schedule_integrations where schedule_id = $1
 	`, waiting); err != nil {
 		return Post{}, fmt.Errorf("clear the scheduled delivery choice: %w", err)
 	}
@@ -275,7 +275,7 @@ type leased struct {
 	CreatedBy  *uuid.UUID
 	Note       string
 	Token      uuid.UUID
-	Attempts   int
+	Tries      int
 }
 
 func (s *Service) leaseDueSchedule(ctx context.Context, now time.Time) (leased, bool, error) {
@@ -300,7 +300,7 @@ func (s *Service) leaseDueSchedule(ctx context.Context, now time.Time) (leased, 
 		returning schedule.id, schedule.post_id, schedule.revision_id,
 		          schedule.created_by, schedule.note, schedule.attempts
 	`, now, held.Token, now.Add(ScheduleLease), SchedulePending, SchedulePublishing).Scan(
-		&held.ID, &held.PostID, &held.RevisionID, &held.CreatedBy, &held.Note, &held.Attempts,
+		&held.ID, &held.PostID, &held.RevisionID, &held.CreatedBy, &held.Note, &held.Tries,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return leased{}, false, nil
@@ -370,7 +370,7 @@ func refusesLeased(
 	locked working,
 	kept working,
 ) (string, error) {
-	if held.Attempts > ScheduleAttempts {
+	if held.Tries > ScheduleAttempts {
 		return stoppedByFailure, nil
 	}
 	if locked.GrantID != nil {
@@ -448,7 +448,7 @@ func keepScheduleChoice(
 ) error {
 	for _, one := range chosen {
 		_, err := tx.Exec(ctx, `
-			insert into post_schedule_destinations (schedule_id, destination_id, mention_role)
+			insert into post_schedule_integrations (schedule_id, integration_id, mention_role)
 			values ($1, $2, $3) on conflict do nothing
 		`, scheduleID, one.ID, one.Ping)
 		if err != nil {
@@ -460,13 +460,13 @@ func keepScheduleChoice(
 
 func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]announcements.Sending, error) {
 	rows, err := tx.Query(ctx, `
-		select destination.id, destination.name, destination.type, destination.state,
-		       destination.events, destination.role_name, chosen.mention_role
-		  from post_schedule_destinations chosen
-		  join publication_destinations destination on destination.id = chosen.destination_id
-		 where chosen.schedule_id = $1 and destination.state = $2
-		 order by destination.name, destination.created_at
-	`, scheduleID, DestinationActive)
+		select integration.id, integration.name, integration.type, integration.state,
+		       integration.announcements, integration.role_name, chosen.mention_role
+		  from post_schedule_integrations chosen
+		  join blog_integrations integration on integration.id = chosen.integration_id
+		 where chosen.schedule_id = $1 and integration.state = $2
+		 order by integration.name, integration.created_at
+	`, scheduleID, IntegrationActive)
 	if err != nil {
 		return nil, fmt.Errorf("read the scheduled delivery choice: %w", err)
 	}

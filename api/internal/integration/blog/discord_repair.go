@@ -45,15 +45,15 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 	if in.Action != "delete" && (in.Text == "" || utf8.RuneCountInString(in.Text) > 1800) {
 		return invalid("Write the replacement note or correction in 1 to 1800 characters.")
 	}
-	held, err := s.Delivery(ctx, id)
+	held, err := s.Attempt(ctx, id)
 	if err != nil {
 		return DiscordRepairResult{}, err
 	}
 	if held.Type != TypeDiscord || held.Removed {
-		return invalid("This delivery has no Discord destination to repair.")
+		return invalid("This attempt has no Discord integration to repair.")
 	}
 	if held.SettledAt == nil {
-		return DiscordRepairResult{}, ErrDeliveryUnsettled
+		return DiscordRepairResult{}, ErrAttemptUnsettled
 	}
 	if in.Action != "correction" {
 		if err := discord.CheckRole(in.MessageID); err != nil {
@@ -63,18 +63,18 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 			return invalid("The message ID does not match this announcement.")
 		}
 	}
-	var destinationID uuid.UUID
-	if err := s.pool.QueryRow(ctx, `select destination_id from publication_deliveries where id = $1`, id).Scan(&destinationID); err != nil {
+	var integrationID uuid.UUID
+	if err := s.pool.QueryRow(ctx, `select integration_id from blog_announcement_attempts where id = $1`, id).Scan(&integrationID); err != nil {
 		return DiscordRepairResult{}, err
 	}
-	_, state, err := s.destinationStanding(ctx, destinationID)
+	_, state, err := s.integrationStanding(ctx, integrationID)
 	if err != nil {
 		return DiscordRepairResult{}, err
 	}
-	if state != DestinationActive {
-		return DiscordRepairResult{}, ErrDeliveryUnsendable
+	if state != IntegrationActive {
+		return DiscordRepairResult{}, ErrAttemptUnsendable
 	}
-	capability, _, err := s.channelOf(ctx, destinationID)
+	capability, _, err := s.channelOf(ctx, integrationID)
 	if err != nil {
 		return DiscordRepairResult{}, err
 	}
@@ -83,7 +83,7 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 	if in.Action == "delete" {
 		method, address = http.MethodDelete, capability.URL+"/messages/"+in.MessageID
 	} else {
-		summary, err := s.Summary(ctx, s.pool, held.EventID)
+		summary, err := s.Summary(ctx, s.pool, held.AnnouncementID)
 		if err != nil {
 			return DiscordRepairResult{}, err
 		}
@@ -117,16 +117,16 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 	}
 	defer tx.Rollback(ctx)
 	tag, err := tx.Exec(ctx, `
-		insert into publication_audits (id, actor_id, credential, action, post_id, destination_id, delivery_id)
+		insert into publication_audits (id, actor_id, credential, action, post_id, integration_id, attempt_id)
 		values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing
-	`, in.RequestID, actor, CredentialSession, "discord."+in.Action, held.PostID, destinationID, id)
+	`, in.RequestID, actor, CredentialSession, "discord."+in.Action, held.PostID, integrationID, id)
 	if err != nil {
 		return DiscordRepairResult{}, fmt.Errorf("record the Discord repair: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		var previous string
 		err := tx.QueryRow(ctx, `select result::text from publication_discord_repairs
-			where id = $1 and actor_id = $2 and delivery_id = $3 and fingerprint = $4`,
+			where id = $1 and actor_id = $2 and attempt_id = $3 and fingerprint = $4`,
 			in.RequestID, actor, id, fingerprint).Scan(&previous)
 		if err != nil {
 			return invalid("Use a new request ID for a different repair action.")
@@ -137,7 +137,7 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 		return result, nil
 	}
 	_, err = tx.Exec(ctx, `insert into publication_discord_repairs
-		(id, actor_id, delivery_id, target_message_id, fingerprint, result)
+		(id, actor_id, attempt_id, target_message_id, fingerprint, result)
 		values ($1, $2, $3, $4, $5, $6)`, in.RequestID, actor, id, in.MessageID, fingerprint, string(stored))
 	if err != nil {
 		return DiscordRepairResult{}, fmt.Errorf("record the Discord repair request: %w", err)
@@ -152,7 +152,7 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 		}
 		_ = json.Unmarshal(answer.Body, &fault)
 		if answer.Status == http.StatusNotFound && (in.Action == "correction" || fault.Code == 10015) {
-			if err := s.retireDestination(ctx, destinationID); err != nil {
+			if err := s.retireIntegration(ctx, integrationID); err != nil {
 				return DiscordRepairResult{}, err
 			}
 		}
@@ -161,7 +161,7 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 			if in.Action == "delete" {
 				result.State, result.Detail = "completed", "The named Discord message was deleted. Copies already received by readers remain outside Illarin's control."
 			} else if message := dispatch.MessageID(answer.Body); message != "" {
-				result.State, result.MessageID, result.Detail = "completed", message, "Discord confirmed the requested change. The blog post and delivery history are unchanged."
+				result.State, result.MessageID, result.Detail = "completed", message, "Discord confirmed the requested change. The blog post and attempt history are unchanged."
 			}
 		case answer.Status == http.StatusTooManyRequests:
 			result.State, result.Detail = "refused", "Discord asked Illarin to wait. Try a new repair after the rate limit clears."

@@ -2,9 +2,9 @@ package blog
 
 import "github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 
-var DeliveryDelays = dispatch.Delays
+var TryDelays = dispatch.Delays
 
-var DeliveryAttempts = dispatch.Attempts
+var MaxTries = dispatch.MaxTries
 
 const (
 	SettledArrived     = dispatch.Arrived

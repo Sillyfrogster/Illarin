@@ -15,22 +15,22 @@ import (
 )
 
 type workAnnouncement struct {
-	ID            string           `json:"id"`
-	EventID       string           `json:"eventId"`
-	UpdateID      string           `json:"updateId"`
-	UpdateNumber  int              `json:"updateNumber"`
-	Destination   string           `json:"destination"`
-	Type          string           `json:"type"`
-	Removed       bool             `json:"removed"`
-	State         string           `json:"state"`
-	SettledReason string           `json:"settledReason"`
-	MessageID     string           `json:"messageId"`
-	Run           int              `json:"run"`
-	Attempts      int              `json:"attempts"`
-	OccurredAt    time.Time        `json:"occurredAt"`
-	DueAt         time.Time        `json:"dueAt"`
-	SettledAt     *time.Time       `json:"settledAt"`
-	Last          *deliveryAttempt `json:"last"`
+	ID             string           `json:"id"`
+	AnnouncementID string           `json:"announcementId"`
+	VersionID      string           `json:"versionId"`
+	VersionNumber  int              `json:"versionNumber"`
+	Integration    string           `json:"integration"`
+	Type           string           `json:"type"`
+	Removed        bool             `json:"removed"`
+	State          string           `json:"state"`
+	SettledReason  string           `json:"settledReason"`
+	MessageID      string           `json:"messageId"`
+	Run            int              `json:"run"`
+	Tries          int              `json:"tries"`
+	OccurredAt     time.Time        `json:"occurredAt"`
+	DueAt          time.Time        `json:"dueAt"`
+	SettledAt      *time.Time       `json:"settledAt"`
+	Last           *announcementTry `json:"last"`
 }
 
 type workAnnouncementList struct {
@@ -57,12 +57,12 @@ type workUpdateEvent struct {
 	} `json:"update"`
 }
 
-func (s destinationStack) creatorWebhook(t *testing.T, session *http.Cookie) addedDestination {
+func (s integrationStack) creatorWebhook(t *testing.T, session *http.Cookie) addedIntegration {
 	t.Helper()
 	made := s.addUpdateDestination(t, session, "webhook", s.to.address())
 	s.to.answers(echoesTheChallenge)
-	verified := s.updateDestinationRequest(t, session, http.MethodPost,
-		updateDestinationsPath+"/"+made.Destination.ID+"/verification", "")
+	verified := s.integrationRequest(t, session, http.MethodPost,
+		integrationsPath+"/"+made.Integration.ID+"/verification", "")
 	if verified.Code != http.StatusOK {
 		t.Fatalf("verify creator webhook = %d: %s", verified.Code, verified.Body.String())
 	}
@@ -71,7 +71,7 @@ func (s destinationStack) creatorWebhook(t *testing.T, session *http.Cookie) add
 	return made
 }
 
-func (s destinationStack) publishedCharacter(t *testing.T, session *http.Cookie) apitest.StartedWork {
+func (s integrationStack) publishedCharacter(t *testing.T, session *http.Cookie) apitest.StartedWork {
 	t.Helper()
 	started := apitest.StartCharacter(t, s.router, session)
 	apitest.WriteCharacterFloor(t, s.router, session, started)
@@ -81,7 +81,7 @@ func (s destinationStack) publishedCharacter(t *testing.T, session *http.Cookie)
 	return started
 }
 
-func (s destinationStack) describe(t *testing.T, session *http.Cookie, started apitest.StartedWork, text string) {
+func (s integrationStack) describe(t *testing.T, session *http.Cookie, started apitest.StartedWork, text string) {
 	t.Helper()
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
 	core := apitest.EditableBlock(coreBlock)
@@ -91,7 +91,7 @@ func (s destinationStack) describe(t *testing.T, session *http.Cookie, started a
 	}
 }
 
-func (s destinationStack) announced(t *testing.T, session *http.Cookie, workID, body string) {
+func (s integrationStack) announced(t *testing.T, session *http.Cookie, workID, body string) {
 	t.Helper()
 	response := apitest.PublishWorkVersion(t, s.router, session, workID, body)
 	if response.Code != http.StatusOK {
@@ -99,10 +99,10 @@ func (s destinationStack) announced(t *testing.T, session *http.Cookie, workID, 
 	}
 }
 
-func (s destinationStack) announcements(t *testing.T, session *http.Cookie, workID string) []workAnnouncement {
+func (s integrationStack) announcements(t *testing.T, session *http.Cookie, workID string) []workAnnouncement {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+workID+"/announcements", nil,
+		http.MethodGet, "/v1/works/"+workID+"/announcement-attempts", nil,
 	), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read announcements = %d: %s", response.Code, response.Body.String())
@@ -114,16 +114,16 @@ func (s destinationStack) announcements(t *testing.T, session *http.Cookie, work
 	return listed.Announcements
 }
 
-func (s destinationStack) sendAnnouncementsAt(t *testing.T, at time.Time) int {
+func (s integrationStack) sendAnnouncementsAt(t *testing.T, at time.Time) int {
 	t.Helper()
-	made, err := s.handlers.UpdateDestinations.SendDueAnnouncements(t.Context(), at)
+	made, err := s.handlers.Integrations.SendDueAnnouncements(t.Context(), at)
 	if err != nil {
 		t.Fatalf("send due announcements: %v", err)
 	}
 	return made
 }
 
-func (s destinationStack) onlyAnnouncement(t *testing.T, session *http.Cookie, workID string) workAnnouncement {
+func (s integrationStack) onlyAnnouncement(t *testing.T, session *http.Cookie, workID string) workAnnouncement {
 	t.Helper()
 	listed := s.announcements(t, session, workID)
 	if len(listed) != 1 {
@@ -134,7 +134,7 @@ func (s destinationStack) onlyAnnouncement(t *testing.T, session *http.Cookie, w
 
 func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	channel := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
 	started := stack.publishedCharacter(t, stack.editor)
@@ -142,8 +142,8 @@ func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *te
 
 	stack.announced(t, stack.editor, started.ID, fmt.Sprintf(
 		`{"summary":"Moved her @everyone <@&%s> to the east shelf","notes":"Private reasoning stays here.",`+
-			`"versionLabel":"v2","destinationIds":[%q,%q]}`,
-		discordWebhookID, hook.Destination.ID, channel.Destination.ID))
+			`"versionLabel":"v2","integrationIds":[%q,%q]}`,
+		discordWebhookID, hook.Integration.ID, channel.Integration.ID))
 	if len(stack.to.arrivals()) != 0 || len(stack.discord.announcements()) != 0 {
 		t.Fatal("publication sent inside its own request")
 	}
@@ -152,7 +152,7 @@ func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *te
 		t.Fatalf("queued %d announcements, want 2", len(queued))
 	}
 	for _, one := range queued {
-		if one.State != "pending" || one.Attempts != 0 || one.UpdateNumber != 2 {
+		if one.State != "pending" || one.Tries != 0 || one.VersionNumber != 2 {
 			t.Errorf("queued announcement = %+v", one)
 		}
 	}
@@ -233,11 +233,11 @@ func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *te
 	}
 
 	for _, one := range stack.announcements(t, stack.editor, started.ID) {
-		if one.State != "delivered" || one.SettledReason != "arrived" || one.Attempts != 1 {
+		if one.State != "delivered" || one.SettledReason != "arrived" || one.Tries != 1 {
 			t.Errorf("settled announcement = %+v", one)
 		}
 		if one.ID != webhookID && one.Type == "webhook" {
-			t.Errorf("the webhook-id %q is not the delivery %q", webhookID, one.ID)
+			t.Errorf("the webhook-id %q is not the attempt %q", webhookID, one.ID)
 		}
 		if one.Type == "discord" && one.MessageID != discordMessageID {
 			t.Errorf("Discord announcement kept message %q", one.MessageID)
@@ -250,13 +250,13 @@ func TestAPublishedUpdateAnnouncesToItsChosenDestinationsOutsideTheRequest(t *te
 
 func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := apitest.StartCharacter(t, stack.router, stack.editor)
 	apitest.WriteCharacterFloor(t, stack.router, stack.editor, started)
-	chosen := stack.updateDestinationRequest(t, stack.editor, http.MethodPut,
-		"/v1/works/"+started.ID+"/update-destinations",
-		fmt.Sprintf(`{"destinationIds":[%q]}`, hook.Destination.ID))
+	chosen := stack.integrationRequest(t, stack.editor, http.MethodPut,
+		"/v1/works/"+started.ID+"/integrations",
+		fmt.Sprintf(`{"integrationIds":[%q]}`, hook.Integration.ID))
 	if chosen.Code != http.StatusNoContent {
 		t.Fatalf("remember defaults = %d", chosen.Code)
 	}
@@ -278,13 +278,13 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 
 	stack.announced(t, stack.editor, started.ID, `{"summary":"Now she is public"}`)
 	sent := stack.onlyAnnouncement(t, stack.editor, started.ID)
-	if sent.Destination != "Creator updates" || sent.UpdateNumber != 2 {
-		t.Errorf("the remembered destination was not used: %+v", sent)
+	if sent.Integration != "Creator updates" || sent.VersionNumber != 2 {
+		t.Errorf("the remembered integration was not used: %+v", sent)
 	}
 	stack.sendAnnouncementsAt(t, time.Now())
 	arrivals := stack.to.arrivals()
 	if len(arrivals) != 1 {
-		t.Fatalf("the remembered destination received %d requests, want 1", len(arrivals))
+		t.Fatalf("the remembered integration received %d requests, want 1", len(arrivals))
 	}
 	var event workUpdateEvent
 	if err := json.Unmarshal(arrivals[0].Body, &event); err != nil {
@@ -308,49 +308,49 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 
 func TestAnExplicitSelectionIsRememberedAndAnEmptyOneAnnouncesNowhere(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := stack.publishedCharacter(t, stack.editor)
 
 	stack.describe(t, stack.editor, started, "First change.")
 	stack.announced(t, stack.editor, started.ID,
-		fmt.Sprintf(`{"summary":"First change","destinationIds":[%q]}`, hook.Destination.ID))
-	choices := stack.updateDestinationRequest(t, stack.editor, http.MethodGet,
-		"/v1/works/"+started.ID+"/update-destinations", "")
+		fmt.Sprintf(`{"summary":"First change","integrationIds":[%q]}`, hook.Integration.ID))
+	choices := stack.integrationRequest(t, stack.editor, http.MethodGet,
+		"/v1/works/"+started.ID+"/integrations", "")
 	var offered struct {
-		Destinations []destinationChoice `json:"destinations"`
+		Integrations []integrationChoice `json:"integrations"`
 	}
 	if err := json.Unmarshal(choices.Body.Bytes(), &offered); err != nil {
 		t.Fatal(err)
 	}
-	if len(offered.Destinations) != 1 || !offered.Destinations[0].ByDefault {
-		t.Fatalf("after an explicit selection the work remembers %+v", offered.Destinations)
+	if len(offered.Integrations) != 1 || !offered.Integrations[0].ByDefault {
+		t.Fatalf("after an explicit selection the work remembers %+v", offered.Integrations)
 	}
 
 	stack.describe(t, stack.editor, started, "Second change.")
-	stack.announced(t, stack.editor, started.ID, `{"summary":"Second change","destinationIds":[]}`)
+	stack.announced(t, stack.editor, started.ID, `{"summary":"Second change","integrationIds":[]}`)
 	listed := stack.announcements(t, stack.editor, started.ID)
-	if len(listed) != 1 || listed[0].UpdateNumber != 2 {
+	if len(listed) != 1 || listed[0].VersionNumber != 2 {
 		t.Fatalf("an empty selection queued something: %+v", listed)
 	}
-	choices = stack.updateDestinationRequest(t, stack.editor, http.MethodGet,
-		"/v1/works/"+started.ID+"/update-destinations", "")
+	choices = stack.integrationRequest(t, stack.editor, http.MethodGet,
+		"/v1/works/"+started.ID+"/integrations", "")
 	if err := json.Unmarshal(choices.Body.Bytes(), &offered); err != nil {
 		t.Fatal(err)
 	}
-	if offered.Destinations[0].ByDefault {
+	if offered.Integrations[0].ByDefault {
 		t.Error("an empty selection left the old selection remembered")
 	}
 }
 
 func TestAnUnlistedWorkAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := stack.publishedCharacter(t, stack.editor)
-	chosen := stack.updateDestinationRequest(t, stack.editor, http.MethodPut,
-		"/v1/works/"+started.ID+"/update-destinations",
-		fmt.Sprintf(`{"destinationIds":[%q]}`, hook.Destination.ID))
+	chosen := stack.integrationRequest(t, stack.editor, http.MethodPut,
+		"/v1/works/"+started.ID+"/integrations",
+		fmt.Sprintf(`{"integrationIds":[%q]}`, hook.Integration.ID))
 	if chosen.Code != http.StatusNoContent {
 		t.Fatalf("remember defaults = %d", chosen.Code)
 	}
@@ -363,14 +363,14 @@ func TestAnUnlistedWorkAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	stack.describe(t, stack.editor, started, "Quiet by default.")
 	stack.announced(t, stack.editor, started.ID, `{"summary":"Quiet by default"}`)
 	if len(stack.announcements(t, stack.editor, started.ID)) != 0 {
-		t.Fatal("an unlisted update used remembered destinations without consent")
+		t.Fatal("an unlisted update used remembered integrations without consent")
 	}
 
 	stack.describe(t, stack.editor, started, "Needs consent.")
 	refused := apitest.PublishWorkVersion(t, stack.router, stack.editor, started.ID,
-		fmt.Sprintf(`{"summary":"Needs consent","destinationIds":[%q]}`, hook.Destination.ID))
+		fmt.Sprintf(`{"summary":"Needs consent","integrationIds":[%q]}`, hook.Integration.ID))
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "announceUnlisted") {
-		t.Fatalf("selecting a destination for an unlisted work = %d: %s", refused.Code, refused.Body.String())
+		t.Fatalf("selecting a integration for an unlisted work = %d: %s", refused.Code, refused.Body.String())
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/works/"+started.ID+"/versions", nil), stack.editor))
@@ -379,7 +379,7 @@ func TestAnUnlistedWorkAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	}
 
 	stack.announced(t, stack.editor, started.ID, fmt.Sprintf(
-		`{"summary":"Needs consent","destinationIds":[%q],"announceUnlisted":true}`, hook.Destination.ID))
+		`{"summary":"Needs consent","integrationIds":[%q],"announceUnlisted":true}`, hook.Integration.ID))
 	stack.sendAnnouncementsAt(t, time.Now())
 	if len(stack.to.arrivals()) != 1 {
 		t.Fatalf("a consented unlisted announcement made %d requests, want 1", len(stack.to.arrivals()))
@@ -395,22 +395,22 @@ func TestAnUnlistedWorkAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 
 func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	other := apitest.VerifiedSignUp(t, stack.router, stack.outbox, "other@example.com", "other.creator")
 	theirs := stack.creatorWebhook(t, other)
 	disabled := stack.creatorWebhook(t, stack.editor)
-	if got := stack.updateDestinationRequest(t, stack.editor, http.MethodDelete,
-		updateDestinationsPath+"/"+disabled.Destination.ID+"/verification", ""); got.Code != http.StatusOK {
+	if got := stack.integrationRequest(t, stack.editor, http.MethodDelete,
+		integrationsPath+"/"+disabled.Integration.ID+"/verification", ""); got.Code != http.StatusOK {
 		t.Fatalf("disable = %d", got.Code)
 	}
 	started := stack.publishedCharacter(t, stack.editor)
 	stack.describe(t, stack.editor, started, "Changed.")
 
-	for _, id := range []string{theirs.Destination.ID, disabled.Destination.ID} {
+	for _, id := range []string{theirs.Integration.ID, disabled.Integration.ID} {
 		refused := apitest.PublishWorkVersion(t, stack.router, stack.editor, started.ID,
-			fmt.Sprintf(`{"summary":"Changed","destinationIds":[%q]}`, id))
-		if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "destinationIds") {
-			t.Fatalf("publishing to an ineligible destination = %d: %s", refused.Code, refused.Body.String())
+			fmt.Sprintf(`{"summary":"Changed","integrationIds":[%q]}`, id))
+		if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "integrationIds") {
+			t.Fatalf("publishing to an ineligible integration = %d: %s", refused.Code, refused.Body.String())
 		}
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
@@ -419,7 +419,7 @@ func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 		t.Fatal("a refused announcement left the update published")
 	}
 	var events int
-	if err := stack.pool.QueryRow(context.Background(), `select count(*) from work_update_events`).Scan(&events); err != nil {
+	if err := stack.pool.QueryRow(context.Background(), `select count(*) from work_announcements`).Scan(&events); err != nil {
 		t.Fatal(err)
 	}
 	if events != 0 {
@@ -429,12 +429,12 @@ func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 
 func TestAnnouncementsRetryOnTheSharedScheduleWithAnInjectedClock(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := stack.publishedCharacter(t, stack.editor)
 	stack.describe(t, stack.editor, started, "Retried.")
 	stack.announced(t, stack.editor, started.ID,
-		fmt.Sprintf(`{"summary":"Retried","destinationIds":[%q]}`, hook.Destination.ID))
+		fmt.Sprintf(`{"summary":"Retried","integrationIds":[%q]}`, hook.Integration.ID))
 	stack.answersWith(http.StatusServiceUnavailable)
 
 	at := time.Now().UTC()
@@ -459,55 +459,55 @@ func TestAnnouncementsRetryOnTheSharedScheduleWithAnInjectedClock(t *testing.T) 
 		t.Fatalf("the last attempt made %d requests, want 1", last)
 	}
 	spent := stack.onlyAnnouncement(t, stack.editor, started.ID)
-	if spent.State != "failed" || spent.SettledReason != "exhausted" || spent.Attempts != dispatch.Attempts {
-		t.Errorf("the run ended %+v, want failed/exhausted after %d attempts", spent, dispatch.Attempts)
+	if spent.State != "failed" || spent.SettledReason != "exhausted" || spent.Tries != dispatch.MaxTries {
+		t.Errorf("the run ended %+v, want failed/exhausted after %d attempts", spent, dispatch.MaxTries)
 	}
 	if again := stack.sendAnnouncementsAt(t, at.Add(365*24*time.Hour)); again != 0 {
 		t.Errorf("a spent run made %d further requests", again)
 	}
 	for _, one := range stack.to.arrivals() {
 		if one.Headers.Get(dispatch.IDHeader) != spent.ID {
-			t.Fatalf("an attempt carried webhook-id %q, want the delivery %q", one.Headers.Get(dispatch.IDHeader), spent.ID)
+			t.Fatalf("an attempt carried webhook-id %q, want the attempt %q", one.Headers.Get(dispatch.IDHeader), spent.ID)
 		}
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/works/"+started.ID+"/versions", nil), stack.editor))
 	if !strings.Contains(history.Body.String(), "Retried") {
-		t.Error("delivery failure undid the publication")
+		t.Error("attempt failure undid the publication")
 	}
 }
 
 func TestEveryAttemptRechecksTheWorkAndTheDestination(t *testing.T) {
 	t.Parallel()
-	type revoke func(t *testing.T, stack destinationStack, started apitest.StartedWork, hook addedDestination)
+	type revoke func(t *testing.T, stack integrationStack, started apitest.StartedWork, hook addedIntegration)
 	for name, one := range map[string]struct {
 		reason string
 		act    revoke
 	}{
-		"withheld": {"withheld", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
+		"withheld": {"withheld", func(t *testing.T, stack integrationStack, started apitest.StartedWork, _ addedIntegration) {
 			withheld := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
 				"/v1/works/"+started.ID+"/withhold", `{"reason":"Under review"}`, stack.editor))
 			if withheld.Code != http.StatusNoContent {
 				t.Fatalf("withhold = %d: %s", withheld.Code, withheld.Body.String())
 			}
 		}},
-		"unlisted": {"unlisted", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
+		"unlisted": {"unlisted", func(t *testing.T, stack integrationStack, started apitest.StartedWork, _ addedIntegration) {
 			unlisted := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
 				"/v1/works/"+started.ID+"/visibility", `{"visibility":"unlisted"}`, stack.editor))
 			if unlisted.Code != http.StatusNoContent {
 				t.Fatalf("unlist = %d: %s", unlisted.Code, unlisted.Body.String())
 			}
 		}},
-		"deleted": {"deleted", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
+		"deleted": {"deleted", func(t *testing.T, stack integrationStack, started apitest.StartedWork, _ addedIntegration) {
 			deleted := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 				http.MethodDelete, "/v1/works/"+started.ID, nil), stack.editor))
 			if deleted.Code != http.StatusNoContent {
 				t.Fatalf("delete = %d: %s", deleted.Code, deleted.Body.String())
 			}
 		}},
-		"withdrawn": {"withdrawn", func(t *testing.T, stack destinationStack, started apitest.StartedWork, _ addedDestination) {
+		"withdrawn": {"withdrawn", func(t *testing.T, stack integrationStack, started apitest.StartedWork, _ addedIntegration) {
 			stack.describe(t, stack.editor, started, "A replacement so the old one can go.")
-			stack.announced(t, stack.editor, started.ID, `{"summary":"Replacement","destinationIds":[]}`)
+			stack.announced(t, stack.editor, started.ID, `{"summary":"Replacement","integrationIds":[]}`)
 			withdraw := apitest.AuthorizedJSONRequest(t, http.MethodPost,
 				"/v1/works/"+started.ID+"/versions/2/withdraw",
 				`{"explanation":"This version gave incorrect guidance."}`, stack.editor)
@@ -515,28 +515,28 @@ func TestEveryAttemptRechecksTheWorkAndTheDestination(t *testing.T) {
 				t.Fatalf("withdraw = %d: %s", got.Code, got.Body.String())
 			}
 		}},
-		"disabled": {"disabled", func(t *testing.T, stack destinationStack, _ apitest.StartedWork, hook addedDestination) {
-			got := stack.updateDestinationRequest(t, stack.editor, http.MethodDelete,
-				updateDestinationsPath+"/"+hook.Destination.ID+"/verification", "")
+		"disabled": {"disabled", func(t *testing.T, stack integrationStack, _ apitest.StartedWork, hook addedIntegration) {
+			got := stack.integrationRequest(t, stack.editor, http.MethodDelete,
+				integrationsPath+"/"+hook.Integration.ID+"/verification", "")
 			if got.Code != http.StatusOK {
 				t.Fatalf("disable = %d: %s", got.Code, got.Body.String())
 			}
 		}},
-		"removed": {"removed", func(t *testing.T, stack destinationStack, _ apitest.StartedWork, hook addedDestination) {
-			got := stack.updateDestinationRequest(t, stack.editor, http.MethodDelete,
-				updateDestinationsPath+"/"+hook.Destination.ID, "")
+		"removed": {"removed", func(t *testing.T, stack integrationStack, _ apitest.StartedWork, hook addedIntegration) {
+			got := stack.integrationRequest(t, stack.editor, http.MethodDelete,
+				integrationsPath+"/"+hook.Integration.ID, "")
 			if got.Code != http.StatusNoContent {
 				t.Fatalf("remove = %d: %s", got.Code, got.Body.String())
 			}
 		}},
 	} {
 		t.Run(name, func(t *testing.T) {
-			stack := newDestinationStack(t)
+			stack := newIntegrationStack(t)
 			hook := stack.creatorWebhook(t, stack.editor)
 			started := stack.publishedCharacter(t, stack.editor)
 			stack.describe(t, stack.editor, started, "Changed before revocation.")
 			stack.announced(t, stack.editor, started.ID,
-				fmt.Sprintf(`{"summary":"Changed","destinationIds":[%q]}`, hook.Destination.ID))
+				fmt.Sprintf(`{"summary":"Changed","integrationIds":[%q]}`, hook.Integration.ID))
 			stack.answersWith(http.StatusServiceUnavailable)
 			at := time.Now().UTC()
 			if first := stack.sendAnnouncementsAt(t, at); first != 1 {
@@ -553,8 +553,8 @@ func TestEveryAttemptRechecksTheWorkAndTheDestination(t *testing.T) {
 			}
 			var state, reason string
 			err := stack.pool.QueryRow(context.Background(), `
-				select state, coalesce(settled_reason, '') from work_update_deliveries
-				 where event_id = (select id from work_update_events order by occurred_at limit 1)
+				select state, coalesce(settled_reason, '') from work_announcement_attempts
+				 where announcement_id = (select id from work_announcements order by occurred_at limit 1)
 			`).Scan(&state, &reason)
 			if err != nil {
 				t.Fatalf("read the cancelled announcement: %v", err)
@@ -568,12 +568,12 @@ func TestEveryAttemptRechecksTheWorkAndTheDestination(t *testing.T) {
 
 func TestAnUnconfirmedDiscordAnnouncementStaysVisibleAndIsNotSentAgain(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	channel := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
 	started := stack.publishedCharacter(t, stack.editor)
 	stack.describe(t, stack.editor, started, "Unconfirmed.")
 	stack.announced(t, stack.editor, started.ID,
-		fmt.Sprintf(`{"summary":"Unconfirmed","destinationIds":[%q]}`, channel.Destination.ID))
+		fmt.Sprintf(`{"summary":"Unconfirmed","integrationIds":[%q]}`, channel.Integration.ID))
 	stack.discord.answersSendWith(func(arrived) (int, string) { return http.StatusNoContent, "" })
 
 	stack.sendAnnouncementsAt(t, time.Now())
@@ -589,17 +589,17 @@ func TestAnUnconfirmedDiscordAnnouncementStaysVisibleAndIsNotSentAgain(t *testin
 
 func TestAnnouncementStatusIsTheOwnersAloneAndCarriesNoSecrets(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
 	started := stack.publishedCharacter(t, stack.editor)
 	stack.describe(t, stack.editor, started, "Status.")
 	stack.announced(t, stack.editor, started.ID,
-		fmt.Sprintf(`{"summary":"Status","destinationIds":[%q]}`, hook.Destination.ID))
+		fmt.Sprintf(`{"summary":"Status","integrationIds":[%q]}`, hook.Integration.ID))
 	stack.answersWith(http.StatusTeapot)
 	stack.sendAnnouncementsAt(t, time.Now())
 
 	for _, session := range []*http.Cookie{stack.authority, nil} {
-		request := httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID+"/announcements", nil)
+		request := httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID+"/announcement-attempts", nil)
 		if session != nil {
 			request = apitest.Authorized(request, session)
 		}
@@ -609,7 +609,7 @@ func TestAnnouncementStatusIsTheOwnersAloneAndCarriesNoSecrets(t *testing.T) {
 		}
 	}
 	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+started.ID+"/announcements", nil), stack.editor))
+		http.MethodGet, "/v1/works/"+started.ID+"/announcement-attempts", nil), stack.editor))
 	body := response.Body.String()
 	if strings.Contains(body, hook.Secret) || strings.Contains(body, stack.to.address()) {
 		t.Error("announcement status carries credentials or the endpoint address")
@@ -623,18 +623,18 @@ func TestAnnouncementStatusIsTheOwnersAloneAndCarriesNoSecrets(t *testing.T) {
 
 func TestARotatedSecretSignsAnnouncementsTwiceDuringTheOverlap(t *testing.T) {
 	t.Parallel()
-	stack := newDestinationStack(t)
+	stack := newIntegrationStack(t)
 	hook := stack.creatorWebhook(t, stack.editor)
-	rotated := stack.updateDestinationRequest(t, stack.editor, http.MethodPost,
-		updateDestinationsPath+"/"+hook.Destination.ID+"/secret", "")
-	var fresh addedDestination
+	rotated := stack.integrationRequest(t, stack.editor, http.MethodPost,
+		integrationsPath+"/"+hook.Integration.ID+"/secret", "")
+	var fresh addedIntegration
 	if rotated.Code != http.StatusOK || json.Unmarshal(rotated.Body.Bytes(), &fresh) != nil {
 		t.Fatalf("rotate = %d", rotated.Code)
 	}
 	started := stack.publishedCharacter(t, stack.editor)
 	stack.describe(t, stack.editor, started, "Rotated.")
 	stack.announced(t, stack.editor, started.ID,
-		fmt.Sprintf(`{"summary":"Rotated","destinationIds":[%q]}`, hook.Destination.ID))
+		fmt.Sprintf(`{"summary":"Rotated","integrationIds":[%q]}`, hook.Integration.ID))
 	stack.sendAnnouncementsAt(t, time.Now())
 
 	arrivals := stack.to.arrivals()

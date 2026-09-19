@@ -17,21 +17,18 @@ import { Mark, type Tone } from "@/components/register/RowParts";
 import { Button } from "@/components/ui/button";
 import { Gate } from "@/components/ui/gate";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
-import {
-  readUpdateDestinations,
-  type WorkUpdateDestination,
-} from "@/lib/api/work-destinations";
+import { readIntegrations, type WorkIntegration } from "@/lib/api/integrations";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import {
-  destinationRotating,
-  destinationStanding,
-  destinationWhere,
-} from "@/lib/update-destinations";
-import { DestinationEditor } from "./DestinationEditor";
+  integrationRotating,
+  integrationStanding,
+  integrationWhere,
+} from "@/lib/integrations";
+import { IntegrationEditor } from "./IntegrationEditor";
 
 const STATES: Record<
-  WorkUpdateDestination["state"],
+  WorkIntegration["state"],
   { icon: typeof CircleCheck; tone: Tone; word: string }
 > = {
   active: { icon: CircleCheck, tone: "accent", word: "Ready" },
@@ -39,7 +36,7 @@ const STATES: Record<
   unverified: { icon: CircleDashed, tone: "quiet", word: "Not verified" },
 };
 
-export function UpdateDestinationSettings() {
+export function IntegrationSettings() {
   const { account } = useAuth();
   if (account === undefined)
     return (
@@ -52,8 +49,8 @@ export function UpdateDestinationSettings() {
       <Gate
         action="Sign in"
         className="mt-10"
-        heading="Your destinations"
-        href="/sign-in?returnTo=%2Fsettings%2Fupdate-destinations"
+        heading="Your integrations"
+        href="/sign-in?returnTo=%2Fsettings%2Fupdate-integrations"
         line="Sign in to manage where updates to your work are announced."
       />
     );
@@ -63,17 +60,17 @@ export function UpdateDestinationSettings() {
         action="Verify email"
         className="mt-10"
         heading="Verify your account"
-        href="/verify-email?returnTo=%2Fsettings%2Fupdate-destinations"
-        line="Verify your email before connecting an update destination."
+        href="/verify-email?returnTo=%2Fsettings%2Fupdate-integrations"
+        line="Verify your email before adding an integration."
       />
     );
-  return <DestinationManager key={account.id} />;
+  return <IntegrationManager key={account.id} />;
 }
 
-function DestinationManager() {
-  const [destinations, setDestinations] = useState<
-    WorkUpdateDestination[] | null
-  >(null);
+function IntegrationManager() {
+  const [integrations, setIntegrations] = useState<WorkIntegration[] | null>(
+    null,
+  );
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<{
     id: string | null;
@@ -83,11 +80,11 @@ function DestinationManager() {
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setError("");
-    const answer = await readUpdateDestinations(signal);
+    const answer = await readIntegrations(signal);
     if (signal?.aborted) return;
     if (!answer.value)
-      setError(answer.error || "Could not read your destinations.");
-    else setDestinations(answer.value.destinations);
+      setError(answer.error || "Could not read your integrations.");
+    else setIntegrations(answer.value.integrations);
   }, []);
 
   useEffect(() => {
@@ -96,13 +93,13 @@ function DestinationManager() {
     return () => controller.abort();
   }, [load]);
 
-  function saved(destination: WorkUpdateDestination) {
+  function saved(integration: WorkIntegration) {
     setEditing((current) =>
-      current ? { ...current, id: destination.id } : current,
+      current ? { ...current, id: integration.id } : current,
     );
-    setDestinations((current) => {
-      const rest = (current ?? []).filter((one) => one.id !== destination.id);
-      return [...rest, destination].sort((a, b) =>
+    setIntegrations((current) => {
+      const rest = (current ?? []).filter((one) => one.id !== integration.id);
+      return [...rest, integration].sort((a, b) =>
         a.name.localeCompare(b.name),
       );
     });
@@ -113,7 +110,7 @@ function DestinationManager() {
     setEditing(null);
   }
 
-  const held = destinations ?? [];
+  const held = integrations ?? [];
 
   return (
     <>
@@ -123,13 +120,13 @@ function DestinationManager() {
           editing && "lg:max-w-none lg:pr-[30rem]",
         )}
       >
-        <section aria-labelledby="your-destinations">
+        <section aria-labelledby="your-integrations">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <h2
               className="font-display text-section font-medium tracking-tight text-ink"
-              id="your-destinations"
+              id="your-integrations"
             >
-              Your destinations
+              Your integrations
             </h2>
             <Button
               disabled={busy}
@@ -137,7 +134,7 @@ function DestinationManager() {
               variant="primary"
             >
               <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
-              Connect a destination
+              Add an integration
             </Button>
           </div>
 
@@ -151,9 +148,9 @@ function DestinationManager() {
                   Try again
                 </Button>
               </div>
-            ) : destinations === null ? (
+            ) : integrations === null ? (
               <output className="block rounded-plate bg-deep px-6 py-6 text-ui text-mute">
-                Loading your destinations…
+                Loading your integrations…
               </output>
             ) : held.length === 0 ? (
               <div className="flex flex-wrap items-center gap-4 rounded-plate bg-deep px-6 py-6">
@@ -163,14 +160,14 @@ function DestinationManager() {
                   strokeWidth={1.5}
                 />
                 <p className="min-w-0 flex-1 basis-64 font-prose text-ui text-mute">
-                  No destinations connected. Add a Discord channel or a webhook
-                  you run, then select it when you publish an update.
+                  No integrations connected. Add a Discord channel or a webhook
+                  you run, then choose it when you publish a version.
                 </p>
               </div>
             ) : (
               <ul className="m-0 grid list-none gap-2 p-0">
                 {held.map((one) => (
-                  <DestinationRow
+                  <IntegrationRow
                     key={one.id}
                     onOpen={() =>
                       setEditing({ id: one.id, key: `${one.id}-open` })
@@ -192,19 +189,19 @@ function DestinationManager() {
           <WorkspaceRail
             description={
               editing.id
-                ? "Changes take effect on the next update you publish."
-                : "Connecting a destination sends no announcement. Select it when you publish an update."
+                ? "Changes take effect on the next version you publish."
+                : "Adding an integration announces nothing. Choose it when you publish a version."
             }
             key={editing.key}
             onClose={close}
-            title={editing.id ? "Destination" : "Connect a destination"}
+            title={editing.id ? "Integration" : "Connect an integration"}
           >
-            <DestinationEditor
+            <IntegrationEditor
               busy={busy}
               existing={held.find((one) => one.id === editing.id) ?? null}
               onBusy={setBusy}
               onRemoved={(id) => {
-                setDestinations(
+                setIntegrations(
                   (current) => current?.filter((one) => one.id !== id) ?? [],
                 );
                 setEditing(null);
@@ -218,12 +215,12 @@ function DestinationManager() {
   );
 }
 
-function DestinationRow({
+function IntegrationRow({
   one,
   onOpen,
   open,
 }: {
-  one: WorkUpdateDestination;
+  one: WorkIntegration;
   onOpen: () => void;
   open: boolean;
 }) {
@@ -257,19 +254,19 @@ function DestinationRow({
               type="button"
             >
               {one.name}
-              <span className="sr-only">. Open this destination</span>
+              <span className="sr-only">. Open this integration</span>
             </button>
           </h3>
           <p className="font-ui text-ui text-mute wrap-anywhere">
-            {destinationWhere(one)}
+            {integrationWhere(one)}
           </p>
           <p className="mt-2 max-w-[54ch] font-prose text-meta text-mute">
-            {destinationStanding(one)}
+            {integrationStanding(one)}
           </p>
         </div>
 
         <div className="relative flex shrink-0 items-center gap-3">
-          {destinationRotating(one) ? (
+          {integrationRotating(one) ? (
             <Mark icon={RefreshCw}>Rotating</Mark>
           ) : null}
           <Mark icon={state.icon} tone={state.tone}>
@@ -287,19 +284,19 @@ function DestinationRow({
 
 const NOTES: { said: string; title: string }[] = [
   {
-    said: "The name, the update number or your version label, your one-line summary and a link to the history. Never the changes themselves, your notes or prompt text.",
+    said: "The name, the version number or your version label, your one-line summary and a link to the history. Never the changes themselves, your notes or prompt text.",
     title: "What an announcement carries",
   },
   {
-    said: "Only a published update. A first publication, a private save and a correction to published notes send nothing, and an unlisted work stays quiet unless you say its link may travel.",
+    said: "Only a published version. A first publication, a private save and a correction to published notes send nothing, and an unlisted work stays quiet unless you say its link may travel.",
     title: "When one is sent",
   },
   {
-    said: "A destination that does not answer is tried again for about three days. Every attempt carries the same webhook-id, so a receiver that has seen that value can drop the repeat.",
-    title: "If a destination is down",
+    said: "An integration that does not answer is tried again for about three days. Every attempt carries the same webhook-id, so a receiver that has seen that value can drop the repeat.",
+    title: "If an integration is down",
   },
   {
-    said: "Two announcements can arrive in either order, so compare occurredAt and the update number rather than arrival order. Verify Illarin's signature with the signing secret saved on your server.",
+    said: "Two announcements can arrive in either order, so compare occurredAt and the version number rather than arrival order. Verify Illarin's signature with the signing secret saved on your server.",
     title: "What a receiver should check",
   },
 ];

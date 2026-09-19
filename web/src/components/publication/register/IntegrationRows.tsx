@@ -30,30 +30,30 @@ import {
 import { Field, TextInput } from "@/components/ui/field";
 import {
   addChannel,
-  addDestination,
-  disableDestination,
-  removeDestination,
+  addIntegration,
+  disableIntegration,
+  removeIntegration,
   updateChannel,
-  updateDestination,
-  verifyDestination,
+  updateIntegration,
+  verifyIntegration,
 } from "@/lib/api/publication";
 import type {
-  AddedPublicationDestination,
-  PublicationDestination,
-  PublicationDestinationType,
-  PublicationEvent,
+  AddedBlogIntegration,
+  BlogAnnouncementType,
+  BlogIntegration,
+  BlogIntegrationType,
 } from "@/lib/api/query";
 import {
-  destinationActions,
-  destinationStanding,
-  destinationTakes,
+  integrationActions,
+  integrationStanding,
+  integrationTakes,
   nothingIn,
 } from "@/lib/publication-register";
-import { DestinationKind, EventChoice } from "./choices";
+import { AnnouncementChoice, IntegrationKind } from "./choices";
 import { TakeTheSecret } from "./SecretStep";
 
 const STATE_MARKS: Record<
-  PublicationDestination["state"],
+  BlogIntegration["state"],
   { icon: typeof CircleCheck; tone: Tone }
 > = {
   active: { icon: CircleCheck, tone: "accent" },
@@ -61,22 +61,22 @@ const STATE_MARKS: Record<
   unverified: { icon: CircleDashed, tone: "quiet" },
 };
 
-export function DestinationRows({
-  destinations,
+export function IntegrationRows({
+  integrations,
   onFailure,
   onOpen,
   onSaved,
 }: {
-  destinations: PublicationDestination[];
+  integrations: BlogIntegration[];
   onFailure: (message: string) => void;
-  onOpen: (destination: PublicationDestination | null) => void;
-  onSaved: (saved: PublicationDestination) => void;
+  onOpen: (integration: BlogIntegration | null) => void;
+  onSaved: (saved: BlogIntegration) => void;
 }) {
   const [working, setWorking] = useState("");
 
-  async function prove(one: PublicationDestination) {
+  async function prove(one: BlogIntegration) {
     setWorking(one.id);
-    const answer = await verifyDestination(one.id);
+    const answer = await verifyIntegration(one.id);
     setWorking("");
     if (answer.error || !answer.value) {
       onFailure(answer.error ?? "");
@@ -91,20 +91,20 @@ export function DestinationRows({
       <PanelHead
         action={
           <StartAction icon={Plus} onClick={() => onOpen(null)}>
-            Add a destination
+            Add an integration
           </StartAction>
         }
         id="register-heading"
-        title="Destinations"
+        title="Integrations"
       />
 
-      {destinations.length === 0 ? (
-        <Nothing>{nothingIn("destinations")}</Nothing>
+      {integrations.length === 0 ? (
+        <Nothing>{nothingIn("integrations")}</Nothing>
       ) : (
         <Rows>
-          {destinations.map((one) => {
+          {integrations.map((one) => {
             const state = STATE_MARKS[one.state];
-            const open = destinationActions(one);
+            const open = integrationActions(one);
             return (
               <Row
                 aside={
@@ -120,7 +120,7 @@ export function DestinationRows({
                 facts={
                   <>
                     <span>{one.host}</span>
-                    <span>{destinationTakes(one)}</span>
+                    <span>{integrationTakes(one)}</span>
                   </>
                 }
                 key={one.id}
@@ -135,7 +135,7 @@ export function DestinationRows({
                 }
                 onOpen={() => onOpen(one)}
                 open={`Edit ${one.name}`}
-                standing={destinationStanding(one)}
+                standing={integrationStanding(one)}
                 title={one.name}
                 trailing={
                   one.type === "discord" ? <Mark>Discord</Mark> : undefined
@@ -149,7 +149,7 @@ export function DestinationRows({
   );
 }
 
-export function DestinationStep({
+export function IntegrationStep({
   existing,
   onClose,
   onFailure,
@@ -157,30 +157,30 @@ export function DestinationStep({
   onRotate,
   onSaved,
 }: {
-  existing: PublicationDestination | null;
+  existing: BlogIntegration | null;
   onClose: () => void;
   onFailure: (message: string) => void;
   onRemoved: () => void;
   onRotate: () => void;
-  onSaved: (saved: PublicationDestination) => void;
+  onSaved: (saved: BlogIntegration) => void;
 }) {
-  const [kind, setType] = useState<PublicationDestinationType>(
+  const [kind, setType] = useState<BlogIntegrationType>(
     existing?.type ?? "discord",
   );
   const [name, setName] = useState(existing?.name ?? "");
   const [address, setAddress] = useState("");
   const [roleId, setRoleId] = useState(existing?.channel?.roleId ?? "");
   const [roleName, setRoleName] = useState(existing?.channel?.roleName ?? "");
-  const [events, setEvents] = useState<PublicationEvent[]>(
-    existing?.events ?? ["publication.post.published.v1"],
+  const [announced, setAnnounced] = useState<BlogAnnouncementType[]>(
+    existing?.announcements ?? ["publication.post.published.v1"],
   );
-  const [made, setMade] = useState<AddedPublicationDestination | null>(null);
+  const [made, setMade] = useState<AddedBlogIntegration | null>(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [working, setWorking] = useState("");
 
   const open = existing
-    ? destinationActions(existing)
+    ? integrationActions(existing)
     : { rotate: false, switchOff: false, verify: false };
   const ready = existing
     ? Boolean(name.trim())
@@ -201,12 +201,16 @@ export function DestinationStep({
         : addChannel({ ...channel, address: address.trim() });
     }
     return existing
-      ? updateDestination(existing.id, {
+      ? updateIntegration(existing.id, {
           address: address.trim() || undefined,
-          events,
+          announcements: announced,
           name: name.trim(),
         })
-      : addDestination({ address: address.trim(), events, name: name.trim() });
+      : addIntegration({
+          address: address.trim(),
+          announcements: announced,
+          name: name.trim(),
+        });
   }
 
   async function save() {
@@ -218,7 +222,7 @@ export function DestinationStep({
       return;
     }
     if ("secret" in written.value) {
-      onSaved(written.value.destination);
+      onSaved(written.value.integration);
       setMade(written.value);
       return;
     }
@@ -228,7 +232,7 @@ export function DestinationStep({
 
   async function stand(
     what: "verify" | "switchOff",
-    run: () => ReturnType<typeof verifyDestination>,
+    run: () => ReturnType<typeof verifyIntegration>,
   ) {
     setWorking(what);
     const answer = await run();
@@ -244,7 +248,7 @@ export function DestinationStep({
   async function remove() {
     if (!existing) return;
     setBusy(true);
-    const answer = await removeDestination(existing.id);
+    const answer = await removeIntegration(existing.id);
     setBusy(false);
     if (answer.error) {
       onFailure(answer.error);
@@ -279,7 +283,7 @@ export function DestinationStep({
           <Consequence
             action="Remove"
             busy={busy}
-            confirm="Remove destination"
+            confirm="Remove integration"
             onConfirm={remove}
           >
             Everything already sent to {existing.name} stays in the record.
@@ -297,7 +301,7 @@ export function DestinationStep({
               busy={working === "verify"}
               icon={SatelliteDish}
               onClick={() =>
-                stand("verify", () => verifyDestination(existing.id))
+                stand("verify", () => verifyIntegration(existing.id))
               }
             >
               {working === "verify" ? "Verifying…" : "Verify endpoint"}
@@ -308,10 +312,10 @@ export function DestinationStep({
               busy={working === "switchOff"}
               icon={Power}
               onClick={() =>
-                stand("switchOff", () => disableDestination(existing.id))
+                stand("switchOff", () => disableIntegration(existing.id))
               }
             >
-              Disable destination
+              Switch the integration off
             </StepAction>
           ) : null}
           {open.rotate ? (
@@ -322,7 +326,7 @@ export function DestinationStep({
         </div>
       ) : null}
 
-      {existing ? null : <DestinationKind chosen={kind} onChosen={setType} />}
+      {existing ? null : <IntegrationKind chosen={kind} onChosen={setType} />}
 
       {existing?.channel ? (
         <div className="rounded-plate bg-deep p-4">
@@ -344,12 +348,12 @@ export function DestinationStep({
 
       <Field
         hint="Shown to contributors when choosing announcements. The endpoint URL stays private."
-        htmlFor="destination-name"
+        htmlFor="integration-name"
         label="Name"
       >
         <TextInput
           autoComplete="off"
-          id="destination-name"
+          id="integration-name"
           maxLength={48}
           onChange={(event) => setName(event.target.value)}
           placeholder={kind === "discord" ? "Announcements" : "Release feed"}
@@ -359,12 +363,12 @@ export function DestinationStep({
 
       <Field
         hint={addressHint(kind, existing)}
-        htmlFor="destination-address"
+        htmlFor="integration-address"
         label="Webhook URL"
       >
         <TextInput
           autoComplete="off"
-          id="destination-address"
+          id="integration-address"
           maxLength={300}
           onChange={(event) => setAddress(event.target.value)}
           placeholder={
@@ -381,13 +385,13 @@ export function DestinationStep({
         <>
           <Field
             hint="The one role a writer may ask an announcement to mention. Leave both role fields empty to approve none."
-            htmlFor="destination-role-id"
+            htmlFor="integration-role-id"
             label="Role id"
           >
             <TextInput
               autoComplete="off"
               className="font-mono"
-              id="destination-role-id"
+              id="integration-role-id"
               inputMode="numeric"
               maxLength={20}
               onChange={(event) => setRoleId(event.target.value)}
@@ -397,12 +401,12 @@ export function DestinationStep({
           </Field>
           <Field
             hint="Shown to contributors instead of the role ID."
-            htmlFor="destination-role-name"
+            htmlFor="integration-role-name"
             label="Role name"
           >
             <TextInput
               autoComplete="off"
-              id="destination-role-name"
+              id="integration-role-name"
               maxLength={48}
               onChange={(event) => setRoleName(event.target.value)}
               placeholder="Blog readers"
@@ -411,16 +415,16 @@ export function DestinationStep({
           </Field>
         </>
       ) : (
-        <EventChoice chosen={events} onChosen={setEvents} />
+        <AnnouncementChoice chosen={announced} onChosen={setAnnounced} />
       )}
     </StepForm>
   );
 }
 
-function hint(kind: PublicationDestinationType, editing: boolean): string {
+function hint(kind: BlogIntegrationType, editing: boolean): string {
   if (kind === "discord") {
     return editing
-      ? "Illarin masks the address after you save it. Leave it empty to keep the channel this destination already announces in."
+      ? "Illarin masks the address after you save it. Leave it empty to keep the channel this integration already announces in."
       : "One Discord channel Illarin announces a post's first publication in. Illarin asks Discord what the address points at before saving it.";
   }
   return editing
@@ -429,8 +433,8 @@ function hint(kind: PublicationDestinationType, editing: boolean): string {
 }
 
 function addressHint(
-  kind: PublicationDestinationType,
-  existing: PublicationDestination | null,
+  kind: BlogIntegrationType,
+  existing: BlogIntegration | null,
 ): string {
   if (existing) return `Now ${existing.address}. Leave this empty to keep it.`;
   if (kind === "discord") {
