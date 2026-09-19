@@ -15,7 +15,7 @@ import (
 func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	t.Parallel()
 	svc, pool := newTestService(t)
-	owner := revisionOwner(t, svc, "candidate.owner")
+	owner := originalFileOwner(t, svc, "candidate.owner")
 	id, err := svc.StartFromNothing(context.Background(), owner, "character", "")
 	if err != nil {
 		t.Fatal(err)
@@ -26,7 +26,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	defer writer.Close()
 	done := make(chan error, 1)
 	go func() {
-		_, err := svc.AcceptRevision(context.Background(), RevisionInput{
+		_, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 			OwnerID: owner, WorkID: id, Filename: "candidate.json", File: reader,
 		}, candidate)
 		done <- err
@@ -54,7 +54,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	if err := staff.NewService(pool).ClearWithhold(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
-	_, err = svc.AcceptRevision(context.Background(), RevisionInput{
+	_, err = svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: id, Filename: "candidate.json", File: bytes.NewBufferString(`{"candidate":"private"}`),
 	}, candidate)
 	var conflict *work.VersionConflict
@@ -70,14 +70,14 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	}
 }
 
-func TestQueuedRevisionCannotOverwriteANewerWorkingCopy(t *testing.T) {
+func TestAQueuedOriginalFileCannotOverwriteNewerDraftedChanges(t *testing.T) {
 	t.Parallel()
 	registry := registryWithModule(t, typeModule{id: "as_character", workType: "character"})
 	svc, _ := newTestServiceWithRegistry(t, registry)
-	owner := revisionOwner(t, svc, "queued.owner")
+	owner := originalFileOwner(t, svc, "queued.owner")
 	created := ingestOne(t, svc, owner, "card.json", []byte(`{"spec":"as_character"}`))
 	candidate := currentCandidate(t, svc, created.ID)
-	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
+	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: created.ID, Filename: "card.json", File: bytes.NewBufferString(`{"spec":"as_character"}`),
 	}, candidate)
 	if err != nil {
@@ -94,14 +94,14 @@ func TestQueuedRevisionCannotOverwriteANewerWorkingCopy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if finished.Status != IngestFailed || finished.Failure == nil || finished.Failure.Reason != "working_copy_conflict" {
+	if finished.Status != IngestFailed || finished.Failure == nil || finished.Failure.Reason != "drafted_changes_conflict" {
 		t.Fatalf("stale upload = %+v", finished)
 	}
-	page, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
+	page, err := works(svc).DraftedChanges(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if page.Name != "Newer work" || page.WorkingCopyVersion == nil || *page.WorkingCopyVersion != candidate.SavedVersion {
+	if page.Name != "Newer work" || page.DraftedChangesVersion == nil || *page.DraftedChangesVersion != candidate.SavedVersion {
 		t.Fatalf("stale upload changed the candidate: %+v", page)
 	}
 }

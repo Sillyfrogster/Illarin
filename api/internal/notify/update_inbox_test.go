@@ -397,7 +397,7 @@ func (s updateInboxStack) resizeMessages(t *testing.T) {
 
 func (s updateInboxStack) publishUpdate(t *testing.T, body string) {
 	t.Helper()
-	if got := apitest.PublishWorkUpdate(t, s.router, s.creator, s.workID, body); got.Code != http.StatusOK {
+	if got := apitest.PublishWorkVersion(t, s.router, s.creator, s.workID, body); got.Code != http.StatusOK {
 		t.Fatalf("publish an update = %d, want 200: %s", got.Code, got.Body.String())
 	}
 }

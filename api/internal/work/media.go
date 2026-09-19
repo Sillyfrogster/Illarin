@@ -123,10 +123,6 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.WorkID); err != nil {
 		return Media{}, err
 	}
-	fingerprint, err := s.contentFingerprint(ctx, tx, in.WorkID)
-	if err != nil {
-		return Media{}, err
-	}
 	id := uuid.New()
 	_, err = tx.Exec(ctx, `
 		insert into work_media (id, work_id, role, width, height, blob_id)
@@ -147,9 +143,6 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 		if err := setAlternateCoverMedia(ctx, tx, in.WorkID, id); err != nil {
 			return Media{}, err
 		}
-	}
-	if err := s.moveContentGeneration(ctx, tx, in.WorkID, fingerprint); err != nil {
-		return Media{}, err
 	}
 	if err := candidate.Commit(ctx, tx, in.WorkID); err != nil {
 		return Media{}, fmt.Errorf("commit media addition: %w", err)
@@ -353,10 +346,10 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 	err := s.pool.QueryRow(ctx, `
 		select media.blob_id, blob.sha256,
 		       work.lifecycle = 'draft' or not exists (
-		           select 1 from work_snapshot_media recorded
-		           join work_snapshots snapshot on snapshot.id = recorded.snapshot_id
+		           select 1 from work_version_media recorded
+		           join work_versions version on version.id = recorded.version_id
 		           where recorded.work_id = work.id and recorded.media_id = media.id
-		             and snapshot.withdrawn_at is null
+		             and version.withdrawn_at is null
 		       ), coalesce(work.owner_id = $2, false), work.lifecycle = 'draft'
 		  from work_media media
 		  join works work on work.id = media.work_id

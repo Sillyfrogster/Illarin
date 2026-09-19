@@ -122,10 +122,10 @@ func (s *Service) ResolvePromptCorrespondence(
 			return ErrUnknownPrompt
 		}
 		if _, err := tx.Exec(ctx, `
-			insert into work_snapshot_prompt_matches
-				(snapshot_id, current_fragment_id, recorded_fragment_id)
+			insert into work_version_prompt_matches
+				(version_id, current_fragment_id, recorded_fragment_id)
 			values ($1, $2, $3)
-			on conflict (snapshot_id, current_fragment_id) do update
+			on conflict (version_id, current_fragment_id) do update
 			set recorded_fragment_id = excluded.recorded_fragment_id,
 				resolved_at = now()
 		`, version.ID, answer.Current, answer.Recorded); err != nil {
@@ -151,7 +151,7 @@ func ownedWork(ctx context.Context, tx pgx.Tx, ownerID, workID uuid.UUID) error 
 
 func recordedNumbers(ctx context.Context, tx pgx.Tx, workID uuid.UUID) ([]int, error) {
 	rows, err := tx.Query(ctx,
-		`select number from work_snapshots where work_id = $1 order by number desc`, workID)
+		`select number from work_versions where work_id = $1 order by number desc`, workID)
 	if err != nil {
 		return nil, fmt.Errorf("list the recorded versions: %w", err)
 	}
@@ -167,10 +167,10 @@ func recordedNumbers(ctx context.Context, tx pgx.Tx, workID uuid.UUID) ([]int, e
 	return numbers, rows.Err()
 }
 
-func settledPrompts(ctx context.Context, tx pgx.Tx, snapshotID uuid.UUID) (map[uuid.UUID]bool, error) {
+func settledPrompts(ctx context.Context, tx pgx.Tx, versionID uuid.UUID) (map[uuid.UUID]bool, error) {
 	rows, err := tx.Query(ctx,
-		`select current_fragment_id from work_snapshot_prompt_matches where snapshot_id = $1`,
-		snapshotID)
+		`select current_fragment_id from work_version_prompt_matches where version_id = $1`,
+		versionID)
 	if err != nil {
 		return nil, fmt.Errorf("read the settled prompts: %w", err)
 	}

@@ -25,9 +25,9 @@ func TestHandlersRefuseMalformedInputBeforeDoingAnything(t *testing.T) {
 	}{
 		{"path id that is not a uuid", http.MethodGet, "/v1/works/not-a-uuid", nil,
 			http.StatusBadRequest, "Invalid format for parameter id: "},
-		{"second path id that is not a uuid", http.MethodDelete, "/v1/works/" + someID + "/revisions/nope", nil,
+		{"second path id that is not a uuid", http.MethodDelete, "/v1/works/" + someID + "/original-file/nope", nil,
 			http.StatusBadRequest, "Invalid format for parameter operationId: "},
-		{"path number that is not a number", http.MethodPost, "/v1/works/" + someID + "/updates/two/withdraw", nil,
+		{"path number that is not a number", http.MethodPost, "/v1/works/" + someID + "/versions/two/withdraw", nil,
 			http.StatusBadRequest, "Invalid format for parameter number: "},
 		{"query number that is not a number", http.MethodGet, "/v1/works?limit=many", nil,
 			http.StatusBadRequest, "Invalid format for parameter limit: "},
@@ -37,11 +37,11 @@ func TestHandlersRefuseMalformedInputBeforeDoingAnything(t *testing.T) {
 			http.StatusBadRequest, "Invalid format for parameter type: "},
 		{"missing required query value", http.MethodGet, "/v1/auth/discord/callback", nil,
 			http.StatusBadRequest, "Query argument state is required, but not found"},
-		{"missing working copy version", http.MethodPost, "/v1/works/" + someID + "/blocks", nil,
-			http.StatusBadRequest, "Header parameter X-Working-Copy-Version is required, but not found"},
-		{"working copy version that is not a number", http.MethodPost, "/v1/works/" + someID + "/blocks",
-			map[string]string{"X-Working-Copy-Version": "latest"},
-			http.StatusBadRequest, "Invalid format for parameter X-Working-Copy-Version: "},
+		{"missing drafted changes version", http.MethodPost, "/v1/works/" + someID + "/blocks", nil,
+			http.StatusBadRequest, "Header parameter X-Drafted-Changes-Version is required, but not found"},
+		{"drafted changes version that is not a number", http.MethodPost, "/v1/works/" + someID + "/blocks",
+			map[string]string{"X-Drafted-Changes-Version": "latest"},
+			http.StatusBadRequest, "Invalid format for parameter X-Drafted-Changes-Version: "},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

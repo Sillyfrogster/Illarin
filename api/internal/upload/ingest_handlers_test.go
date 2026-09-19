@@ -179,13 +179,13 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 		t.Fatalf("repeated upload status = %d, want 202: %s", repeated.Code, repeated.Body.String())
 	}
 	repeatedRevision := apitest.Send(t, limitedRouter, apitest.Authorized(
-		apitest.RevisionRequest(t, created.ID, "same.bin", shared), firstSession,
+		apitest.OriginalFileRequest(t, created.ID, "same.bin", shared), firstSession,
 	))
 	if repeatedRevision.Code != http.StatusAccepted {
 		t.Fatalf("repeated revision status = %d, want 202: %s", repeatedRevision.Code, repeatedRevision.Body.String())
 	}
 	distinctRevision := apitest.Send(t, limitedRouter, apitest.Authorized(
-		apitest.RevisionRequest(t, created.ID, "different.bin", []byte("different canonical bytes")), firstSession,
+		apitest.OriginalFileRequest(t, created.ID, "different.bin", []byte("different canonical bytes")), firstSession,
 	))
 	if distinctRevision.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("distinct revision status = %d, want 413: %s", distinctRevision.Code, distinctRevision.Body.String())
@@ -1090,7 +1090,7 @@ func TestIngestContinuesAfterTheUploadConnectionCloses(t *testing.T) {
 	}
 }
 
-func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
+func TestANewOriginalFileKeepsThePublishedBytesAndDetails(t *testing.T) {
 	t.Parallel()
 	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Evening Theme")
@@ -1108,17 +1108,17 @@ func TestARevisionUploadKeepsThePublishedBytesAndCatalogEntry(t *testing.T) {
 	}
 	firstFile := servedSourcePath(t, r, created.ID)
 
-	revision := apitest.Send(t, r, apitest.Authorized(
-		apitest.RevisionRequest(t, created.ID, "evening.lumitheme", []byte("second bytes")), session,
+	uploaded := apitest.Send(t, r, apitest.Authorized(
+		apitest.OriginalFileRequest(t, created.ID, "evening.lumitheme", []byte("second bytes")), session,
 	))
-	if revision.Code != http.StatusAccepted {
-		t.Fatalf("status = %d, want 202. body: %s", revision.Code, revision.Body.String())
+	if uploaded.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202. body: %s", uploaded.Code, uploaded.Body.String())
 	}
 	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process revision: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, created.ID, revision.Header().Get("Location"))
-	updated := apitest.PollIngestWork(t, r, session, revision.Header().Get("Location"))
+	apitest.AcceptReplacementPreview(t, r, session, created.ID, uploaded.Header().Get("Location"))
+	updated := apitest.PollIngestWork(t, r, session, uploaded.Header().Get("Location"))
 	if updated.ID != created.ID {
 		t.Fatalf("revision made work %s, want %s", updated.ID, created.ID)
 	}
@@ -1144,7 +1144,7 @@ func servedSourcePath(t *testing.T, r *gin.Engine, workID string) string {
 	return path
 }
 
-func TestARevisionForSomebodyElsesWorkIsNotFound(t *testing.T) {
+func TestAnOriginalFileForSomebodyElsesWorkIsNotFound(t *testing.T) {
 	t.Parallel()
 	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Evening Theme")
@@ -1155,7 +1155,7 @@ func TestARevisionForSomebodyElsesWorkIsNotFound(t *testing.T) {
 	}
 	created := apitest.PollIngestWork(t, r, session, upload.Header().Get("Location"))
 
-	stranger := apitest.Send(t, r, apitest.RevisionRequest(t, created.ID, "evening.lumitheme", []byte("second")))
+	stranger := apitest.Send(t, r, apitest.OriginalFileRequest(t, created.ID, "evening.lumitheme", []byte("second")))
 	if stranger.Code != http.StatusUnauthorized {
 		t.Fatalf("signed-out status = %d, want 401", stranger.Code)
 	}

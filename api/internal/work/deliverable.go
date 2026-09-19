@@ -22,24 +22,24 @@ func (s *Service) DeliverableWork(
 	workID uuid.UUID,
 ) (connect.Deliverable, error) {
 	var found connect.Deliverable
-	var generation int32
-	var revisionID, coverID pgtype.UUID
+	var number int32
+	var originalFileID, coverID pgtype.UUID
 	err := q.QueryRow(ctx, `
-		select type, name, content_generation, current_revision_id, cover_media_id
+		select type, name, version_number, original_file_id, cover_media_id
 		  from work_public.works
 		 where id = $1
 		   and deleted_at is null
 		   and withheld_at is null
 		   and lifecycle = 'published'
-	`, workID).Scan(&found.Type, &found.Name, &generation, &revisionID, &coverID)
+	`, workID).Scan(&found.Type, &found.Name, &number, &originalFileID, &coverID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return connect.Deliverable{}, connect.ErrNotDeliverable
 	}
 	if err != nil {
 		return connect.Deliverable{}, fmt.Errorf("read the work to deliver: %w", err)
 	}
-	found.ContentGeneration = int(generation)
-	found.HasOriginal = revisionID.Valid
+	found.VersionNumber = int(number)
+	found.HasOriginal = originalFileID.Valid
 
 	offered, err := deliveryTargets(ctx, q, workID)
 	if err != nil {

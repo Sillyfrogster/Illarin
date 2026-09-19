@@ -155,7 +155,7 @@ func run() error {
 	publications := blog.NewService(pool, images, publishing)
 	updateDestinations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	versions := version.NewService(pool, svc)
-	versions.OnUpdatePublished(updateDestinations.Announce, version.TellFollowers)
+	versions.OnPublished(updateDestinations.Announce, version.TellFollowers)
 	links := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	deliveries := connect.NewSends(pool, svc, links, connect.DefaultSettings())
 	notifications := notify.NewService(pool)

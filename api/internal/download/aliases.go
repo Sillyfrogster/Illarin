@@ -10,6 +10,7 @@ import (
 func registerAliases(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
 	routes.Handle(http.MethodGet, "/v1/assets/:id/updates/:number/downloads", d.JSON, h.GetRecordedVersionDownloads)
+	routes.Handle(http.MethodGet, "/v1/works/:id/updates/:number/downloads", d.JSON, h.GetRecordedVersionDownloads)
 }
 
 // The field name a version's downloads answered to before the rename, kept for sixty days

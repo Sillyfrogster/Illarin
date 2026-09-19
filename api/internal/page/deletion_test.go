@@ -150,9 +150,9 @@ func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 	var digest []byte
 	if err := pool.QueryRow(context.Background(), `
 		select blob.sha256
-		  from work_revisions revision
-		  join blobs blob on blob.id = revision.blob_id
-		 where revision.work_id = $1
+		  from work_original_files original
+		  join blobs blob on blob.id = original.blob_id
+		 where original.work_id = $1
 	`, workID).Scan(&digest); err != nil {
 		t.Fatalf("read work digest: %v", err)
 	}

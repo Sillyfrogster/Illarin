@@ -358,7 +358,7 @@ func (s publicationStack) save(
 	t.Helper()
 	body, err := json.Marshal(working)
 	if err != nil {
-		t.Fatalf("encode working copy: %v", err)
+		t.Fatalf("encode drafted changes: %v", err)
 	}
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/publication/posts/"+id, string(body),

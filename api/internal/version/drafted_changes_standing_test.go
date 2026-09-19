@@ -9,30 +9,30 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
-type workingCopyStanding struct {
+type draftedChangesStanding struct {
 	UnpublishedChanges bool `json:"unpublishedChanges"`
 }
 
-func readWorkingCopyStanding(
+func readDraftedChangesStanding(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
 	workID string,
-) workingCopyStanding {
+) draftedChangesStanding {
 	t.Helper()
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+workID+"?workingCopy=true", nil), session))
+		http.MethodGet, "/v1/works/"+workID+"?draftedChanges=true", nil), session))
 	if response.Code != http.StatusOK {
-		t.Fatalf("read the working copy = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("read the drafted changes = %d: %s", response.Code, response.Body.String())
 	}
-	var standing workingCopyStanding
+	var standing draftedChangesStanding
 	if err := json.Unmarshal(response.Body.Bytes(), &standing); err != nil {
-		t.Fatalf("decode the working copy: %v", err)
+		t.Fatalf("decode the drafted changes: %v", err)
 	}
 	return standing
 }
 
-func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
+func TestADraftedChangesSaysWhetherReadersHaveSeenItYet(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
@@ -40,7 +40,7 @@ func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
 	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if readWorkingCopyStanding(t, r, session, started.ID).UnpublishedChanges {
+	if readDraftedChangesStanding(t, r, session, started.ID).UnpublishedChanges {
 		t.Error("a freshly published work reads as having changes readers cannot see")
 	}
 
@@ -50,16 +50,16 @@ func TestAWorkingCopySaysWhetherReadersHaveSeenItYet(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if !readWorkingCopyStanding(t, r, session, started.ID).UnpublishedChanges {
+	if !readDraftedChangesStanding(t, r, session, started.ID).UnpublishedChanges {
 		t.Error("a private edit reads as though readers already have it")
 	}
 
-	update := apitest.PublishWorkUpdate(t, r, session, started.ID,
+	update := apitest.PublishWorkVersion(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf"}`)
 	if update.Code != http.StatusOK {
 		t.Fatalf("publish an update status = %d, want 200: %s", update.Code, update.Body.String())
 	}
-	if readWorkingCopyStanding(t, r, session, started.ID).UnpublishedChanges {
-		t.Error("a published update left the working copy reading as unpublished")
+	if readDraftedChangesStanding(t, r, session, started.ID).UnpublishedChanges {
+		t.Error("a published update left the drafted changes reading as unpublished")
 	}
 }

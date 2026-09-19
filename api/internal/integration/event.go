@@ -51,8 +51,8 @@ type announced struct {
 func (s *Service) Announce(
 	ctx context.Context,
 	tx pgx.Tx,
-	published version.Update,
-	choice version.UpdateAnnouncement,
+	published version.Version,
+	choice version.Announcement,
 ) error {
 	var held announced
 	err := tx.QueryRow(ctx, `
@@ -86,7 +86,7 @@ func (s *Service) Announce(
 	}
 	_, err = tx.Exec(ctx, `
 		insert into work_update_events
-		       (id, work_id, snapshot_id, type, occurred_at, unlisted_consent, payload)
+		       (id, work_id, version_id, type, occurred_at, unlisted_consent, payload)
 		values ($1, $2, $3, $4, $5, $6, $7)
 	`, eventID, published.WorkID, published.ID, EventUpdatePublished, occurred,
 		choice.AnnounceUnlisted, body)
@@ -117,7 +117,7 @@ func (s *Service) pick(
 	tx pgx.Tx,
 	owner, workID uuid.UUID,
 	unlisted bool,
-	choice version.UpdateAnnouncement,
+	choice version.Announcement,
 ) ([]picked, error) {
 	if choice.DestinationIDs == nil {
 		if unlisted {
@@ -146,7 +146,7 @@ func (s *Service) pick(
 		return nil, err
 	}
 	if len(found) != len(wanted) {
-		return nil, version.ErrUpdateDestinationIneligible
+		return nil, version.ErrDestinationIneligible
 	}
 	if err := remember(ctx, tx, workID, wanted); err != nil {
 		return nil, err

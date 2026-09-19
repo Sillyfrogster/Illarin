@@ -37,8 +37,8 @@ func (s *Sends) Sync(
 	for _, entry := range entries {
 		workIDs = append(workIDs, entry.WorkID)
 		reported := int32(0)
-		if entry.ContentGeneration != nil {
-			reported = int32(*entry.ContentGeneration)
+		if entry.VersionNumber != nil {
+			reported = int32(*entry.VersionNumber)
 		}
 		generations = append(generations, reported)
 	}
@@ -51,7 +51,7 @@ func (s *Sends) Sync(
 	queries := db.New(tx)
 	accepted, err := queries.ReportLibraryEntries(ctx, db.ReportLibraryEntriesParams{
 		InstanceID: uuidValue(instance.ID), WorkIds: uuidValues(workIDs),
-		Generations: generations,
+		VersionNumbers: generations,
 	})
 	if err != nil {
 		return LibraryResult{}, fmt.Errorf("record a library report: %w", err)
@@ -63,7 +63,7 @@ func (s *Sends) Sync(
 	}
 	var dropped int64
 	if report.Snapshot {
-		dropped, err = queries.PruneLibraryToSnapshot(ctx, db.PruneLibraryToSnapshotParams{
+		dropped, err = queries.PruneLibraryToWhole(ctx, db.PruneLibraryToWholeParams{
 			InstanceID: uuidValue(instance.ID), WorkIds: uuidValues(workIDs),
 		})
 	} else if len(removed) > 0 {
@@ -98,7 +98,7 @@ func (s *Sends) readReport(report ReportedLibrary) ([]ReportedEntry, []uuid.UUID
 	entries := make([]ReportedEntry, 0, len(report.Entries))
 	seen := make(map[uuid.UUID]struct{}, len(report.Entries))
 	for _, entry := range report.Entries {
-		if entry.ContentGeneration != nil && *entry.ContentGeneration < 1 {
+		if entry.VersionNumber != nil && *entry.VersionNumber < 1 {
 			return nil, nil, ErrLibraryReport
 		}
 		if _, repeated := seen[entry.WorkID]; repeated {

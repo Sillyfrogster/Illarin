@@ -265,7 +265,6 @@ func TestWithheldWorkRefusesEveryProtectedPromptMutation(t *testing.T) {
 	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
 		t.Fatalf("save sealed prompt: %d %s", response.Code, response.Body.String())
 	}
-	before := apitest.ContentGeneration(t, pool, started.ID)
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	if _, err := pool.Exec(t.Context(), `
@@ -314,9 +313,6 @@ func TestWithheldWorkRefusesEveryProtectedPromptMutation(t *testing.T) {
 	}
 	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
 		t.Fatalf("after refused saves: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
-	}
-	if got := apitest.ContentGeneration(t, pool, started.ID); got != before {
-		t.Fatalf("content generation after refused saves = %d, want %d", got, before)
 	}
 }
 

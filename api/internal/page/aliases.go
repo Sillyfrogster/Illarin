@@ -8,7 +8,10 @@ import (
 
 // The field names a work's page answered to before the rename, kept for sixty days
 var (
-	workDetailAliases        = map[string]string{"type": "kind", "visibility": "discovery", "follow": "watch"}
+	workDetailAliases = map[string]string{
+		"type": "kind", "visibility": "discovery", "follow": "watch",
+		"draftedChangesVersion": "workingCopyVersion", "latestVersion": "latestUpdate",
+	}
 	workListAliases          = map[string]string{"nsfwPreference": "visibility"}
 	browseWorkAliases        = map[string]string{"type": "kind"}
 	deletedWorkAliases       = map[string]string{"type": "kind"}
@@ -32,6 +35,10 @@ func registerAliases(routes api.Routes, h *Handlers) {
 
 func aliasBrowseQuery(q *api.Query) {
 	q.Alias("type", "kind")
+}
+
+func aliasPageQuery(q *api.Query) {
+	q.Alias("draftedChanges", "workingCopy")
 }
 
 func (w WorkDetail) MarshalJSON() ([]byte, error) {

@@ -47,7 +47,7 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}
@@ -98,7 +98,7 @@ func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}

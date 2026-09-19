@@ -25,7 +25,7 @@ import (
 
 var (
 	errIngestLeaseLost = errors.New("ingest lease lost")
-	errWrongType       = errors.New("revision resolves to a different type")
+	errWrongType       = errors.New("the original file resolves to a different type")
 )
 
 func (s *Service) RunIngestWorkers(ctx context.Context, count int, report func(error)) {
@@ -77,10 +77,10 @@ type ingestJob struct {
 	Visibility work.Visibility
 	ByteSize   int64
 	Attempts   int
-	Target     *revisionTarget
+	Target     *originalFileTarget
 }
 
-type revisionTarget struct {
+type originalFileTarget struct {
 	Version int64
 	WorkID  uuid.UUID
 	Type    string
@@ -309,7 +309,7 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		}
 		var conflict *work.VersionConflict
 		if errors.As(err, &conflict) || errors.Is(err, work.ErrVersionRequired) {
-			return true, s.failIngest(ctx, job, "working_copy_conflict", "The working copy changed. Review it before accepting the upload again.")
+			return true, s.failIngest(ctx, job, "drafted_changes_conflict", "The drafted changes changed. Review it before accepting the upload again.")
 		}
 		if errors.Is(err, work.ErrWorkFrozen) || errors.Is(err, work.ErrNotFound) {
 			return true, s.failIngest(ctx, job, "work_unavailable", "This work is no longer available for changes.")
@@ -391,7 +391,7 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 		if !targetType.Valid {
 			return ingestJob{}, false, fmt.Errorf("ingest %s targets a missing work", job.ID)
 		}
-		job.Target = &revisionTarget{
+		job.Target = &originalFileTarget{
 			WorkID: uuidFromPgtype(targetWorkID), Type: targetType.String, Version: candidateVersion,
 		}
 	}
@@ -624,10 +624,7 @@ func (s *Service) writeIngestResultWithDecisions(
 				return uuid.Nil, private.ExposureRefusal{Prompts: exposed}
 			}
 		}
-		change := func() error {
-			return s.replaceContent(ctx, tx, job, prepared, existing, blocks, carried, decisions)
-		}
-		if err := s.works.ChangeContent(ctx, tx, job.Target.WorkID, change); err != nil {
+		if err := s.replaceContent(ctx, tx, job, prepared, existing, blocks, carried, decisions); err != nil {
 			return uuid.Nil, err
 		}
 		return job.Target.WorkID, nil
@@ -657,7 +654,7 @@ func (s *Service) writeIngestResultWithDecisions(
 	); err != nil {
 		return uuid.Nil, err
 	}
-	if err := writeRevision(ctx, tx, workID, 1, job, prepared); err != nil {
+	if err := writeOriginalFile(ctx, tx, workID, 1, job, prepared); err != nil {
 		return uuid.Nil, err
 	}
 	if err := insertVaultPictures(ctx, tx, workID, prepared.Vault); err != nil {
@@ -675,7 +672,7 @@ func (s *Service) replaceContent(
 	carried map[uuid.UUID]string,
 	decisions map[string]string,
 ) error {
-	if err := appendRevision(ctx, tx, job, prepared); err != nil {
+	if err := appendOriginalFile(ctx, tx, job, prepared); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `delete from work_blocks where work_id = $1`, job.Target.WorkID); err != nil {
@@ -752,7 +749,7 @@ func replacePreservedData(
 	return nil
 }
 
-func appendRevision(
+func appendOriginalFile(
 	ctx context.Context,
 	tx pgx.Tx,
 	job ingestJob,
@@ -760,14 +757,14 @@ func appendRevision(
 ) error {
 	var next int
 	if err := tx.QueryRow(ctx, `
-		select coalesce(max(revision), 0) + 1 from work_revisions where work_id = $1
+		select coalesce(max(number), 0) + 1 from work_original_files where work_id = $1
 	`, job.Target.WorkID).Scan(&next); err != nil {
-		return fmt.Errorf("number the new revision: %w", err)
+		return fmt.Errorf("number the new original file: %w", err)
 	}
-	return writeRevision(ctx, tx, job.Target.WorkID, next, job, prepared)
+	return writeOriginalFile(ctx, tx, job.Target.WorkID, next, job, prepared)
 }
 
-func writeRevision(
+func writeOriginalFile(
 	ctx context.Context,
 	tx pgx.Tx,
 	workID uuid.UUID,
@@ -775,7 +772,7 @@ func writeRevision(
 	job ingestJob,
 	prepared preparedIngest,
 ) error {
-	_, err := work.RecordRevision(ctx, tx, work.Revision{
+	_, err := work.RecordOriginalFile(ctx, tx, work.OriginalFile{
 		WorkID: workID, Number: number, BlobID: job.BlobID, MediaType: prepared.MediaType,
 		Format: prepared.Format, Identifier: prepared.Header.Identifier, Media: prepared.Media,
 	})

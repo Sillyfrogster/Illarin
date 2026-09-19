@@ -21,46 +21,46 @@ const (
 )
 
 var (
-	ErrSummaryRequired  = errors.New("an update needs a summary")
-	ErrSummaryTooLong   = errors.New("the update text is too long")
-	ErrNothingToPublish = errors.New("nothing has changed since the last update")
+	ErrSummaryRequired  = errors.New("a version needs a summary")
+	ErrSummaryTooLong   = errors.New("the version text is too long")
+	ErrNothingToPublish = errors.New("nothing has changed since the last version")
 )
 
-type UpdateRequest struct {
+type PublishRequest struct {
 	OwnerID      uuid.UUID
 	WorkID       uuid.UUID
 	Summary      string
 	Notes        string
 	VersionLabel string
-	Announcement UpdateAnnouncement
+	Announcement Announcement
 }
 
-func (s *Service) PublishUpdate(
+func (s *Service) PublishVersion(
 	ctx context.Context,
-	in UpdateRequest,
+	in PublishRequest,
 	candidate *work.Candidate,
-) (Update, []work.ReadinessItem, error) {
+) (Version, []work.ReadinessItem, error) {
 	in.Summary = strings.TrimSpace(in.Summary)
 	in.Notes = strings.TrimSpace(in.Notes)
 	in.VersionLabel = strings.TrimSpace(in.VersionLabel)
 	if in.Summary == "" {
-		return Update{}, nil, ErrSummaryRequired
+		return Version{}, nil, ErrSummaryRequired
 	}
 	if utf8.RuneCountInString(in.Summary) > MaxSummaryRunes ||
 		utf8.RuneCountInString(in.Notes) > MaxNotesRunes ||
 		utf8.RuneCountInString(in.VersionLabel) > MaxVersionLabelRunes {
-		return Update{}, nil, ErrSummaryTooLong
+		return Version{}, nil, ErrSummaryTooLong
 	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Update{}, nil, err
+		return Version{}, nil, err
 	}
 	defer tx.Rollback(ctx)
 
 	workType, err := candidate.Lock(ctx, tx, in.OwnerID, in.WorkID)
 	if err != nil {
-		return Update{}, nil, err
+		return Version{}, nil, err
 	}
 	var name, lifecycle string
 	var isNSFW *bool
@@ -68,85 +68,79 @@ func (s *Service) PublishUpdate(
 		select name, is_nsfw, lifecycle from works where id = $1
 	`, in.WorkID).Scan(&name, &isNSFW, &lifecycle)
 	if err != nil {
-		return Update{}, nil, fmt.Errorf("read the work to update: %w", err)
+		return Version{}, nil, fmt.Errorf("read the work to publish a version of: %w", err)
 	}
 	if work.Lifecycle(lifecycle) != work.LifecyclePublished {
-		return Update{}, nil, work.ErrWorkIsDraft
+		return Version{}, nil, work.ErrWorkIsDraft
 	}
 
 	blocks, err := block.Read(ctx, tx, in.WorkID)
 	if err != nil {
-		return Update{}, nil, err
+		return Version{}, nil, err
 	}
 	items, err := s.works.CandidateReadiness(ctx, tx, in.WorkID, workType, name, isNSFW, blocks)
 	if err != nil {
-		return Update{}, nil, err
+		return Version{}, nil, err
 	}
 	if !work.Ready(items) {
-		return Update{}, items, work.ErrPublishFloor
+		return Version{}, items, work.ErrPublishFloor
 	}
 
 	drafted, err := s.works.DraftedChanges(ctx, tx, in.WorkID)
 	if err != nil {
-		return Update{}, nil, err
+		return Version{}, nil, err
 	}
 	if !drafted.Any {
-		return Update{}, nil, ErrNothingToPublish
+		return Version{}, nil, ErrNothingToPublish
 	}
 
-	recorded, err := s.recordUpdate(ctx, tx, in, drafted.Content)
+	recorded, err := s.record(ctx, tx, in, drafted.Content)
 	if err != nil {
-		return Update{}, nil, err
+		return Version{}, nil, err
 	}
-	for _, listen := range s.UpdateListeners() {
+	for _, listen := range s.Listeners() {
 		if err := listen(ctx, tx, recorded, in.Announcement); err != nil {
-			return Update{}, nil, err
+			return Version{}, nil, err
 		}
 	}
 	if err := candidate.Commit(ctx, tx, in.WorkID); err != nil {
-		return Update{}, nil, err
+		return Version{}, nil, err
 	}
 	return recorded, items, nil
 }
 
-func (s *Service) recordUpdate(
+func (s *Service) record(
 	ctx context.Context,
 	tx pgx.Tx,
-	in UpdateRequest,
+	in PublishRequest,
 	contentChanged bool,
-) (Update, error) {
-	_, err := tx.Exec(ctx, `
-		update works
-		   set content_generation = content_generation + case when $2 then 1 else 0 end,
-		       updated_at = now()
-		 where id = $1
-	`, in.WorkID, contentChanged)
-	if err != nil {
-		return Update{}, fmt.Errorf("move the content generation: %w", err)
+) (Version, error) {
+	if _, err := tx.Exec(ctx, `update works set updated_at = now() where id = $1`, in.WorkID); err != nil {
+		return Version{}, fmt.Errorf("mark the work as changed: %w", err)
 	}
 	var chosenLabel *string
 	if in.VersionLabel != "" {
 		chosenLabel = &in.VersionLabel
 	}
-	var snapshotID pgtype.UUID
-	err = tx.QueryRow(ctx, `select record_work_snapshot($1, false, $2, $3, $4)`,
-		in.WorkID, in.Summary, in.Notes, chosenLabel).Scan(&snapshotID)
+	var versionID pgtype.UUID
+	err := tx.QueryRow(ctx, `select record_work_version($1, false, $2, $3, $4)`,
+		in.WorkID, in.Summary, in.Notes, chosenLabel).Scan(&versionID)
 	if err != nil {
-		return Update{}, fmt.Errorf("record the update: %w", err)
+		return Version{}, fmt.Errorf("record the version: %w", err)
 	}
-	if !snapshotID.Valid {
-		return Update{}, work.ErrNotFound
+	if !versionID.Valid {
+		return Version{}, work.ErrNotFound
 	}
-	recorded := Update{
-		ID: snapshotID.Bytes, WorkID: in.WorkID, ContentChanged: contentChanged,
+	recorded := Version{
+		ID: versionID.Bytes, WorkID: in.WorkID, ContentChanged: contentChanged,
 	}
 	err = tx.QueryRow(ctx, `
-		select number, recorded_at, version_label, summary, notes, content_generation
-		  from work_snapshots where id = $1
+		select number, recorded_at, version_label, summary, notes
+		  from work_versions where id = $1
 	`, recorded.ID).Scan(&recorded.Number, &recorded.RecordedAt, &recorded.VersionLabel,
-		&recorded.Summary, &recorded.Notes, &recorded.ContentGeneration)
+		&recorded.Summary, &recorded.Notes)
 	if err != nil {
-		return Update{}, fmt.Errorf("read the recorded update: %w", err)
+		return Version{}, fmt.Errorf("read the recorded version: %w", err)
 	}
 	return recorded, nil
 }

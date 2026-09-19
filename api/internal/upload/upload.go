@@ -41,7 +41,7 @@ type IngestInput struct {
 	Visibility work.Visibility
 }
 
-type RevisionInput struct {
+type OriginalFileInput struct {
 	OwnerID  uuid.UUID
 	WorkID   uuid.UUID
 	Filename string

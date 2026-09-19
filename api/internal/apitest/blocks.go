@@ -78,7 +78,7 @@ func FetchStartedWork(
 ) StartedWork {
 	t.Helper()
 	response := Send(t, r, Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"?workingCopy=true", nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"?draftedChanges=true", nil), session,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read saved asset status = %d, want 200: %s", response.Code, response.Body.String())

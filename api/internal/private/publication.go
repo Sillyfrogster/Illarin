@@ -28,10 +28,10 @@ func ApplyRecordedPolicy(
 	ctx context.Context,
 	q Querier,
 	workID uuid.UUID,
-	snapshotID *uuid.UUID,
+	versionID *uuid.UUID,
 	blocks []block.Block,
 ) (bool, error) {
-	uncertain, err := markCurrentProtection(ctx, q, workID, snapshotID, blocks)
+	uncertain, err := markCurrentProtection(ctx, q, workID, versionID, blocks)
 	if err != nil {
 		return false, err
 	}
@@ -47,14 +47,14 @@ func markCurrentProtection(
 	ctx context.Context,
 	q Querier,
 	workID uuid.UUID,
-	snapshotID *uuid.UUID,
+	versionID *uuid.UUID,
 	blocks []block.Block,
 ) (bool, error) {
 	current, err := currentPrompts(ctx, q, workID)
 	if err != nil {
 		return false, err
 	}
-	settled, standsFor, err := correspondence(ctx, q, workID, snapshotID)
+	settled, standsFor, err := correspondence(ctx, q, workID, versionID)
 	if err != nil {
 		return false, err
 	}
@@ -113,14 +113,14 @@ func PrepareRestoration(
 	ctx context.Context,
 	tx pgx.Tx,
 	workID uuid.UUID,
-	snapshotID uuid.UUID,
+	versionID uuid.UUID,
 	payloads []byte,
 	blocks []block.Block,
 ) error {
 	if err := RestoreRecordedPrompts(payloads, blocks); err != nil {
 		return err
 	}
-	if _, err := markCurrentProtection(ctx, tx, workID, &snapshotID, blocks); err != nil {
+	if _, err := markCurrentProtection(ctx, tx, workID, &versionID, blocks); err != nil {
 		return err
 	}
 	sealed := map[uuid.UUID]promptValue{}
@@ -303,14 +303,14 @@ func correspondence(
 	ctx context.Context,
 	q Querier,
 	workID uuid.UUID,
-	snapshotID *uuid.UUID,
+	versionID *uuid.UUID,
 ) (map[uuid.UUID]bool, map[uuid.UUID]uuid.UUID, error) {
 	rows, err := q.Query(ctx, `
 		select match.current_fragment_id, match.recorded_fragment_id
-		  from work_snapshot_prompt_matches match
+		  from work_version_prompt_matches match
 		  join public.works owner on owner.id = $1
-		 where match.snapshot_id = coalesce($2, owner.published_snapshot_id)
-	`, workID, snapshotID)
+		 where match.version_id = coalesce($2, owner.published_version_id)
+	`, workID, versionID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read recorded prompt correspondence: %w", err)
 	}

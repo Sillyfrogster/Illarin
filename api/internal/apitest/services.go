@@ -143,8 +143,8 @@ func (OpaqueModule) Declaration() format.Declaration {
 	return declaration
 }
 
-func (OpaqueModule) Write(_ context.Context, written format.ExportWork) (format.Artifact, error) {
-	return format.Artifact{
+func (OpaqueModule) Write(_ context.Context, written format.ExportWork) (format.MainFile, error) {
+	return format.MainFile{
 		Body:      []byte(written.Text(block.RoleDescription)),
 		MediaType: "text/plain", Extension: ".txt",
 	}, nil

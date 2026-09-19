@@ -137,7 +137,7 @@ func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 	}
 	var references int
 	if err := pool.QueryRow(ctx,
-		`select count(*) from work_revisions where work_id = $1 and blob_id is not null`, created.ID,
+		`select count(*) from work_original_files where work_id = $1 and blob_id is not null`, created.ID,
 	).Scan(&references); err != nil {
 		t.Fatalf("count expired references: %v", err)
 	}
@@ -174,7 +174,7 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 	}
 	var recoverableBlob uuid.UUID
 	if err := pool.QueryRow(ctx,
-		`select blob_id from work_revisions where work_id = $1`, recoverable.ID,
+		`select blob_id from work_original_files where work_id = $1`, recoverable.ID,
 	).Scan(&recoverableBlob); err != nil {
 		t.Fatalf("read recoverable blob: %v", err)
 	}
@@ -345,7 +345,7 @@ func TestSweepCollectsAnWorkAfterItsRecoveryWindow(t *testing.T) {
 	}
 	var blobID uuid.UUID
 	if err := pool.QueryRow(ctx,
-		`select blob_id from work_revisions where work_id = $1`, created.ID,
+		`select blob_id from work_original_files where work_id = $1`, created.ID,
 	).Scan(&blobID); err != nil {
 		t.Fatalf("read blob id: %v", err)
 	}
@@ -417,18 +417,18 @@ func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
 			t.Fatalf("insert post media: %v", err)
 		}
 	}
-	revisionID := uuid.New()
+	originalFileID := uuid.New()
 	if _, err := pool.Exec(ctx, `
 		insert into post_revisions (id, post_id, number, title, summary, slug, category_id,
 		                            document, document_version, captured_for)
 		values ($1, $2, 1, 'A post with pictures', 'A summary.', 'a-post-with-pictures', $3,
 		        '{"version":2,"content":[]}', 2, 'publication')
-	`, revisionID, postID, categoryID); err != nil {
+	`, originalFileID, postID, categoryID); err != nil {
 		t.Fatalf("insert revision: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into post_media_uses (media_id, post_id, revision_id) values ($1, $2, $3)
-	`, keptMedia, postID, revisionID); err != nil {
+	`, keptMedia, postID, originalFileID); err != nil {
 		t.Fatalf("record what the revision refers to: %v", err)
 	}
 

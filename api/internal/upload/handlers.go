@@ -20,10 +20,10 @@ func NewHandlers(uploads *Service, works *page.Service, maxUploadBytes int64) *H
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
 	routes.Handle(http.MethodPost, "/v1/works", d.Upload, h.CreateWork)
-	routes.Handle(http.MethodGet, "/v1/works/:id/revisions", d.JSON, h.GetWorkReplacement)
-	routes.Handle(http.MethodPost, "/v1/works/:id/revisions", d.Upload, h.AddWorkRevision)
-	routes.Handle(http.MethodPost, "/v1/works/:id/revisions/:operationId/accept", d.JSON, h.AcceptWorkRevision)
-	routes.Handle(http.MethodDelete, "/v1/works/:id/revisions/:operationId", d.JSON, h.CancelWorkRevision)
+	routes.Handle(http.MethodGet, "/v1/works/:id/original-file", d.JSON, h.GetWorkReplacement)
+	routes.Handle(http.MethodPost, "/v1/works/:id/original-file", d.Upload, h.AddWorkOriginalFile)
+	routes.Handle(http.MethodPost, "/v1/works/:id/original-file/:operationId/accept", d.JSON, h.AcceptWorkOriginalFile)
+	routes.Handle(http.MethodDelete, "/v1/works/:id/original-file/:operationId", d.JSON, h.CancelWorkOriginalFile)
 	routes.Handle(http.MethodGet, "/v1/works/:id/vault", d.JSON, h.ListVaultPictures)
 	routes.Handle(http.MethodDelete, "/v1/works/:id/vault/:pictureId", d.JSON, h.DiscardVaultPicture)
 	routes.Handle(http.MethodPost, "/v1/works/:id/vault/:pictureId/place", d.JSON, h.PlaceVaultPicture)

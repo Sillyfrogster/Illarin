@@ -85,7 +85,7 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 		t.Fatalf("seal the prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	fetched := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
+	fetched := apitest.FetchSigned(t, router, work.Files[0].URL)
 
 	if fetched.Code != http.StatusNotFound {
 		t.Fatalf("fetch after sealing = %d, want 404: %s", fetched.Code, fetched.Body.String())
@@ -149,7 +149,7 @@ func TestAnyReadersAllowedInstanceReceivesTheCompleteProtectedPreset(t *testing.
 		t.Fatalf("queueing recorded %d downloads, want 0", before)
 	}
 	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
-	artifact := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
+	artifact := apitest.FetchSigned(t, router, work.Files[0].URL)
 
 	if artifact.Code != http.StatusOK {
 		t.Fatalf("artifact status = %d, want 200: %s", artifact.Code, artifact.Body.String())

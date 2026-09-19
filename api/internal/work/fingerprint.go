@@ -1,3 +1,4 @@
+// The content fingerprint says whether a change would alter the bytes a download or send hands out.
 package work
 
 import (
@@ -125,8 +126,8 @@ func (s *Service) fingerprintUpload(ctx context.Context, q db.DBTX, workID uuid.
 	err := q.QueryRow(ctx, `
 		select blob.sha256
 		  from works work
-		  join work_revisions revision on revision.id = work.current_revision_id
-		  join blobs blob on blob.id = revision.blob_id
+		  join work_original_files original on original.id = work.original_file_id
+		  join blobs blob on blob.id = original.blob_id
 		 where work.id = $1
 	`, workID).Scan(&sum)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -264,40 +265,6 @@ func fingerprintPictures(
 		fmt.Fprint(digest, entry)
 	}
 	return rows.Err()
-}
-
-func (s *Service) moveContentGeneration(
-	ctx context.Context,
-	tx pgx.Tx,
-	workID uuid.UUID,
-	before string,
-) error {
-	after, err := s.contentFingerprint(ctx, tx, workID)
-	if err != nil {
-		return err
-	}
-	if after == before {
-		return nil
-	}
-	if _, err := tx.Exec(ctx, `
-		update works set content_generation = content_generation + 1
-		 where id = $1 and published_snapshot_id is null
-	`, workID); err != nil {
-		return fmt.Errorf("move the content generation: %w", err)
-	}
-	return nil
-}
-
-// ChangeContent runs a change to a work's drafted content and moves its content generation when the content changed
-func (s *Service) ChangeContent(ctx context.Context, tx pgx.Tx, workID uuid.UUID, change func() error) error {
-	fingerprint, err := s.contentFingerprint(ctx, tx, workID)
-	if err != nil {
-		return err
-	}
-	if err := change(); err != nil {
-		return err
-	}
-	return s.moveContentGeneration(ctx, tx, workID, fingerprint)
 }
 
 // SteadyIDs swaps ids a file mints afresh for the stable names they stand for

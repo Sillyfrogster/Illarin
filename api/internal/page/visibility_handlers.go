@@ -45,7 +45,7 @@ func (h *Handlers) PublishWork(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}

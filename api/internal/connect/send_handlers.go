@@ -84,7 +84,7 @@ func (h *Handlers) GetWorkInstances(c *gin.Context) {
 		items = append(items, toAPIWorkInstance(state))
 	}
 	c.JSON(http.StatusOK, WorkInstanceList{
-		ContentGeneration: found.ContentGeneration, Items: items,
+		VersionNumber: found.VersionNumber, Items: items,
 	})
 }
 
@@ -149,7 +149,7 @@ func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "private, no-store")
-	workID, target, err := h.sends.Artifact(
+	workID, target, err := h.sends.MainFile(
 		c.Request.Context(), id, params.Expires, params.Signature,
 	)
 	if err != nil {
@@ -160,7 +160,7 @@ func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
 }
 
 func (h *Handlers) deliveryArtifactError(c *gin.Context, err error) {
-	if errors.Is(err, ErrArtifactNotFound) {
+	if errors.Is(err, ErrMainFileNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no such download")
 		return
 	}
@@ -210,7 +210,7 @@ func toLibraryReport(request LibraryReport) ReportedLibrary {
 	entries := make([]ReportedEntry, 0, len(request.Entries))
 	for _, entry := range request.Entries {
 		entries = append(entries, ReportedEntry{
-			WorkID: entry.WorkId, ContentGeneration: entry.ContentGeneration,
+			WorkID: entry.WorkId, VersionNumber: entry.VersionNumber,
 		})
 	}
 	var removed []uuid.UUID
@@ -227,24 +227,24 @@ func toLibraryReport(request LibraryReport) ReportedLibrary {
 }
 
 func toAPIDeliveryWork(released Work) DeliveryWork {
-	artifacts := make([]DeliveryArtifact, 0, len(released.Artifacts))
-	for _, artifact := range released.Artifacts {
-		item := DeliveryArtifact{
-			Type: DeliveryArtifactType(artifact.Type), Url: artifact.URL,
+	files := make([]DeliveryFile, 0, len(released.Files))
+	for _, artifact := range released.Files {
+		item := DeliveryFile{
+			Type: DeliveryFileType(artifact.Type), Url: artifact.URL,
 		}
 		if artifact.MediaID != nil {
 			mediaID := *artifact.MediaID
 			role, isCover := artifact.Role, artifact.IsCover
 			item.MediaId, item.Role, item.IsCover = &mediaID, &role, &isCover
 		}
-		artifacts = append(artifacts, item)
+		files = append(files, item)
 	}
 	return DeliveryWork{
 		Id: released.ID, WorkId: released.WorkID,
-		ContentGeneration: released.ContentGeneration, Type: released.Type,
+		VersionNumber: released.VersionNumber, Type: released.Type,
 		Name: released.Name, Format: released.Format, Label: released.Label,
 		QueuedAt: released.QueuedAt, LeaseExpiresAt: released.LeaseExpiresAt,
-		Artifacts: artifacts,
+		Files: files,
 	}
 }
 
@@ -267,8 +267,8 @@ func toAPIWorkInstance(state InstanceState) WorkInstance {
 		InstanceId: state.InstanceID, ApplicationName: state.ApplicationName,
 		InstanceName: state.InstanceName, LastSeenAt: state.LastSeenAt,
 		CanReceive: state.CanReceive, ReportsLibrary: state.ReportsLibrary,
-		InstalledGeneration: state.InstalledGeneration,
-		UpdateAvailable:     state.UpdateAvailable,
+		InstalledVersion: state.InstalledVersion,
+		UpdateAvailable:  state.UpdateAvailable,
 	}
 	if state.Delivery != nil {
 		queued := toAPIQueuedDelivery(*state.Delivery)

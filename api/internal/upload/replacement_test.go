@@ -28,13 +28,13 @@ func TestReplacementPreviewLeavesThePublishedWorkAloneUntilAccepted(t *testing.T
 		}},
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
-	owner := revisionOwner(t, svc, "preview.owner")
+	owner := originalFileOwner(t, svc, "preview.owner")
 	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	publishImported(t, svc, owner, created)
 
 	parsed.Elements[0].Content = block.Prose{Text: "After"}
 	candidate := currentCandidate(t, svc, created.ID)
-	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
+	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: created.ID, Filename: "wren.json",
 		File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
 	}, candidate)
@@ -65,7 +65,7 @@ func TestReplacementPreviewLeavesThePublishedWorkAloneUntilAccepted(t *testing.T
 	if accepted.Status != IngestSuccess {
 		t.Fatalf("accepted replacement = %+v", accepted)
 	}
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
+	working, err := works(svc).DraftedChanges(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,10 +81,10 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 		Elements: []block.Element{{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}}},
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
-	owner := revisionOwner(t, svc, "stale.preview.owner")
+	owner := originalFileOwner(t, svc, "stale.preview.owner")
 	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	candidate := currentCandidate(t, svc, created.ID)
-	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
+	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true}`),
 	}, candidate)
 	if err != nil {
@@ -116,11 +116,11 @@ func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T
 		},
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
-	owner := revisionOwner(t, svc, "unrepresentable.preview.owner")
+	owner := originalFileOwner(t, svc, "unrepresentable.preview.owner")
 	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	parsed.Elements = parsed.Elements[:1]
 	candidate := currentCandidate(t, svc, created.ID)
-	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
+	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
 	}, candidate)
 	if err != nil {
@@ -146,7 +146,7 @@ func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T
 	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID, currentCandidate(t, svc, created.ID), decisions, false); err != nil {
 		t.Fatal(err)
 	}
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
+	working, err := works(svc).DraftedChanges(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,11 +171,11 @@ func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
 		Elements: []block.Element{{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Before"}}},
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
-	owner := revisionOwner(t, svc, "cancel.preview.owner")
+	owner := originalFileOwner(t, svc, "cancel.preview.owner")
 	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	parsed.Elements[0].Content = block.Prose{Text: "After"}
 	candidate := currentCandidate(t, svc, created.ID)
-	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
+	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
 	}, candidate)
 	if err != nil {
@@ -191,7 +191,7 @@ func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
 	if err != nil || cancelled.Status != IngestCancelled {
 		t.Fatalf("cancelled operation = %+v, error = %v", cancelled, err)
 	}
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
+	working, err := works(svc).DraftedChanges(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,10 +281,10 @@ func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
 		}
 	}
 	svc, pool := newTestServiceWithRegistry(t, registry)
-	owner := revisionOwner(t, svc, "format.change.owner")
+	owner := originalFileOwner(t, svc, "format.change.owner")
 	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"spec":"old_character"}`))
 	candidate := currentCandidate(t, svc, created.ID)
-	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
+	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"spec":"new_character"}`),
 	}, candidate)
 	if err != nil {
@@ -312,9 +312,9 @@ func TestReplacementPreviewsEveryBuildableType(t *testing.T) {
 		t.Run(workType, func(t *testing.T) {
 			module := typeModule{id: "preview_" + workType, workType: workType}
 			svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, module))
-			owner := revisionOwner(t, svc, "preview."+workType)
+			owner := originalFileOwner(t, svc, "preview."+workType)
 			created := ingestOne(t, svc, owner, "asset.json", []byte(`{"spec":"preview_`+workType+`"}`))
-			operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
+			operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 				OwnerID: owner, WorkID: created.ID, Filename: "asset.json",
 				File: bytes.NewBufferString(`{"spec":"preview_` + workType + `"}`),
 			}, currentCandidate(t, svc, created.ID))
@@ -362,6 +362,6 @@ func (m namedReplacementModule) Parse(context.Context, format.Inspection, format
 	return m.parsed, nil
 }
 
-func (m namedReplacementModule) Write(context.Context, format.ExportWork) (format.Artifact, error) {
-	return format.Artifact{MediaType: "text/plain", Extension: ".txt"}, nil
+func (m namedReplacementModule) Write(context.Context, format.ExportWork) (format.MainFile, error) {
+	return format.MainFile{MediaType: "text/plain", Extension: ".txt"}, nil
 }

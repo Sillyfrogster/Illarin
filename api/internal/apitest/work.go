@@ -264,45 +264,49 @@ func PublishedCharacter(t *testing.T, r *gin.Engine, session *http.Cookie) strin
 func WithReviewedVersion(t *testing.T, r http.Handler, req *http.Request) {
 	t.Helper()
 	parts := strings.Split(strings.Trim(req.URL.Path, "/"), "/")
-	if req.Method == http.MethodGet || len(parts) < 4 || parts[0] != "v1" || parts[1] != "works" || req.Header.Get("X-Working-Copy-Version") != "" {
+	if req.Method == http.MethodGet || len(parts) < 4 || parts[0] != "v1" || parts[1] != "works" || req.Header.Get("X-Drafted-Changes-Version") != "" {
 		return
 	}
 	switch parts[3] {
-	case "details", "blocks", "publish", "updates", "preserved", "media", "revisions", "vault":
+	case "details", "blocks", "publish", "versions", "preserved", "media", "original-file", "vault":
 	default:
 		return
 	}
-	read := httptest.NewRequest(http.MethodGet, "/v1/works/"+parts[2]+"?workingCopy=true", nil)
+	read := httptest.NewRequest(http.MethodGet, "/v1/works/"+parts[2]+"?draftedChanges=true", nil)
 	read.Header.Set("Cookie", req.Header.Get("Cookie"))
 	response := httptest.NewRecorder()
 	r.ServeHTTP(response, read)
 	var page struct {
-		WorkingCopyVersion int64 `json:"workingCopyVersion"`
+		DraftedChangesVersion int64 `json:"draftedChangesVersion"`
 	}
 	if response.Code == http.StatusOK {
 		if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if page.WorkingCopyVersion == 0 {
-		page.WorkingCopyVersion = 1
+	if page.DraftedChangesVersion == 0 {
+		page.DraftedChangesVersion = 1
 	}
-	req.Header.Set("X-Working-Copy-Version", strconv.FormatInt(page.WorkingCopyVersion, 10))
+	req.Header.Set("X-Drafted-Changes-Version", strconv.FormatInt(page.DraftedChangesVersion, 10))
 }
 
-func ContentGeneration(t *testing.T, pool *pgxpool.Pool, workID string) int {
+// VersionNumber reads the number of the work's published version, which is 0 for a draft
+func VersionNumber(t *testing.T, pool *pgxpool.Pool, workID string) int {
 	t.Helper()
 	id, err := uuid.Parse(workID)
 	if err != nil {
-		t.Fatalf("parse the asset id: %v", err)
+		t.Fatalf("parse the work id: %v", err)
 	}
-	var generation int
+	var number int
 	if err := pool.QueryRow(t.Context(),
-		`select content_generation from works where id = $1`, id,
-	).Scan(&generation); err != nil {
-		t.Fatalf("read the content generation: %v", err)
+		`select coalesce(version.number, 0)
+		   from works work
+		   left join work_versions version on version.id = work.published_version_id
+		  where work.id = $1`, id,
+	).Scan(&number); err != nil {
+		t.Fatalf("read the version number: %v", err)
 	}
-	return generation
+	return number
 }
 
 func StartPreset(t *testing.T, r http.Handler, session *http.Cookie, app string) StartedWork {
@@ -338,7 +342,7 @@ func ItemNamed(t *testing.T, items []ReadinessItem, id string) ReadinessItem {
 	return ReadinessItem{}
 }
 
-func PublishWorkUpdate(
+func PublishWorkVersion(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
@@ -347,7 +351,7 @@ func PublishWorkUpdate(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPost,
-		"/v1/works/"+workID+"/updates", strings.NewReader(body))
+		"/v1/works/"+workID+"/versions", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	return Send(t, r, Authorized(request, session))
 }

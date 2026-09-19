@@ -188,7 +188,7 @@ func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
 		t.Fatalf("stale worker finalization: %v", err)
 	}
 
-	for _, table := range []string{"works", "work_revisions"} {
+	for _, table := range []string{"works", "work_original_files"} {
 		var count int
 		if err := pool.QueryRow(context.Background(), "select count(*) from "+table).Scan(&count); err != nil {
 			t.Fatalf("count %s: %v", table, err)

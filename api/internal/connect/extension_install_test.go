@@ -74,16 +74,16 @@ func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
 	if installed.Delivery == nil || installed.Delivery.State != "delivered" || installed.Delivery.SettledAt == nil {
 		t.Fatalf("delivery = %+v, want it delivered", installed.Delivery)
 	}
-	if installed.InstalledGeneration != nil {
+	if installed.InstalledVersion != nil {
 		t.Fatalf("instance = %+v, want no library word yet", installed)
 	}
 
 	syncLibrary(t, r, grant.AccessToken, false, []map[string]any{
-		{"workId": workID, "contentGeneration": 1},
+		{"workId": workID, "versionNumber": 1},
 	}, nil)
 	reported := apitest.WorkInstances(t, r, session, workID).Items[0]
-	if reported.InstalledGeneration == nil || *reported.InstalledGeneration != 1 {
-		t.Fatalf("instance = %+v, want generation 1 installed", reported)
+	if reported.InstalledVersion == nil || *reported.InstalledVersion != 1 {
+		t.Fatalf("instance = %+v, want version 1 installed", reported)
 	}
 
 	again := apitest.DecodeResponse[apitest.QueuedDelivery](t, apitest.SendToInstance(t, r, session, workID, grant.Instance.ID))
@@ -136,7 +136,7 @@ func TestALibraryEntryAddressMustBeAWebAddress(t *testing.T) {
 			t.Errorf("address %q = %d, want 400: %s", bad, rec.Code, rec.Body.String())
 		}
 	}
-	if state := apitest.WorkInstances(t, r, session, workID).Items[0]; state.InstalledGeneration != nil {
+	if state := apitest.WorkInstances(t, r, session, workID).Items[0]; state.InstalledVersion != nil {
 		t.Fatal("a refused report still recorded the install")
 	}
 }

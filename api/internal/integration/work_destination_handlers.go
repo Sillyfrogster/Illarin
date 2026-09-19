@@ -78,7 +78,7 @@ func (h *Handlers) workDestinationError(c *gin.Context, err error) {
 		api.Refuse(c, http.StatusConflict, "The destination changed. Check its configuration and try again.")
 	case errors.Is(err, work.ErrWorkFrozen):
 		api.Refuse(c, http.StatusConflict, "This work is frozen while it is withheld.")
-	case errors.Is(err, version.ErrUpdateDestinationIneligible):
+	case errors.Is(err, version.ErrDestinationIneligible):
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Choose only your own verified, active destinations.", "destinationIds")
 	case errors.As(err, &field):
 		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, field.Message, field.Field)

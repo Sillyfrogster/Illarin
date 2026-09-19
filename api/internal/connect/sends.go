@@ -193,7 +193,7 @@ func (s *Sends) WorkInstances(
 	workID uuid.UUID,
 ) (WorkInstances, error) {
 	queries := db.New(s.pool)
-	generation, err := queries.SendableWorkGeneration(ctx, uuidValue(workID))
+	number, err := queries.SendableWorkVersion(ctx, uuidValue(workID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return WorkInstances{}, ErrWorkNotFound
 	}
@@ -213,7 +213,7 @@ func (s *Sends) WorkInstances(
 	if err != nil {
 		return WorkInstances{}, fmt.Errorf("read instance state for a work: %w", err)
 	}
-	found := WorkInstances{ContentGeneration: int(generation), Items: []InstanceState{}}
+	found := WorkInstances{VersionNumber: int(number), Items: []InstanceState{}}
 	for _, row := range rows {
 		_, _, canReceive := chooseTarget(
 			row.AcceptedTargets, sendable.Targets, sendable.HasOriginal,
@@ -235,10 +235,10 @@ func (s *Sends) WorkInstances(
 			)
 			state.Delivery = &waiting
 		}
-		if row.InstalledGeneration.Valid {
-			installed := int(row.InstalledGeneration.Int32)
-			state.InstalledGeneration = &installed
-			state.UpdateAvailable = installed < found.ContentGeneration
+		if row.InstalledVersion.Valid {
+			installed := int(row.InstalledVersion.Int32)
+			state.InstalledVersion = &installed
+			state.UpdateAvailable = installed < found.VersionNumber
 		}
 		found.Items = append(found.Items, state)
 	}
@@ -287,10 +287,11 @@ func (s *Sends) worksInstalledBehind(
 		  from instance_library_entries entry
 		  join linked_instances instance on instance.id = entry.instance_id
 		  join works subject on subject.id = entry.work_id
+		  join work_versions published on published.id = subject.published_version_id
 		 where instance.user_id = $1
 		   and instance.revoked_at is null
 		   and entry.work_id = any($2::uuid[])
-		   and entry.content_generation < subject.content_generation
+		   and entry.version_number < published.number
 		   and subject.deleted_at is null
 		   and subject.withheld_at is null
 		   and subject.lifecycle = 'published'

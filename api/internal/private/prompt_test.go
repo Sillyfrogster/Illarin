@@ -74,7 +74,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	if work.Format != "preset_lumiverse" {
 		t.Fatalf("delivery format = %q, want Lumiverse", work.Format)
 	}
-	artifact := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
+	artifact := apitest.FetchSigned(t, router, work.Files[0].URL)
 	if artifact.Code != http.StatusOK {
 		t.Fatalf("artifact status = %d, want 200: %s", artifact.Code, artifact.Body.String())
 	}
@@ -282,7 +282,7 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 		]
 	}`)
 	accepted := apitest.Send(t, router, apitest.Authorized(
-		apitest.RevisionRequest(t, started.ID, "replacement.json", replacement), session,
+		apitest.OriginalFileRequest(t, started.ID, "replacement.json", replacement), session,
 	))
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("replacement upload status = %d, want 202: %s", accepted.Code, accepted.Body.String())

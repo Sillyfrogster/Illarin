@@ -9,71 +9,72 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type revisionRow struct {
-	Revision   int
+type originalFileRow struct {
+	Number     int
 	BlobID     uuid.UUID
 	MediaType  string
 	Format     string
 	Identifier string
 }
 
-func insertRevision(ctx context.Context, tx pgx.Tx, id, workID uuid.UUID, row revisionRow) error {
+func insertOriginalFile(ctx context.Context, tx pgx.Tx, id, workID uuid.UUID, row originalFileRow) error {
 	queries := db.New(tx)
-	params := db.InsertRevisionParams{
+	params := db.InsertOriginalFileParams{
 		ID:         uuidToPgtype(id),
 		WorkID:     uuidToPgtype(workID),
-		Revision:   int32(row.Revision),
+		Number:     int32(row.Number),
 		BlobID:     uuidToPgtype(row.BlobID),
 		MediaType:  row.MediaType,
 		Format:     row.Format,
 		Identifier: row.Identifier,
 	}
-	if err := queries.InsertRevision(ctx, params); err != nil {
-		return fmt.Errorf("insert revision: %w", err)
+	if err := queries.InsertOriginalFile(ctx, params); err != nil {
+		return fmt.Errorf("insert the original file: %w", err)
 	}
 	return nil
 }
 
-func setCurrentRevision(ctx context.Context, tx pgx.Tx, workID, revisionID uuid.UUID) error {
+func setOriginalFile(ctx context.Context, tx pgx.Tx, workID, originalFileID uuid.UUID) error {
 	queries := db.New(tx)
-	params := db.SetCurrentRevisionParams{
-		ID:                uuidToPgtype(workID),
-		CurrentRevisionID: uuidToPgtype(revisionID),
+	params := db.SetOriginalFileParams{
+		ID:             uuidToPgtype(workID),
+		OriginalFileID: uuidToPgtype(originalFileID),
 	}
-	if err := queries.SetCurrentRevision(ctx, params); err != nil {
-		return fmt.Errorf("set current revision: %w", err)
+	if err := queries.SetOriginalFile(ctx, params); err != nil {
+		return fmt.Errorf("set the original file: %w", err)
 	}
 	return nil
 }
 
-type RevisionLocation struct {
-	WorkID     uuid.UUID
-	RevisionID uuid.UUID
-	BlobID     uuid.UUID
-	MediaType  string
-	OwnerID    *uuid.UUID
+type OriginalFileLocation struct {
+	WorkID         uuid.UUID
+	OriginalFileID uuid.UUID
+	BlobID         uuid.UUID
+	MediaType      string
+	OwnerID        *uuid.UUID
 }
 
-func CurrentRevisionLocation(
+// LocateOriginalFile finds the original file a download of the work hands over
+func LocateOriginalFile(
 	ctx context.Context,
 	q db.DBTX,
 	workID uuid.UUID,
 	viewerID *uuid.UUID,
-) (RevisionLocation, error) {
+) (OriginalFileLocation, error) {
 	queries := db.New(q)
-	row, err := queries.CurrentRevisionLocation(ctx, db.CurrentRevisionLocationParams{
+	row, err := queries.OriginalFileLocation(ctx, db.OriginalFileLocationParams{
 		ID: uuidToPgtype(workID), ViewerID: uuidToNullable(viewerID),
 	})
 	if err != nil {
-		return RevisionLocation{}, err
+		return OriginalFileLocation{}, err
 	}
 	var ownerID *uuid.UUID
 	if row.OwnerID.Valid {
 		owner := uuidFromPgtype(row.OwnerID)
 		ownerID = &owner
 	}
-	return RevisionLocation{
-		WorkID: uuidFromPgtype(row.WorkID), RevisionID: uuidFromPgtype(row.RevisionID),
+	return OriginalFileLocation{
+		WorkID: uuidFromPgtype(row.WorkID), OriginalFileID: uuidFromPgtype(row.OriginalFileID),
 		BlobID: uuidFromPgtype(row.BlobID), MediaType: row.MediaType,
 		OwnerID: ownerID,
 	}, nil
@@ -142,8 +143,8 @@ func avatarMedia(media []PreparedMedia) *uuid.UUID {
 	return alternate
 }
 
-// Revision is an uploaded original file and the pictures read out of it
-type Revision struct {
+// OriginalFile is an uploaded file and the pictures read out of it
+type OriginalFile struct {
 	WorkID     uuid.UUID
 	Number     int
 	BlobID     uuid.UUID
@@ -153,26 +154,26 @@ type Revision struct {
 	Media      []PreparedMedia
 }
 
-// RecordRevision makes an uploaded file the work's current original and replaces the pictures read from the one before
-func RecordRevision(ctx context.Context, tx pgx.Tx, revision Revision) (uuid.UUID, error) {
-	revisionID := uuid.New()
-	if err := insertRevision(ctx, tx, revisionID, revision.WorkID, revisionRow{
-		Revision: revision.Number, BlobID: revision.BlobID, MediaType: revision.MediaType,
-		Format: revision.Format, Identifier: revision.Identifier,
+// RecordOriginalFile makes an uploaded file the work's current original file and replaces the pictures read from the one before
+func RecordOriginalFile(ctx context.Context, tx pgx.Tx, original OriginalFile) (uuid.UUID, error) {
+	originalFileID := uuid.New()
+	if err := insertOriginalFile(ctx, tx, originalFileID, original.WorkID, originalFileRow{
+		Number: original.Number, BlobID: original.BlobID, MediaType: original.MediaType,
+		Format: original.Format, Identifier: original.Identifier,
 	}); err != nil {
 		return uuid.Nil, err
 	}
-	if err := supersedeExtractedMedia(ctx, tx, revision.WorkID); err != nil {
+	if err := supersedeExtractedMedia(ctx, tx, original.WorkID); err != nil {
 		return uuid.Nil, err
 	}
-	if err := insertWorkMedia(ctx, tx, revision.WorkID, revision.Media); err != nil {
+	if err := insertWorkMedia(ctx, tx, original.WorkID, original.Media); err != nil {
 		return uuid.Nil, err
 	}
-	if err := setCurrentRevision(ctx, tx, revision.WorkID, revisionID); err != nil {
+	if err := setOriginalFile(ctx, tx, original.WorkID, originalFileID); err != nil {
 		return uuid.Nil, err
 	}
-	if coverID := avatarMedia(revision.Media); coverID != nil {
-		return revisionID, setCoverMedia(ctx, tx, revision.WorkID, coverID)
+	if coverID := avatarMedia(original.Media); coverID != nil {
+		return originalFileID, setCoverMedia(ctx, tx, original.WorkID, coverID)
 	}
-	return revisionID, clearSupersededCover(ctx, tx, revision.WorkID)
+	return originalFileID, clearSupersededCover(ctx, tx, original.WorkID)
 }

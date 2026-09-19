@@ -11,12 +11,12 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
-type latestUpdateBody struct {
-	LatestUpdate *struct {
+type latestVersionBody struct {
+	LatestVersion *struct {
 		Number  int    `json:"number"`
 		Initial bool   `json:"initial"`
 		Summary string `json:"summary"`
-	} `json:"latestUpdate"`
+	} `json:"latestVersion"`
 }
 
 type recordedVersionListBody struct {
@@ -34,7 +34,7 @@ func readUpdateHistory(
 	session *http.Cookie,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"/updates", nil)
+	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"/versions", nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -50,7 +50,7 @@ func TestTheWorkPageCarriesTheVersionReadersHave(t *testing.T) {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	first := readLatestUpdate(t, r, started.ID)
+	first := readLatestVersion(t, r, started.ID)
 	if first.Number != 1 || first.Initial || first.Summary != "" {
 		t.Fatalf("first publication reads as %+v", first)
 	}
@@ -61,13 +61,13 @@ func TestTheWorkPageCarriesTheVersionReadersHave(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	update := apitest.PublishWorkUpdate(t, r, session, started.ID,
+	update := apitest.PublishWorkVersion(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf"}`)
 	if update.Code != http.StatusOK {
 		t.Fatalf("publish an update status = %d, want 200: %s", update.Code, update.Body.String())
 	}
 
-	second := readLatestUpdate(t, r, started.ID)
+	second := readLatestVersion(t, r, started.ID)
 	if second.Number != 2 || second.Summary != "Moved her to the east shelf" {
 		t.Fatalf("published update reads as %+v", second)
 	}
@@ -88,7 +88,7 @@ func TestTheWorkPageCarriesTheVersionReadersHave(t *testing.T) {
 	}
 }
 
-func TestUpdateHistoryFollowsTheWorksCurrentAccess(t *testing.T) {
+func TestVersionHistoryFollowsTheWorksCurrentAccess(t *testing.T) {
 	t.Parallel()
 	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := apitest.StartCharacter(t, r, session)
@@ -127,7 +127,7 @@ func TestUpdateHistoryFollowsTheWorksCurrentAccess(t *testing.T) {
 	}
 }
 
-func readLatestUpdate(t *testing.T, r http.Handler, workID string) struct {
+func readLatestVersion(t *testing.T, r http.Handler, workID string) struct {
 	Number  int    `json:"number"`
 	Initial bool   `json:"initial"`
 	Summary string `json:"summary"`
@@ -137,12 +137,12 @@ func readLatestUpdate(t *testing.T, r http.Handler, workID string) struct {
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the work page = %d: %s", response.Code, response.Body.String())
 	}
-	var page latestUpdateBody
+	var page latestVersionBody
 	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode the work page: %v", err)
 	}
-	if page.LatestUpdate == nil {
+	if page.LatestVersion == nil {
 		t.Fatal("a published work's page carries no recorded version")
 	}
-	return *page.LatestUpdate
+	return *page.LatestVersion
 }

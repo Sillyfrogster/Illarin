@@ -245,7 +245,7 @@ func readLumiverseStyles(
 	return styles, rows
 }
 
-func (LumiverseModule) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+func (LumiverseModule) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
 	held := keepTheme(work.Preserved)
 	body := held.body(lumiverseNamespace)
 	theme := keys.Object(body["theme"])
@@ -309,7 +309,7 @@ func (LumiverseModule) Write(_ context.Context, work format.ExportWork) (format.
 			descriptors := preservedWorkDescriptors(body["assets"])
 			for _, attached := range styles.Files {
 				if !safeArchivePath(attached.Path) {
-					return format.Artifact{}, format.SafetyViolation(fmt.Errorf(
+					return format.MainFile{}, format.SafetyViolation(fmt.Errorf(
 						"theme asset path %q is not safe", attached.Path,
 					))
 				}
@@ -336,25 +336,25 @@ func preservedWorkDescriptors(value json.RawMessage) []json.RawMessage {
 	return descriptors
 }
 
-func writeLumiverseBundle(document map[string]json.RawMessage, files []block.StylesheetFile) (format.Artifact, error) {
+func writeLumiverseBundle(document map[string]json.RawMessage, files []block.StylesheetFile) (format.MainFile, error) {
 	encoded, err := json.Marshal(document)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the Lumiverse theme: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the Lumiverse theme: %w", err)
 	}
 	var output bytes.Buffer
 	archive := zip.NewWriter(&output)
 	if err := writeZipEntry(archive, "theme.json", encoded); err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
 	for _, attached := range files {
 		if err := writeZipEntry(archive, attached.Path, attached.Data); err != nil {
-			return format.Artifact{}, err
+			return format.MainFile{}, err
 		}
 	}
 	if err := archive.Close(); err != nil {
-		return format.Artifact{}, fmt.Errorf("finish the Lumiverse theme bundle: %w", err)
+		return format.MainFile{}, fmt.Errorf("finish the Lumiverse theme bundle: %w", err)
 	}
-	return format.Artifact{
+	return format.MainFile{
 		Body: output.Bytes(), MediaType: "application/zip", Extension: ".lumitheme",
 	}, nil
 }

@@ -67,7 +67,7 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 	}
 }
 
-func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
+func TestAKeyedPlaceholderOriginalFileKeepsTheExistingPrivateText(t *testing.T) {
 	t.Parallel()
 	router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Keyed sealed preset")
@@ -89,7 +89,7 @@ func TestAKeyedPlaceholderRevisionKeepsTheExistingPrivateText(t *testing.T) {
 		}]
 	}`)
 	accepted := apitest.Send(t, router, apitest.Authorized(
-		apitest.RevisionRequest(t, workID, "keyed-revision.json", placeholder), session,
+		apitest.OriginalFileRequest(t, workID, "keyed-revision.json", placeholder), session,
 	))
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("revision upload = %d: %s", accepted.Code, accepted.Body.String())
@@ -136,7 +136,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			}
 			before := apitest.FetchStartedWork(t, router, session, workID)
 			replacement := strings.ReplaceAll(ordinary, "Keyed sealed preset", "Replacement preset")
-			staged := apitest.Send(t, router, apitest.Authorized(apitest.RevisionRequest(t, workID, "replacement.json", []byte(replacement)), session))
+			staged := apitest.Send(t, router, apitest.Authorized(apitest.OriginalFileRequest(t, workID, "replacement.json", []byte(replacement)), session))
 			if staged.Code != http.StatusAccepted {
 				t.Fatalf("stage replacement: %d %s", staged.Code, staged.Body.String())
 			}
@@ -144,7 +144,7 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 				t.Fatalf("process replacement: %t %v", processed, err)
 			}
 			operationID := strings.TrimPrefix(staged.Header().Get("Location"), "/v1/ingests/")
-			path := "/v1/works/" + workID + "/revisions/" + operationID + "/accept"
+			path := "/v1/works/" + workID + "/original-file/" + operationID + "/accept"
 			request := apitest.AuthorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{}}`, session)
 			apitest.WithReviewedVersion(t, router, request)
 			refused := apitest.Send(t, router, request)
@@ -153,14 +153,14 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			}
 			after := apitest.FetchStartedWork(t, router, session, workID)
 			if !after.LinkedInstallOnly || !reflect.DeepEqual(after.Blocks, before.Blocks) {
-				t.Fatal("refused replacement changed the working copy or its protection")
+				t.Fatal("refused replacement changed the drafted changes or its protection")
 			}
 			reader := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 			if reader.Code != http.StatusOK || strings.Contains(reader.Body.String(), "Exact private prompt.") {
 				t.Fatalf("reader after refusal: %d %s", reader.Code, reader.Body.String())
 			}
 			confirmation := apitest.AuthorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{},"exposeProtected":true}`, session)
-			confirmation.Header.Set("X-Working-Copy-Version", request.Header.Get("X-Working-Copy-Version"))
+			confirmation.Header.Set("X-Drafted-Changes-Version", request.Header.Get("X-Drafted-Changes-Version"))
 			confirmed := apitest.Send(t, router, confirmation)
 			if confirmed.Code != http.StatusOK {
 				t.Fatalf("confirmed replacement: %d %s", confirmed.Code, confirmed.Body.String())

@@ -55,19 +55,19 @@ type Delivery struct {
 }
 
 type Work struct {
-	ID                uuid.UUID
-	WorkID            uuid.UUID
-	ContentGeneration int
-	Type              string
-	Name              string
-	Format            string
-	Label             string
-	QueuedAt          time.Time
-	LeaseExpiresAt    time.Time
-	Artifacts         []Artifact
+	ID             uuid.UUID
+	WorkID         uuid.UUID
+	VersionNumber  int
+	Type           string
+	Name           string
+	Format         string
+	Label          string
+	QueuedAt       time.Time
+	LeaseExpiresAt time.Time
+	Files          []File
 }
 
-type Artifact struct {
+type File struct {
 	Type    string
 	URL     string
 	MediaID *uuid.UUID
@@ -76,25 +76,25 @@ type Artifact struct {
 }
 
 const (
-	ArtifactExport  = "export"
-	ArtifactPicture = "picture"
+	FileExport  = "export"
+	FilePicture = "picture"
 )
 
 type InstanceState struct {
-	InstanceID          uuid.UUID
-	ApplicationName     string
-	InstanceName        string
-	LastSeenAt          *time.Time
-	CanReceive          bool
-	ReportsLibrary      bool
-	Delivery            *Delivery
-	InstalledGeneration *int
-	UpdateAvailable     bool
+	InstanceID       uuid.UUID
+	ApplicationName  string
+	InstanceName     string
+	LastSeenAt       *time.Time
+	CanReceive       bool
+	ReportsLibrary   bool
+	Delivery         *Delivery
+	InstalledVersion *int
+	UpdateAvailable  bool
 }
 
 type WorkInstances struct {
-	ContentGeneration int
-	Items             []InstanceState
+	VersionNumber int
+	Items         []InstanceState
 }
 
 type LibraryCounts struct {
@@ -110,8 +110,8 @@ type ReportedLibrary struct {
 }
 
 type ReportedEntry struct {
-	WorkID            uuid.UUID
-	ContentGeneration *int
+	WorkID        uuid.UUID
+	VersionNumber *int
 }
 
 type LibraryResult struct {

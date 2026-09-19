@@ -16,8 +16,8 @@ type writerModule struct {
 
 func (m writerModule) ID() string               { return m.declaration.ID }
 func (m writerModule) Declaration() Declaration { return m.declaration }
-func (writerModule) Write(context.Context, ExportWork) (Artifact, error) {
-	return Artifact{}, nil
+func (writerModule) Write(context.Context, ExportWork) (MainFile, error) {
+	return MainFile{}, nil
 }
 
 func writerDeclaration(id string, grades map[block.Role]SupportGrade) Declaration {

@@ -25,12 +25,12 @@ type DeliveryPicture struct {
 
 // Deliverable is what a send carries about the work it is sending
 type Deliverable struct {
-	Type              string
-	Name              string
-	ContentGeneration int
-	Targets           []DeliveryTarget
-	HasOriginal       bool
-	Pictures          []DeliveryPicture
+	Type          string
+	Name          string
+	VersionNumber int
+	Targets       []DeliveryTarget
+	HasOriginal   bool
+	Pictures      []DeliveryPicture
 	// InstallCapabilities lists what an instance must declare, any one of them, before the work is sent to it.
 	InstallCapabilities []string
 }

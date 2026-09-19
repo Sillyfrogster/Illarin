@@ -113,10 +113,10 @@ func (s *Service) recordedPictures(
 	blurred := flagged != nil && *flagged && preference != work.NSFWShown
 	rows, err := tx.Query(ctx, `
 		select media.id, media.role, media.width, media.height, blob.byte_size
-		  from public.work_snapshot_media kept
+		  from public.work_version_media kept
 		  join public.work_media media on media.id = kept.media_id
 		  join public.blobs blob on blob.id = media.blob_id
-		 where kept.snapshot_id = $1
+		 where kept.version_id = $1
 		   and media.width is not null and media.height is not null
 		 order by (media.id = $2) desc,
 		          case media.role
@@ -204,12 +204,12 @@ func (s *Service) recordedExportSubject(
 	subject.blocks = recorded.Blocks
 	subject.cover = recorded.Metadata.Cover
 	subject.ownerID = ownerID
-	subject.revisionID = recorded.SourceRevisionID
+	subject.originalFileID = recorded.OriginalFileID
 	subject.recorded = &recorded
 	return subject, sealed, nil
 }
 
-func recordedRemainder(v work.Snapshot) []format.Remainder {
+func recordedRemainder(v work.FullVersion) []format.Remainder {
 	preserved := make([]format.Remainder, 0, len(v.Preserved))
 	for _, row := range v.Preserved {
 		preserved = append(preserved, format.Remainder{

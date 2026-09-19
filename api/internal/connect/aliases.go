@@ -13,18 +13,22 @@ func registerAliases(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPost, "/v1/assets/:id/deliveries", d.JSON, h.SendWorkToInstance)
 }
 
-// The field names a send and the app's library answered to before the rename, kept for sixty days
+// The field names a send and the app's library answered to before the renames, kept for sixty days
 var (
-	deliveryArtifactAliases = map[string]string{"type": "kind"}
-	deliveryWorkAliases     = map[string]string{"workId": "assetId", "type": "kind"}
-	libraryEntryAliases     = map[string]string{"workId": "assetId"}
+	deliveryFileAliases = map[string]string{"type": "kind"}
+	deliveryWorkAliases = map[string]string{
+		"workId": "assetId", "type": "kind", "versionNumber": "contentGeneration", "files": "artifacts",
+	}
+	libraryEntryAliases     = map[string]string{"workId": "assetId", "versionNumber": "contentGeneration"}
 	queuedDeliveryAliases   = map[string]string{"workId": "assetId"}
 	withheldNoticeAliases   = map[string]string{"workId": "assetId"}
+	workInstanceAliases     = map[string]string{"installedVersion": "installedGeneration"}
+	workInstanceListAliases = map[string]string{"versionNumber": "contentGeneration"}
 )
 
-func (a DeliveryArtifact) MarshalJSON() ([]byte, error) {
-	type plain DeliveryArtifact
-	return api.MarshalAliased(plain(a), deliveryArtifactAliases)
+func (a DeliveryFile) MarshalJSON() ([]byte, error) {
+	type plain DeliveryFile
+	return api.MarshalAliased(plain(a), deliveryFileAliases)
 }
 
 func (d DeliveryWork) MarshalJSON() ([]byte, error) {
@@ -40,6 +44,16 @@ func (e LibraryEntry) MarshalJSON() ([]byte, error) {
 func (e *LibraryEntry) UnmarshalJSON(data []byte) error {
 	type plain LibraryEntry
 	return api.UnmarshalAliased(data, (*plain)(e), libraryEntryAliases)
+}
+
+func (i WorkInstance) MarshalJSON() ([]byte, error) {
+	type plain WorkInstance
+	return api.MarshalAliased(plain(i), workInstanceAliases)
+}
+
+func (l WorkInstanceList) MarshalJSON() ([]byte, error) {
+	type plain WorkInstanceList
+	return api.MarshalAliased(plain(l), workInstanceListAliases)
 }
 
 func (d QueuedDelivery) MarshalJSON() ([]byte, error) {

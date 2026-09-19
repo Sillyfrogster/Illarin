@@ -29,15 +29,15 @@ func TestRestoringARecordedVersionStagesItWithoutReplacingNewerWork(t *testing.T
 	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save second description = %d: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishWorkUpdate(t, r, session, started.ID, `{"summary":"Second version"}`); got.Code != http.StatusOK {
+	if got := apitest.PublishWorkVersion(t, r, session, started.ID, `{"summary":"Second version"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish second version = %d: %s", got.Code, got.Body.String())
 	}
 
 	stale := apitest.Authorized(httptest.NewRequest(http.MethodPost,
-		"/v1/works/"+started.ID+"/updates/1/restore", nil), session)
+		"/v1/works/"+started.ID+"/versions/1/restore", nil), session)
 	apitest.WithReviewedVersion(t, r, stale)
 	identity := apitest.AuthorizedJSONRequest(t, http.MethodPut, "/v1/works/"+started.ID+"/details",
-		`{"name":"Unsaved newer work","blurb":"Kept in the working copy.","isNsfw":false}`, session)
+		`{"name":"Unsaved newer work","blurb":"Kept in the drafted changes.","isNsfw":false}`, session)
 	if got := apitest.Send(t, r, identity); got.Code != http.StatusNoContent {
 		t.Fatalf("save newer work = %d: %s", got.Code, got.Body.String())
 	}
@@ -49,22 +49,22 @@ func TestRestoringARecordedVersionStagesItWithoutReplacingNewerWork(t *testing.T
 	}
 
 	restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
-		"/v1/works/"+started.ID+"/updates/1/restore", nil), session)
+		"/v1/works/"+started.ID+"/versions/1/restore", nil), session)
 	if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 		t.Fatalf("restore = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	working := apitest.FetchStartedWork(t, r, session, started.ID)
 	if working.Name != "Ilse of the west shelf" || blockText(t, working.Blocks, "character_core") != "She keeps the books that forget themselves." {
-		t.Fatalf("restored working copy = %q / %q", working.Name, blockText(t, working.Blocks, "character_core"))
+		t.Fatalf("restored drafted changes = %q / %q", working.Name, blockText(t, working.Blocks, "character_core"))
 	}
 	public := apitest.FetchWork(t, r, nil, started.ID)
 	if got := blockText(t, public.Blocks, "character_core"); got != "The second public description." {
 		t.Fatalf("restore changed public description to %q", got)
 	}
-	if got := apitest.PublishWorkUpdate(t, r, session, started.ID, `{"summary":""}`); got.Code != http.StatusBadRequest {
+	if got := apitest.PublishWorkVersion(t, r, session, started.ID, `{"summary":""}`); got.Code != http.StatusBadRequest {
 		t.Fatalf("restoration published without fresh notes = %d: %s", got.Code, got.Body.String())
 	}
-	published := apitest.PublishWorkUpdate(t, r, session, started.ID, `{"summary":"Restored the original description"}`)
+	published := apitest.PublishWorkVersion(t, r, session, started.ID, `{"summary":"Restored the original description"}`)
 	if published.Code != http.StatusOK || !strings.Contains(published.Body.String(), `"number":3`) {
 		t.Fatalf("restoration did not become a new update: %d %s", published.Code, published.Body.String())
 	}
@@ -107,11 +107,11 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 		`{"name":"Ilse of the west shelf","blurb":"Now with another picture.","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save second version details = %d: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishWorkUpdate(t, r, session, started.ID, `{"summary":"Added another picture"}`); got.Code != http.StatusOK {
+	if got := apitest.PublishWorkVersion(t, r, session, started.ID, `{"summary":"Added another picture"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish second version = %d: %s", got.Code, got.Body.String())
 	}
 	restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
-		"/v1/works/"+started.ID+"/updates/1/restore", nil), session)
+		"/v1/works/"+started.ID+"/versions/1/restore", nil), session)
 	if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 		t.Fatalf("restore = %d: %s", got.Code, got.Body.String())
 	}
@@ -136,11 +136,11 @@ func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save second prompts = %d: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishWorkUpdate(t, r, session, started.ID, `{"summary":"Changed both prompts"}`); got.Code != http.StatusOK {
+	if got := apitest.PublishWorkVersion(t, r, session, started.ID, `{"summary":"Changed both prompts"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish second prompts = %d: %s", got.Code, got.Body.String())
 	}
 	restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
-		"/v1/works/"+started.ID+"/updates/1/restore", nil), session)
+		"/v1/works/"+started.ID+"/versions/1/restore", nil), session)
 	if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 		t.Fatalf("restore protected version = %d: %s", got.Code, got.Body.String())
 	}
@@ -152,10 +152,10 @@ func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 	text := string(encoded)
 	for _, want := range []string{"First public prompt.", "First protected prompt.", `"allowedApps":["lumiverse"]`, `"linkedInstallOnly":true`} {
 		if !strings.Contains(text, want) {
-			t.Fatalf("restored working copy omitted %q: %s", want, text)
+			t.Fatalf("restored drafted changes omitted %q: %s", want, text)
 		}
 	}
-	if got := apitest.PublishWorkUpdate(t, r, session, started.ID, `{"summary":"Restored earlier prompts"}`); got.Code != http.StatusOK {
+	if got := apitest.PublishWorkVersion(t, r, session, started.ID, `{"summary":"Restored earlier prompts"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish restored prompts = %d: %s", got.Code, got.Body.String())
 	}
 	public := apitest.FetchWork(t, r, nil, started.ID)
@@ -175,11 +175,10 @@ func TestRestoredOldContentMustPassCurrentPublicationValidation(t *testing.T) {
 	}
 
 	var payload, protected []byte
-	var generation int
 	if err := pool.QueryRow(t.Context(), `
-		select payload, protected_payloads, content_generation
-		  from work_snapshots where work_id = $1 and number = 1
-	`, started.ID).Scan(&payload, &protected, &generation); err != nil {
+		select payload, protected_payloads
+		  from work_versions where work_id = $1 and number = 1
+	`, started.ID).Scan(&payload, &protected); err != nil {
 		t.Fatal(err)
 	}
 	var recorded map[string]any
@@ -200,19 +199,19 @@ func TestRestoredOldContentMustPassCurrentPublicationValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(t.Context(), `
-		insert into work_snapshots
-			(work_id, number, content_generation, payload, protected_payloads, summary)
-		values ($1, 2, $2, $3, $4, 'Recorded under an older rule')
-	`, started.ID, generation, invalid, protected); err != nil {
+		insert into work_versions
+			(work_id, number, payload, protected_payloads, summary)
+		values ($1, 2, $2, $3, 'Recorded under an older rule')
+	`, started.ID, invalid, protected); err != nil {
 		t.Fatal(err)
 	}
 
 	restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
-		"/v1/works/"+started.ID+"/updates/2/restore", nil), session)
+		"/v1/works/"+started.ID+"/versions/2/restore", nil), session)
 	if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 		t.Fatalf("restore older content = %d: %s", got.Code, got.Body.String())
 	}
-	publish := apitest.PublishWorkUpdate(t, r, session, started.ID, `{"summary":"Restore an older version"}`)
+	publish := apitest.PublishWorkVersion(t, r, session, started.ID, `{"summary":"Restore an older version"}`)
 	if publish.Code != http.StatusConflict || !strings.Contains(publish.Body.String(), `"code":"not_ready"`) {
 		t.Fatalf("invalid restored content published = %d: %s", publish.Code, publish.Body.String())
 	}
@@ -226,16 +225,16 @@ func TestCorrectingNotesMarksTheEditWithoutPublishingContent(t *testing.T) {
 	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
-	before := apitest.ContentGeneration(t, pool, started.ID)
+	before := apitest.VersionNumber(t, pool, started.ID)
 
 	req := apitest.AuthorizedJSONRequest(t, http.MethodPatch,
-		"/v1/works/"+started.ID+"/updates/1/notes",
+		"/v1/works/"+started.ID+"/versions/1/notes",
 		`{"summary":"Corrected summary","notes":"Corrected context."}`, session)
 	if got := apitest.Send(t, r, req); got.Code != http.StatusNoContent {
 		t.Fatalf("correct notes = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if after := apitest.ContentGeneration(t, pool, started.ID); after != before {
-		t.Fatalf("note correction moved generation from %d to %d", before, after)
+	if after := apitest.VersionNumber(t, pool, started.ID); after != before {
+		t.Fatalf("note correction moved the version number from %d to %d", before, after)
 	}
 
 	response := readUpdateHistory(t, r, started.ID, nil)
@@ -255,7 +254,7 @@ func TestCorrectingNotesMarksTheEditWithoutPublishingContent(t *testing.T) {
 	}
 }
 
-func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
+func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsContent(t *testing.T) {
 	t.Parallel()
 	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	started := apitest.StartCharacter(t, r, session)
@@ -276,13 +275,13 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
 		if number == 0 {
 			notes = "Private after withdrawal"
 		}
-		if got := apitest.PublishWorkUpdate(t, r, session, started.ID,
+		if got := apitest.PublishWorkVersion(t, r, session, started.ID,
 			`{"summary":"Version `+description+`","notes":"`+notes+`"}`); got.Code != http.StatusOK {
 			t.Fatalf("publish version %d = %d: %s", number+2, got.Code, got.Body.String())
 		}
 		if number == 0 {
 			restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
-				"/v1/works/"+started.ID+"/updates/1/restore", nil), session)
+				"/v1/works/"+started.ID+"/versions/1/restore", nil), session)
 			if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
 				t.Fatalf("restore without withdrawn picture = %d: %s", got.Code, got.Body.String())
 			}
@@ -290,7 +289,7 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
 	}
 
 	withdraw := apitest.AuthorizedJSONRequest(t, http.MethodPost,
-		"/v1/works/"+started.ID+"/updates/2/withdraw",
+		"/v1/works/"+started.ID+"/versions/2/withdraw",
 		`{"explanation":"This version gave incorrect guidance."}`, session)
 	if got := apitest.Send(t, r, withdraw); got.Code != http.StatusNoContent {
 		t.Fatalf("withdraw = %d, want 204: %s", got.Code, got.Body.String())
@@ -324,7 +323,7 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
 	}
 
 	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,
-		"/v1/works/"+started.ID+"/updates/2/downloads", nil))
+		"/v1/works/"+started.ID+"/versions/2/downloads", nil))
 	if download.Code != http.StatusNotFound {
 		t.Fatalf("withdrawn download = %d, want 404: %s", download.Code, download.Body.String())
 	}
@@ -334,13 +333,13 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsSnapshot(t *testing.T) {
 		t.Fatalf("withdrawn media = %d, want 404", directMedia.Code)
 	}
 	comparison := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,
-		"/v1/works/"+started.ID+"/updates/comparison?from=1&to=2", nil))
+		"/v1/works/"+started.ID+"/versions/comparison?from=1&to=2", nil))
 	if comparison.Code != http.StatusOK || !strings.Contains(comparison.Body.String(), "This version was withdrawn.") || strings.Contains(comparison.Body.String(), "Second secret history") {
 		t.Fatalf("withdrawn comparison was not blocked: %d %s", comparison.Code, comparison.Body.String())
 	}
 
 	current := apitest.AuthorizedJSONRequest(t, http.MethodPost,
-		"/v1/works/"+started.ID+"/updates/3/withdraw", `{"explanation":"Not alone."}`, session)
+		"/v1/works/"+started.ID+"/versions/3/withdraw", `{"explanation":"Not alone."}`, session)
 	if got := apitest.Send(t, r, current); got.Code != http.StatusConflict {
 		t.Fatalf("current withdrawal = %d, want 409: %s", got.Code, got.Body.String())
 	}

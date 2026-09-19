@@ -12,10 +12,17 @@ installed, and lets its owner revoke it.
 ## Names that changed
 
 Illarin says work where it said asset, type where it said kind, and follow where
-it said watch. For now the old names still answer beside the new ones: every
-`/api/v1/assets` path still works at its `/api/v1/works` address, a send carries
-`assetId` and `kind` next to `workId` and `type`, and a library report may name
-a work by `assetId`. The date the old names stop answering will be given here.
+it said watch. A work's version number is now the one number that says a newer
+version exists: it replaces the content generation, and it moves with every
+published version, even one that left the file alone. A send lists its `files`
+where it listed `artifacts`.
+
+For now the old names still answer beside the new ones: every `/api/v1/assets`
+path still works at its `/api/v1/works` address, a send carries `assetId`,
+`kind`, `contentGeneration` and `artifacts` next to `workId`, `type`,
+`versionNumber` and `files`, and a library report may name a work by `assetId`
+and its version by `contentGeneration`. The date the old names stop answering
+will be given here.
 
 ## What one installation must keep
 
@@ -413,14 +420,14 @@ A `200` carries one entry per released delivery, and the
     {
       "id": "…",
       "workId": "…",
-      "contentGeneration": 4,
+      "versionNumber": 4,
       "type": "character",
       "name": "…",
       "format": "example_bundle_v2",
       "label": "Example bundle",
       "queuedAt": "2026-08-23T18:30:00Z",
       "leaseExpiresAt": "2026-08-23T18:45:00Z",
-      "artifacts": [
+      "files": [
         {"type": "export", "url": "https://…/delivery/…/export?expires=…&signature=…"},
         {"type": "picture", "url": "https://…/media/…", "mediaId": "…",
          "role": "expression", "isCover": false}
@@ -448,8 +455,8 @@ Rules for a conforming client:
   answers `204`; two workers waiting for the same installation simply take turns.
 - After a failure, back off exponentially with jitter and honour `Retry-After`.
   `429` is a rate limit and `503` means Illarin is holding as many waits as it will.
-- Store `contentGeneration` against `workId`. A larger one later means the file
-  changed.
+- Store `versionNumber` against `workId`. A larger one later means a newer
+  version was published; fetch it again even if the bytes turn out the same.
 
 An acknowledged delivery stays on record as delivered for a week, so the owner
 sees on the work's page that it arrived.
@@ -460,7 +467,7 @@ An extension is delivered only to an installation that declares the capability
 of the app it is written for: `chat.lumiverse:extension-install` for a Spindle
 extension, `app.sillytavern:extension-install` for a SillyTavern one. Without it the
 page offers a download only, and a delivery queued before the capability was
-withdrawn stops as `unsupported`. The artifact is the developer's archive exactly
+withdrawn stops as `unsupported`. The main file is the developer's archive exactly
 as uploaded, with `type` set to `extension`; accept the matching format id
 (`extension_spindle` or `extension_sillytavern`) so `format` names it rather
 than `raw`. The archive holds the manifest at its root or inside the one folder
@@ -489,8 +496,8 @@ Content-Type: application/json
   "snapshot": false,
   "applicationVersion": "4.3.0",
   "entries": [
-    {"workId": "…", "contentGeneration": 4},
-    {"workId": "…", "contentGeneration": 1}
+    {"workId": "…", "versionNumber": 4},
+    {"workId": "…", "versionNumber": 1}
   ],
   "removed": ["…"]
 }
@@ -513,8 +520,8 @@ anything absent is removed, so a snapshot may not also carry `removed`. Leave it
 `false` to add, update and remove only what you name. At most 2000 entries and
 2000 removals per request, and at most 256 KiB of body.
 
-Leave `contentGeneration` out when an installation predates the counter. Illarin
-records the work's current generation rather than calling the install out of
+Leave `versionNumber` out when an installation predates the number. Illarin
+records the work's current version number rather than calling the install out of
 date: an installation that cannot say which version it holds has not told us it
 is behind.
 
@@ -588,7 +595,7 @@ Before calling an integration complete, verify all of these:
   unlink without sharing state.
 - Unknown capabilities and targets produce no privileged behavior.
 - Response fields the installation does not recognise are ignored.
-- One delivery wait is open at a time, `204` is handled, artifacts are fetched
+- One delivery wait is open at a time, `204` is handled, files are fetched
   as ordinary retryable `GET`s, and deliveries are acknowledged only after they
   are durably installed.
 - Delivery ids are deduplicated, so the same delivery arriving twice installs once.

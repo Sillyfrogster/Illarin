@@ -30,7 +30,7 @@ type BlobTombstone struct {
 type DownloadEvent struct {
 	ID                 int64
 	WorkID             pgtype.UUID
-	RevisionID         pgtype.UUID
+	OriginalFileID     pgtype.UUID
 	ExportTarget       string
 	HandedOffAt        pgtype.Timestamptz
 	AuthorizationClass string
@@ -105,7 +105,7 @@ type InstanceDelivery struct {
 type InstanceLibraryEntry struct {
 	InstanceID         pgtype.UUID
 	WorkID             pgtype.UUID
-	ContentGeneration  int32
+	VersionNumber      int32
 	ReportedAt         pgtype.Timestamptz
 	NotifiedWithheldAt pgtype.Timestamptz
 }
@@ -667,32 +667,31 @@ type User struct {
 }
 
 type Work struct {
-	ID                  pgtype.UUID
-	Type                string
-	CurrentRevisionID   pgtype.UUID
-	OwnerID             pgtype.UUID
-	Name                string
-	Blurb               string
-	Tags                []string
-	CoverMediaID        pgtype.UUID
-	IsNsfw              pgtype.Bool
-	Visibility          string
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	IndexedAt           pgtype.Timestamptz
-	WithheldAt          pgtype.Timestamptz
-	WithheldBy          pgtype.UUID
-	WithheldReason      pgtype.Text
-	DeletedAt           pgtype.Timestamptz
-	RecoverableUntil    pgtype.Timestamptz
-	Lifecycle           string
-	WorkVersion         string
-	CreditedAuthor      string
-	Nickname            string
-	OriginFormat        pgtype.Text
-	ContentGeneration   int32
-	PublishedSnapshotID pgtype.UUID
-	WorkingCopyVersion  int64
+	ID                    pgtype.UUID
+	Type                  string
+	OriginalFileID        pgtype.UUID
+	OwnerID               pgtype.UUID
+	Name                  string
+	Blurb                 string
+	Tags                  []string
+	CoverMediaID          pgtype.UUID
+	IsNsfw                pgtype.Bool
+	Visibility            string
+	CreatedAt             pgtype.Timestamptz
+	UpdatedAt             pgtype.Timestamptz
+	IndexedAt             pgtype.Timestamptz
+	WithheldAt            pgtype.Timestamptz
+	WithheldBy            pgtype.UUID
+	WithheldReason        pgtype.Text
+	DeletedAt             pgtype.Timestamptz
+	RecoverableUntil      pgtype.Timestamptz
+	Lifecycle             string
+	WorkVersion           string
+	CreditedAuthor        string
+	Nickname              string
+	OriginFormat          pgtype.Text
+	PublishedVersionID    pgtype.UUID
+	DraftedChangesVersion int64
 }
 
 type WorkBlock struct {
@@ -732,6 +731,17 @@ type WorkMedium struct {
 	IsCurrent   bool
 }
 
+type WorkOriginalFile struct {
+	ID         pgtype.UUID
+	WorkID     pgtype.UUID
+	Number     int32
+	MediaType  string
+	CreatedAt  pgtype.Timestamptz
+	BlobID     pgtype.UUID
+	Format     string
+	Identifier string
+}
+
 type WorkPreservedDatum struct {
 	ID        pgtype.UUID
 	WorkID    pgtype.UUID
@@ -752,31 +762,31 @@ type WorkPublicProtectedContent struct {
 }
 
 type WorkPublicWork struct {
-	ID                  pgtype.UUID
-	Type                string
-	CurrentRevisionID   interface{}
-	OwnerID             pgtype.UUID
-	Name                interface{}
-	Blurb               interface{}
-	Tags                interface{}
-	CoverMediaID        pgtype.UUID
-	IsNsfw              bool
-	Visibility          string
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	IndexedAt           pgtype.Timestamptz
-	WithheldAt          pgtype.Timestamptz
-	WithheldBy          pgtype.UUID
-	WithheldReason      pgtype.Text
-	DeletedAt           pgtype.Timestamptz
-	RecoverableUntil    pgtype.Timestamptz
-	Lifecycle           string
-	WorkVersion         interface{}
-	CreditedAuthor      interface{}
-	Nickname            interface{}
-	OriginFormat        interface{}
-	ContentGeneration   int32
-	PublishedSnapshotID pgtype.UUID
+	ID                 pgtype.UUID
+	Type               string
+	OriginalFileID     interface{}
+	OwnerID            pgtype.UUID
+	Name               interface{}
+	Blurb              interface{}
+	Tags               interface{}
+	CoverMediaID       pgtype.UUID
+	IsNsfw             bool
+	Visibility         string
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	IndexedAt          pgtype.Timestamptz
+	WithheldAt         pgtype.Timestamptz
+	WithheldBy         pgtype.UUID
+	WithheldReason     pgtype.Text
+	DeletedAt          pgtype.Timestamptz
+	RecoverableUntil   pgtype.Timestamptz
+	Lifecycle          string
+	WorkVersion        interface{}
+	CreditedAuthor     interface{}
+	Nickname           interface{}
+	OriginFormat       interface{}
+	VersionNumber      pgtype.Int4
+	PublishedVersionID pgtype.UUID
 }
 
 type WorkPublicWorkBlock struct {
@@ -820,53 +830,6 @@ type WorkPublicWorkSummary struct {
 	Facets           []byte
 	FacetStamp       string
 	FacetComputedAt  pgtype.Timestamptz
-}
-
-type WorkRevision struct {
-	ID         pgtype.UUID
-	WorkID     pgtype.UUID
-	Revision   int32
-	MediaType  string
-	CreatedAt  pgtype.Timestamptz
-	BlobID     pgtype.UUID
-	Format     string
-	Identifier string
-}
-
-type WorkSnapshot struct {
-	ID                    pgtype.UUID
-	WorkID                pgtype.UUID
-	Number                int32
-	RecordedAt            pgtype.Timestamptz
-	InitialRecorded       bool
-	VersionLabel          string
-	ContentGeneration     int32
-	SourceRevisionID      pgtype.UUID
-	Payload               []byte
-	ProtectedPayloads     []byte
-	Summary               string
-	Notes                 string
-	NotesEditedAt         pgtype.Timestamptz
-	WithdrawnAt           pgtype.Timestamptz
-	WithdrawalExplanation pgtype.Text
-}
-
-type WorkSnapshotMedium struct {
-	SnapshotID pgtype.UUID
-	WorkID     pgtype.UUID
-	MediaID    pgtype.UUID
-}
-
-type WorkSnapshotPromptMatch struct {
-	SnapshotID         pgtype.UUID
-	CurrentFragmentID  pgtype.UUID
-	RecordedFragmentID pgtype.UUID
-	ResolvedAt         pgtype.Timestamptz
-}
-
-type WorkSnapshotSummary struct {
-	SnapshotID pgtype.UUID
-	Summary    []byte
 }
 
 type WorkSummary struct {
@@ -939,7 +902,7 @@ type WorkUpdateDestinationDefault struct {
 type WorkUpdateEvent struct {
 	ID              pgtype.UUID
 	WorkID          pgtype.UUID
-	SnapshotID      pgtype.UUID
+	VersionID       pgtype.UUID
 	Type            string
 	OccurredAt      pgtype.Timestamptz
 	UnlistedConsent bool
@@ -956,4 +919,39 @@ type WorkVaultPicture struct {
 	Section   string
 	Position  int32
 	CreatedAt pgtype.Timestamptz
+}
+
+type WorkVersion struct {
+	ID                    pgtype.UUID
+	WorkID                pgtype.UUID
+	Number                int32
+	RecordedAt            pgtype.Timestamptz
+	InitialRecorded       bool
+	VersionLabel          string
+	OriginalFileID        pgtype.UUID
+	Payload               []byte
+	ProtectedPayloads     []byte
+	Summary               string
+	Notes                 string
+	NotesEditedAt         pgtype.Timestamptz
+	WithdrawnAt           pgtype.Timestamptz
+	WithdrawalExplanation pgtype.Text
+}
+
+type WorkVersionMedium struct {
+	VersionID pgtype.UUID
+	WorkID    pgtype.UUID
+	MediaID   pgtype.UUID
+}
+
+type WorkVersionPromptMatch struct {
+	VersionID          pgtype.UUID
+	CurrentFragmentID  pgtype.UUID
+	RecordedFragmentID pgtype.UUID
+	ResolvedAt         pgtype.Timestamptz
+}
+
+type WorkVersionSummary struct {
+	VersionID pgtype.UUID
+	Summary   []byte
 }

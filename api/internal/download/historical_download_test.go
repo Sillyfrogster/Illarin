@@ -118,7 +118,7 @@ func publishTwoCoveredVersions(
 	secondCover := apitest.PNG(t, 40, 40)
 	apitest.UploadedImageID(t, r, session, started.ID, "avatar", secondCover)
 	describeBlock(t, r, session, started, "She has moved to the east shelf.")
-	if got := apitest.PublishWorkUpdate(t, r, session, started.ID,
+	if got := apitest.PublishWorkVersion(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -140,7 +140,7 @@ func TestAnOlderVersionDownloadsWhatItRecordedAndTheNewestWhatReadersHave(t *tes
 	if !bytes.Equal(archivedIcon(t, older.Body.Bytes()), firstCover) {
 		t.Error("version 1 does not carry the cover it recorded")
 	}
-	if got := older.Header().Get("Content-Disposition"); !strings.Contains(got, "update-1") {
+	if got := older.Header().Get("Content-Disposition"); !strings.Contains(got, "version-1") {
 		t.Errorf("disposition = %q, want the update named in the filename", got)
 	}
 
@@ -154,7 +154,7 @@ func TestAnOlderVersionDownloadsWhatItRecordedAndTheNewestWhatReadersHave(t *tes
 	if !bytes.Equal(archivedIcon(t, newest.Body.Bytes()), secondCover) {
 		t.Error("the newest version does not carry the current cover")
 	}
-	if got := newest.Header().Get("Content-Disposition"); strings.Contains(got, "update-") {
+	if got := newest.Header().Get("Content-Disposition"); strings.Contains(got, "version-") {
 		t.Errorf("disposition = %q, want no update named on the current file", got)
 	}
 }
@@ -227,7 +227,7 @@ func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 	if removed.Code != http.StatusNoContent {
 		t.Fatalf("delete chub: %d %s", removed.Code, removed.Body.String())
 	}
-	if got := apitest.PublishWorkUpdate(t, r, session, workID,
+	if got := apitest.PublishWorkVersion(t, r, session, workID,
 		`{"summary":"Dropped the chub data"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -262,7 +262,7 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the sealed prompt: %d %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishWorkUpdate(t, router, session, started.ID,
+	if got := apitest.PublishWorkVersion(t, router, session, started.ID,
 		`{"summary":"Reworded the private instruction"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -321,7 +321,7 @@ func TestAVersionThatRecordedASealedPromptStaysUnwritableAfterItsRemoval(t *test
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("remove the sealed prompt: %d %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishWorkUpdate(t, router, session, started.ID,
+	if got := apitest.PublishWorkVersion(t, router, session, started.ID,
 		`{"summary":"Removed the private instruction"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -358,15 +358,15 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
 	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte(aSillyTavernBook)))
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "lore.json", []byte(aLumiverseBook)), session))
-	if revision.Code != http.StatusAccepted {
-		t.Fatalf("upload the replacement: %d %s", revision.Code, revision.Body.String())
+	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.OriginalFileRequest(t, workID, "lore.json", []byte(aLumiverseBook)), session))
+	if uploaded.Code != http.StatusAccepted {
+		t.Fatalf("upload the replacement: %d %s", uploaded.Code, uploaded.Body.String())
 	}
 	if _, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
-	if got := apitest.PublishWorkUpdate(t, r, session, workID,
+	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))
+	if got := apitest.PublishWorkVersion(t, r, session, workID,
 		`{"summary":"Moved the book to the Lumiverse format"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -390,10 +390,10 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 		}
 	}
 
-	var revisions int
-	if err := pool.QueryRow(t.Context(), `select count(distinct revision_id) from download_events
-		where work_id = $1 and revision_id is not null`, workID).Scan(&revisions); err != nil || revisions != 2 {
-		t.Fatalf("revisions the download events name = %d, error = %v; want each version's own", revisions, err)
+	var originals int
+	if err := pool.QueryRow(t.Context(), `select count(distinct original_file_id) from download_events
+		where work_id = $1 and original_file_id is not null`, workID).Scan(&originals); err != nil || originals != 2 {
+		t.Fatalf("original files the download events name = %d, error = %v; want each version's own", originals, err)
 	}
 }
 
@@ -435,7 +435,7 @@ func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testi
 		t.Fatalf("publish: %d %s", got.Code, got.Body.String())
 	}
 	apitest.UploadedImageID(t, r, session, started.ID, "avatar", secondCover)
-	if got := apitest.PublishWorkUpdate(t, r, session, started.ID,
+	if got := apitest.PublishWorkVersion(t, r, session, started.ID,
 		`{"summary":"A new cover"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
@@ -513,7 +513,7 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatalf("a finally deleted work still wrote version 2: %d", got.Code)
 	}
 	var kept int
-	if err := pool.QueryRow(t.Context(), `select count(*) from work_snapshots where work_id = $1`, started.ID).Scan(&kept); err != nil || kept != 0 {
+	if err := pool.QueryRow(t.Context(), `select count(*) from work_versions where work_id = $1`, started.ID).Scan(&kept); err != nil || kept != 0 {
 		t.Fatalf("recorded versions after final deletion = %d, error = %v; want none", kept, err)
 	}
 	var blobs int
@@ -547,7 +547,7 @@ func readVersionDownloads(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet,
-		"/v1/works/"+workID+"/updates/"+strconv.Itoa(number)+"/downloads", nil)
+		"/v1/works/"+workID+"/versions/"+strconv.Itoa(number)+"/downloads", nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -575,12 +575,12 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
 	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte(aSillyTavernBook)))
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "lore.json", []byte(aLumiverseBook)), session))
+	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.OriginalFileRequest(t, workID, "lore.json", []byte(aLumiverseBook)), session))
 	if _, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
-	if got := apitest.PublishWorkUpdate(t, r, session, workID,
+	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))
+	if got := apitest.PublishWorkVersion(t, r, session, workID,
 		`{"summary":"Moved the book to the Lumiverse format"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}

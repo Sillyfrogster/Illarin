@@ -10,9 +10,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-var ErrArtifactNotFound = errors.New("no such delivery artifact")
+var ErrMainFileNotFound = errors.New("no such main file")
 
-func (s *Sends) Artifact(
+func (s *Sends) MainFile(
 	ctx context.Context,
 	deliveryID uuid.UUID,
 	expires string,
@@ -20,14 +20,14 @@ func (s *Sends) Artifact(
 ) (uuid.UUID, string, error) {
 	path := deliveryPathStart + deliveryID.String() + "/export"
 	if !s.works.ValidSignature(path, expires, signature) {
-		return uuid.Nil, "", ErrArtifactNotFound
+		return uuid.Nil, "", ErrMainFileNotFound
 	}
-	row, err := db.New(s.pool).DeliveryForArtifact(ctx, uuidValue(deliveryID))
+	row, err := db.New(s.pool).DeliveryForMainFile(ctx, uuidValue(deliveryID))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, "", ErrArtifactNotFound
+		return uuid.Nil, "", ErrMainFileNotFound
 	}
 	if err != nil {
-		return uuid.Nil, "", fmt.Errorf("read a delivery artifact: %w", err)
+		return uuid.Nil, "", fmt.Errorf("read the main file of a send: %w", err)
 	}
 	return uuid.UUID(row.WorkID.Bytes), row.ChosenTarget.String, nil
 }

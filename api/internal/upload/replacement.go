@@ -626,7 +626,7 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operat
 	}
 	job := ingestJob{
 		ID: operationID, OwnerID: ownerID, BlobID: uuidFromPgtype(blobID), Filename: filename,
-		Target: &revisionTarget{WorkID: workID, Type: prepared.Type, Version: candidate.Version},
+		Target: &originalFileTarget{WorkID: workID, Type: prepared.Type, Version: candidate.Version},
 	}
 	if _, err := s.writeIngestResultWithDecisions(ctx, tx, job, prepared, decisions, exposeProtected); err != nil {
 		return Operation{}, err

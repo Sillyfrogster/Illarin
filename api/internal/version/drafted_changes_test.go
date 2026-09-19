@@ -21,7 +21,7 @@ func TestPrivateWorkEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 	_, router, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	id := publishedCharacter(t, router, session)
 	before := apitest.FetchWorkPage(t, router, "/v1/works/"+id)
-	generation := apitest.ContentGeneration(t, pool, id)
+	number := apitest.VersionNumber(t, pool, id)
 	if got := apitest.SaveDetails(t, router, session, id, `{"name":"Unpublished name","blurb":"","isNsfw":true}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save private header: %d %s", got.Code, got.Body.String())
 	}
@@ -38,20 +38,20 @@ func TestPrivateWorkEditsStayPrivateAcrossHTTPReads(t *testing.T) {
 	if got := apitest.FetchWorkPage(t, router, "/v1/works/"+id); got.Name != before.Name || got.IsNSFW != before.IsNSFW {
 		t.Fatal("private header changed public metadata")
 	}
-	working := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+id+"?workingCopy=true", nil), session))
+	working := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+id+"?draftedChanges=true", nil), session))
 	if working.Code != http.StatusOK || !strings.Contains(working.Body.String(), "Unpublished description") || !strings.Contains(working.Body.String(), "Unpublished name") {
-		t.Fatalf("owner working copy: %d %s", working.Code, working.Body.String())
+		t.Fatalf("owner drafted changes: %d %s", working.Code, working.Body.String())
 	}
-	anonymous := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+id+"?workingCopy=true", nil))
+	anonymous := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+id+"?draftedChanges=true", nil))
 	if anonymous.Code != http.StatusNotFound {
-		t.Fatalf("anonymous working copy: %d", anonymous.Code)
+		t.Fatalf("anonymous drafted changes: %d", anonymous.Code)
 	}
-	if got := apitest.ContentGeneration(t, pool, id); got != generation {
-		t.Fatalf("private edits advanced generation from %d to %d", generation, got)
+	if got := apitest.VersionNumber(t, pool, id); got != number {
+		t.Fatalf("private edits moved the version number from %d to %d", number, got)
 	}
 }
 
-func TestWorkingCopyMediaIsPrivateOnAPublishedWork(t *testing.T) {
+func TestDraftedChangesMediaIsPrivateOnAPublishedWork(t *testing.T) {
 	t.Parallel()
 	router, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, router, session)
@@ -70,13 +70,13 @@ func TestWorkingCopyMediaIsPrivateOnAPublishedWork(t *testing.T) {
 	if len(public.Media) != 1 || public.Media[0].ID != before.Media[0].ID {
 		t.Fatal("private cover changed the public media")
 	}
-	response := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID+"?workingCopy=true", nil), session))
+	response := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID+"?draftedChanges=true", nil), session))
 	var working apitest.WorkPageResponse
 	if err := json.Unmarshal(response.Body.Bytes(), &working); err != nil || response.Code != http.StatusOK {
-		t.Fatalf("working copy: %d, %v", response.Code, err)
+		t.Fatalf("drafted changes: %d, %v", response.Code, err)
 	}
 	if len(working.Media) != 1 || working.Media[0].ID == public.Media[0].ID {
-		t.Fatalf("working copy did not take the new cover: %+v", working.Media)
+		t.Fatalf("drafted changes did not take the new cover: %+v", working.Media)
 	}
 	for _, signed := range []string{working.Media[0].DetailURL, working.Media[0].ThumbURL} {
 		unsigned, _, _ := strings.Cut(signed, "?")
@@ -111,7 +111,7 @@ func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 	}
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Replacement","role":"system","text":"New private prompt","enabled":true}]}`)
 	if got := apitest.SaveBlock(t, router, session, id, apitest.BlockNamed(t, owner.Blocks, "preset_core").ID, core); got.Code != http.StatusOK {
-		t.Fatalf("replace protected working-copy prompt: %d %s", got.Code, got.Body.String())
+		t.Fatalf("replace protected drafted-changes prompt: %d %s", got.Code, got.Body.String())
 	}
 	for _, target := range []string{"preset_lumiverse", "preset_sillytavern"} {
 		if _, err := download.NewService(pool, works).OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), target); !errors.Is(err, download.ErrLinkedInstallOnly) {

@@ -155,7 +155,7 @@ func TestMalformedOptionalFieldsRoundTripUntilTheirModeledValueChanges(t *testin
 		"loomItems":[]
 	}`))
 
-	assertMalformed := func(t *testing.T, written format.Artifact) {
+	assertMalformed := func(t *testing.T, written format.MainFile) {
 		t.Helper()
 		var document map[string]json.RawMessage
 		if err := json.Unmarshal(written.Body, &document); err != nil {
@@ -247,7 +247,7 @@ func parse(t *testing.T, data []byte) format.Parsed {
 	return parsed
 }
 
-func write(t *testing.T, work format.ExportWork) format.Artifact {
+func write(t *testing.T, work format.ExportWork) format.MainFile {
 	t.Helper()
 	written, err := (Module{}).Write(context.Background(), work)
 	if err != nil {

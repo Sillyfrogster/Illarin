@@ -49,7 +49,7 @@ func TestAReadmeSeedsTheNewPageWithBlocksTheCreatorOwns(t *testing.T) {
 		"art/banner.png": pictureFile(t, 20), "art/settings.png": pictureFile(t, 200),
 	}))
 
-	page := readSeededPage(t, r, session, workID+"?workingCopy=true")
+	page := readSeededPage(t, r, session, workID+"?draftedChanges=true")
 	if got, want := arrangement(page), []string{
 		"custom_block About", "extension_permissions Permissions", "extension_source Version and source",
 		"custom_block Install", "custom_block Usage",
@@ -132,7 +132,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	if placed := apitest.Send(t, r, apitest.Authorized(withCopy, session)); placed.Code != http.StatusOK {
 		t.Fatalf("place the copy = %d: %s", placed.Code, placed.Body.String())
 	}
-	page := readSeededPage(t, r, session, workID+"?workingCopy=true")
+	page := readSeededPage(t, r, session, workID+"?draftedChanges=true")
 	if ids := imageIDs(t, blockTitledIn(t, page.Blocks, "Usage")); len(ids) != 1 || ids[0] != copyMedia.ID {
 		t.Errorf("usage after placing the copy = %v, want the uploaded picture", ids)
 	}
@@ -157,7 +157,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 		http.MethodPost, "/v1/works/"+second+"/vault/"+shots[1].ID+"/place", nil), session)); placed.Code != http.StatusOK {
 		t.Fatalf("place the second picture = %d: %s", placed.Code, placed.Body.String())
 	}
-	shotsPage := readSeededPage(t, r, session, second+"?workingCopy=true")
+	shotsPage := readSeededPage(t, r, session, second+"?draftedChanges=true")
 	if got := arrangement(shotsPage); strings.Join(got, "|") != "extension_permissions Permissions|extension_source Version and source|custom_block Install|custom_block Screenshots" {
 		t.Fatalf("blocks after placing = %q, want one new block named after the section", got)
 	}
@@ -180,7 +180,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 		`select count(*) from work_media where id = $1`, waiting.Media.ID).Scan(&kept); err != nil || kept != 0 {
 		t.Errorf("discarded media rows = %d, %v; want the copy gone", kept, err)
 	}
-	if page := readSeededPage(t, r, session, third+"?workingCopy=true"); len(page.Media) != 1 {
+	if page := readSeededPage(t, r, session, third+"?draftedChanges=true"); len(page.Media) != 1 {
 		t.Errorf("media after discarding = %+v, want only the cover", page.Media)
 	}
 }
@@ -226,7 +226,7 @@ func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 	if saved := apitest.SaveBlock(t, r, session, workID, install.ID, edited); saved.Code >= http.StatusMultipleChoices {
 		t.Fatalf("edit the seeded install text = %d: %s", saved.Code, saved.Body.String())
 	}
-	if update := apitest.PublishWorkUpdate(t, r, session, workID, `{"summary":"Clearer install"}`); update.Code != http.StatusOK {
+	if update := apitest.PublishWorkVersion(t, r, session, workID, `{"summary":"Clearer install"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the edit = %d: %s", update.Code, update.Body.String())
 	}
 	before := readSeededPage(t, r, nil, workID)
@@ -236,15 +236,15 @@ func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 		"spindle.json": manifest, "dist/frontend.js": "two",
 		"README.md": "# Quiet Toolbox\n\n## Changelog\n\nNew in 1.1.", "art/settings.png": pictureFile(t, 90),
 	})
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "toolbox.zip", second), session))
-	if revision.Code != http.StatusAccepted {
-		t.Fatalf("upload the replacement = %d: %s", revision.Code, revision.Body.String())
+	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.OriginalFileRequest(t, workID, "toolbox.zip", second), session))
+	if uploaded.Code != http.StatusAccepted {
+		t.Fatalf("upload the replacement = %d: %s", uploaded.Code, uploaded.Body.String())
 	}
 	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
-	if update := apitest.PublishWorkUpdate(t, r, session, workID, `{"summary":"Version 1.1"}`); update.Code != http.StatusOK {
+	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))
+	if update := apitest.PublishWorkVersion(t, r, session, workID, `{"summary":"Version 1.1"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
 

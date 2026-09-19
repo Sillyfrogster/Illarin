@@ -191,7 +191,7 @@ func remainder(
 	return rows
 }
 
-func (Module) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+func (Module) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
 	body, itemFields := preserved(work.Preserved)
 	var unread []json.RawMessage
 	_ = json.Unmarshal(body["lumiaItems"], &unread)
@@ -250,9 +250,9 @@ func (Module) Write(_ context.Context, work format.ExportWork) (format.Artifact,
 
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the Lumiverse pack: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the Lumiverse pack: %w", err)
 	}
-	return format.Artifact{Body: document, MediaType: "application/json", Extension: ".json"}, nil
+	return format.MainFile{Body: document, MediaType: "application/json", Extension: ".json"}, nil
 }
 
 func writeModeledUnlessUnread[T comparable](

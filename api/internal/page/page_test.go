@@ -130,8 +130,8 @@ func TestWorkPageShowsNoTotals(t *testing.T) {
 		"appTargets": true,
 		"blocks":     true, "media": true, "preview": true, "nsfwPreference": true,
 		"linkedInstallOnly": true, "allowedApps": true, "eligibleApps": true,
-		"latestUpdate": true, "extensionDependencies": true, "installedAppVersions": true,
-		"kind": true, "discovery": true,
+		"latestVersion": true, "extensionDependencies": true, "installedAppVersions": true,
+		"kind": true, "discovery": true, "latestUpdate": true,
 	}
 	for key := range body {
 		if !wantKeys[key] {

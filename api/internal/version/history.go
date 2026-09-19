@@ -22,10 +22,10 @@ func (s *Service) VersionHistory(
 	rows, err := s.pool.Query(ctx, `
 		select id, number, recorded_at, initial_recorded, version_label, summary, notes,
 		       notes_edited_at, withdrawn_at, coalesce(withdrawal_explanation, '')
-		  from work_snapshots where work_id = $1 order by number desc
+		  from work_versions where work_id = $1 order by number desc
 	`, workID)
 	if err != nil {
-		return nil, fmt.Errorf("read the update history: %w", err)
+		return nil, fmt.Errorf("read the version history: %w", err)
 	}
 	defer rows.Close()
 	history := make([]work.Version, 0)

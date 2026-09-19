@@ -86,7 +86,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, registry)
+	r, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, registry)
 	metadata := apitest.ExampleMetadata("Archive companions")
 	metadata["filename"] = "companions.json"
 	metadata["_keepDraft"] = true
@@ -123,9 +123,6 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	if err := json.Unmarshal(added.Body.Bytes(), &itemImage); err != nil {
 		t.Fatalf("decode Pack item image: %v", err)
 	}
-	if got := apitest.ContentGeneration(t, pool, workID); got != 1 {
-		t.Fatalf("unreferenced Pack image moved content generation to %d", got)
-	}
 
 	body := apitest.EditableBlock(core)
 	var content struct {
@@ -141,9 +138,6 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	if saved := apitest.SaveBlock(t, r, session, workID, core.ID, body); saved.Code != http.StatusOK {
 		t.Fatalf("save edited Pack item = %d, want 200: %s", saved.Code, saved.Body.String())
 	}
-	if got := apitest.ContentGeneration(t, pool, workID); got != 2 {
-		t.Fatalf("Pack item edit moved content generation to %d, want 2", got)
-	}
 
 	cover := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, workID, "avatar", apitest.PNG(t, 800, 1000),
@@ -156,9 +150,6 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 	}
 	if err := json.Unmarshal(cover.Body.Bytes(), &coverImage); err != nil {
 		t.Fatalf("decode Pack cover: %v", err)
-	}
-	if got := apitest.ContentGeneration(t, pool, workID); got != 3 {
-		t.Fatalf("Pack cover moved content generation to %d, want 3", got)
 	}
 
 	request := httptest.NewRequest(

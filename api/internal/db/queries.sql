@@ -18,28 +18,28 @@ select id, definition, title, position, hidden, layout, width, elements
  where work_id = $1
  order by position;
 
--- name: InsertRevision :exec
-insert into work_revisions
-  (id, work_id, revision, blob_id, media_type, format, identifier)
+-- name: InsertOriginalFile :exec
+insert into work_original_files
+  (id, work_id, number, blob_id, media_type, format, identifier)
 values ($1, $2, $3, $4, $5, $6, $7);
 
--- name: SetCurrentRevision :exec
-update works set current_revision_id = $2, updated_at = now() where id = $1;
+-- name: SetOriginalFile :exec
+update works set original_file_id = $2, updated_at = now() where id = $1;
 
 -- name: ListWorks :many
-select a.id, a.type, revision.format, a.origin_format,
+select a.id, a.type, original.format, a.origin_format,
        a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
-       a.current_revision_id, a.created_at
+       a.original_file_id, a.created_at
   from works a
-  left join work_revisions revision on revision.id = a.current_revision_id
+  left join work_original_files original on original.id = a.original_file_id
  where a.lifecycle = 'published'
    and a.visibility = 'listed'
    and a.withheld_at is null
    and a.deleted_at is null
    and ($1 = '' or a.type = $1)
-   and (not $2::boolean or revision.format is not distinct from $3)
+   and (not $2::boolean or original.format is not distinct from $3)
    and ($4::text[] is null or a.tags @> $4)
    and (sqlc.narg('before')::timestamptz is null
         or (a.created_at, a.id)
@@ -208,15 +208,15 @@ select count(*)
 -- name: WorkPage :one
 select a.id, a.type, a.name, a.blurb, a.tags, a.is_nsfw, a.visibility,
        a.lifecycle, a.created_at,
-       revision.format as original_format, revision.media_type as original_media_type,
-       revision.created_at as original_arrived_at,
-       coalesce(revision.identifier, '')::text as identifier,
+       original.format as original_format, original.media_type as original_media_type,
+       original.created_at as original_arrived_at,
+       coalesce(original.identifier, '')::text as identifier,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = sqlc.narg('viewer_id')::uuid, false)::boolean as is_owner,
        a.withheld_reason, a.withheld_at
   from works a
   left join users owner on owner.id = a.owner_id
-  left join work_revisions revision on revision.id = a.current_revision_id
+  left join work_original_files original on original.id = a.original_file_id
  where a.id = $1
    and a.deleted_at is null
    and (a.lifecycle = 'published' or a.owner_id = sqlc.narg('viewer_id')::uuid)
@@ -244,12 +244,12 @@ select media.id, media.role, media.width, media.height, blob.byte_size,
 		  end,
           media.created_at desc, media.id desc;
 
--- name: CurrentRevisionLocation :one
-select a.id as work_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
+-- name: OriginalFileLocation :one
+select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, a.owner_id
   from works a
-  left join public.work_snapshots snapshot on snapshot.id = a.published_snapshot_id
-  join work_revisions r on r.id = case when snapshot.id is null
-      then a.current_revision_id else snapshot.source_revision_id end
+  left join public.work_versions version on version.id = a.published_version_id
+  join work_original_files r on r.id = case when version.id is null
+      then a.original_file_id else version.original_file_id end
  where a.id = $1
    and r.blob_id is not null
    and a.lifecycle = 'published'
@@ -257,13 +257,13 @@ select a.id as work_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
    and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
 -- name: WorkByID :one
-select a.id, a.type, revision.format, a.origin_format,
+select a.id, a.type, original.format, a.origin_format,
        a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
-       a.current_revision_id, a.created_at
+       a.original_file_id, a.created_at
   from works a
-  join work_revisions revision on revision.id = a.current_revision_id
+  join work_original_files original on original.id = a.original_file_id
  where a.id = $1;
 
 -- name: SetWorkVisibility :execrows
@@ -284,16 +284,16 @@ with withheld as (
            updated_at = now()
      where work.id = $1 and work.lifecycle = 'published'
        and work.withheld_at is null and work.deleted_at is null
-    returning work.id, work.owner_id, work.name, work.published_snapshot_id
+    returning work.id, work.owner_id, work.name, work.published_version_id
 ), stopped as (
     update instance_deliveries as delivery
        set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
      where delivery.work_id in (select withheld.id from withheld)
        and delivery.state = 'queued'
 )
-select withheld.owner_id, coalesce(snapshot.payload ->> 'name', withheld.name)::text as public_name
+select withheld.owner_id, coalesce(version.payload ->> 'name', withheld.name)::text as public_name
   from withheld
-  left join work_snapshots snapshot on snapshot.id = withheld.published_snapshot_id;
+  left join work_versions version on version.id = withheld.published_version_id;
 
 -- name: ClearWorkWithhold :one
 with cleared as (
@@ -301,11 +301,11 @@ with cleared as (
        set withheld_at = null, withheld_by = null, withheld_reason = null,
            updated_at = now()
      where work.id = $1 and work.withheld_at is not null and work.deleted_at is null
-    returning work.id, work.owner_id, work.name, work.published_snapshot_id
+    returning work.id, work.owner_id, work.name, work.published_version_id
 )
-select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
+select cleared.owner_id, coalesce(version.payload ->> 'name', cleared.name)::text as public_name
   from cleared
-  left join work_snapshots snapshot on snapshot.id = cleared.published_snapshot_id;
+  left join work_versions version on version.id = cleared.published_version_id;
 
 -- name: WorkDeletionState :one
 select withheld_at, deleted_at
@@ -1061,7 +1061,7 @@ delete from instance_deliveries as delivery
    and delivery.instance_id = instance.id
    and instance.user_id = sqlc.arg('user_id');
 
--- name: DeliveryForArtifact :one
+-- name: DeliveryForMainFile :one
 select delivery.work_id, delivery.chosen_target, instance.id as instance_id
   from instance_deliveries as delivery
   join linked_instances as instance on instance.id = delivery.instance_id
@@ -1086,10 +1086,11 @@ delete from instance_deliveries as delivery
  using expired
  where delivery.id = expired.id;
 
--- name: SendableWorkGeneration :one
-select content_generation
-  from works
- where id = sqlc.arg('work_id')
+-- name: SendableWorkVersion :one
+select version.number
+  from works work
+  join work_versions version on version.id = work.published_version_id
+ where work.id = sqlc.arg('work_id')
    and deleted_at is null
    and withheld_at is null
    and lifecycle = 'published';
@@ -1103,7 +1104,7 @@ select instance.id, instance.application_name, instance.instance_name,
        delivery.settled_reason, delivery.queued_at, delivery.settled_at,
        delivery.expires_at,
        coalesce(delivery.updates_install, false)::boolean as updates_install,
-       entry.content_generation as installed_generation
+       entry.version_number as installed_version
   from linked_instances as instance
   left join lateral (
       select waiting.id, waiting.state, waiting.settled_reason,
@@ -1126,10 +1127,11 @@ select instance.id, instance.application_name, instance.instance_name,
 select entry.instance_id,
        count(*)::bigint as installed,
        count(*) filter (
-           where work.content_generation > entry.content_generation
+           where version.number > entry.version_number
        )::bigint as updates_available
   from instance_library_entries as entry
   join works as work on work.id = entry.work_id
+  join work_versions as version on version.id = work.published_version_id
   join linked_instances as instance on instance.id = entry.instance_id
  where instance.user_id = sqlc.arg('user_id')
    and instance.revoked_at is null
@@ -1140,19 +1142,20 @@ select entry.instance_id,
 
 -- name: ReportLibraryEntries :execrows
 insert into instance_library_entries
-    (instance_id, work_id, content_generation, reported_at)
+    (instance_id, work_id, version_number, reported_at)
 select sqlc.arg('instance_id'), work.id,
-       coalesce(nullif(reported.generation, 0), work.content_generation), now()
+       coalesce(nullif(reported.version_number, 0), version.number), now()
   from (
       select unnest(sqlc.arg('work_ids')::uuid[]) as work_id,
-             unnest(sqlc.arg('generations')::integer[]) as generation
+             unnest(sqlc.arg('version_numbers')::integer[]) as version_number
   ) as reported
   join works as work
     on work.id = reported.work_id
    and work.deleted_at is null
    and work.lifecycle = 'published'
+  join work_versions as version on version.id = work.published_version_id
 on conflict (instance_id, work_id) do update
-   set content_generation = excluded.content_generation,
+   set version_number = excluded.version_number,
        reported_at = excluded.reported_at;
 
 -- name: RemoveLibraryEntries :execrows
@@ -1160,7 +1163,7 @@ delete from instance_library_entries
  where instance_id = sqlc.arg('instance_id')
    and work_id = any(sqlc.arg('work_ids')::uuid[]);
 
--- name: PruneLibraryToSnapshot :execrows
+-- name: PruneLibraryToWhole :execrows
 delete from instance_library_entries
  where instance_id = sqlc.arg('instance_id')
    and not (work_id = any(sqlc.arg('work_ids')::uuid[]));

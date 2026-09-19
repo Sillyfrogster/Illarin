@@ -29,23 +29,23 @@ func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	}
 
 	quiet := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+created.ID+"/revisions", nil), session))
+		http.MethodGet, "/v1/works/"+created.ID+"/original-file", nil), session))
 	if quiet.Code != http.StatusOK || strings.TrimSpace(quiet.Body.String()) != "null" {
 		t.Fatalf("a work with no replacement = %d %s, want 200 null",
 			quiet.Code, quiet.Body.String())
 	}
 
-	revision := apitest.Send(t, r, apitest.Authorized(
-		apitest.RevisionRequest(t, created.ID, "evening.lumitheme", []byte("second bytes")), session))
-	if revision.Code != http.StatusAccepted {
-		t.Fatalf("upload a replacement = %d, want 202: %s", revision.Code, revision.Body.String())
+	uploaded := apitest.Send(t, r, apitest.Authorized(
+		apitest.OriginalFileRequest(t, created.ID, "evening.lumitheme", []byte("second bytes")), session))
+	if uploaded.Code != http.StatusAccepted {
+		t.Fatalf("upload a replacement = %d, want 202: %s", uploaded.Code, uploaded.Body.String())
 	}
 	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
 
 	found := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+created.ID+"/revisions", nil), session))
+		http.MethodGet, "/v1/works/"+created.ID+"/original-file", nil), session))
 	if found.Code != http.StatusOK {
 		t.Fatalf("read the waiting replacement = %d, want 200: %s", found.Code, found.Body.String())
 	}
@@ -62,18 +62,18 @@ func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	if operation.Status != "preview" || operation.Preview == nil {
 		t.Fatalf("the waiting replacement = %+v", operation)
 	}
-	if "/v1/ingests/"+operation.ID != revision.Header().Get("Location") {
+	if "/v1/ingests/"+operation.ID != uploaded.Header().Get("Location") {
 		t.Fatalf("found operation %s, want the uploaded %s",
-			operation.ID, revision.Header().Get("Location"))
+			operation.ID, uploaded.Header().Get("Location"))
 	}
 
 	cancelled := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/works/"+created.ID+"/revisions/"+operation.ID, nil), session))
+		http.MethodDelete, "/v1/works/"+created.ID+"/original-file/"+operation.ID, nil), session))
 	if cancelled.Code != http.StatusNoContent {
 		t.Fatalf("cancel the replacement = %d, want 204: %s", cancelled.Code, cancelled.Body.String())
 	}
 	after := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+created.ID+"/revisions", nil), session))
+		http.MethodGet, "/v1/works/"+created.ID+"/original-file", nil), session))
 	if strings.TrimSpace(after.Body.String()) != "null" {
 		t.Fatalf("a cancelled replacement still answers %s, want null", after.Body.String())
 	}

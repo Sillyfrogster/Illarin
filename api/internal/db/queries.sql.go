@@ -396,11 +396,11 @@ with cleared as (
        set withheld_at = null, withheld_by = null, withheld_reason = null,
            updated_at = now()
      where work.id = $1 and work.withheld_at is not null and work.deleted_at is null
-    returning work.id, work.owner_id, work.name, work.published_snapshot_id
+    returning work.id, work.owner_id, work.name, work.published_version_id
 )
-select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
+select cleared.owner_id, coalesce(version.payload ->> 'name', cleared.name)::text as public_name
   from cleared
-  left join work_snapshots snapshot on snapshot.id = cleared.published_snapshot_id
+  left join work_versions version on version.id = cleared.published_version_id
 `
 
 type ClearWorkWithholdRow struct {
@@ -590,45 +590,6 @@ func (q *Queries) CountSuppressedBrowseWorks(ctx context.Context, arg CountSuppr
 	return count, err
 }
 
-const currentRevisionLocation = `-- name: CurrentRevisionLocation :one
-select a.id as work_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
-  from works a
-  left join public.work_snapshots snapshot on snapshot.id = a.published_snapshot_id
-  join work_revisions r on r.id = case when snapshot.id is null
-      then a.current_revision_id else snapshot.source_revision_id end
- where a.id = $1
-   and r.blob_id is not null
-   and a.lifecycle = 'published'
-   and a.deleted_at is null
-   and (a.withheld_at is null or a.owner_id = $2::uuid)
-`
-
-type CurrentRevisionLocationParams struct {
-	ID       pgtype.UUID
-	ViewerID pgtype.UUID
-}
-
-type CurrentRevisionLocationRow struct {
-	WorkID     pgtype.UUID
-	RevisionID pgtype.UUID
-	BlobID     pgtype.UUID
-	MediaType  string
-	OwnerID    pgtype.UUID
-}
-
-func (q *Queries) CurrentRevisionLocation(ctx context.Context, arg CurrentRevisionLocationParams) (CurrentRevisionLocationRow, error) {
-	row := q.db.QueryRow(ctx, currentRevisionLocation, arg.ID, arg.ViewerID)
-	var i CurrentRevisionLocationRow
-	err := row.Scan(
-		&i.WorkID,
-		&i.RevisionID,
-		&i.BlobID,
-		&i.MediaType,
-		&i.OwnerID,
-	)
-	return i, err
-}
-
 const deleteExpiredDeliveries = `-- name: DeleteExpiredDeliveries :execrows
 with expired as (
     select id
@@ -812,7 +773,7 @@ func (q *Queries) DeleteVerificationTokensForUser(ctx context.Context, userID pg
 	return err
 }
 
-const deliveryForArtifact = `-- name: DeliveryForArtifact :one
+const deliveryForMainFile = `-- name: DeliveryForMainFile :one
 select delivery.work_id, delivery.chosen_target, instance.id as instance_id
   from instance_deliveries as delivery
   join linked_instances as instance on instance.id = delivery.instance_id
@@ -825,15 +786,15 @@ select delivery.work_id, delivery.chosen_target, instance.id as instance_id
    and instance.scopes @> array['asset:receive']
 `
 
-type DeliveryForArtifactRow struct {
+type DeliveryForMainFileRow struct {
 	WorkID       pgtype.UUID
 	ChosenTarget pgtype.Text
 	InstanceID   pgtype.UUID
 }
 
-func (q *Queries) DeliveryForArtifact(ctx context.Context, deliveryID pgtype.UUID) (DeliveryForArtifactRow, error) {
-	row := q.db.QueryRow(ctx, deliveryForArtifact, deliveryID)
-	var i DeliveryForArtifactRow
+func (q *Queries) DeliveryForMainFile(ctx context.Context, deliveryID pgtype.UUID) (DeliveryForMainFileRow, error) {
+	row := q.db.QueryRow(ctx, deliveryForMainFile, deliveryID)
+	var i DeliveryForMainFileRow
 	err := row.Scan(&i.WorkID, &i.ChosenTarget, &i.InstanceID)
 	return i, err
 }
@@ -1290,6 +1251,35 @@ func (q *Queries) InsertOAuthState(ctx context.Context, arg InsertOAuthStatePara
 	return err
 }
 
+const insertOriginalFile = `-- name: InsertOriginalFile :exec
+insert into work_original_files
+  (id, work_id, number, blob_id, media_type, format, identifier)
+values ($1, $2, $3, $4, $5, $6, $7)
+`
+
+type InsertOriginalFileParams struct {
+	ID         pgtype.UUID
+	WorkID     pgtype.UUID
+	Number     int32
+	BlobID     pgtype.UUID
+	MediaType  string
+	Format     string
+	Identifier string
+}
+
+func (q *Queries) InsertOriginalFile(ctx context.Context, arg InsertOriginalFileParams) error {
+	_, err := q.db.Exec(ctx, insertOriginalFile,
+		arg.ID,
+		arg.WorkID,
+		arg.Number,
+		arg.BlobID,
+		arg.MediaType,
+		arg.Format,
+		arg.Identifier,
+	)
+	return err
+}
+
 const insertPasswordReset = `-- name: InsertPasswordReset :exec
 insert into password_reset_tokens (token_hash, user_id, expires_at)
 values ($1, $2, $3)
@@ -1312,35 +1302,6 @@ insert into retired_handles (handle) values ($1)
 
 func (q *Queries) InsertRetiredHandle(ctx context.Context, handle string) error {
 	_, err := q.db.Exec(ctx, insertRetiredHandle, handle)
-	return err
-}
-
-const insertRevision = `-- name: InsertRevision :exec
-insert into work_revisions
-  (id, work_id, revision, blob_id, media_type, format, identifier)
-values ($1, $2, $3, $4, $5, $6, $7)
-`
-
-type InsertRevisionParams struct {
-	ID         pgtype.UUID
-	WorkID     pgtype.UUID
-	Revision   int32
-	BlobID     pgtype.UUID
-	MediaType  string
-	Format     string
-	Identifier string
-}
-
-func (q *Queries) InsertRevision(ctx context.Context, arg InsertRevisionParams) error {
-	_, err := q.db.Exec(ctx, insertRevision,
-		arg.ID,
-		arg.WorkID,
-		arg.Revision,
-		arg.BlobID,
-		arg.MediaType,
-		arg.Format,
-		arg.Identifier,
-	)
 	return err
 }
 
@@ -1544,10 +1505,11 @@ const instanceLibraryCounts = `-- name: InstanceLibraryCounts :many
 select entry.instance_id,
        count(*)::bigint as installed,
        count(*) filter (
-           where work.content_generation > entry.content_generation
+           where version.number > entry.version_number
        )::bigint as updates_available
   from instance_library_entries as entry
   join works as work on work.id = entry.work_id
+  join work_versions as version on version.id = work.published_version_id
   join linked_instances as instance on instance.id = entry.instance_id
  where instance.user_id = $1
    and instance.revoked_at is null
@@ -1690,19 +1652,19 @@ func (q *Queries) ListLinkedInstances(ctx context.Context, userID pgtype.UUID) (
 }
 
 const listWorks = `-- name: ListWorks :many
-select a.id, a.type, revision.format, a.origin_format,
+select a.id, a.type, original.format, a.origin_format,
        a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
-       a.current_revision_id, a.created_at
+       a.original_file_id, a.created_at
   from works a
-  left join work_revisions revision on revision.id = a.current_revision_id
+  left join work_original_files original on original.id = a.original_file_id
  where a.lifecycle = 'published'
    and a.visibility = 'listed'
    and a.withheld_at is null
    and a.deleted_at is null
    and ($1 = '' or a.type = $1)
-   and (not $2::boolean or revision.format is not distinct from $3)
+   and (not $2::boolean or original.format is not distinct from $3)
    and ($4::text[] is null or a.tags @> $4)
    and ($6::timestamptz is null
         or (a.created_at, a.id)
@@ -1722,21 +1684,21 @@ type ListWorksParams struct {
 }
 
 type ListWorksRow struct {
-	ID                pgtype.UUID
-	Type              string
-	Format            pgtype.Text
-	OriginFormat      pgtype.Text
-	WorkVersion       string
-	CreditedAuthor    string
-	Nickname          string
-	Lifecycle         string
-	Name              string
-	Blurb             string
-	Tags              []string
-	IsNsfw            bool
-	Visibility        string
-	CurrentRevisionID pgtype.UUID
-	CreatedAt         pgtype.Timestamptz
+	ID             pgtype.UUID
+	Type           string
+	Format         pgtype.Text
+	OriginFormat   pgtype.Text
+	WorkVersion    string
+	CreditedAuthor string
+	Nickname       string
+	Lifecycle      string
+	Name           string
+	Blurb          string
+	Tags           []string
+	IsNsfw         bool
+	Visibility     string
+	OriginalFileID pgtype.UUID
+	CreatedAt      pgtype.Timestamptz
 }
 
 func (q *Queries) ListWorks(ctx context.Context, arg ListWorksParams) ([]ListWorksRow, error) {
@@ -1770,7 +1732,7 @@ func (q *Queries) ListWorks(ctx context.Context, arg ListWorksParams) ([]ListWor
 			&i.Tags,
 			&i.IsNsfw,
 			&i.Visibility,
-			&i.CurrentRevisionID,
+			&i.OriginalFileID,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -2143,6 +2105,45 @@ func (q *Queries) NSFWPreferenceBySessionHash(ctx context.Context, tokenHash []b
 	return nsfw_preference, err
 }
 
+const originalFileLocation = `-- name: OriginalFileLocation :one
+select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, a.owner_id
+  from works a
+  left join public.work_versions version on version.id = a.published_version_id
+  join work_original_files r on r.id = case when version.id is null
+      then a.original_file_id else version.original_file_id end
+ where a.id = $1
+   and r.blob_id is not null
+   and a.lifecycle = 'published'
+   and a.deleted_at is null
+   and (a.withheld_at is null or a.owner_id = $2::uuid)
+`
+
+type OriginalFileLocationParams struct {
+	ID       pgtype.UUID
+	ViewerID pgtype.UUID
+}
+
+type OriginalFileLocationRow struct {
+	WorkID         pgtype.UUID
+	OriginalFileID pgtype.UUID
+	BlobID         pgtype.UUID
+	MediaType      string
+	OwnerID        pgtype.UUID
+}
+
+func (q *Queries) OriginalFileLocation(ctx context.Context, arg OriginalFileLocationParams) (OriginalFileLocationRow, error) {
+	row := q.db.QueryRow(ctx, originalFileLocation, arg.ID, arg.ViewerID)
+	var i OriginalFileLocationRow
+	err := row.Scan(
+		&i.WorkID,
+		&i.OriginalFileID,
+		&i.BlobID,
+		&i.MediaType,
+		&i.OwnerID,
+	)
+	return i, err
+}
+
 const profileByHandle = `-- name: ProfileByHandle :one
 select id, username, show_nsfw_contributions_on_profile
   from users where username = $1
@@ -2161,19 +2162,19 @@ func (q *Queries) ProfileByHandle(ctx context.Context, username string) (Profile
 	return i, err
 }
 
-const pruneLibraryToSnapshot = `-- name: PruneLibraryToSnapshot :execrows
+const pruneLibraryToWhole = `-- name: PruneLibraryToWhole :execrows
 delete from instance_library_entries
  where instance_id = $1
    and not (work_id = any($2::uuid[]))
 `
 
-type PruneLibraryToSnapshotParams struct {
+type PruneLibraryToWholeParams struct {
 	InstanceID pgtype.UUID
 	WorkIds    []pgtype.UUID
 }
 
-func (q *Queries) PruneLibraryToSnapshot(ctx context.Context, arg PruneLibraryToSnapshotParams) (int64, error) {
-	result, err := q.db.Exec(ctx, pruneLibraryToSnapshot, arg.InstanceID, arg.WorkIds)
+func (q *Queries) PruneLibraryToWhole(ctx context.Context, arg PruneLibraryToWholeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneLibraryToWhole, arg.InstanceID, arg.WorkIds)
 	if err != nil {
 		return 0, err
 	}
@@ -2351,30 +2352,31 @@ func (q *Queries) ReplacePassword(ctx context.Context, arg ReplacePasswordParams
 
 const reportLibraryEntries = `-- name: ReportLibraryEntries :execrows
 insert into instance_library_entries
-    (instance_id, work_id, content_generation, reported_at)
+    (instance_id, work_id, version_number, reported_at)
 select $1, work.id,
-       coalesce(nullif(reported.generation, 0), work.content_generation), now()
+       coalesce(nullif(reported.version_number, 0), version.number), now()
   from (
       select unnest($2::uuid[]) as work_id,
-             unnest($3::integer[]) as generation
+             unnest($3::integer[]) as version_number
   ) as reported
   join works as work
     on work.id = reported.work_id
    and work.deleted_at is null
    and work.lifecycle = 'published'
+  join work_versions as version on version.id = work.published_version_id
 on conflict (instance_id, work_id) do update
-   set content_generation = excluded.content_generation,
+   set version_number = excluded.version_number,
        reported_at = excluded.reported_at
 `
 
 type ReportLibraryEntriesParams struct {
-	InstanceID  pgtype.UUID
-	WorkIds     []pgtype.UUID
-	Generations []int32
+	InstanceID     pgtype.UUID
+	WorkIds        []pgtype.UUID
+	VersionNumbers []int32
 }
 
 func (q *Queries) ReportLibraryEntries(ctx context.Context, arg ReportLibraryEntriesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, reportLibraryEntries, arg.InstanceID, arg.WorkIds, arg.Generations)
+	result, err := q.db.Exec(ctx, reportLibraryEntries, arg.InstanceID, arg.WorkIds, arg.VersionNumbers)
 	if err != nil {
 		return 0, err
 	}
@@ -2604,34 +2606,21 @@ func (q *Queries) RotateInstanceRefreshToken(ctx context.Context, arg RotateInst
 	return instance_id, err
 }
 
-const sendableWorkGeneration = `-- name: SendableWorkGeneration :one
-select content_generation
-  from works
- where id = $1
+const sendableWorkVersion = `-- name: SendableWorkVersion :one
+select version.number
+  from works work
+  join work_versions version on version.id = work.published_version_id
+ where work.id = $1
    and deleted_at is null
    and withheld_at is null
    and lifecycle = 'published'
 `
 
-func (q *Queries) SendableWorkGeneration(ctx context.Context, workID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, sendableWorkGeneration, workID)
-	var content_generation int32
-	err := row.Scan(&content_generation)
-	return content_generation, err
-}
-
-const setCurrentRevision = `-- name: SetCurrentRevision :exec
-update works set current_revision_id = $2, updated_at = now() where id = $1
-`
-
-type SetCurrentRevisionParams struct {
-	ID                pgtype.UUID
-	CurrentRevisionID pgtype.UUID
-}
-
-func (q *Queries) SetCurrentRevision(ctx context.Context, arg SetCurrentRevisionParams) error {
-	_, err := q.db.Exec(ctx, setCurrentRevision, arg.ID, arg.CurrentRevisionID)
-	return err
+func (q *Queries) SendableWorkVersion(ctx context.Context, workID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, sendableWorkVersion, workID)
+	var number int32
+	err := row.Scan(&number)
+	return number, err
 }
 
 const setDeliveryTarget = `-- name: SetDeliveryTarget :exec
@@ -2700,6 +2689,20 @@ func (q *Queries) SetNSFWPreferenceBySessionHash(ctx context.Context, arg SetNSF
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const setOriginalFile = `-- name: SetOriginalFile :exec
+update works set original_file_id = $2, updated_at = now() where id = $1
+`
+
+type SetOriginalFileParams struct {
+	ID             pgtype.UUID
+	OriginalFileID pgtype.UUID
+}
+
+func (q *Queries) SetOriginalFile(ctx context.Context, arg SetOriginalFileParams) error {
+	_, err := q.db.Exec(ctx, setOriginalFile, arg.ID, arg.OriginalFileID)
+	return err
 }
 
 const setWorkVisibility = `-- name: SetWorkVisibility :execrows
@@ -3430,16 +3433,16 @@ with withheld as (
            updated_at = now()
      where work.id = $1 and work.lifecycle = 'published'
        and work.withheld_at is null and work.deleted_at is null
-    returning work.id, work.owner_id, work.name, work.published_snapshot_id
+    returning work.id, work.owner_id, work.name, work.published_version_id
 ), stopped as (
     update instance_deliveries as delivery
        set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
      where delivery.work_id in (select withheld.id from withheld)
        and delivery.state = 'queued'
 )
-select withheld.owner_id, coalesce(snapshot.payload ->> 'name', withheld.name)::text as public_name
+select withheld.owner_id, coalesce(version.payload ->> 'name', withheld.name)::text as public_name
   from withheld
-  left join work_snapshots snapshot on snapshot.id = withheld.published_snapshot_id
+  left join work_versions version on version.id = withheld.published_version_id
 `
 
 type WithholdWorkParams struct {
@@ -3508,32 +3511,32 @@ func (q *Queries) WorkBlocks(ctx context.Context, workID pgtype.UUID) ([]WorkBlo
 }
 
 const workByID = `-- name: WorkByID :one
-select a.id, a.type, revision.format, a.origin_format,
+select a.id, a.type, original.format, a.origin_format,
        a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
-       a.current_revision_id, a.created_at
+       a.original_file_id, a.created_at
   from works a
-  join work_revisions revision on revision.id = a.current_revision_id
+  join work_original_files original on original.id = a.original_file_id
  where a.id = $1
 `
 
 type WorkByIDRow struct {
-	ID                pgtype.UUID
-	Type              string
-	Format            string
-	OriginFormat      pgtype.Text
-	WorkVersion       string
-	CreditedAuthor    string
-	Nickname          string
-	Lifecycle         string
-	Name              string
-	Blurb             string
-	Tags              []string
-	IsNsfw            bool
-	Visibility        string
-	CurrentRevisionID pgtype.UUID
-	CreatedAt         pgtype.Timestamptz
+	ID             pgtype.UUID
+	Type           string
+	Format         string
+	OriginFormat   pgtype.Text
+	WorkVersion    string
+	CreditedAuthor string
+	Nickname       string
+	Lifecycle      string
+	Name           string
+	Blurb          string
+	Tags           []string
+	IsNsfw         bool
+	Visibility     string
+	OriginalFileID pgtype.UUID
+	CreatedAt      pgtype.Timestamptz
 }
 
 func (q *Queries) WorkByID(ctx context.Context, id pgtype.UUID) (WorkByIDRow, error) {
@@ -3553,7 +3556,7 @@ func (q *Queries) WorkByID(ctx context.Context, id pgtype.UUID) (WorkByIDRow, er
 		&i.Tags,
 		&i.IsNsfw,
 		&i.Visibility,
-		&i.CurrentRevisionID,
+		&i.OriginalFileID,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -3591,7 +3594,7 @@ select instance.id, instance.application_name, instance.instance_name,
        delivery.settled_reason, delivery.queued_at, delivery.settled_at,
        delivery.expires_at,
        coalesce(delivery.updates_install, false)::boolean as updates_install,
-       entry.content_generation as installed_generation
+       entry.version_number as installed_version
   from linked_instances as instance
   left join lateral (
       select waiting.id, waiting.state, waiting.settled_reason,
@@ -3617,21 +3620,21 @@ type WorkInstanceStatesParams struct {
 }
 
 type WorkInstanceStatesRow struct {
-	ID                  pgtype.UUID
-	ApplicationName     string
-	InstanceName        string
-	LastSeenAt          pgtype.Timestamptz
-	Scopes              []string
-	Capabilities        []string
-	AcceptedTargets     []string
-	DeliveryID          pgtype.UUID
-	DeliveryState       string
-	SettledReason       pgtype.Text
-	QueuedAt            pgtype.Timestamptz
-	SettledAt           pgtype.Timestamptz
-	ExpiresAt           pgtype.Timestamptz
-	UpdatesInstall      bool
-	InstalledGeneration pgtype.Int4
+	ID               pgtype.UUID
+	ApplicationName  string
+	InstanceName     string
+	LastSeenAt       pgtype.Timestamptz
+	Scopes           []string
+	Capabilities     []string
+	AcceptedTargets  []string
+	DeliveryID       pgtype.UUID
+	DeliveryState    string
+	SettledReason    pgtype.Text
+	QueuedAt         pgtype.Timestamptz
+	SettledAt        pgtype.Timestamptz
+	ExpiresAt        pgtype.Timestamptz
+	UpdatesInstall   bool
+	InstalledVersion pgtype.Int4
 }
 
 func (q *Queries) WorkInstanceStates(ctx context.Context, arg WorkInstanceStatesParams) ([]WorkInstanceStatesRow, error) {
@@ -3658,7 +3661,7 @@ func (q *Queries) WorkInstanceStates(ctx context.Context, arg WorkInstanceStates
 			&i.SettledAt,
 			&i.ExpiresAt,
 			&i.UpdatesInstall,
-			&i.InstalledGeneration,
+			&i.InstalledVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -3673,15 +3676,15 @@ func (q *Queries) WorkInstanceStates(ctx context.Context, arg WorkInstanceStates
 const workPage = `-- name: WorkPage :one
 select a.id, a.type, a.name, a.blurb, a.tags, a.is_nsfw, a.visibility,
        a.lifecycle, a.created_at,
-       revision.format as original_format, revision.media_type as original_media_type,
-       revision.created_at as original_arrived_at,
-       coalesce(revision.identifier, '')::text as identifier,
+       original.format as original_format, original.media_type as original_media_type,
+       original.created_at as original_arrived_at,
+       coalesce(original.identifier, '')::text as identifier,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = $2::uuid, false)::boolean as is_owner,
        a.withheld_reason, a.withheld_at
   from works a
   left join users owner on owner.id = a.owner_id
-  left join work_revisions revision on revision.id = a.current_revision_id
+  left join work_original_files original on original.id = a.original_file_id
  where a.id = $1
    and a.deleted_at is null
    and (a.lifecycle = 'published' or a.owner_id = $2::uuid)

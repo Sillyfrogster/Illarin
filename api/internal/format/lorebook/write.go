@@ -12,20 +12,20 @@ import (
 	"github.com/google/uuid"
 )
 
-func (Module) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+func (Module) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
 	entries := bookEntries(work)
 	body := map[string]json.RawMessage{
 		"name":     keys.Must(work.Header.Name),
 		entriesKey: keys.Must(book.Write(entries)),
 	}
 	if err := restorePreserved(body, entries, work.Preserved); err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the lorebook: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the lorebook: %w", err)
 	}
-	return format.Artifact{
+	return format.MainFile{
 		Body: document, MediaType: "application/json", Extension: ".json",
 	}, nil
 }

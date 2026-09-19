@@ -390,7 +390,7 @@ func parse(t *testing.T, file format.Inspection) format.Parsed {
 	return parsed
 }
 
-func write(t *testing.T, module format.Reader, parsed format.Parsed) format.Artifact {
+func write(t *testing.T, module format.Reader, parsed format.Parsed) format.MainFile {
 	t.Helper()
 	writer := module.(format.Writer)
 	written, err := writer.Write(context.Background(), format.ExportWork{

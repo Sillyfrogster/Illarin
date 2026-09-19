@@ -109,12 +109,8 @@ func (s *Service) PlaceVaultPicture(
 		}
 		picture.MediaID = mediaID
 	}
-	var after []block.Block
-	place := func() (err error) {
-		after, err = s.placeInPage(ctx, tx, workType, workID, picture)
-		return err
-	}
-	if err := s.works.ChangeContent(ctx, tx, workID, place); err != nil {
+	after, err := s.placeInPage(ctx, tx, workType, workID, picture)
+	if err != nil {
 		return work.SavedBlocks{}, err
 	}
 	if err := candidate.Commit(ctx, tx, workID); err != nil {

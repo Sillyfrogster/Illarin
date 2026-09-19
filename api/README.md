@@ -52,7 +52,7 @@ Features, one per thing the product has:
 Everything else is plumbing a feature reaches for:
 
 - `api` — what every feature needs from the request, as above.
-- `work` — the stored work itself: its row, revisions, snapshots, media,
+- `work` — the stored work itself: its row, original files, versions, media,
   preserved payloads, and the service every feature builds on.
 - `format` — one reader and writer per file format, plus recognition;
   `format/modules` holds the registry and the rest is one package per format.

@@ -105,7 +105,7 @@ func (s *Service) Publish(
 	`, workID); err != nil {
 		return nil, fmt.Errorf("publish work: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `select record_initial_work_snapshot($1, false)`, workID); err != nil {
+	if _, err := tx.Exec(ctx, `select record_initial_work_version($1, false)`, workID); err != nil {
 		return nil, fmt.Errorf("record initial publication: %w", err)
 	}
 	if err := candidate.Commit(ctx, tx, workID); err != nil {

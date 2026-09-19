@@ -60,29 +60,29 @@ func TestSendingAnWorkReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 	}
 	work := released.Deliveries[0]
 	if work.ID != waiting.ID || work.WorkID != workID || work.Format != "test_opaque" ||
-		work.Type != "character" || work.Name == "" || work.ContentGeneration < 1 {
+		work.Type != "character" || work.Name == "" || work.VersionNumber < 1 {
 		t.Fatalf("released work = %+v, want the queued work written as test_opaque", work)
 	}
-	if len(work.Artifacts) == 0 || work.Artifacts[0].Type != "export" {
-		t.Fatalf("artifacts = %+v, want an export first", work.Artifacts)
+	if len(work.Files) == 0 || work.Files[0].Type != "export" {
+		t.Fatalf("files = %+v, want an export first", work.Files)
 	}
-	if !strings.Contains(work.Artifacts[0].URL, "signature=") {
-		t.Fatalf("export address %q carries no signature", work.Artifacts[0].URL)
+	if !strings.Contains(work.Files[0].URL, "signature=") {
+		t.Fatalf("export address %q carries no signature", work.Files[0].URL)
 	}
-	fetched := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
+	fetched := apitest.FetchSigned(t, router, work.Files[0].URL)
 	if fetched.Code != http.StatusOK {
 		t.Fatalf("fetch status = %d, want 200: %s", fetched.Code, fetched.Body.String())
 	}
-	var revisionMissing bool
+	var originalFileMissing bool
 	if err := pool.QueryRow(context.Background(), `
-		select revision_id is null
+		select original_file_id is null
 		  from download_events
 		 where work_id = $1 and authorization_class = 'linked_instance'
-	`, workID).Scan(&revisionMissing); err != nil {
+	`, workID).Scan(&originalFileMissing); err != nil {
 		t.Fatalf("read linked-instance download event: %v", err)
 	}
-	if !revisionMissing {
-		t.Fatal("work made in Illarin recorded a source revision")
+	if !originalFileMissing {
+		t.Fatal("work made in Illarin recorded an original file")
 	}
 }
 
@@ -108,7 +108,7 @@ func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *tes
 	if work.Format != format.RawTarget {
 		t.Fatalf("format = %q, want the creator's own file as raw", work.Format)
 	}
-	fetched := apitest.FetchSigned(t, router, work.Artifacts[0].URL)
+	fetched := apitest.FetchSigned(t, router, work.Files[0].URL)
 
 	if fetched.Code != http.StatusOK || fetched.Header().Get("X-Accel-Redirect") == "" {
 		t.Fatalf("fetch = %d, headers %v", fetched.Code, fetched.Header())
@@ -127,7 +127,7 @@ func TestATamperedOrUnsignedDeliveryAddressIsRefused(t *testing.T) {
 	apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
 	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
 
-	address, err := url.Parse(work.Artifacts[0].URL)
+	address, err := url.Parse(work.Files[0].URL)
 	if err != nil {
 		t.Fatalf("parse the export address: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestAnAcknowledgedDeliveryLeavesTheQueueAndStaysOnRecordAsDelivered(t *test
 	if delivered == nil || delivered.State != "delivered" || delivered.SettledAt == nil || delivered.UpdatesInstall {
 		t.Fatalf("delivery = %+v, want it on record as delivered", delivered)
 	}
-	if fetched := apitest.FetchSigned(t, router, work.Artifacts[0].URL); fetched.Code != http.StatusNotFound {
+	if fetched := apitest.FetchSigned(t, router, work.Files[0].URL); fetched.Code != http.StatusNotFound {
 		t.Fatalf("the export address still answers %d after acknowledgement", fetched.Code)
 	}
 
@@ -337,7 +337,7 @@ func syncLibrary(
 	return apitest.DecodeResponse[apitest.LibraryResult](t, rec)
 }
 
-func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
+func TestAnInstallWithNoVersionNumberStaysCurrentAfterPrivateEdits(t *testing.T) {
 	t.Parallel()
 	router, session, _ := harness.NewLinkingRouter(t)
 	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk",
@@ -351,7 +351,7 @@ func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
 		t.Fatalf("library sync accepted %d, want 1", result.Accepted)
 	}
 	current := apitest.WorkInstances(t, router, session, workID)
-	if current.Items[0].InstalledGeneration == nil || current.Items[0].UpdateAvailable {
+	if current.Items[0].InstalledVersion == nil || current.Items[0].UpdateAvailable {
 		t.Fatalf("state = %+v, want installed and current", current.Items[0])
 	}
 
@@ -359,9 +359,9 @@ func TestAnInstallWithNoGenerationStaysCurrentAfterPrivateEdits(t *testing.T) {
 
 	stale := apitest.WorkInstances(t, router, session, workID)
 	if stale.Items[0].UpdateAvailable ||
-		*stale.Items[0].InstalledGeneration != stale.ContentGeneration {
-		t.Fatalf("state = %+v at generation %d, want the published generation unchanged",
-			stale.Items[0], stale.ContentGeneration)
+		*stale.Items[0].InstalledVersion != stale.VersionNumber {
+		t.Fatalf("state = %+v at version %d, want the published version number unchanged",
+			stale.Items[0], stale.VersionNumber)
 	}
 }
 
@@ -372,19 +372,19 @@ func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
 	first := apitest.PublishedCharacter(t, router, session)
 	second := apitest.PublishedCharacter(t, router, session)
 	syncLibrary(t, router, grant.AccessToken, false, []map[string]any{
-		{"workId": first, "contentGeneration": 1},
-		{"workId": second, "contentGeneration": 1},
+		{"workId": first, "versionNumber": 1},
+		{"workId": second, "versionNumber": 1},
 	}, nil)
 
 	result := syncLibrary(t, router, grant.AccessToken, true, []map[string]any{
-		{"workId": second, "contentGeneration": 1},
+		{"workId": second, "versionNumber": 1},
 	}, nil)
 
 	if result.Accepted != 1 || result.Removed != 1 {
 		t.Fatalf("snapshot = %+v, want one kept and one removed", result)
 	}
 	gone := apitest.WorkInstances(t, router, session, first)
-	if gone.Items[0].InstalledGeneration != nil {
+	if gone.Items[0].InstalledVersion != nil {
 		t.Fatalf("the first work is still installed after a snapshot without it")
 	}
 }

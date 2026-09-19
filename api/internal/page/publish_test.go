@@ -407,7 +407,7 @@ func TestAPublishedPageBelowTheFloorMarksNothingForAVisitor(t *testing.T) {
 	}
 }
 
-func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.T) {
+func TestAVersionPublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)
@@ -422,7 +422,7 @@ func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.
 		t.Fatalf("save the description status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
-	response := apitest.PublishWorkUpdate(t, r, session, started.ID,
+	response := apitest.PublishWorkVersion(t, r, session, started.ID,
 		`{"summary":"Moved her to the east shelf","versionLabel":"v2"}`)
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish an update status = %d, want 200: %s", response.Code, response.Body.String())
@@ -439,11 +439,11 @@ func TestAnUpdatePublishesOnceAndTheSameCandidateIsRefusedAfterwards(t *testing.
 	if recorded.Number != 2 || recorded.VersionLabel != "v2" || !recorded.ContentChanged {
 		t.Fatalf("recorded update = %+v", recorded)
 	}
-	if response.Header().Get("X-Working-Copy-Version") == "" {
-		t.Error("the update named no committed working-copy version")
+	if response.Header().Get("X-Drafted-Changes-Version") == "" {
+		t.Error("the update named no committed drafted-changes version")
 	}
 
-	again := apitest.PublishWorkUpdate(t, r, session, started.ID, `{"summary":"Nothing new"}`)
+	again := apitest.PublishWorkVersion(t, r, session, started.ID, `{"summary":"Nothing new"}`)
 	if again.Code != http.StatusConflict {
 		t.Fatalf("republishing status = %d, want 409: %s", again.Code, again.Body.String())
 	}

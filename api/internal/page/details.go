@@ -56,16 +56,11 @@ func (s *Service) SetDetails(ctx context.Context, in Details, candidate *work.Ca
 	if in.IsNSFW == nil && work.Lifecycle(lifecycle) != work.LifecycleDraft {
 		return ErrRatingUnanswerable
 	}
-	if err := s.works.ChangeContent(ctx, tx, in.WorkID, func() error {
-		if _, err := tx.Exec(ctx, `
-			update works set name = $2, blurb = $3, is_nsfw = $4, updated_at = now()
-			 where id = $1
-		`, in.WorkID, name, in.Blurb, in.IsNSFW); err != nil {
-			return fmt.Errorf("save work header: %w", err)
-		}
-		return nil
-	}); err != nil {
-		return err
+	if _, err := tx.Exec(ctx, `
+		update works set name = $2, blurb = $3, is_nsfw = $4, updated_at = now()
+		 where id = $1
+	`, in.WorkID, name, in.Blurb, in.IsNSFW); err != nil {
+		return fmt.Errorf("save work header: %w", err)
 	}
 	return candidate.Commit(ctx, tx, in.WorkID)
 }

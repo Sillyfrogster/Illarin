@@ -157,11 +157,11 @@ func (s *Sends) release(
 	}
 	return &Work{
 		ID: deliveryID, WorkID: workID,
-		ContentGeneration: sendable.ContentGeneration,
-		Type:              sendable.Type, Name: sendable.Name,
+		VersionNumber: sendable.VersionNumber,
+		Type:          sendable.Type, Name: sendable.Name,
 		Format: target, Label: label,
 		QueuedAt: row.QueuedAt.Time, LeaseExpiresAt: row.LeaseExpiresAt.Time,
-		Artifacts: s.artifacts(deliveryID, sendable),
+		Files: s.files(deliveryID, sendable),
 	}, nil
 }
 
@@ -179,20 +179,20 @@ func stop(
 	return nil
 }
 
-func (s *Sends) artifacts(deliveryID uuid.UUID, sendable Deliverable) []Artifact {
-	artifacts := make([]Artifact, 0, len(sendable.Pictures)+1)
-	artifacts = append(artifacts, Artifact{
-		Type: ArtifactExport,
+func (s *Sends) files(deliveryID uuid.UUID, sendable Deliverable) []File {
+	files := make([]File, 0, len(sendable.Pictures)+1)
+	files = append(files, File{
+		Type: FileExport,
 		URL:  s.works.SignedURL(deliveryPathStart + deliveryID.String() + "/export"),
 	})
 	for _, picture := range sendable.Pictures {
 		mediaID := picture.MediaID
-		artifacts = append(artifacts, Artifact{
-			Type: ArtifactPicture, URL: picture.URL, MediaID: &mediaID,
+		files = append(files, File{
+			Type: FilePicture, URL: picture.URL, MediaID: &mediaID,
 			Role: picture.Role, IsCover: picture.IsCover,
 		})
 	}
-	return artifacts
+	return files
 }
 
 func uuidValues(values []uuid.UUID) []pgtype.UUID {

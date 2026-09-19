@@ -34,15 +34,15 @@ type IngestFailure struct {
 type IngestFailureReason string
 
 const (
-	IngestFailureReasonWorkUnavailable     IngestFailureReason = "work_unavailable"
-	IngestFailureReasonInternalFailure     IngestFailureReason = "internal_failure"
-	IngestFailureReasonLimitExceeded       IngestFailureReason = "limit_exceeded"
-	IngestFailureReasonMalformedInput      IngestFailureReason = "malformed_input"
-	IngestFailureReasonSafetyViolation     IngestFailureReason = "safety_violation"
-	IngestFailureReasonUnsupportedFormat   IngestFailureReason = "unsupported_format"
-	IngestFailureReasonUnsupportedVersion  IngestFailureReason = "unsupported_version"
-	IngestFailureReasonWorkingCopyConflict IngestFailureReason = "working_copy_conflict"
-	IngestFailureReasonWrongType           IngestFailureReason = "wrong_type"
+	IngestFailureReasonWorkUnavailable        IngestFailureReason = "work_unavailable"
+	IngestFailureReasonInternalFailure        IngestFailureReason = "internal_failure"
+	IngestFailureReasonLimitExceeded          IngestFailureReason = "limit_exceeded"
+	IngestFailureReasonMalformedInput         IngestFailureReason = "malformed_input"
+	IngestFailureReasonSafetyViolation        IngestFailureReason = "safety_violation"
+	IngestFailureReasonUnsupportedFormat      IngestFailureReason = "unsupported_format"
+	IngestFailureReasonUnsupportedVersion     IngestFailureReason = "unsupported_version"
+	IngestFailureReasonDraftedChangesConflict IngestFailureReason = "drafted_changes_conflict"
+	IngestFailureReasonWrongType              IngestFailureReason = "wrong_type"
 )
 
 type IngestOperation struct {

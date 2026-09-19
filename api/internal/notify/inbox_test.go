@@ -163,7 +163,7 @@ func TestAnEntryReadsAsItDidWhenTheChangeHappenedAfterARename(t *testing.T) {
 		`{"name":"Sunlit Archive","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("rename status = %d, want 204: %s", got.Code, got.Body.String())
 	}
-	if got := apitest.PublishWorkUpdate(t, s.router, s.creator, workID, `{"summary":"A new name"}`); got.Code != http.StatusOK {
+	if got := apitest.PublishWorkVersion(t, s.router, s.creator, workID, `{"summary":"A new name"}`); got.Code != http.StatusOK {
 		t.Fatalf("publish the rename = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	s.fanOut(t, time.Now())

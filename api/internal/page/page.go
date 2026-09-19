@@ -22,35 +22,35 @@ type DetailTag struct {
 }
 
 type Detail struct {
-	WorkingCopyVersion  *int64
-	UnpublishedChanges  *bool
-	ID                  uuid.UUID
-	Type                string
-	Name                string
-	Blurb               string
-	Tags                []DetailTag
-	Creator             string
-	Identifier          *string
-	Dependencies        []Dependency
-	IsNSFW              *bool
-	Visibility          work.Visibility
-	Lifecycle           work.Lifecycle
-	IsOwner             bool
-	Downloads           []format.Target
-	AppTargets          []format.AppTarget
-	Original            *work.OriginalUpload
-	CreatedAt           time.Time
-	Blocks              []block.Block
-	Media               []work.DetailImage
-	Preview             *string
-	LatestUpdate        *work.Version
-	Readiness           []work.ReadinessItem
-	SealedBlocks        int
-	LinkedInstallOnly   bool
-	AllowedApps         []string
-	EligibleApps        []string
-	InstallCapabilities []string
-	Withhold            *Withhold
+	DraftedChangesVersion *int64
+	UnpublishedChanges    *bool
+	ID                    uuid.UUID
+	Type                  string
+	Name                  string
+	Blurb                 string
+	Tags                  []DetailTag
+	Creator               string
+	Identifier            *string
+	Dependencies          []Dependency
+	IsNSFW                *bool
+	Visibility            work.Visibility
+	Lifecycle             work.Lifecycle
+	IsOwner               bool
+	Downloads             []format.Target
+	AppTargets            []format.AppTarget
+	Original              *work.OriginalUpload
+	CreatedAt             time.Time
+	Blocks                []block.Block
+	Media                 []work.DetailImage
+	Preview               *string
+	LatestVersion         *work.Version
+	Readiness             []work.ReadinessItem
+	SealedBlocks          int
+	LinkedInstallOnly     bool
+	AllowedApps           []string
+	EligibleApps          []string
+	InstallCapabilities   []string
+	Withhold              *Withhold
 }
 
 func (s *Service) Detail(
@@ -62,8 +62,8 @@ func (s *Service) Detail(
 	return s.detail(ctx, id, viewerID, preference, false)
 }
 
-// WorkingCopy reads the page its owner edits, drafted changes included
-func (s *Service) WorkingCopy(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, preference work.NSFWPreference) (Detail, error) {
+// DraftedChanges reads the page its owner edits, drafted changes included
+func (s *Service) DraftedChanges(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, preference work.NSFWPreference) (Detail, error) {
 	if viewerID == nil {
 		return Detail{}, work.ErrNotFound
 	}
@@ -115,10 +115,10 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	}
 	if working || (found.IsOwner && found.Lifecycle == work.LifecycleDraft) {
 		var version int64
-		if err := tx.QueryRow(ctx, `select working_copy_version from public.works where id = $1`, id).Scan(&version); err != nil {
+		if err := tx.QueryRow(ctx, `select drafted_changes_version from public.works where id = $1`, id).Scan(&version); err != nil {
 			return Detail{}, err
 		}
-		found.WorkingCopyVersion = &version
+		found.DraftedChangesVersion = &version
 	}
 	found.Downloads, err = summary.Offered(ctx, tx, id)
 	if err != nil {
@@ -134,7 +134,7 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	if err != nil {
 		return Detail{}, err
 	}
-	found.LatestUpdate, err = latestUpdate(ctx, tx, id)
+	found.LatestVersion, err = latestVersion(ctx, tx, id)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -223,13 +223,13 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 	return found, nil
 }
 
-func latestUpdate(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (*work.Version, error) {
+func latestVersion(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (*work.Version, error) {
 	var recorded work.Version
 	err := tx.QueryRow(ctx, `
 		select s.id, s.number, s.recorded_at, s.initial_recorded,
 		       s.version_label, s.summary, s.notes
 		  from public.works a
-		  join public.work_snapshots s on s.id = a.published_snapshot_id
+		  join public.work_versions s on s.id = a.published_version_id
 		 where a.id = $1
 	`, workID).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes)

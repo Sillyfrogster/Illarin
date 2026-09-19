@@ -113,11 +113,11 @@ func (s *Service) recheck(ctx context.Context, held dispatch.Work) (standing, er
 	err := s.pool.QueryRow(ctx, `
 		select owned.deleted_at is not null or owned.lifecycle <> 'published',
 		       owned.withheld_at is not null, owned.visibility = 'unlisted',
-		       snapshot.withdrawn_at is not null, event.unlisted_consent, event.payload::text,
+		       version.withdrawn_at is not null, event.unlisted_consent, event.payload::text,
 		       destination.type, destination.state, destination.owner_id = owned.owner_id
 		  from work_update_events event
 		  join works owned on owned.id = event.work_id
-		  join work_snapshots snapshot on snapshot.id = event.snapshot_id
+		  join work_versions version on version.id = event.version_id
 		  left join work_update_destinations destination on destination.id = $2
 		 where event.id = $1
 	`, held.EventID, held.DestinationID).Scan(

@@ -171,11 +171,11 @@ func (s *Service) EnsureAccountStorage(
 			   and operation.blob_id is not null
 			   and operation.status in ('pending', 'processing')
 			union
-			select revision.blob_id
-			  from work_revisions revision
-			  join works work on work.id = revision.work_id
+			select original.blob_id
+			  from work_original_files original
+			  join works work on work.id = original.work_id
 			 where work.owner_id = $1
-			   and revision.blob_id is not null
+			   and original.blob_id is not null
 			   and (work.deleted_at is null or work.recoverable_until > $3)
 			union
 			select media.blob_id
@@ -213,12 +213,12 @@ func (s *Service) EnsureAccountStorage(
 }
 
 func (s *Service) OpenSource(ctx context.Context, workID uuid.UUID) (io.ReadCloser, error) {
-	location, err := CurrentRevisionLocation(ctx, s.pool, workID, nil)
+	location, err := LocateOriginalFile(ctx, s.pool, workID, nil)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
-		return nil, fmt.Errorf("find current revision: %w", err)
+		return nil, fmt.Errorf("find the original file: %w", err)
 	}
 
 	rc, err := s.store.Open(ctx, location.BlobID)
@@ -242,8 +242,8 @@ func WorkByID(ctx context.Context, q db.DBTX, id uuid.UUID) (Work, error) {
 		CreditedAuthor: row.CreditedAuthor, Nickname: row.Nickname,
 		Name: row.Name, Blurb: row.Blurb, Tags: row.Tags,
 		IsNSFW: &row.IsNsfw, Visibility: Visibility(row.Visibility), Lifecycle: Lifecycle(row.Lifecycle),
-		CurrentRevisionID: uuidFromPgtype(row.CurrentRevisionID),
-		CreatedAt:         timeFromPgtype(row.CreatedAt),
+		OriginalFileID: uuidFromPgtype(row.OriginalFileID),
+		CreatedAt:      timeFromPgtype(row.CreatedAt),
 	}, nil
 }
 

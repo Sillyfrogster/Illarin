@@ -11,26 +11,26 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *Handlers) PublishWorkUpdate(c *gin.Context) {
+func (h *Handlers) PublishWorkVersion(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	workingCopyVersion, ok := api.WorkingCopyVersion(c)
+	draftedChangesVersion, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "publishing an update")
+	owner, ok := api.Verified(c, "publishing a version")
 	if !ok {
 		return
 	}
-	var request WorkUpdateRequest
+	var request WorkVersionRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
 		api.Refuse(c, http.StatusBadRequest, "Send a summary of what changed, and any notes with it.")
 		return
 	}
-	candidate := &work.Candidate{Version: workingCopyVersion}
-	recorded, items, err := h.versions.PublishUpdate(c.Request.Context(), UpdateRequest{
+	candidate := &work.Candidate{Version: draftedChangesVersion}
+	recorded, items, err := h.versions.PublishVersion(c.Request.Context(), PublishRequest{
 		OwnerID: owner.ID, WorkID: id, Summary: request.Summary,
 		Notes: valueOrEmpty(request.Notes), VersionLabel: valueOrEmpty(request.VersionLabel),
 		Announcement: announcementChoice(request),
@@ -42,10 +42,10 @@ func (h *Handlers) PublishWorkUpdate(c *gin.Context) {
 	case errors.Is(err, ErrUnlistedConsentRequired):
 		refuseInvalid(c, "announceUnlisted",
 			"This work is unlisted. Confirm that its direct link may be sent, or publish quietly.")
-	case errors.Is(err, ErrUpdateDestinationIneligible):
+	case errors.Is(err, ErrDestinationIneligible):
 		refuseInvalid(c, "destinationIds", "Choose only your own verified, active destinations.")
 	case errors.Is(err, ErrSummaryRequired):
-		api.Refuse(c, http.StatusBadRequest, "Say what changed in this update.")
+		api.Refuse(c, http.StatusBadRequest, "Say what changed in this version.")
 	case errors.Is(err, ErrSummaryTooLong):
 		api.Refuse(c, http.StatusBadRequest, "The summary, notes or version label is too long.")
 	case errors.Is(err, work.ErrPublishFloor):
@@ -58,27 +58,26 @@ func (h *Handlers) PublishWorkUpdate(c *gin.Context) {
 	case errors.Is(err, ErrNothingToPublish):
 		unchanged := page.PublishRefusalCodeNoChanges
 		c.JSON(http.StatusConflict, page.PublishRefusal{
-			Error: "Nothing has changed since the last update.", Code: &unchanged,
+			Error: "Nothing has changed since the last version.", Code: &unchanged,
 		})
 	case errors.Is(err, work.ErrWorkIsDraft):
-		c.JSON(http.StatusConflict, page.PublishRefusal{Error: "Publish this draft before updating it."})
+		c.JSON(http.StatusConflict, page.PublishRefusal{Error: "Publish this draft before publishing a version of it."})
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such work.")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not publish the update.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not publish the version.")
 	default:
-		c.JSON(http.StatusOK, WorkUpdate{
+		c.JSON(http.StatusOK, WorkVersion{
 			Id: recorded.ID, Number: recorded.Number,
 			RecordedAt: recorded.RecordedAt, VersionLabel: recorded.VersionLabel,
 			Summary: recorded.Summary, Notes: recorded.Notes,
-			ContentGeneration: recorded.ContentGeneration,
-			ContentChanged:    recorded.ContentChanged,
+			ContentChanged: recorded.ContentChanged,
 		})
 	}
 }
 
-func announcementChoice(request WorkUpdateRequest) UpdateAnnouncement {
-	choice := UpdateAnnouncement{Notify: request.Notify == nil || *request.Notify}
+func announcementChoice(request WorkVersionRequest) Announcement {
+	choice := Announcement{Notify: request.Notify == nil || *request.Notify}
 	if request.DestinationIds != nil {
 		chosen := append([]uuid.UUID(nil), *request.DestinationIds...)
 		choice.DestinationIDs = &chosen

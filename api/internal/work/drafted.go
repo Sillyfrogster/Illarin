@@ -96,7 +96,7 @@ func (s *Service) UnpublishedChanges(ctx context.Context, tx pgx.Tx, workID uuid
 	return drafted.Any, err
 }
 
-// Drafted says whether the working copy differs from the published version at all, and whether its content does
+// Drafted says whether the drafted changes differs from the published version at all, and whether its content does
 type Drafted struct {
 	Any     bool
 	Content bool

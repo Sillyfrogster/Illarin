@@ -73,7 +73,7 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	if work.Format != extension.SpindleID || work.Type != "extension" {
 		t.Fatalf("delivery = %+v, want the Spindle archive", work)
 	}
-	fetched := apitest.FetchSigned(t, r, work.Artifacts[0].URL)
+	fetched := apitest.FetchSigned(t, r, work.Files[0].URL)
 	if fetched.Code != http.StatusOK {
 		t.Fatalf("fetch the delivery = %d: %s", fetched.Code, fetched.Body.String())
 	}
@@ -85,8 +85,8 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	if tavern := browsedIDs(t, r, "/v1/works?kind=extension&platform=sillytavern"); strings.Contains(tavern, workID) {
 		t.Errorf("browsing SillyTavern extensions found a Spindle extension: %s", tavern)
 	}
-	if generation := apitest.ContentGeneration(t, pool, workID); generation != 1 {
-		t.Errorf("a listing edit moved the content generation to %d", generation)
+	if number := apitest.VersionNumber(t, pool, workID); number != 1 {
+		t.Errorf("a listing edit moved the version number to %d", number)
 	}
 }
 
@@ -173,7 +173,7 @@ func TestARepositoryDownloadIsListedAndDownloadedUnchanged(t *testing.T) {
 	assertSameBytes(t, "download", download.Body.Bytes(), upload)
 }
 
-func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testing.T) {
+func TestAReplacementArchiveRefreshesTheLockedElementsAndTheVersionNumber(t *testing.T) {
 	t.Parallel()
 	r, session, works, pool := harness.NewExtensionRouter(t)
 	first := apitest.ExtensionZip(t, map[string]string{"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "one"})
@@ -185,25 +185,25 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheGeneration(t *testin
 	if published := apitest.PublishWork(t, r, session, workID); published.Code != http.StatusOK {
 		t.Fatalf("publish = %d: %s", published.Code, published.Body.String())
 	}
-	before := apitest.ContentGeneration(t, pool, workID)
+	before := apitest.VersionNumber(t, pool, workID)
 
 	manifest := strings.Replace(apitest.ToolboxManifest, `"ui_panels", "generation"`, `"ui_panels", "generation", "tools"`, 1)
 	manifest = strings.Replace(manifest, `"version": "1.0.0"`, `"version": "1.1.0"`, 1)
 	second := apitest.ExtensionZip(t, map[string]string{"spindle.json": manifest, "dist/frontend.js": "two"})
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "toolbox.zip", second), session))
-	if revision.Code != http.StatusAccepted {
-		t.Fatalf("upload the replacement = %d: %s", revision.Code, revision.Body.String())
+	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.OriginalFileRequest(t, workID, "toolbox.zip", second), session))
+	if uploaded.Code != http.StatusAccepted {
+		t.Fatalf("upload the replacement = %d: %s", uploaded.Code, uploaded.Body.String())
 	}
 	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
-	if update := apitest.PublishWorkUpdate(t, r, session, workID, `{"summary":"Adds tools"}`); update.Code != http.StatusOK {
+	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))
+	if update := apitest.PublishWorkVersion(t, r, session, workID, `{"summary":"Adds tools"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
 
-	if after := apitest.ContentGeneration(t, pool, workID); after <= before {
-		t.Errorf("content generation stayed at %d after a new archive", after)
+	if after := apitest.VersionNumber(t, pool, workID); after != before+1 {
+		t.Errorf("version number = %d after a new archive, want %d", after, before+1)
 	}
 	page := apitest.ReadExtensionPage(t, r, nil, workID)
 	contents := ""
@@ -253,15 +253,15 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 		"dist/backend.js":  `spindle.registerMacro({ name: "tidy" })`,
 		"dist/frontend.js": `export function setup(ctx) { ctx.ui.registerDrawerTab({ title: "Quiet Toolbox" }) }`,
 	})
-	revision := apitest.Send(t, r, apitest.Authorized(apitest.RevisionRequest(t, workID, "toolbox.zip", second), session))
-	if revision.Code != http.StatusAccepted {
-		t.Fatalf("upload the replacement = %d: %s", revision.Code, revision.Body.String())
+	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.OriginalFileRequest(t, workID, "toolbox.zip", second), session))
+	if uploaded.Code != http.StatusAccepted {
+		t.Fatalf("upload the replacement = %d: %s", uploaded.Code, uploaded.Body.String())
 	}
 	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
-	apitest.AcceptReplacementPreview(t, r, session, workID, revision.Header().Get("Location"))
-	if update := apitest.PublishWorkUpdate(t, r, session, workID, `{"summary":"Swaps the tool for a macro"}`); update.Code != http.StatusOK {
+	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))
+	if update := apitest.PublishWorkVersion(t, r, session, workID, `{"summary":"Swaps the tool for a macro"}`); update.Code != http.StatusOK {
 		t.Fatalf("publish the update = %d: %s", update.Code, update.Body.String())
 	}
 	if listed := additionsOnPage(t, r, workID); listed != "Macros {{tidy}}; UI surfaces Drawer tab: Quiet Toolbox" {

@@ -155,7 +155,7 @@ func TestALibraryReportRefusesAnAppVersionThatIsNotShortPrintableText(t *testing
 			t.Errorf("application version %q = %d, want 400: %s", bad, rec.Code, rec.Body.String())
 		}
 	}
-	if state := apitest.WorkInstances(t, r, session, workID).Items[0]; state.InstalledGeneration != nil {
+	if state := apitest.WorkInstances(t, r, session, workID).Items[0]; state.InstalledVersion != nil {
 		t.Fatal("a refused report still recorded the install")
 	}
 }

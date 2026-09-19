@@ -201,8 +201,8 @@ func Uploads(works *work.Service) *upload.Service {
 	return upload.NewService(works.Pool(), works)
 }
 
-// RevisionRequest uploads file as a new version of the work
-func RevisionRequest(t *testing.T, workID, filename string, file []byte) *http.Request {
+// OriginalFileRequest uploads file as a new version of the work
+func OriginalFileRequest(t *testing.T, workID, filename string, file []byte) *http.Request {
 	t.Helper()
 	body := &bytes.Buffer{}
 	form := multipart.NewWriter(body)
@@ -210,7 +210,7 @@ func RevisionRequest(t *testing.T, workID, filename string, file []byte) *http.R
 	if err := form.Close(); err != nil {
 		t.Fatalf("close form: %v", err)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/revisions", body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/original-file", body)
 	req.Header.Set("Content-Type", form.FormDataContentType())
 	return req
 }

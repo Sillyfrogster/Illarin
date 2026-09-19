@@ -68,7 +68,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (work.Work, error)
 		return work.Work{}, err
 	}
 	a.CreatedAt = made
-	revisionID, err := work.RecordRevision(ctx, tx, work.Revision{
+	originalFileID, err := work.RecordOriginalFile(ctx, tx, work.OriginalFile{
 		WorkID: a.ID, Number: 1, BlobID: stored.ID, MediaType: "application/octet-stream",
 		Format: a.Format, Media: extractedMedia,
 	})
@@ -87,7 +87,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (work.Work, error)
 	if err := s.writeSummary(ctx, tx, a.ID); err != nil {
 		return work.Work{}, err
 	}
-	if _, err := tx.Exec(ctx, `select record_initial_work_snapshot($1, false)`, a.ID); err != nil {
+	if _, err := tx.Exec(ctx, `select record_initial_work_version($1, false)`, a.ID); err != nil {
 		return work.Work{}, fmt.Errorf("record initial publication: %w", err)
 	}
 
@@ -95,7 +95,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (work.Work, error)
 		return work.Work{}, err
 	}
 
-	a.CurrentRevisionID = revisionID
+	a.OriginalFileID = originalFileID
 	return a, nil
 }
 

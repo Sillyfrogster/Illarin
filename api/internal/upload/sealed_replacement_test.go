@@ -41,8 +41,8 @@ func (module sealingModule) Parse(context.Context, format.Inspection, format.Cla
 	return *module.parsed, nil
 }
 
-func (sealingModule) Write(context.Context, format.ExportWork) (format.Artifact, error) {
-	return format.Artifact{MediaType: "text/plain", Extension: ".txt"}, nil
+func (sealingModule) Write(context.Context, format.ExportWork) (format.MainFile, error) {
+	return format.MainFile{MediaType: "text/plain", Extension: ".txt"}, nil
 }
 
 const sealingNamespace = "sealing_block"
@@ -76,7 +76,7 @@ func TestASealedPlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 		ID: held, Name: "Setup", Text: "The wording only this asset holds", Enabled: true,
 	}, "setup")
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, sealingModule{parsed: &parsed}))
-	owner := revisionOwner(t, svc, "sealing.owner")
+	owner := originalFileOwner(t, svc, "sealing.owner")
 	created := ingestOne(t, svc, owner, "loom.json", []byte(`{"payload":true}`))
 	publishImported(t, svc, owner, created)
 
@@ -104,7 +104,7 @@ func TestASealedPlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 		t.Fatalf("AcceptReplacement: %v", err)
 	}
 
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
+	working, err := works(svc).DraftedChanges(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 		ID: block.NewItemID(), Name: "Setup", Text: "Present", Enabled: true,
 	}, "setup")
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, sealingModule{parsed: &parsed}))
-	owner := revisionOwner(t, svc, "unfillable.owner")
+	owner := originalFileOwner(t, svc, "unfillable.owner")
 	created := ingestOne(t, svc, owner, "loom.json", []byte(`{"payload":true}`))
 	publishImported(t, svc, owner, created)
 
@@ -151,7 +151,7 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 		t.Fatalf("AcceptReplacement: %v", err)
 	}
 
-	working, err := works(svc).WorkingCopy(context.Background(), created.ID, &owner, work.NSFWShown)
+	working, err := works(svc).DraftedChanges(context.Background(), created.ID, &owner, work.NSFWShown)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,12 +163,12 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 
 func stageReplacementFile(t *testing.T, svc *Service, owner, workID uuid.UUID) Operation {
 	t.Helper()
-	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
+	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: workID, Filename: "loom.json",
 		File: bytes.NewBufferString(`{"payload":true,"replacement":true}`),
 	}, currentCandidate(t, svc, workID))
 	if err != nil {
-		t.Fatalf("AcceptRevision: %v", err)
+		t.Fatalf("AcceptOriginalFile: %v", err)
 	}
 	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)

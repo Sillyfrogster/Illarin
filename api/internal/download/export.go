@@ -47,18 +47,18 @@ type Export struct {
 }
 
 type exportSubject struct {
-	workID     uuid.UUID
-	workType   string
-	name       string
-	origin     string
-	header     format.Header
-	blocks     []block.Block
-	cover      *uuid.UUID
-	ownerID    *uuid.UUID
-	lifecycle  work.Lifecycle
-	revisionID *uuid.UUID
-	gallery    *GallerySelection
-	recorded   *work.Snapshot
+	workID         uuid.UUID
+	workType       string
+	name           string
+	origin         string
+	header         format.Header
+	blocks         []block.Block
+	cover          *uuid.UUID
+	ownerID        *uuid.UUID
+	lifecycle      work.Lifecycle
+	originalFileID *uuid.UUID
+	gallery        *GallerySelection
+	recorded       *work.FullVersion
 }
 
 func (s *Service) OpenExport(
@@ -113,26 +113,26 @@ func (s *Service) OpenExport(
 }
 
 func (subject exportSubject) export(
-	written format.Artifact,
+	written format.MainFile,
 	target, label string,
 	viewerID *uuid.UUID,
 ) Export {
 	export := Export{
 		Body: written.Body, MediaType: written.MediaType, Target: target,
-		Filename: format.Filename(subject.name, subject.updateName(), label, written.Extension),
+		Filename: format.Filename(subject.name, subject.versionName(), label, written.Extension),
 	}
 	if subject.lifecycle == work.LifecyclePublished {
-		event := newEvent(subject.workID, subject.revisionID, target, subject.ownerID, viewerID)
+		event := newEvent(subject.workID, subject.originalFileID, target, subject.ownerID, viewerID)
 		export.Event = &event
 	}
 	return export
 }
 
-func (subject exportSubject) updateName() string {
+func (subject exportSubject) versionName() string {
 	if subject.recorded == nil {
 		return ""
 	}
-	return fmt.Sprintf("update %d", subject.recorded.Number)
+	return fmt.Sprintf("version %d", subject.recorded.Number)
 }
 
 func (s *Service) OpenExportForLinkedInstance(
@@ -198,45 +198,45 @@ func (s *Service) writeExport(
 	q db.DBTX,
 	subject exportSubject,
 	writer format.Writer,
-) (format.Artifact, error) {
+) (format.MainFile, error) {
 	travelling := subject.travellingElements()
 	work := format.ExportWork{
 		Type: subject.workType, Header: subject.header, Elements: travelling,
 	}
 	cover, images, err := s.exportImages(ctx, q, subject, travelling)
 	if err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
 	work.Cover, work.Images = cover, images
 	work.Preserved, err = s.travellingPreservedData(ctx, q, subject, writer.ID())
 	if err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
 	if declaration, known := s.reg.Declaration(writer.ID()); known && declaration.KeepsUpload {
 		work.Upload, err = s.readUpload(ctx, q, subject)
 		if err != nil {
-			return format.Artifact{}, err
+			return format.MainFile{}, err
 		}
 	}
 	written, err := writer.Write(ctx, work)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write %s: %w", writer.ID(), err)
+		return format.MainFile{}, fmt.Errorf("write %s: %w", writer.ID(), err)
 	}
 	if len(written.Body) > MaxExportBytes {
-		return format.Artifact{}, ErrExportTooLarge
+		return format.MainFile{}, ErrExportTooLarge
 	}
 	return written, nil
 }
 
 // readUpload reads the file behind the version being exported.
 func (s *Service) readUpload(ctx context.Context, q db.DBTX, subject exportSubject) ([]byte, error) {
-	if subject.revisionID == nil {
+	if subject.originalFileID == nil {
 		return nil, fmt.Errorf("%w: no upload is recorded for this version", ErrTargetNotOffered)
 	}
 	var blobID uuid.UUID
 	if err := q.QueryRow(ctx,
-		`select blob_id from work_revisions where id = $1 and work_id = $2`,
-		*subject.revisionID, subject.workID,
+		`select blob_id from work_original_files where id = $1 and work_id = $2`,
+		*subject.originalFileID, subject.workID,
 	).Scan(&blobID); err != nil {
 		return nil, fmt.Errorf("find the upload to export: %w", err)
 	}
@@ -307,11 +307,11 @@ func (s *Service) exportSubject(
 ) (exportSubject, error) {
 	var subject exportSubject
 	var origin pgtype.Text
-	var ownerID, revisionID, cover pgtype.UUID
+	var ownerID, originalFileID, cover pgtype.UUID
 	err := q.QueryRow(ctx, `
 		select work.type, work.name, work.blurb, work.origin_format, work.lifecycle,
 		       work.work_version, work.credited_author, work.nickname,
-		       work.owner_id, work.current_revision_id, work.cover_media_id
+		       work.owner_id, work.original_file_id, work.cover_media_id
 		  from works work
 		 where work.id = $1 and work.deleted_at is null
 		   and (work.lifecycle = 'published' or work.owner_id = $2)
@@ -319,7 +319,7 @@ func (s *Service) exportSubject(
 	`, workID, viewerID).Scan(
 		&subject.workType, &subject.name, &subject.header.Blurb, &origin, &subject.lifecycle,
 		&subject.header.WorkVersion, &subject.header.CreditedAuthor,
-		&subject.header.Nickname, &ownerID, &revisionID, &cover,
+		&subject.header.Nickname, &ownerID, &originalFileID, &cover,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return exportSubject{}, work.ErrNotFound
@@ -332,7 +332,7 @@ func (s *Service) exportSubject(
 	subject.origin = origin.String
 	subject.cover = uuidOrNil(cover)
 	subject.ownerID = uuidOrNil(ownerID)
-	subject.revisionID = uuidOrNil(revisionID)
+	subject.originalFileID = uuidOrNil(originalFileID)
 	subject.blocks, err = block.Read(ctx, q, workID)
 	if err != nil {
 		return exportSubject{}, err
@@ -406,7 +406,7 @@ func (s *Service) exportImages(
 		return nil, map[uuid.UUID]format.ExportMedia{}, nil
 	}
 
-	rows, err := q.Query(ctx, subject.pictureQuery(), subject.workID, wanted, subject.snapshotID())
+	rows, err := q.Query(ctx, subject.pictureQuery(), subject.workID, wanted, subject.versionID())
 	if err != nil {
 		return nil, nil, fmt.Errorf("list the pictures to export: %w", err)
 	}
@@ -462,12 +462,12 @@ func (subject exportSubject) pictureQuery() string {
 	return `
 		select media.id, media.blob_id, blob.byte_size
 		  from public.work_media media
-		  join public.work_snapshot_media kept on kept.media_id = media.id
+		  join public.work_version_media kept on kept.media_id = media.id
 		  join public.blobs blob on blob.id = media.blob_id
-		 where media.work_id = $1 and media.id = any($2) and kept.snapshot_id = $3`
+		 where media.work_id = $1 and media.id = any($2) and kept.version_id = $3`
 }
 
-func (subject exportSubject) snapshotID() *uuid.UUID {
+func (subject exportSubject) versionID() *uuid.UUID {
 	if subject.recorded == nil {
 		return nil
 	}

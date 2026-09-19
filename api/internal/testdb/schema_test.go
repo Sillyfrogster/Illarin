@@ -17,7 +17,7 @@ func TestCoreTablesExist(t *testing.T) {
 
 	want := []string{
 		"works",
-		"work_revisions",
+		"work_original_files",
 		"work_media",
 		"work_blocks",
 		"work_summaries",
@@ -132,7 +132,7 @@ func TestDurableRecordsReferenceBlobs(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 
-	for _, table := range []string{"work_revisions", "work_media"} {
+	for _, table := range []string{"work_original_files", "work_media"} {
 		rows, err := pool.Query(context.Background(),
 			`select column_name
 			   from information_schema.columns
@@ -350,7 +350,7 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 	}
 }
 
-func TestOriginAndRevisionFormatsHaveSeparateHomes(t *testing.T) {
+func TestOriginalFormatAndOriginalFileFormatHaveSeparateHomes(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 
@@ -371,49 +371,49 @@ func TestOriginAndRevisionFormatsHaveSeparateHomes(t *testing.T) {
 		}
 	}
 
-	revisionColumns, err := tableColumns(pool, "work_revisions")
+	originalFileColumns, err := tableColumns(pool, "work_original_files")
 	if err != nil {
-		t.Fatalf("read revision columns: %v", err)
+		t.Fatalf("read the original file columns: %v", err)
 	}
-	if !slices.Contains(revisionColumns, "format") {
-		t.Error("work_revisions has no format")
+	if !slices.Contains(originalFileColumns, "format") {
+		t.Error("work_original_files has no format")
 	}
-	if slices.Contains(revisionColumns, "passthrough_platform") {
-		t.Error("work_revisions still has passthrough_platform")
+	if slices.Contains(originalFileColumns, "passthrough_platform") {
+		t.Error("work_original_files still has passthrough_platform")
 	}
-	if slices.Contains(revisionColumns, "format_version") {
-		t.Error("work_revisions still has format_version")
+	if slices.Contains(originalFileColumns, "format_version") {
+		t.Error("work_original_files still has format_version")
 	}
 }
 
-func TestRevisionIdentityCanBackACompositeForeignKey(t *testing.T) {
+func TestOriginalFileIdentityCanBackACompositeForeignKey(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
-	_, err := pool.Exec(ctx, `drop table if exists revision_reference_probe`)
+	_, err := pool.Exec(ctx, `drop table if exists original_file_reference_probe`)
 	if err != nil {
-		t.Fatalf("clear revision reference probe: %v", err)
+		t.Fatalf("clear the original file reference probe: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), `drop table if exists revision_reference_probe`)
+		_, _ = pool.Exec(context.Background(), `drop table if exists original_file_reference_probe`)
 	})
 
 	_, err = pool.Exec(ctx,
-		`create table revision_reference_probe (
-		    revision_id uuid not null,
+		`create table original_file_reference_probe (
+		    original_file_id uuid not null,
 		    work_id uuid not null,
-		    foreign key (revision_id, work_id)
-		        references work_revisions (id, work_id)
+		    foreign key (original_file_id, work_id)
+		        references work_original_files (id, work_id)
 		)`)
 	if err != nil {
-		t.Fatalf("work_revisions (id, work_id) cannot back a composite foreign key: %v", err)
+		t.Fatalf("work_original_files (id, work_id) cannot back a composite foreign key: %v", err)
 	}
 }
 
 func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	workID, revisionID, _ := insertWorkRevision(t, pool)
+	workID, originalFileID, _ := insertOriginalFile(t, pool)
 
 	columns, err := tableColumns(pool, "download_events")
 	if err != nil {
@@ -422,7 +422,7 @@ func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 	want := []string{
 		"id",
 		"work_id",
-		"revision_id",
+		"original_file_id",
 		"export_target",
 		"handed_off_at",
 		"authorization_class",
@@ -434,15 +434,15 @@ func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 
 	_, err = pool.Exec(context.Background(), `
 		insert into download_events
-			(work_id, revision_id, export_target, authorization_class, visibility)
+			(work_id, original_file_id, export_target, authorization_class, visibility)
 		values ($1, $2, 'raw', 'anonymous', 'listed')
-	`, workID, revisionID)
+	`, workID, originalFileID)
 	if err != nil {
 		t.Fatalf("insert download event: %v", err)
 	}
 }
 
-func TestDownloadEventMayOmitASourceRevision(t *testing.T) {
+func TestDownloadEventMayOmitAnOriginalFile(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	workID := uuid.New()
@@ -452,30 +452,30 @@ func TestDownloadEventMayOmitASourceRevision(t *testing.T) {
 		insert into works (id, type, name, lifecycle)
 		values ($1, 'character', 'Made here', 'published')
 	`, workID); err != nil {
-		t.Fatalf("insert work without a source revision: %v", err)
+		t.Fatalf("insert work without an original file: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into download_events
-			(work_id, revision_id, export_target, authorization_class, visibility)
+			(work_id, original_file_id, export_target, authorization_class, visibility)
 		values ($1, null, 'chara_card_v3', 'anonymous', 'listed')
 	`, workID); err != nil {
-		t.Fatalf("insert download event without a source revision: %v", err)
+		t.Fatalf("insert download event without an original file: %v", err)
 	}
 }
 
 func TestDownloadEventsAreImmutable(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	workID, revisionID, _ := insertWorkRevision(t, pool)
+	workID, originalFileID, _ := insertOriginalFile(t, pool)
 	ctx := context.Background()
 
 	var eventID int64
 	err := pool.QueryRow(ctx, `
 		insert into download_events
-			(work_id, revision_id, export_target, authorization_class, visibility)
+			(work_id, original_file_id, export_target, authorization_class, visibility)
 		values ($1, $2, 'raw', 'anonymous', 'listed')
 		returning id
-	`, workID, revisionID).Scan(&eventID)
+	`, workID, originalFileID).Scan(&eventID)
 	if err != nil {
 		t.Fatalf("insert download event: %v", err)
 	}
@@ -496,7 +496,7 @@ func TestDownloadEventsAreImmutable(t *testing.T) {
 func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	workID, _, _ := insertWorkRevision(t, pool)
+	workID, _, _ := insertOriginalFile(t, pool)
 	ctx := context.Background()
 
 	var migratedAt time.Time
@@ -536,27 +536,27 @@ func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 	}
 }
 
-func TestDownloadEventRevisionMustBelongToItsWork(t *testing.T) {
+func TestDownloadEventOriginalFileMustBelongToItsWork(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	firstWorkID, firstRevisionID, _ := insertWorkRevision(t, pool)
-	secondWorkID, _, _ := insertWorkRevision(t, pool)
+	firstWorkID, firstOriginalFileID, _ := insertOriginalFile(t, pool)
+	secondWorkID, _, _ := insertOriginalFile(t, pool)
 
 	_, err := pool.Exec(context.Background(), `
 		insert into download_events
-			(work_id, revision_id, export_target, authorization_class, visibility)
+			(work_id, original_file_id, export_target, authorization_class, visibility)
 		values ($1, $2, 'raw', 'anonymous', 'listed')
-	`, secondWorkID, firstRevisionID)
+	`, secondWorkID, firstOriginalFileID)
 	if err == nil {
-		t.Fatalf("revision %s from work %s was recorded for work %s",
-			firstRevisionID, firstWorkID, secondWorkID)
+		t.Fatalf("original file %s from work %s was recorded for work %s",
+			firstOriginalFileID, firstWorkID, secondWorkID)
 	}
 }
 
 func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	workID, revisionID, _ := insertWorkRevision(t, pool)
+	workID, originalFileID, _ := insertOriginalFile(t, pool)
 	ctx := context.Background()
 
 	for _, authorizationClass := range []string{
@@ -564,9 +564,9 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 	} {
 		_, err := pool.Exec(ctx, `
 			insert into download_events
-				(work_id, revision_id, export_target, authorization_class, visibility)
+				(work_id, original_file_id, export_target, authorization_class, visibility)
 			values ($1, $2, 'raw', $3, 'listed')
-		`, workID, revisionID, authorizationClass)
+		`, workID, originalFileID, authorizationClass)
 		if err != nil {
 			t.Fatalf("insert %s download event: %v", authorizationClass, err)
 		}
@@ -580,9 +580,9 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			_, err := pool.Exec(ctx, `
 				insert into download_events
-					(work_id, revision_id, export_target, authorization_class, visibility)
+					(work_id, original_file_id, export_target, authorization_class, visibility)
 				values ($1, $2, $3, $4, $5)
-			`, workID, revisionID, values[0], values[1], values[2])
+			`, workID, originalFileID, values[0], values[1], values[2])
 			if err == nil {
 				t.Fatal("invalid download event was accepted")
 			}
@@ -593,7 +593,7 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 func TestTheSummaryCarriesTwoIndependentHalves(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	workID, _, _ := insertWorkRevision(t, pool)
+	workID, _, _ := insertOriginalFile(t, pool)
 
 	columns, err := tableColumns(pool, "work_summaries")
 	if err != nil {
@@ -629,7 +629,7 @@ func TestTheSummaryCarriesTwoIndependentHalves(t *testing.T) {
 func TestMediaBelongsToOneWork(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	workID, _, blobID := insertWorkRevision(t, pool)
+	workID, _, blobID := insertOriginalFile(t, pool)
 	ctx := context.Background()
 
 	columns, err := tableColumns(pool, "work_media")
@@ -679,7 +679,7 @@ func TestMediaBelongsToOneWork(t *testing.T) {
 func TestCoverIsAnOptionalWorkReference(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
-	workID, _, blobID := insertWorkRevision(t, pool)
+	workID, _, blobID := insertOriginalFile(t, pool)
 	ctx := context.Background()
 
 	workColumns, err := tableColumns(pool, "works")
@@ -760,13 +760,13 @@ func tableColumns(pool *pgxpool.Pool, table string) ([]string, error) {
 	return rowsToStrings(rows)
 }
 
-func insertWorkRevision(t *testing.T, pool *pgxpool.Pool) (uuid.UUID, uuid.UUID, uuid.UUID) {
+func insertOriginalFile(t *testing.T, pool *pgxpool.Pool) (uuid.UUID, uuid.UUID, uuid.UUID) {
 	t.Helper()
 	workID := uuid.New()
-	revisionID := uuid.New()
+	originalFileID := uuid.New()
 	blobID := uuid.New()
 	digest := make([]byte, 32)
-	copy(digest, revisionID[:])
+	copy(digest, originalFileID[:])
 	ctx := context.Background()
 	_, err := pool.Exec(ctx,
 		`insert into blobs (id, sha256, byte_size, storage_key)
@@ -778,13 +778,13 @@ func insertWorkRevision(t *testing.T, pool *pgxpool.Pool) (uuid.UUID, uuid.UUID,
 	}
 	if err == nil {
 		_, err = pool.Exec(ctx,
-			`insert into work_revisions
-			     (id, work_id, revision, blob_id, media_type, format)
+			`insert into work_original_files
+			     (id, work_id, number, blob_id, media_type, format)
 			 values ($1, $2, 1, $3, 'application/json', 'chara_card_v3')`,
-			revisionID, workID, blobID)
+			originalFileID, workID, blobID)
 	}
 	if err != nil {
-		t.Fatalf("insert work revision: %v", err)
+		t.Fatalf("insert the original file: %v", err)
 	}
-	return workID, revisionID, blobID
+	return workID, originalFileID, blobID
 }

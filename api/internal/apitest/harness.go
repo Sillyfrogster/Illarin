@@ -141,7 +141,7 @@ func NewServicesWithDelivery(
 		pool, SealingKey(), Publishing(to).Sender, "http://localhost:3000",
 	)
 	versions := version.NewService(pool, works)
-	versions.OnUpdatePublished(updateDestinations.Announce, version.TellFollowers)
+	versions.OnPublished(updateDestinations.Announce, version.TellFollowers)
 	return Services{
 		Works:              works,
 		Pages:              page.NewService(pool, works),
@@ -170,7 +170,7 @@ func NewServicesOver(
 	links := NewLinkingService(pool)
 	destinations := NewUpdateDestinations(pool)
 	versions := version.NewService(pool, works)
-	versions.OnUpdatePublished(destinations.Announce, version.TellFollowers)
+	versions.OnPublished(destinations.Announce, version.TellFollowers)
 	return Services{
 		Works:              works,
 		Pages:              page.NewService(pool, works),

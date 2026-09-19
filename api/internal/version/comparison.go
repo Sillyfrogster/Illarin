@@ -78,8 +78,8 @@ const (
 func resolveVersions(ctx context.Context, tx pgx.Tx, workID uuid.UUID, from, to int) (int, int, error) {
 	if to == 0 {
 		err := tx.QueryRow(ctx, `
-			select s.number from work_snapshots s
-			  join works a on a.published_snapshot_id = s.id and a.id = s.work_id
+			select s.number from work_versions s
+			  join works a on a.published_version_id = s.id and a.id = s.work_id
 			 where a.id = $1
 		`, workID).Scan(&to)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -92,7 +92,7 @@ func resolveVersions(ctx context.Context, tx pgx.Tx, workID uuid.UUID, from, to 
 	if from == 0 {
 		var earlier *int
 		err := tx.QueryRow(ctx, `
-			select max(number) from work_snapshots where work_id = $1 and number < $2
+			select max(number) from work_versions where work_id = $1 and number < $2
 		`, workID, to).Scan(&earlier)
 		if err != nil {
 			return 0, 0, fmt.Errorf("read the version before %d: %w", to, err)
@@ -153,7 +153,7 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 		return Comparison{}, err
 	}
 	compared := Comparison{From: earlier.Version, To: later.Version}
-	for _, version := range []work.Snapshot{earlier, later} {
+	for _, version := range []work.FullVersion{earlier, later} {
 		if refusal := in.Access(version.Version); refusal != "" {
 			compared.Unavailable = refusal
 			if !in.AsOwner {
@@ -163,7 +163,7 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 			return compared, nil
 		}
 	}
-	for _, version := range []work.Snapshot{earlier, later} {
+	for _, version := range []work.FullVersion{earlier, later} {
 		withheld, err := version.HoldPrompts(ctx, tx, in.WorkID, in.AsOwner)
 		if err != nil {
 			return Comparison{}, err
@@ -177,7 +177,7 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 	return compared, nil
 }
 
-func compareVersions(earlier, later work.Snapshot) []ChangeGroup {
+func compareVersions(earlier, later work.FullVersion) []ChangeGroup {
 	groups := make([]ChangeGroup, 0, 8)
 	groups = AddGroup(groups, MetadataSubject, "Details", compareMetadata(earlier.Metadata, later.Metadata))
 	groups = append(groups, compareContent(earlier.Blocks, later.Blocks)...)

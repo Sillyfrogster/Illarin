@@ -259,7 +259,7 @@ func TestACardWrittenBackReadsAsTheSameContent(t *testing.T) {
 	}
 }
 
-func write(t *testing.T, module format.Module, work format.ExportWork) format.Artifact {
+func write(t *testing.T, module format.Module, work format.ExportWork) format.MainFile {
 	t.Helper()
 	writer, ok := module.(format.Writer)
 	if !ok {
@@ -568,7 +568,7 @@ func TestAWriterMintsNoRecordForAGalleryImageItWasNotGiven(t *testing.T) {
 func writtenCard(
 	t *testing.T,
 	module format.Writer,
-	written format.Artifact,
+	written format.MainFile,
 ) map[string]json.RawMessage {
 	t.Helper()
 	if module.ID() != CharX {

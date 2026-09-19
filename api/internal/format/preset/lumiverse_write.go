@@ -15,7 +15,7 @@ import (
 func (LumiverseModule) Write(
 	_ context.Context,
 	work format.ExportWork,
-) (format.Artifact, error) {
+) (format.MainFile, error) {
 	held := preservedBy(work.Preserved)
 	named := slotsByApp[Lumiverse]
 
@@ -50,9 +50,9 @@ func (LumiverseModule) Write(
 	restoreLumiversePreserved(body, held)
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the preset: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the preset: %w", err)
 	}
-	return format.Artifact{
+	return format.MainFile{
 		Body: document, MediaType: "application/json", Extension: ".json",
 	}, nil
 }

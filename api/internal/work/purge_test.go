@@ -50,7 +50,7 @@ func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testi
 	}
 	var digestBytes []byte
 	if err := pool.QueryRow(ctx, `
-		select blob.sha256 from work_revisions revision
+		select blob.sha256 from work_original_files revision
 		join blobs blob on blob.id = revision.blob_id
 		where revision.work_id = $1
 	`, created.ID).Scan(&digestBytes); err != nil {
@@ -74,7 +74,7 @@ func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testi
 	}
 	var references int
 	if err := pool.QueryRow(ctx,
-		`select count(*) from work_revisions where work_id = $1 and blob_id is not null`, created.ID,
+		`select count(*) from work_original_files where work_id = $1 and blob_id is not null`, created.ID,
 	).Scan(&references); err != nil {
 		t.Fatalf("count references: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestPurgeDeletesSharedBytesBreaksReferencesAndRecordsATombstone(t *testing.
 		}
 		if err := pool.QueryRow(ctx, `
 			select blob.id, blob.sha256
-			  from work_revisions revision
+			  from work_original_files revision
 			  join blobs blob on blob.id = revision.blob_id
 			 where revision.work_id = $1
 		`, created.ID).Scan(&blobID, &digest); err != nil {
@@ -142,7 +142,7 @@ func TestPurgeDeletesSharedBytesBreaksReferencesAndRecordsATombstone(t *testing.
 	}
 	var liveReferences int
 	if err := pool.QueryRow(ctx,
-		`select count(*) from work_revisions where blob_id is not null`,
+		`select count(*) from work_original_files where blob_id is not null`,
 	).Scan(&liveReferences); err != nil {
 		t.Fatalf("count revision references: %v", err)
 	}

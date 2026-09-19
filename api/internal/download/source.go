@@ -31,12 +31,12 @@ func (s *Service) Source(
 		return Source{}, err
 	}
 	defer tx.Rollback(ctx)
-	location, err := work.CurrentRevisionLocation(ctx, tx, workID, viewerID)
+	location, err := work.LocateOriginalFile(ctx, tx, workID, viewerID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Source{}, work.ErrNotFound
 		}
-		return Source{}, fmt.Errorf("find current revision: %w", err)
+		return Source{}, fmt.Errorf("find the original file: %w", err)
 	}
 	apps, err := private.Apps(ctx, tx, workID)
 	if err != nil {
@@ -56,12 +56,12 @@ func (s *Service) Source(
 	if err != nil {
 		return Source{}, fmt.Errorf("resolve stored file: %w", err)
 	}
-	revisionID := location.RevisionID
+	originalFileID := location.OriginalFileID
 	return Source{
 		InternalRedirect: redirect, MediaType: location.MediaType,
 		Inline: format.IsInlineMediaType(location.MediaType),
 		Event: newEvent(
-			location.WorkID, &revisionID, format.RawTarget,
+			location.WorkID, &originalFileID, format.RawTarget,
 			location.OwnerID, viewerID,
 		),
 	}, nil

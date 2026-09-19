@@ -30,11 +30,8 @@ func (s *Service) MoveBlockContent(
 	if err != nil {
 		return SavedBlocks{}, err
 	}
-	var after []block.Block
-	if err := s.works.ChangeContent(ctx, tx, workID, func() error {
-		after, err = s.moveContent(ctx, tx, workType, workID, blockID, destinationID)
-		return err
-	}); err != nil {
+	after, err := s.moveContent(ctx, tx, workType, workID, blockID, destinationID)
+	if err != nil {
 		return SavedBlocks{}, err
 	}
 	if err := candidate.Commit(ctx, tx, workID); err != nil {

@@ -437,7 +437,7 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 
 	exportedAt := apitest.SummaryComputedAt(t, pool, workID)
 	measuredAt := facetComputedAt(t, pool, workID)
-	generation := apitest.ContentGeneration(t, pool, workID)
+	number := apitest.VersionNumber(t, pool, workID)
 
 	page := apitest.FetchStartedWork(t, r, session, workID)
 	arrangement := make([]apitest.ArrangedBlock, 0, len(page.Blocks))
@@ -456,8 +456,8 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 	if after := facetComputedAt(t, pool, workID); !after.After(measuredAt) {
 		t.Error("hiding a block left the facet half of the summary alone")
 	}
-	if after := apitest.ContentGeneration(t, pool, workID); after != generation {
-		t.Errorf("content generation = %d, want %d after a hide", after, generation)
+	if after := apitest.VersionNumber(t, pool, workID); after != number {
+		t.Errorf("version number = %d, want %d after a hide", after, number)
 	}
 
 	carried := readBrowse(t, r, "/v1/works?kind=character&facet=expressions%3Dtrue")

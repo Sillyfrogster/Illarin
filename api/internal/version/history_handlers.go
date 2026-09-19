@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *Handlers) ListWorkUpdates(c *gin.Context) {
+func (h *Handlers) ListWorkVersions(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -26,7 +26,7 @@ func (h *Handlers) ListWorkUpdates(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the update history.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the version history.")
 		return
 	}
 	items := make([]page.RecordedVersion, 0, len(history))
@@ -45,7 +45,7 @@ func (h *Handlers) RestoreWorkVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
-	workingCopyVersion, ok := api.WorkingCopyVersion(c)
+	draftedChangesVersion, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}
@@ -53,7 +53,7 @@ func (h *Handlers) RestoreWorkVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
-	candidate := &work.Candidate{Version: workingCopyVersion}
+	candidate := &work.Candidate{Version: draftedChangesVersion}
 	err := h.versions.RestoreVersion(c.Request.Context(), owner.ID, id, number, candidate)
 	if page.CandidateResult(c, candidate, err) {
 		return
@@ -61,7 +61,7 @@ func (h *Handlers) RestoreWorkVersion(c *gin.Context) {
 	switch {
 	case errors.Is(err, work.ErrInvalidBlock):
 		c.JSON(http.StatusConflict, gin.H{
-			"error": "This version no longer forms a valid working copy.",
+			"error": "This version no longer forms a valid drafted changes.",
 			"code":  "invalid_recorded_version",
 		})
 	case errors.Is(err, work.ErrNotFound):
@@ -82,7 +82,7 @@ func (h *Handlers) CorrectWorkVersionNotes(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "correcting update notes")
+	owner, ok := api.Verified(c, "correcting version notes")
 	if !ok {
 		return
 	}
@@ -95,7 +95,7 @@ func (h *Handlers) CorrectWorkVersionNotes(c *gin.Context) {
 		request.Summary, valueOrEmpty(request.Notes))
 	switch {
 	case errors.Is(err, ErrSummaryRequired):
-		api.Refuse(c, http.StatusBadRequest, "Keep a summary for this update.")
+		api.Refuse(c, http.StatusBadRequest, "Keep a summary for this version.")
 	case errors.Is(err, ErrSummaryTooLong):
 		api.Refuse(c, http.StatusBadRequest, "The summary or notes are too long.")
 	case errors.Is(err, work.ErrNotFound):

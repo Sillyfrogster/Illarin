@@ -74,14 +74,14 @@ func StartedDraft(t *testing.T, works *work.Service) (uuid.UUID, uuid.UUID) {
 	return owner, draft
 }
 
-// CurrentCandidate reads the working copy version a change must present
+// CurrentCandidate reads the drafted changes version a change must present
 func CurrentCandidate(t *testing.T, works *work.Service, id uuid.UUID) *work.Candidate {
 	t.Helper()
 	var candidate work.Candidate
 	if err := works.Pool().QueryRow(context.Background(),
-		`select working_copy_version from works where id = $1`, id,
+		`select drafted_changes_version from works where id = $1`, id,
 	).Scan(&candidate.Version); err != nil {
-		t.Fatalf("read the working copy version: %v", err)
+		t.Fatalf("read the drafted changes version: %v", err)
 	}
 	return &candidate
 }
@@ -228,8 +228,8 @@ func PublishImported(t *testing.T, svc *work.Service, ownerID uuid.UUID, created
 	}
 }
 
-// AddRevision uploads a replacement file and takes it all the way to a saved revision
-func AddRevision(
+// AddOriginalFile uploads a replacement file and takes it all the way to a saved original file
+func AddOriginalFile(
 	t *testing.T,
 	works *work.Service,
 	ownerID, workID uuid.UUID,
@@ -239,11 +239,11 @@ func AddRevision(
 	t.Helper()
 	uploads := Uploads(works)
 	ctx := context.Background()
-	operation, err := uploads.AcceptRevision(ctx, upload.RevisionInput{
+	operation, err := uploads.AcceptOriginalFile(ctx, upload.OriginalFileInput{
 		OwnerID: ownerID, WorkID: workID, Filename: filename, File: bytes.NewReader(file),
 	}, CurrentCandidate(t, works, workID))
 	if err != nil {
-		t.Fatalf("AcceptRevision: %v", err)
+		t.Fatalf("AcceptOriginalFile: %v", err)
 	}
 	if processed, err := uploads.ProcessNextIngest(ctx); err != nil || !processed {
 		t.Fatalf("ProcessNextIngest = %v, %v; want true, nil", processed, err)

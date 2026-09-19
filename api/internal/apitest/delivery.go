@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type DeliveryArtifact struct {
+type DeliveryFile struct {
 	Type    string  `json:"type"`
 	URL     string  `json:"url"`
 	MediaID *string `json:"mediaId"`
@@ -24,16 +24,16 @@ type DeliveryArtifact struct {
 }
 
 type DeliveryWork struct {
-	ID                string             `json:"id"`
-	WorkID            string             `json:"workId"`
-	ContentGeneration int                `json:"contentGeneration"`
-	Type              string             `json:"type"`
-	Name              string             `json:"name"`
-	Format            string             `json:"format"`
-	Label             string             `json:"label"`
-	QueuedAt          time.Time          `json:"queuedAt"`
-	LeaseExpiresAt    time.Time          `json:"leaseExpiresAt"`
-	Artifacts         []DeliveryArtifact `json:"artifacts"`
+	ID             string         `json:"id"`
+	WorkID         string         `json:"workId"`
+	VersionNumber  int            `json:"versionNumber"`
+	Type           string         `json:"type"`
+	Name           string         `json:"name"`
+	Format         string         `json:"format"`
+	Label          string         `json:"label"`
+	QueuedAt       time.Time      `json:"queuedAt"`
+	LeaseExpiresAt time.Time      `json:"leaseExpiresAt"`
+	Files          []DeliveryFile `json:"files"`
 }
 
 type DeliveryWorkList struct {
@@ -54,20 +54,20 @@ type QueuedDelivery struct {
 }
 
 type WorkInstance struct {
-	InstanceID          string          `json:"instanceId"`
-	ApplicationName     string          `json:"applicationName"`
-	InstanceName        string          `json:"instanceName"`
-	LastSeenAt          *time.Time      `json:"lastSeenAt"`
-	CanReceive          bool            `json:"canReceive"`
-	ReportsLibrary      bool            `json:"reportsLibrary"`
-	Delivery            *QueuedDelivery `json:"delivery"`
-	InstalledGeneration *int            `json:"installedGeneration"`
-	UpdateAvailable     bool            `json:"updateAvailable"`
+	InstanceID       string          `json:"instanceId"`
+	ApplicationName  string          `json:"applicationName"`
+	InstanceName     string          `json:"instanceName"`
+	LastSeenAt       *time.Time      `json:"lastSeenAt"`
+	CanReceive       bool            `json:"canReceive"`
+	ReportsLibrary   bool            `json:"reportsLibrary"`
+	Delivery         *QueuedDelivery `json:"delivery"`
+	InstalledVersion *int            `json:"installedVersion"`
+	UpdateAvailable  bool            `json:"updateAvailable"`
 }
 
 type WorkInstanceList struct {
-	ContentGeneration int            `json:"contentGeneration"`
-	Items             []WorkInstance `json:"items"`
+	VersionNumber int            `json:"versionNumber"`
+	Items         []WorkInstance `json:"items"`
 }
 
 func (h Harness) NewLinkingRouter(t *testing.T) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {

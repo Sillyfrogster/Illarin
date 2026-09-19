@@ -71,12 +71,12 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner api.Account) {
 	c.JSON(http.StatusAccepted, toAPIIngest(operation))
 }
 
-func (h *Handlers) AddWorkRevision(c *gin.Context) {
+func (h *Handlers) AddWorkOriginalFile(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}
@@ -88,7 +88,7 @@ func (h *Handlers) AddWorkRevision(c *gin.Context) {
 	parts, err := c.Request.MultipartReader()
 	if err != nil {
 		RefuseFile(c, api.FormRefusal{
-			Reason: "send the revision as form data, with a file part",
+			Reason: "send the original file as form data, with a file part",
 			Cause:  err,
 		}, h.maxUploadBytes)
 		return
@@ -102,7 +102,7 @@ func (h *Handlers) AddWorkRevision(c *gin.Context) {
 	defer limitedFile.Close()
 
 	candidate := &work.Candidate{Version: version}
-	operation, err := h.uploads.AcceptRevision(c.Request.Context(), RevisionInput{
+	operation, err := h.uploads.AcceptOriginalFile(c.Request.Context(), OriginalFileInput{
 		OwnerID:  owner.ID,
 		WorkID:   id,
 		Filename: file.FileName(),
@@ -149,7 +149,7 @@ func (h *Handlers) GetWorkReplacement(c *gin.Context) {
 	c.JSON(http.StatusOK, toAPIIngest(operation))
 }
 
-func (h *Handlers) AcceptWorkRevision(c *gin.Context) {
+func (h *Handlers) AcceptWorkOriginalFile(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -158,7 +158,7 @@ func (h *Handlers) AcceptWorkRevision(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}
@@ -208,7 +208,7 @@ func (h *Handlers) AcceptWorkRevision(c *gin.Context) {
 	c.JSON(http.StatusOK, toAPIIngest(operation))
 }
 
-func (h *Handlers) CancelWorkRevision(c *gin.Context) {
+func (h *Handlers) CancelWorkOriginalFile(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return

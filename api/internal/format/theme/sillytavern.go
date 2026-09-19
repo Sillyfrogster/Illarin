@@ -68,7 +68,7 @@ func readSillyTavern(payload format.Payload) (format.Parsed, error) {
 	}, nil
 }
 
-func (SillyTavernModule) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+func (SillyTavernModule) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
 	body := keepTheme(work.Preserved).body(sillyTavernNamespace)
 	body["name"] = raw(work.Header.Name)
 
@@ -102,9 +102,9 @@ func (SillyTavernModule) Write(_ context.Context, work format.ExportWork) (forma
 
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the SillyTavern theme: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the SillyTavern theme: %w", err)
 	}
-	return format.Artifact{Body: document, MediaType: "application/json", Extension: ".json"}, nil
+	return format.MainFile{Body: document, MediaType: "application/json", Extension: ".json"}, nil
 }
 
 func sillyTavernCSS(styles block.StylesheetSet) string {

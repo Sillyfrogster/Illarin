@@ -43,7 +43,7 @@ func (s *Service) Announcements(ctx context.Context, owner, workID uuid.UUID) ([
 		return nil, ErrNotFound
 	}
 	rows, err := s.pool.Query(ctx, `
-		select work.id, event.id, event.snapshot_id, snapshot.number,
+		select work.id, event.id, event.version_id, version.number,
 		       work.destination_name, work.destination_type, work.destination_id is null,
 		       work.state, coalesce(work.settled_reason, ''), coalesce(work.message_id, ''),
 		       work.run, work.attempts, event.occurred_at, work.due_at, work.settled_at,
@@ -51,7 +51,7 @@ func (s *Service) Announcements(ctx context.Context, owner, workID uuid.UUID) ([
 		       last.took_ms, last.attempted_at
 		  from work_update_deliveries work
 		  join work_update_events event on event.id = work.event_id
-		  join work_snapshots snapshot on snapshot.id = event.snapshot_id
+		  join work_versions version on version.id = event.version_id
 		  left join lateral (
 			select run, number, outcome, status, detail, took_ms, attempted_at
 			  from work_update_delivery_attempts

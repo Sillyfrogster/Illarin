@@ -13,10 +13,10 @@ import (
 )
 
 type Service struct {
-	pool            *pgxpool.Pool
-	reg             *format.Registry
-	works           *work.Service
-	updateListeners []UpdateListener
+	pool      *pgxpool.Pool
+	reg       *format.Registry
+	works     *work.Service
+	listeners []Listener
 }
 
 func NewService(pool *pgxpool.Pool, works *work.Service) *Service {

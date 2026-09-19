@@ -275,9 +275,9 @@ func spindleElements(manifest spindleManifestFields) []block.Element {
 	}
 }
 
-func (Spindle) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+func (Spindle) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
 	if len(work.Upload) == 0 {
-		return format.Artifact{}, errors.New("write the Spindle extension: the uploaded archive is missing")
+		return format.MainFile{}, errors.New("write the Spindle extension: the uploaded archive is missing")
 	}
-	return format.Artifact{Body: work.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
+	return format.MainFile{Body: work.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
 }

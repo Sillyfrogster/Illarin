@@ -77,7 +77,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 
 	var references int
 	if err := pool.QueryRow(ctx, `
-		select (select count(*) from work_revisions where blob_id is not null)
+		select (select count(*) from work_original_files where blob_id is not null)
 		     + (select count(*) from ingest_operations where blob_id is not null)
 	`).Scan(&references); err != nil {
 		t.Fatalf("count surviving references: %v", err)

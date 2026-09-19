@@ -36,9 +36,10 @@ func (h *Handlers) GetWork(c *gin.Context) {
 		return
 	}
 	q := api.ReadQuery(c)
+	aliasPageQuery(q)
 	params := GetWorkParams{
-		WorkingCopy: api.QueryFlag(q, "workingCopy"),
-		Nsfw:        api.QueryText[GetWorkParamsNsfw](q, "nsfw"),
+		DraftedChanges: api.QueryFlag(q, "draftedChanges"),
+		Nsfw:           api.QueryText[GetWorkParamsNsfw](q, "nsfw"),
 	}
 	if q.Refused(c) {
 		return
@@ -57,8 +58,8 @@ func (h *Handlers) GetWork(c *gin.Context) {
 		return
 	}
 	read := h.works.Detail
-	if params.WorkingCopy != nil && *params.WorkingCopy {
-		read = h.works.WorkingCopy
+	if params.DraftedChanges != nil && *params.DraftedChanges {
+		read = h.works.DraftedChanges
 	}
 	found, err := read(c.Request.Context(), id, viewerID, preference)
 	if errors.Is(err, work.ErrNotFound) {
@@ -103,7 +104,7 @@ func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
 	}
 	addable := toAPIAddableBlocks(found.Type, found.IsOwner)
 	return WorkDetail{
-		WorkingCopyVersion:    found.WorkingCopyVersion,
+		DraftedChangesVersion: found.DraftedChangesVersion,
 		UnpublishedChanges:    found.UnpublishedChanges,
 		Id:                    found.ID,
 		Type:                  WorkDetailType(found.Type),
@@ -132,7 +133,7 @@ func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
 		SealedBlocks:          countOrAbsent(found.SealedBlocks),
 		AddableBlocks:         addable,
 		NSFWPreference:        WorkDetailNSFWPreference(preference),
-		LatestUpdate:          toAPILatestUpdate(found.LatestUpdate),
+		LatestVersion:         toAPILatestVersion(found.LatestVersion),
 		Withhold:              toAPIWithhold(found.Withhold),
 	}, nil
 }
@@ -166,7 +167,7 @@ func ToImages(images []work.DetailImage) []WorkImage {
 	return media
 }
 
-func toAPILatestUpdate(recorded *work.Version) *RecordedVersion {
+func toAPILatestVersion(recorded *work.Version) *RecordedVersion {
 	if recorded == nil {
 		return nil
 	}

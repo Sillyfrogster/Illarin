@@ -48,25 +48,25 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, workID uuid.UUID,
 	_, err = tx.Exec(ctx, `
 		update works set name = $2, blurb = $3, tags = $4, is_nsfw = $5,
 		       credited_author = $6, nickname = $7, work_version = $8,
-		       origin_format = $9, current_revision_id = $10, cover_media_id = $11,
+		       origin_format = $9, original_file_id = $10, cover_media_id = $11,
 		       updated_at = now()
 		 where id = $1
 	`, workID, metadata.Name, metadata.Blurb, metadata.Tags, metadata.IsNSFW,
 		metadata.CreditedAuthor, metadata.Nickname, metadata.WorkVersion,
-		recorded.Origin, recorded.SourceRevisionID, metadata.Cover)
+		recorded.Origin, recorded.OriginalFileID, metadata.Cover)
 	if err != nil {
 		return fmt.Errorf("restore the recorded header: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
 		update work_media media set is_current = exists (
-			select 1 from work_snapshot_media kept
-			 where kept.snapshot_id = $2 and kept.media_id = media.id)
+			select 1 from work_version_media kept
+			 where kept.version_id = $2 and kept.media_id = media.id)
 		 where media.work_id = $1
 	`, workID, recorded.ID); err != nil {
 		return fmt.Errorf("restore the recorded pictures: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `delete from work_blocks where work_id = $1`, workID); err != nil {
-		return fmt.Errorf("replace the working-copy blocks: %w", err)
+		return fmt.Errorf("replace the drafted-changes blocks: %w", err)
 	}
 	if err := block.Insert(ctx, tx, workID, recorded.Blocks); err != nil {
 		return fmt.Errorf("restore the recorded blocks: %w", err)
@@ -106,11 +106,11 @@ func (s *Service) CorrectVersionNotes(ctx context.Context, ownerID, workID uuid.
 		return err
 	}
 	result, err := tx.Exec(ctx, `
-		update work_snapshots set summary = $3, notes = $4, notes_edited_at = now()
+		update work_versions set summary = $3, notes = $4, notes_edited_at = now()
 		 where work_id = $1 and number = $2
 	`, workID, number, summary, notes)
 	if err != nil {
-		return fmt.Errorf("correct the update notes: %w", err)
+		return fmt.Errorf("correct the version notes: %w", err)
 	}
 	if result.RowsAffected() != 1 {
 		return work.ErrNotFound
@@ -137,9 +137,9 @@ func (s *Service) WithdrawVersion(ctx context.Context, ownerID, workID uuid.UUID
 	var current, chosen uuid.UUID
 	var withdrawn bool
 	err = tx.QueryRow(ctx, `
-		select work.published_snapshot_id, snapshot.id, snapshot.withdrawn_at is not null
-		  from works work join work_snapshots snapshot on snapshot.work_id = work.id
-		 where work.id = $1 and snapshot.number = $2 for update of work, snapshot
+		select work.published_version_id, version.id, version.withdrawn_at is not null
+		  from works work join work_versions version on version.work_id = work.id
+		 where work.id = $1 and version.number = $2 for update of work, version
 	`, workID, number).Scan(&current, &chosen, &withdrawn)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return work.ErrNotFound
@@ -154,7 +154,7 @@ func (s *Service) WithdrawVersion(ctx context.Context, ownerID, workID uuid.UUID
 		return ErrVersionAlreadyWithdrawn
 	}
 	if _, err := tx.Exec(ctx, `
-		update work_snapshots set withdrawn_at = now(), withdrawal_explanation = $2 where id = $1
+		update work_versions set withdrawn_at = now(), withdrawal_explanation = $2 where id = $1
 	`, chosen, explanation); err != nil {
 		return fmt.Errorf("withdraw the version: %w", err)
 	}

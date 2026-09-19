@@ -91,8 +91,8 @@ func (opaqueTestModule) Declaration() format.Declaration {
 	}
 	return declaration
 }
-func (opaqueTestModule) Write(_ context.Context, written format.ExportWork) (format.Artifact, error) {
-	return format.Artifact{
+func (opaqueTestModule) Write(_ context.Context, written format.ExportWork) (format.MainFile, error) {
+	return format.MainFile{
 		Body:      []byte(written.Text(block.RoleDescription)),
 		MediaType: "text/plain", Extension: ".txt",
 	}, nil
@@ -146,14 +146,14 @@ func (replacingModule) Declaration() format.Declaration {
 func (module replacingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return *module.parsed, nil
 }
-func (replacingModule) Write(context.Context, format.ExportWork) (format.Artifact, error) {
-	return format.Artifact{MediaType: "text/plain", Extension: ".txt"}, nil
+func (replacingModule) Write(context.Context, format.ExportWork) (format.MainFile, error) {
+	return format.MainFile{MediaType: "text/plain", Extension: ".txt"}, nil
 }
 
 func currentCandidate(t *testing.T, svc *Service, id uuid.UUID) *work.Candidate {
 	t.Helper()
 	var candidate work.Candidate
-	if err := svc.pool.QueryRow(context.Background(), `select working_copy_version from works where id = $1`, id).Scan(&candidate.Version); err != nil {
+	if err := svc.pool.QueryRow(context.Background(), `select drafted_changes_version from works where id = $1`, id).Scan(&candidate.Version); err != nil {
 		t.Fatal(err)
 	}
 	return &candidate

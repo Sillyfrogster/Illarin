@@ -42,12 +42,8 @@ func (s *Service) SaveBlock(
 	if err != nil {
 		return SavedBlock{}, err
 	}
-	var blocks []block.Block
-	var index int
-	if err := s.works.ChangeContent(ctx, tx, workID, func() error {
-		blocks, index, err = s.writeBlock(ctx, tx, workType, workID, blockID, update)
-		return err
-	}); err != nil {
+	blocks, index, err := s.writeBlock(ctx, tx, workType, workID, blockID, update)
+	if err != nil {
 		return SavedBlock{}, err
 	}
 	if err := private.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {

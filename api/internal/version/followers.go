@@ -8,8 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// TellFollowers records an update for the accounts following the work when it changed the file and was not published quietly.
-func TellFollowers(ctx context.Context, tx pgx.Tx, published Update, choice UpdateAnnouncement) error {
+// TellFollowers tells the accounts following the work about a version that changed the file and was not published quietly.
+func TellFollowers(ctx context.Context, tx pgx.Tx, published Version, choice Announcement) error {
 	if !published.ContentChanged || !choice.Notify {
 		return nil
 	}

@@ -32,26 +32,26 @@ var v3OnlyKeys = []string{
 	"modification_date", "source", "creator_notes_multilingual",
 }
 
-func (CCv2Module) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+func (CCv2Module) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
 	return writeCard(work, V2)
 }
 
-func (CCv3Module) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+func (CCv3Module) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
 	return writeCard(work, V3)
 }
 
-func (CharXModule) Write(_ context.Context, work format.ExportWork) (format.Artifact, error) {
+func (CharXModule) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
 	return writeCharX(work)
 }
 
-func writeCard(work format.ExportWork, formatID string) (format.Artifact, error) {
+func writeCard(work format.ExportWork, formatID string) (format.MainFile, error) {
 	picture := embeddablePicture(work)
 	body, entries := cardFields(work, formatID)
 	if formatID != V2 {
 		body["assets"] = inlineFiles(work, picture != nil)
 	}
 	if err := RestorePreserved(body, entries, work.Preserved); err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
 	if formatID == V2 {
 		for _, key := range v3OnlyKeys {
@@ -60,13 +60,13 @@ func writeCard(work format.ExportWork, formatID string) (format.Artifact, error)
 	}
 	card, err := marshalCard(formatID, body)
 	if err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
 	copies := []cardCopy{{keyword: chunkName(formatID), card: card}}
 	if formatID != V2 {
 		fallback, err := marshalCard(V2, olderShape(body))
 		if err != nil {
-			return format.Artifact{}, err
+			return format.MainFile{}, err
 		}
 		copies = append(copies, cardCopy{keyword: chunkName(V2), card: fallback})
 	}
@@ -74,16 +74,16 @@ func writeCard(work format.ExportWork, formatID string) (format.Artifact, error)
 		if formatID != V2 {
 			card, err = withLegacyFields(card, body)
 			if err != nil {
-				return format.Artifact{}, err
+				return format.MainFile{}, err
 			}
 		}
-		return format.Artifact{Body: card, MediaType: "application/json", Extension: ".json"}, nil
+		return format.MainFile{Body: card, MediaType: "application/json", Extension: ".json"}, nil
 	}
 	written, err := embedCardsInPNG(picture.Data, copies)
 	if err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
-	return format.Artifact{Body: written, MediaType: "image/png", Extension: ".png"}, nil
+	return format.MainFile{Body: written, MediaType: "image/png", Extension: ".png"}, nil
 }
 
 func olderShape(body map[string]json.RawMessage) map[string]json.RawMessage {
@@ -117,32 +117,32 @@ func withLegacyFields(card []byte, body map[string]json.RawMessage) ([]byte, err
 	return written, nil
 }
 
-func writeCharX(work format.ExportWork) (format.Artifact, error) {
+func writeCharX(work format.ExportWork) (format.MainFile, error) {
 	body, entries := cardFields(work, CharX)
 	files, records := archivedFiles(work)
 	body["assets"] = records
 	if err := RestorePreserved(body, entries, work.Preserved); err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
 	card, err := marshalCard(V3, body)
 	if err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
 
 	var output bytes.Buffer
 	archive := zip.NewWriter(&output)
 	if err := writeArchiveFile(archive, cardEntry, card); err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
 	for _, file := range slices.Concat(files, archivedMemberFiles(work.Preserved, files)) {
 		if err := writeArchiveFile(archive, file.path, file.data); err != nil {
-			return format.Artifact{}, err
+			return format.MainFile{}, err
 		}
 	}
 	if err := archive.Close(); err != nil {
-		return format.Artifact{}, fmt.Errorf("close CharX: %w", err)
+		return format.MainFile{}, fmt.Errorf("close CharX: %w", err)
 	}
-	return format.Artifact{
+	return format.MainFile{
 		Body: output.Bytes(), MediaType: "application/zip", Extension: ".charx",
 	}, nil
 }

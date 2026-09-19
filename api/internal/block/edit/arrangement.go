@@ -35,28 +35,25 @@ func (s *Service) AddBlock(
 	if err != nil {
 		return SavedBlock{}, err
 	}
-	var added block.Block
-	if err := s.works.ChangeContent(ctx, tx, workID, func() error {
-		page, err := block.Read(ctx, tx, workID)
-		if err != nil {
-			return err
-		}
-		added, err = block.NewBlock(workType, definition, elementType, page)
-		if err != nil {
-			return invalid(err)
-		}
-		if err := block.ValidateStructure(added); err != nil {
-			return invalid(err)
-		}
-		after := append(page, added)
-		if err := block.ValidateBuilderConstraints(workType, after, after); err != nil {
-			return invalid(err)
-		}
-		if err := block.Insert(ctx, tx, workID, []block.Block{added}); err != nil {
-			return err
-		}
-		return s.writeSummary(ctx, tx, workID)
-	}); err != nil {
+	page, err := block.Read(ctx, tx, workID)
+	if err != nil {
+		return SavedBlock{}, err
+	}
+	added, err := block.NewBlock(workType, definition, elementType, page)
+	if err != nil {
+		return SavedBlock{}, invalid(err)
+	}
+	if err := block.ValidateStructure(added); err != nil {
+		return SavedBlock{}, invalid(err)
+	}
+	after := append(page, added)
+	if err := block.ValidateBuilderConstraints(workType, after, after); err != nil {
+		return SavedBlock{}, invalid(err)
+	}
+	if err := block.Insert(ctx, tx, workID, []block.Block{added}); err != nil {
+		return SavedBlock{}, err
+	}
+	if err := s.writeSummary(ctx, tx, workID); err != nil {
 		return SavedBlock{}, err
 	}
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
@@ -159,29 +156,27 @@ func (s *Service) RemoveBlock(
 	if err != nil {
 		return err
 	}
-	if err := s.works.ChangeContent(ctx, tx, workID, func() error {
-		blocks, err := block.Read(ctx, tx, workID)
-		if err != nil {
-			return err
-		}
-		if err := private.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {
-			return err
-		}
-		remaining, err := withoutBlock(workType, blocks, blockID)
-		if err != nil {
-			return err
-		}
-		if err := private.SyncPromptFragments(ctx, tx, workID, remaining, nil); err != nil {
-			return invalid(err)
-		}
-		if err := deleteBlockAndClosePositions(ctx, tx, workID, blockID, remaining); err != nil {
-			return err
-		}
-		if err := dropUnownedPreservedData(ctx, tx, workID, remaining); err != nil {
-			return err
-		}
-		return s.writeSummary(ctx, tx, workID)
-	}); err != nil {
+	blocks, err := block.Read(ctx, tx, workID)
+	if err != nil {
+		return err
+	}
+	if err := private.RestorePromptFragments(ctx, tx, workID, blocks); err != nil {
+		return err
+	}
+	remaining, err := withoutBlock(workType, blocks, blockID)
+	if err != nil {
+		return err
+	}
+	if err := private.SyncPromptFragments(ctx, tx, workID, remaining, nil); err != nil {
+		return invalid(err)
+	}
+	if err := deleteBlockAndClosePositions(ctx, tx, workID, blockID, remaining); err != nil {
+		return err
+	}
+	if err := dropUnownedPreservedData(ctx, tx, workID, remaining); err != nil {
+		return err
+	}
+	if err := s.writeSummary(ctx, tx, workID); err != nil {
 		return err
 	}
 	return candidate.Commit(ctx, tx, workID)

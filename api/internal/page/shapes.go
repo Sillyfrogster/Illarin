@@ -67,7 +67,7 @@ type WorkDetail struct {
 	IsNsfw                *bool                    `json:"isNsfw" tstype:"boolean | null,required"`
 	IsOwner               bool                     `json:"isOwner"`
 	Type                  WorkDetailType           `json:"type"`
-	LatestUpdate          *RecordedVersion         `json:"latestUpdate,omitempty"`
+	LatestVersion         *RecordedVersion         `json:"latestVersion,omitempty"`
 	Lifecycle             WorkDetailLifecycle      `json:"lifecycle"`
 	LinkedInstallOnly     bool                     `json:"linkedInstallOnly"`
 	Media                 []WorkImage              `json:"media"`
@@ -81,7 +81,7 @@ type WorkDetail struct {
 	NSFWPreference        WorkDetailNSFWPreference `json:"nsfwPreference"`
 	Follow                *notify.WorkFollow       `json:"follow,omitempty"`
 	Withhold              *WorkWithhold            `json:"withhold,omitempty"`
-	WorkingCopyVersion    *int64                   `json:"workingCopyVersion,omitempty"`
+	DraftedChangesVersion *int64                   `json:"draftedChangesVersion,omitempty"`
 }
 
 type WorkDetailAllowedApps string
@@ -338,8 +338,8 @@ type ListWorksParams struct {
 }
 
 type GetWorkParams struct {
-	WorkingCopy *bool              `json:"workingCopy,omitempty"`
-	Nsfw        *GetWorkParamsNsfw `json:"nsfw,omitempty"`
+	DraftedChanges *bool              `json:"draftedChanges,omitempty"`
+	Nsfw           *GetWorkParamsNsfw `json:"nsfw,omitempty"`
 }
 
 type ListWorksParamsType string
@@ -406,8 +406,8 @@ type CandidateConflict struct {
 type CandidateConflictCode string
 
 const (
-	CandidateConflictCodeWorkFrozen          CandidateConflictCode = "work_frozen"
-	CandidateConflictCodeWorkingCopyConflict CandidateConflictCode = "working_copy_conflict"
+	CandidateConflictCodeWorkFrozen             CandidateConflictCode = "work_frozen"
+	CandidateConflictCodeDraftedChangesConflict CandidateConflictCode = "drafted_changes_conflict"
 )
 
 type RecordedVersion struct {

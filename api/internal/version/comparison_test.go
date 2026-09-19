@@ -118,7 +118,7 @@ func TestComparisonNeedsAccessRulesAndExplainsAVersionItCannotOpen(t *testing.T)
 
 func publishUpdate(t *testing.T, svc *work.Service, owner, id uuid.UUID, summary string) {
 	t.Helper()
-	if _, _, err := version.NewService(svc.Pool(), svc).PublishUpdate(context.Background(), version.UpdateRequest{
+	if _, _, err := version.NewService(svc.Pool(), svc).PublishVersion(context.Background(), version.PublishRequest{
 		OwnerID: owner, WorkID: id, Summary: summary,
 	}, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatalf("publish the update: %v", err)

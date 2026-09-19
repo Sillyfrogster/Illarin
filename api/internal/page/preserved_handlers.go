@@ -41,7 +41,7 @@ func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
 		return
 	}
 	namespace := c.Param("namespace")
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}

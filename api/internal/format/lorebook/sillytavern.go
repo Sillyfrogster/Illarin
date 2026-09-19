@@ -215,7 +215,7 @@ func sillyTavernRemainder(
 func (SillyTavernModule) Write(
 	_ context.Context,
 	work format.ExportWork,
-) (format.Artifact, error) {
+) (format.MainFile, error) {
 	entries := bookEntries(work)
 	written := make([]map[string]json.RawMessage, 0, len(entries))
 	for _, entry := range entries {
@@ -252,9 +252,9 @@ func (SillyTavernModule) Write(
 
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the world info file: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the world info file: %w", err)
 	}
-	return format.Artifact{
+	return format.MainFile{
 		Body: document, MediaType: "application/json", Extension: ".json",
 	}, nil
 }

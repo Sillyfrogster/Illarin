@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func revisionOwner(t *testing.T, svc *Service, handle string) uuid.UUID {
+func originalFileOwner(t *testing.T, svc *Service, handle string) uuid.UUID {
 	t.Helper()
 	ownerID := uuid.New()
 	if _, err := svc.pool.Exec(context.Background(),
@@ -71,11 +71,11 @@ func addRevision(
 	file []byte,
 ) Operation {
 	t.Helper()
-	operation, err := svc.AcceptRevision(context.Background(), RevisionInput{
+	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: ownerID, WorkID: workID, Filename: filename, File: bytes.NewReader(file),
 	}, currentCandidate(t, svc, workID))
 	if err != nil {
-		t.Fatalf("AcceptRevision: %v", err)
+		t.Fatalf("AcceptOriginalFile: %v", err)
 	}
 	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
 		t.Fatalf("ProcessNextIngest = %v, %v; want true, nil", processed, err)
@@ -93,7 +93,7 @@ func addRevision(
 	return got
 }
 
-func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.T) {
+func TestANewOriginalFileChangesTheDraftedChangesAndKeepsThePublishedOne(t *testing.T) {
 	t.Parallel()
 	registry := registryWithModule(t, recognizedModule{parsed: format.Parsed{
 		Type: "character", Format: "recognized", Header: format.Header{Name: "Seeded", Blurb: "Seeded blurb"},
@@ -103,7 +103,7 @@ func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.
 		},
 	}})
 	svc, pool := newTestServiceWithRegistry(t, registry)
-	ownerID := revisionOwner(t, svc, "revision.owner")
+	ownerID := originalFileOwner(t, svc, "revision.owner")
 	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"x","take":1}`))
 	publishImported(t, svc, ownerID, created)
 
@@ -114,7 +114,7 @@ func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.
 	if operation.Work.ID != created.ID {
 		t.Fatalf("revision made work %s, want %s", operation.Work.ID, created.ID)
 	}
-	if operation.Work.CurrentRevisionID == created.CurrentRevisionID {
+	if operation.Work.OriginalFileID == created.OriginalFileID {
 		t.Fatal("the work still points at its first revision")
 	}
 	if operation.Work.Name != created.Name || operation.Work.Blurb != created.Blurb {
@@ -123,7 +123,7 @@ func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.
 
 	var revisions int
 	if err := pool.QueryRow(context.Background(),
-		`select count(*) from work_revisions where work_id = $1`, created.ID).Scan(&revisions); err != nil {
+		`select count(*) from work_original_files where work_id = $1`, created.ID).Scan(&revisions); err != nil {
 		t.Fatalf("count revisions: %v", err)
 	}
 	if revisions != 2 {
@@ -144,7 +144,7 @@ func TestANewRevisionUpdatesTheWorkingCopyAndKeepsThePublishedSource(t *testing.
 	}
 }
 
-func TestARevisionResolvingToADifferentTypeIsRejected(t *testing.T) {
+func TestAnOriginalFileResolvingToADifferentTypeIsRejected(t *testing.T) {
 	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range []format.Module{
@@ -156,7 +156,7 @@ func TestARevisionResolvingToADifferentTypeIsRejected(t *testing.T) {
 		}
 	}
 	svc, pool := newTestServiceWithRegistry(t, registry)
-	ownerID := revisionOwner(t, svc, "kind.owner")
+	ownerID := originalFileOwner(t, svc, "kind.owner")
 	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
 
 	operation := addRevision(t, svc, ownerID, created.ID, "book.json", []byte(`{"spec":"as_lorebook"}`))
@@ -168,18 +168,18 @@ func TestARevisionResolvingToADifferentTypeIsRejected(t *testing.T) {
 	}
 
 	var workType string
-	var currentRevisionID uuid.UUID
+	var currentOriginalFileID uuid.UUID
 	var revisions int
 	err := pool.QueryRow(context.Background(), `
-		select type, current_revision_id,
-		       (select count(*) from work_revisions where work_id = works.id)
+		select type, original_file_id,
+		       (select count(*) from work_original_files where work_id = works.id)
 		  from works where id = $1
-	`, created.ID).Scan(&workType, &currentRevisionID, &revisions)
+	`, created.ID).Scan(&workType, &currentOriginalFileID, &revisions)
 	if err != nil {
 		t.Fatalf("read work: %v", err)
 	}
-	if workType != "character" || currentRevisionID != created.CurrentRevisionID || revisions != 1 {
-		t.Fatalf("work changed: type %s, current %s, revisions %d", workType, currentRevisionID, revisions)
+	if workType != "character" || currentOriginalFileID != created.OriginalFileID || revisions != 1 {
+		t.Fatalf("work changed: type %s, current %s, revisions %d", workType, currentOriginalFileID, revisions)
 	}
 }
 
@@ -192,7 +192,7 @@ func TestAReplacementFileBecomesTheWorksOrigin(t *testing.T) {
 		}
 	}
 	svc, pool := newTestServiceWithRegistry(t, registry)
-	ownerID := revisionOwner(t, svc, "replacement.origin.owner")
+	ownerID := originalFileOwner(t, svc, "replacement.origin.owner")
 	created := ingestOne(t, svc, ownerID, "card-v2.json", []byte(`{
 		"spec":"chara_card_v2","spec_version":"2.0",
 		"data":{"name":"Ana","description":"Before","first_mes":"Hello","character_version":"v2"}
@@ -215,11 +215,11 @@ func TestAReplacementFileBecomesTheWorksOrigin(t *testing.T) {
 	}
 }
 
-func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheWork(t *testing.T) {
+func TestAnUnrecognisedOriginalFileIsRefusedWithoutChangingTheWork(t *testing.T) {
 	t.Parallel()
 	registry := registryWithModule(t, typeModule{id: "as_character", workType: "character"})
 	svc, pool := newTestServiceWithRegistry(t, registry)
-	ownerID := revisionOwner(t, svc, "unsupported.revision.owner")
+	ownerID := originalFileOwner(t, svc, "unsupported.revision.owner")
 	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
 
 	operation := addRevision(t, svc, ownerID, created.ID, "mystery.bin", []byte("nothing claims this"))
@@ -230,29 +230,29 @@ func TestAnUnrecognisedRevisionIsRefusedWithoutChangingTheWork(t *testing.T) {
 		t.Fatalf("revision failure = %+v, want unsupported_format", operation.Failure)
 	}
 
-	var currentRevisionID uuid.UUID
+	var currentOriginalFileID uuid.UUID
 	var revisions int
 	err := pool.QueryRow(context.Background(), `
-		select current_revision_id,
-		       (select count(*) from work_revisions where work_id = works.id)
+		select original_file_id,
+		       (select count(*) from work_original_files where work_id = works.id)
 		  from works where id = $1
-	`, created.ID).Scan(&currentRevisionID, &revisions)
+	`, created.ID).Scan(&currentOriginalFileID, &revisions)
 	if err != nil {
 		t.Fatalf("read work: %v", err)
 	}
-	if currentRevisionID != created.CurrentRevisionID || revisions != 1 {
-		t.Fatalf("work changed: current %s, revisions %d", currentRevisionID, revisions)
+	if currentOriginalFileID != created.OriginalFileID || revisions != 1 {
+		t.Fatalf("work changed: current %s, revisions %d", currentOriginalFileID, revisions)
 	}
 }
 
-func TestOnlyTheOwnerOfALiveWorkCanAddARevision(t *testing.T) {
+func TestOnlyTheOwnerOfALiveWorkCanAddAnOriginalFile(t *testing.T) {
 	t.Parallel()
 	registry := registryWithModule(t, typeModule{id: "as_character", workType: "character"})
 	svc, pool := newTestServiceWithRegistry(t, registry)
-	ownerID := revisionOwner(t, svc, "guard.owner")
+	ownerID := originalFileOwner(t, svc, "guard.owner")
 	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
 
-	_, err := svc.AcceptRevision(context.Background(), RevisionInput{
+	_, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: uuid.New(), WorkID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
 	}, currentCandidate(t, svc, created.ID))
@@ -266,7 +266,7 @@ func TestOnlyTheOwnerOfALiveWorkCanAddARevision(t *testing.T) {
 	`, created.ID, ownerID); err != nil {
 		t.Fatalf("withhold work: %v", err)
 	}
-	_, err = svc.AcceptRevision(context.Background(), RevisionInput{
+	_, err = svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: ownerID, WorkID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
 	}, currentCandidate(t, svc, created.ID))
@@ -282,7 +282,7 @@ func TestReimportedMediaFillsTheWork(t *testing.T) {
 		Media: []format.Media{{Role: work.MediaAvatar, ImageID: 0}},
 	}})
 	svc, pool := newTestServiceWithRegistry(t, registry)
-	ownerID := revisionOwner(t, svc, "scoped.owner")
+	ownerID := originalFileOwner(t, svc, "scoped.owner")
 	first := archiveWithImage(t, testPNG(t, 40, 20, color.White))
 	created := ingestOne(t, svc, ownerID, "card.charx", first)
 	added, err := svc.works.AddMedia(context.Background(), work.AddMediaInput{

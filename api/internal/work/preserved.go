@@ -67,10 +67,6 @@ func (s *Service) DeletePreservedNamespace(
 	if _, err := candidate.Lock(ctx, tx, ownerID, workID); err != nil {
 		return err
 	}
-	fingerprint, err := s.contentFingerprint(ctx, tx, workID)
-	if err != nil {
-		return err
-	}
 	result, err := tx.Exec(ctx, `
 		delete from work_preserved_data where work_id = $1 and namespace = $2
 	`, workID, namespace)
@@ -79,9 +75,6 @@ func (s *Service) DeletePreservedNamespace(
 	}
 	if result.RowsAffected() == 0 {
 		return ErrNotFound
-	}
-	if err := s.moveContentGeneration(ctx, tx, workID, fingerprint); err != nil {
-		return err
 	}
 	return candidate.Commit(ctx, tx, workID)
 }

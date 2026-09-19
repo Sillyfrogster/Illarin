@@ -396,7 +396,7 @@ func parse(t *testing.T, body string) format.Parsed {
 	return parsed
 }
 
-func write(t *testing.T, module format.Reader, parsed format.Parsed) format.Artifact {
+func write(t *testing.T, module format.Reader, parsed format.Parsed) format.MainFile {
 	t.Helper()
 	writer, writes := module.(format.Writer)
 	if !writes {

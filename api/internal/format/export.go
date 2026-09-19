@@ -59,7 +59,7 @@ func (a ExportWork) Text(role block.Role) string {
 	return prose.Text
 }
 
-type Artifact struct {
+type MainFile struct {
 	Body      []byte
 	MediaType string
 	Extension string
@@ -67,7 +67,7 @@ type Artifact struct {
 
 type Writer interface {
 	Module
-	Write(context.Context, ExportWork) (Artifact, error)
+	Write(context.Context, ExportWork) (MainFile, error)
 }
 
 // TravelsWithOrigin says whether data preserved from origin goes into target's export, even when origin has no module left.

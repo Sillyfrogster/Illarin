@@ -93,7 +93,7 @@ func (s destinationStack) describe(t *testing.T, session *http.Cookie, started a
 
 func (s destinationStack) announced(t *testing.T, session *http.Cookie, workID, body string) {
 	t.Helper()
-	response := apitest.PublishWorkUpdate(t, s.router, session, workID, body)
+	response := apitest.PublishWorkVersion(t, s.router, session, workID, body)
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish an update = %d: %s", response.Code, response.Body.String())
 	}
@@ -265,7 +265,7 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	}
 	stack.describe(t, stack.editor, started, "A private save changes nothing public.")
 	correction := apitest.AuthorizedJSONRequest(t, http.MethodPatch,
-		"/v1/works/"+started.ID+"/updates/1/notes",
+		"/v1/works/"+started.ID+"/versions/1/notes",
 		`{"summary":"Corrected summary","notes":"Corrected context."}`, stack.editor)
 	if got := apitest.Send(t, stack.router, correction); got.Code != http.StatusNoContent {
 		t.Fatalf("correct notes = %d: %s", got.Code, got.Body.String())
@@ -295,7 +295,7 @@ func TestOnlyAPublishedUpdateAnnounces(t *testing.T) {
 	}
 
 	correction = apitest.AuthorizedJSONRequest(t, http.MethodPatch,
-		"/v1/works/"+started.ID+"/updates/2/notes",
+		"/v1/works/"+started.ID+"/versions/2/notes",
 		`{"summary":"Corrected again","notes":""}`, stack.editor)
 	if got := apitest.Send(t, stack.router, correction); got.Code != http.StatusNoContent {
 		t.Fatalf("correct notes = %d: %s", got.Code, got.Body.String())
@@ -367,13 +367,13 @@ func TestAnUnlistedWorkAnnouncesOnlyWithExplicitConsent(t *testing.T) {
 	}
 
 	stack.describe(t, stack.editor, started, "Needs consent.")
-	refused := apitest.PublishWorkUpdate(t, stack.router, stack.editor, started.ID,
+	refused := apitest.PublishWorkVersion(t, stack.router, stack.editor, started.ID,
 		fmt.Sprintf(`{"summary":"Needs consent","destinationIds":[%q]}`, hook.Destination.ID))
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "announceUnlisted") {
 		t.Fatalf("selecting a destination for an unlisted work = %d: %s", refused.Code, refused.Body.String())
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+started.ID+"/updates", nil), stack.editor))
+		http.MethodGet, "/v1/works/"+started.ID+"/versions", nil), stack.editor))
 	if strings.Contains(history.Body.String(), "Needs consent") {
 		t.Fatal("a refused announcement left the update published")
 	}
@@ -407,14 +407,14 @@ func TestAnIneligibleDestinationRollsThePublicationBack(t *testing.T) {
 	stack.describe(t, stack.editor, started, "Changed.")
 
 	for _, id := range []string{theirs.Destination.ID, disabled.Destination.ID} {
-		refused := apitest.PublishWorkUpdate(t, stack.router, stack.editor, started.ID,
+		refused := apitest.PublishWorkVersion(t, stack.router, stack.editor, started.ID,
 			fmt.Sprintf(`{"summary":"Changed","destinationIds":[%q]}`, id))
 		if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "destinationIds") {
 			t.Fatalf("publishing to an ineligible destination = %d: %s", refused.Code, refused.Body.String())
 		}
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+started.ID+"/updates", nil), stack.editor))
+		http.MethodGet, "/v1/works/"+started.ID+"/versions", nil), stack.editor))
 	if strings.Contains(history.Body.String(), `"number":2`) {
 		t.Fatal("a refused announcement left the update published")
 	}
@@ -471,7 +471,7 @@ func TestAnnouncementsRetryOnTheSharedScheduleWithAnInjectedClock(t *testing.T) 
 		}
 	}
 	history := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+started.ID+"/updates", nil), stack.editor))
+		http.MethodGet, "/v1/works/"+started.ID+"/versions", nil), stack.editor))
 	if !strings.Contains(history.Body.String(), "Retried") {
 		t.Error("delivery failure undid the publication")
 	}
@@ -509,7 +509,7 @@ func TestEveryAttemptRechecksTheWorkAndTheDestination(t *testing.T) {
 			stack.describe(t, stack.editor, started, "A replacement so the old one can go.")
 			stack.announced(t, stack.editor, started.ID, `{"summary":"Replacement","destinationIds":[]}`)
 			withdraw := apitest.AuthorizedJSONRequest(t, http.MethodPost,
-				"/v1/works/"+started.ID+"/updates/2/withdraw",
+				"/v1/works/"+started.ID+"/versions/2/withdraw",
 				`{"explanation":"This version gave incorrect guidance."}`, stack.editor)
 			if got := apitest.Send(t, stack.router, withdraw); got.Code != http.StatusNoContent {
 				t.Fatalf("withdraw = %d: %s", got.Code, got.Body.String())

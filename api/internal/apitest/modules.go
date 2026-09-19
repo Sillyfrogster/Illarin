@@ -52,6 +52,6 @@ func (ReplacingModule) Declaration() format.Declaration {
 func (module ReplacingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return *module.Parsed, nil
 }
-func (ReplacingModule) Write(context.Context, format.ExportWork) (format.Artifact, error) {
-	return format.Artifact{MediaType: "text/plain", Extension: ".txt"}, nil
+func (ReplacingModule) Write(context.Context, format.ExportWork) (format.MainFile, error) {
+	return format.MainFile{MediaType: "text/plain", Extension: ".txt"}, nil
 }

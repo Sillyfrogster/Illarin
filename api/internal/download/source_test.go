@@ -100,27 +100,27 @@ func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 		t.Fatalf("download = %d, headers %v", download.Code, download.Header())
 	}
 
-	var revisionID, currentRevisionID uuid.UUID
+	var originalFileID, currentOriginalFileID uuid.UUID
 	var target, authorizationClass, visibility string
 	var handedOffAt time.Time
 	err := pool.QueryRow(context.Background(), `
-		select revision_id, export_target, handed_off_at, authorization_class, visibility
+		select original_file_id, export_target, handed_off_at, authorization_class, visibility
 		  from download_events
 		 where work_id = $1
-	`, workID).Scan(&revisionID, &target, &handedOffAt, &authorizationClass, &visibility)
+	`, workID).Scan(&originalFileID, &target, &handedOffAt, &authorizationClass, &visibility)
 	if err != nil {
 		t.Fatalf("read download event: %v", err)
 	}
 	if err := pool.QueryRow(context.Background(), `
-		select current_revision_id from works where id = $1
-	`, workID).Scan(&currentRevisionID); err != nil {
-		t.Fatalf("read current revision: %v", err)
+		select original_file_id from works where id = $1
+	`, workID).Scan(&currentOriginalFileID); err != nil {
+		t.Fatalf("read the original file: %v", err)
 	}
-	if revisionID != currentRevisionID || target != "raw" ||
+	if originalFileID != currentOriginalFileID || target != "raw" ||
 		authorizationClass != "anonymous" || visibility != "listed" {
 		t.Fatalf(
-			"download event = revision %s, target %q, class %q, visibility %q",
-			revisionID, target, authorizationClass, visibility,
+			"download event = original file %s, target %q, class %q, visibility %q",
+			originalFileID, target, authorizationClass, visibility,
 		)
 	}
 	if handedOffAt.Before(before) || handedOffAt.After(after) {
@@ -153,18 +153,18 @@ func TestExportFromAnWorkMadeInIllarinRecordsTheHandoff(t *testing.T) {
 		t.Fatalf("download status = %d, want 200: %s", download.Code, download.Body.String())
 	}
 
-	var revisionMissing bool
+	var originalFileMissing bool
 	var target, authorizationClass string
 	if err := pool.QueryRow(context.Background(), `
-		select revision_id is null, export_target, authorization_class
+		select original_file_id is null, export_target, authorization_class
 		  from download_events
 		 where work_id = $1
-	`, started.ID).Scan(&revisionMissing, &target, &authorizationClass); err != nil {
+	`, started.ID).Scan(&originalFileMissing, &target, &authorizationClass); err != nil {
 		t.Fatalf("read download event: %v", err)
 	}
-	if !revisionMissing || target != "chara_card_v3" || authorizationClass != "anonymous" {
-		t.Fatalf("event = revision missing %t, target %q, class %q",
-			revisionMissing, target, authorizationClass)
+	if !originalFileMissing || target != "chara_card_v3" || authorizationClass != "anonymous" {
+		t.Fatalf("event = original file missing %t, target %q, class %q",
+			originalFileMissing, target, authorizationClass)
 	}
 }
 

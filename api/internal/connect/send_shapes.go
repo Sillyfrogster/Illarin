@@ -7,52 +7,52 @@ import (
 )
 
 type WorkInstance struct {
-	ApplicationName     string          `json:"applicationName"`
-	CanReceive          bool            `json:"canReceive"`
-	Delivery            *QueuedDelivery `json:"delivery" tstype:"QueuedDelivery | null,required"`
-	InstalledGeneration *int            `json:"installedGeneration" tstype:"number | null,required"`
-	InstanceId          uuid.UUID       `json:"instanceId"`
-	InstanceName        string          `json:"instanceName"`
-	LastSeenAt          *time.Time      `json:"lastSeenAt" tstype:"string | null,required"`
-	ReportsLibrary      bool            `json:"reportsLibrary"`
-	UpdateAvailable     bool            `json:"updateAvailable"`
+	ApplicationName  string          `json:"applicationName"`
+	CanReceive       bool            `json:"canReceive"`
+	Delivery         *QueuedDelivery `json:"delivery" tstype:"QueuedDelivery | null,required"`
+	InstalledVersion *int            `json:"installedVersion" tstype:"number | null,required"`
+	InstanceId       uuid.UUID       `json:"instanceId"`
+	InstanceName     string          `json:"instanceName"`
+	LastSeenAt       *time.Time      `json:"lastSeenAt" tstype:"string | null,required"`
+	ReportsLibrary   bool            `json:"reportsLibrary"`
+	UpdateAvailable  bool            `json:"updateAvailable"`
 }
 
 type WorkInstanceList struct {
-	ContentGeneration int            `json:"contentGeneration"`
-	Items             []WorkInstance `json:"items"`
+	VersionNumber int            `json:"versionNumber"`
+	Items         []WorkInstance `json:"items"`
 }
 
 type CollectDeliveries struct {
 	Acknowledge []uuid.UUID `json:"acknowledge"`
 }
 
-type DeliveryArtifact struct {
-	IsCover *bool                `json:"isCover,omitempty"`
-	Type    DeliveryArtifactType `json:"type"`
-	MediaId *uuid.UUID           `json:"mediaId,omitempty"`
-	Role    *string              `json:"role,omitempty"`
-	Url     string               `json:"url"`
+type DeliveryFile struct {
+	IsCover *bool            `json:"isCover,omitempty"`
+	Type    DeliveryFileType `json:"type"`
+	MediaId *uuid.UUID       `json:"mediaId,omitempty"`
+	Role    *string          `json:"role,omitempty"`
+	Url     string           `json:"url"`
 }
 
-type DeliveryArtifactType string
+type DeliveryFileType string
 
 const (
-	DeliveryArtifactTypeExport  DeliveryArtifactType = "export"
-	DeliveryArtifactTypePicture DeliveryArtifactType = "picture"
+	DeliveryFileTypeExport  DeliveryFileType = "export"
+	DeliveryFileTypePicture DeliveryFileType = "picture"
 )
 
 type DeliveryWork struct {
-	Artifacts         []DeliveryArtifact `json:"artifacts"`
-	WorkId            uuid.UUID          `json:"workId"`
-	ContentGeneration int                `json:"contentGeneration"`
-	Format            string             `json:"format"`
-	Id                uuid.UUID          `json:"id"`
-	Type              string             `json:"type"`
-	Label             string             `json:"label"`
-	LeaseExpiresAt    time.Time          `json:"leaseExpiresAt"`
-	Name              string             `json:"name"`
-	QueuedAt          time.Time          `json:"queuedAt"`
+	Files          []DeliveryFile `json:"files"`
+	WorkId         uuid.UUID      `json:"workId"`
+	VersionNumber  int            `json:"versionNumber"`
+	Format         string         `json:"format"`
+	Id             uuid.UUID      `json:"id"`
+	Type           string         `json:"type"`
+	Label          string         `json:"label"`
+	LeaseExpiresAt time.Time      `json:"leaseExpiresAt"`
+	Name           string         `json:"name"`
+	QueuedAt       time.Time      `json:"queuedAt"`
 }
 
 type DeliveryWorkList struct {
@@ -61,8 +61,8 @@ type DeliveryWorkList struct {
 }
 
 type LibraryEntry struct {
-	WorkId            uuid.UUID `json:"workId"`
-	ContentGeneration *int      `json:"contentGeneration,omitempty"`
+	WorkId        uuid.UUID `json:"workId"`
+	VersionNumber *int      `json:"versionNumber,omitempty"`
 }
 
 type LibraryReport struct {

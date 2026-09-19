@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-var ErrVersionRequired = errors.New("a reviewed working-copy version is required")
+var ErrVersionRequired = errors.New("a reviewed drafted-changes version is required")
 
 type Candidate struct {
 	Version      int64
@@ -21,7 +21,7 @@ type VersionConflict struct {
 }
 
 func (e *VersionConflict) Error() string {
-	return "This work changed since you opened it. Keep your edits and reload the working copy to reconcile them."
+	return "This work changed since you opened it. Keep your edits and reload the drafted changes to reconcile them."
 }
 
 func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, workID uuid.UUID) (string, error) {
@@ -33,8 +33,8 @@ func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, workID uuid.UU
 		return "", ErrVersionRequired
 	}
 	var current int64
-	if err := tx.QueryRow(ctx, `select working_copy_version from works where id = $1`, workID).Scan(&current); err != nil {
-		return "", fmt.Errorf("read working-copy version: %w", err)
+	if err := tx.QueryRow(ctx, `select drafted_changes_version from works where id = $1`, workID).Scan(&current); err != nil {
+		return "", fmt.Errorf("read drafted-changes version: %w", err)
 	}
 	if c.Version != current {
 		return "", &VersionConflict{CurrentVersion: current}
@@ -44,7 +44,7 @@ func (c *Candidate) Lock(ctx context.Context, tx pgx.Tx, ownerID, workID uuid.UU
 
 func (c *Candidate) Commit(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
 	var version int64
-	if err := tx.QueryRow(ctx, `update works set working_copy_version = working_copy_version + 1 where id = $1 returning working_copy_version`, workID).Scan(&version); err != nil {
+	if err := tx.QueryRow(ctx, `update works set drafted_changes_version = drafted_changes_version + 1 where id = $1 returning drafted_changes_version`, workID).Scan(&version); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {

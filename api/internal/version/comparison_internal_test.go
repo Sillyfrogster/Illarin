@@ -19,8 +19,8 @@ func recordedElement(role block.Role, workType block.Type, content block.Content
 	return block.Element{ID: uuid.New(), Type: workType, Role: role, Content: content}
 }
 
-func recordedVersionOf(workType string, blocks ...block.Block) work.Snapshot {
-	return work.Snapshot{Type: workType, Metadata: work.VersionMetadata{Name: "Recorded"}, Blocks: blocks}
+func recordedVersionOf(workType string, blocks ...block.Block) work.FullVersion {
+	return work.FullVersion{Type: workType, Metadata: work.VersionMetadata{Name: "Recorded"}, Blocks: blocks}
 }
 
 func changesUnder(t *testing.T, groups []ChangeGroup, subject string) []Change {
@@ -135,7 +135,7 @@ func TestReorderedAndReimportedItemsAreNotChanges(t *testing.T) {
 	t.Parallel()
 	page := uuid.New()
 	first, second := uuid.New(), uuid.New()
-	greetings := func(texts ...block.TextItem) work.Snapshot {
+	greetings := func(texts ...block.TextItem) work.FullVersion {
 		return recordedVersionOf("character",
 			recordedBlock(page, block.CharacterCore, recordedElement(block.RoleGreetings, block.TypeTextSet,
 				block.TextSet{Texts: texts})))
@@ -149,7 +149,7 @@ func TestReorderedAndReimportedItemsAreNotChanges(t *testing.T) {
 	reimported := greetings(
 		block.TextItem{ID: uuid.New(), Text: "Hello there"},
 		block.TextItem{ID: uuid.New(), Text: "Well met"})
-	for _, later := range []work.Snapshot{reordered, reimported} {
+	for _, later := range []work.FullVersion{reordered, reimported} {
 		if groups := compareVersions(earlier, later); len(groups) != 0 {
 			t.Fatalf("groups = %+v, want none", groups)
 		}
@@ -233,7 +233,7 @@ func TestPreservedDataReportsItsNamespaceAndNothingElse(t *testing.T) {
 	}
 }
 
-func TestPresentationOnlyUpdateExplainsThePage(t *testing.T) {
+func TestAPresentationOnlyVersionExplainsThePage(t *testing.T) {
 	t.Parallel()
 	page := uuid.New()
 	core := recordedBlock(page, block.CharacterCore, recordedElement(block.RoleDescription, block.TypeProse,

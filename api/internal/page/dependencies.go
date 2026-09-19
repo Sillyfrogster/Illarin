@@ -44,12 +44,12 @@ func extensionDependencies(ctx context.Context, q db.DBTX, subject dependencySub
 		return dependencies, nil
 	}
 	rows, err := q.Query(ctx, `
-		select revision.identifier, listed.id, listed.name, coalesce(owner.username, 'unknown')
+		select original.identifier, listed.id, listed.name, coalesce(owner.username, 'unknown')
 		  from work_public.works listed
-		  join public.work_revisions revision on revision.id = listed.current_revision_id
+		  join public.work_original_files original on original.id = listed.original_file_id
 		  left join public.users owner on owner.id = listed.owner_id
-		 where revision.identifier = any($1::text[])
-		   and revision.format = $2 and listed.type = $3 and listed.id <> $4
+		 where original.identifier = any($1::text[])
+		   and original.format = $2 and listed.type = $3 and listed.id <> $4
 		   and listed.lifecycle = 'published' and listed.visibility = 'listed'
 		   and listed.withheld_at is null and listed.deleted_at is null
 		   and ($5 <> 'hidden' or not listed.is_nsfw)

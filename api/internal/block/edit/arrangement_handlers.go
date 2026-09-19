@@ -16,7 +16,7 @@ func (h *Handlers) AddWorkBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}
@@ -58,7 +58,7 @@ func (h *Handlers) ArrangeWorkBlocks(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}
@@ -108,7 +108,7 @@ func (h *Handlers) RemoveWorkBlock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}
@@ -142,7 +142,7 @@ func (h *Handlers) MoveWorkBlockContent(c *gin.Context) {
 	if !ok {
 		return
 	}
-	version, ok := api.WorkingCopyVersion(c)
+	version, ok := api.DraftedChangesVersion(c)
 	if !ok {
 		return
 	}

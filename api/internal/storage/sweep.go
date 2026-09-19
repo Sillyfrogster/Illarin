@@ -23,7 +23,7 @@ type SweepResult struct {
 
 func (s *Sweeper) Sweep(ctx context.Context) (SweepResult, error) {
 	now := s.now()
-	if err := s.deleteExpiredSnapshots(ctx); err != nil {
+	if err := s.deleteExpiredVersions(ctx); err != nil {
 		return SweepResult{}, err
 	}
 	if err := s.deleteExpiredProtectedContent(ctx, now); err != nil {
@@ -79,20 +79,20 @@ func (s *Sweeper) Sweep(ctx context.Context) (SweepResult, error) {
 	return result, nil
 }
 
-func (s *Sweeper) deleteExpiredSnapshots(ctx context.Context) error {
+func (s *Sweeper) deleteExpiredVersions(ctx context.Context) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin expired history cleanup: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	if _, err := tx.Exec(ctx, `
-		update works set published_snapshot_id = null
+		update works set published_version_id = null
 		 where deleted_at is not null and recoverable_until <= now()
-		   and published_snapshot_id is not null
+		   and published_version_id is not null
 	`); err != nil {
-		return fmt.Errorf("release expired published snapshots: %w", err)
+		return fmt.Errorf("release expired published versions: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `delete from work_snapshots s using works a
+	if _, err := tx.Exec(ctx, `delete from work_versions s using works a
 		where s.work_id = a.id and a.deleted_at is not null and a.recoverable_until <= now()`); err != nil {
 		return fmt.Errorf("remove expired history: %w", err)
 	}
@@ -338,9 +338,9 @@ func liveBlobReferenceExpression(blobID, at string) string {
 		 where operation.blob_id = ` + blobID + `
 		   and operation.status in ('pending', 'processing')
 		union all
-		select 1 from work_revisions revision
-		  join works work on work.id = revision.work_id
-		 where revision.blob_id = ` + blobID + `
+		select 1 from work_original_files original
+		  join works work on work.id = original.work_id
+		 where original.blob_id = ` + blobID + `
 		   and (work.deleted_at is null or work.recoverable_until > ` + at + `)
 		union all
 		select 1 from work_media media
@@ -360,9 +360,9 @@ func liveBlobReferenceExpression(blobID, at string) string {
 
 func releaseExpiredReferences(ctx context.Context, tx pgx.Tx, id uuid.UUID, now time.Time) error {
 	statements := []string{
-		`update work_revisions revision set blob_id = null
+		`update work_original_files original set blob_id = null
 		   from works work
-		  where revision.work_id = work.id and revision.blob_id = $1
+		  where original.work_id = work.id and original.blob_id = $1
 		    and work.deleted_at is not null and work.recoverable_until <= $2`,
 		`update work_media media set blob_id = null
 		   from works work

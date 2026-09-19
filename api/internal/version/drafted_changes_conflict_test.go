@@ -12,7 +12,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/page"
 )
 
-func TestWorkingCopySaveRequiresAReviewedVersion(t *testing.T) {
+func TestDraftedChangesSaveRequiresAReviewedVersion(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartPreset(t, r, session, "lumiverse")
@@ -26,7 +26,7 @@ func TestWorkingCopySaveRequiresAReviewedVersion(t *testing.T) {
 	}
 }
 
-func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) {
+func TestConcurrentDraftedChangesRequestsKeepOnlyTheWinningCandidate(t *testing.T) {
 	t.Parallel()
 	for _, publish := range []bool{false, true} {
 		name := "two editors"
@@ -43,7 +43,7 @@ func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) 
 			if publish {
 				second = apitest.Authorized(httptest.NewRequest(http.MethodPost, "/v1/works/"+started.ID+"/publish", nil), session)
 			}
-			second.Header.Set("X-Working-Copy-Version", first.Header.Get("X-Working-Copy-Version"))
+			second.Header.Set("X-Drafted-Changes-Version", first.Header.Get("X-Drafted-Changes-Version"))
 			responses := []*httptest.ResponseRecorder{httptest.NewRecorder(), httptest.NewRecorder()}
 			start := make(chan struct{})
 			done := make(chan struct{}, 2)
@@ -68,7 +68,7 @@ func TestConcurrentWorkingCopyRequestsKeepOnlyTheWinningCandidate(t *testing.T) 
 			if err := json.Unmarshal(responses[loser].Body.Bytes(), &conflict); err != nil {
 				t.Fatal(err)
 			}
-			if conflict.Code != "working_copy_conflict" || conflict.CurrentVersion == nil || strconv.FormatInt(*conflict.CurrentVersion, 10) != responses[winner].Header().Get("X-Working-Copy-Version") {
+			if conflict.Code != "drafted_changes_conflict" || conflict.CurrentVersion == nil || strconv.FormatInt(*conflict.CurrentVersion, 10) != responses[winner].Header().Get("X-Drafted-Changes-Version") {
 				t.Fatalf("conflict lacks the winning version: %+v", conflict)
 			}
 			page := apitest.FetchStartedWork(t, r, session, started.ID)

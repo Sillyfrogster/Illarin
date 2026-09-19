@@ -1,4 +1,4 @@
-// A recorded version is one published snapshot of a work, read back whole.
+// A full version is one published version of a work with its recorded content, read back whole.
 package work
 
 import (
@@ -43,7 +43,7 @@ func RedactWithdrawn(version *Version) {
 	version.WithdrawnAt = nil
 }
 
-func (v Snapshot) HoldPrompts(
+func (v FullVersion) HoldPrompts(
 	ctx context.Context,
 	tx pgx.Tx,
 	workID uuid.UUID,
@@ -58,11 +58,11 @@ func (v Snapshot) HoldPrompts(
 	return private.ApplyRecordedPolicy(ctx, tx, workID, &v.ID, v.Blocks)
 }
 
-type Snapshot struct {
+type FullVersion struct {
 	Version
 	Type              string
 	Origin            string
-	SourceRevisionID  *uuid.UUID
+	OriginalFileID    *uuid.UUID
 	Metadata          VersionMetadata
 	Blocks            []block.Block
 	Preserved         []VersionPreserved
@@ -88,7 +88,7 @@ type VersionPreserved struct {
 	Payload   string    `json:"payload"`
 }
 
-type snapshotPayload struct {
+type versionPayload struct {
 	VersionMetadata
 	Type      string             `json:"type"`
 	Origin    string             `json:"origin_format"`
@@ -96,32 +96,32 @@ type snapshotPayload struct {
 	Preserved []VersionPreserved `json:"preserved_data"`
 }
 
-func ReadVersion(ctx context.Context, tx pgx.Tx, workID uuid.UUID, number int) (Snapshot, error) {
-	var recorded Snapshot
+func ReadVersion(ctx context.Context, tx pgx.Tx, workID uuid.UUID, number int) (FullVersion, error) {
+	var recorded FullVersion
 	var stored []byte
 	var sourceRevision pgtype.UUID
 	err := tx.QueryRow(ctx, `
 		select id, number, recorded_at, initial_recorded, version_label, summary, notes,
 		       notes_edited_at, withdrawn_at, coalesce(withdrawal_explanation, ''),
-		       source_revision_id, payload, protected_payloads
-		  from public.work_snapshots where work_id = $1 and number = $2
+		       original_file_id, payload, protected_payloads
+		  from public.work_versions where work_id = $1 and number = $2
 	`, workID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes,
 		&recorded.NotesEditedAt, &recorded.WithdrawnAt, &recorded.WithdrawalExplanation,
 		&sourceRevision, &stored, &recorded.ProtectedPayloads)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Snapshot{}, ErrNotFound
+		return FullVersion{}, ErrNotFound
 	}
 	if err != nil {
-		return Snapshot{}, fmt.Errorf("read version %d: %w", number, err)
+		return FullVersion{}, fmt.Errorf("read version %d: %w", number, err)
 	}
-	var payload snapshotPayload
+	var payload versionPayload
 	if err := json.Unmarshal(stored, &payload); err != nil {
-		return Snapshot{}, fmt.Errorf("read version %d: %w", number, err)
+		return FullVersion{}, fmt.Errorf("read version %d: %w", number, err)
 	}
 	recorded.Type = payload.Type
 	recorded.Origin = payload.Origin
-	recorded.SourceRevisionID = uuidOrNil(sourceRevision)
+	recorded.OriginalFileID = uuidOrNil(sourceRevision)
 	recorded.Metadata = payload.VersionMetadata
 	recorded.Blocks = payload.Blocks
 	recorded.Preserved = payload.Preserved

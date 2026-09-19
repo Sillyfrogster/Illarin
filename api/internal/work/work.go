@@ -26,21 +26,21 @@ func (d Visibility) Valid() bool {
 }
 
 type Work struct {
-	ID                uuid.UUID
-	Type              string
-	Format            string
-	OriginFormat      *string
-	WorkVersion       string
-	CreditedAuthor    string
-	Nickname          string
-	Name              string
-	Blurb             string
-	Tags              []string
-	IsNSFW            *bool
-	Visibility        Visibility
-	Lifecycle         Lifecycle
-	CurrentRevisionID uuid.UUID
-	CreatedAt         time.Time
+	ID             uuid.UUID
+	Type           string
+	Format         string
+	OriginFormat   *string
+	WorkVersion    string
+	CreditedAuthor string
+	Nickname       string
+	Name           string
+	Blurb          string
+	Tags           []string
+	IsNSFW         *bool
+	Visibility     Visibility
+	Lifecycle      Lifecycle
+	OriginalFileID uuid.UUID
+	CreatedAt      time.Time
 }
 
 type NSFWPreference string

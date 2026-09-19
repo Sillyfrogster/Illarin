@@ -75,7 +75,7 @@ func (s *Service) SetUpdateDestinations(ctx context.Context, ownerID, workID uui
 		return err
 	}
 	if count != len(ids) {
-		return version.ErrUpdateDestinationIneligible
+		return version.ErrDestinationIneligible
 	}
 	if _, err := tx.Exec(ctx, `delete from work_update_destination_defaults where work_id = $1`, workID); err != nil {
 		return err
