@@ -43,7 +43,12 @@ type AddableBlockChoice struct {
 	Type  block.ElementType `json:"type"`
 }
 
-type AppTarget struct {
+type AppName struct {
+	Id    string `json:"id"`
+	Label string `json:"label"`
+}
+
+type AppFormat struct {
 	Format string `json:"format"`
 	Id     string `json:"id"`
 	Label  string `json:"label"`
@@ -51,15 +56,15 @@ type AppTarget struct {
 
 type WorkDetail struct {
 	AddableBlocks         *[]AddableBlock          `json:"addableBlocks,omitempty"`
-	AllowedApps           []WorkDetailAllowedApps  `json:"allowedApps" tstype:"'lumiverse'[],required"`
-	AppTargets            []AppTarget              `json:"appTargets"`
+	AllowedApps           []AppName                `json:"allowedApps"`
+	AppFormats            []AppFormat              `json:"appFormats"`
 	Blocks                []block.WorkBlock        `json:"blocks"`
 	Blurb                 string                   `json:"blurb"`
 	CreatedAt             time.Time                `json:"createdAt"`
 	Creator               string                   `json:"creator"`
 	Visibility            WorkDetailVisibility     `json:"visibility"`
-	Downloads             []DownloadTarget         `json:"downloads"`
-	EligibleApps          []WorkDetailEligibleApps `json:"eligibleApps" tstype:"'lumiverse'[],required"`
+	Downloads             []DownloadFormat         `json:"downloads"`
+	EligibleApps          []AppName                `json:"eligibleApps"`
 	ExtensionDependencies []ExtensionDependency    `json:"extensionDependencies"`
 	Id                    uuid.UUID                `json:"id"`
 	Identifier            *string                  `json:"identifier,omitempty"`
@@ -84,23 +89,11 @@ type WorkDetail struct {
 	DraftedChangesVersion *int64                   `json:"draftedChangesVersion,omitempty"`
 }
 
-type WorkDetailAllowedApps string
-
-const (
-	WorkDetailAllowedAppsLumiverse WorkDetailAllowedApps = "lumiverse"
-)
-
 type WorkDetailVisibility string
 
 const (
 	WorkDetailVisibilityListed   WorkDetailVisibility = "listed"
 	WorkDetailVisibilityUnlisted WorkDetailVisibility = "unlisted"
-)
-
-type WorkDetailEligibleApps string
-
-const (
-	WorkDetailEligibleAppsLumiverse WorkDetailEligibleApps = "lumiverse"
 )
 
 type WorkDetailType string
@@ -167,7 +160,7 @@ type WorkList struct {
 	Facets         []BrowseFacet          `json:"facets"`
 	Items          []BrowseWork           `json:"items"`
 	NextCursor     *BrowseCursor          `json:"nextCursor,omitempty"`
-	Platforms      []BrowseOption         `json:"platforms"`
+	Apps           []BrowseOption         `json:"apps"`
 	Suppressed     int                    `json:"suppressed"`
 	Total          int                    `json:"total"`
 	NSFWPreference WorkListNSFWPreference `json:"nsfwPreference"`
@@ -307,7 +300,7 @@ type DownloadSample struct {
 	Texts  *[]string    `json:"texts,omitempty"`
 }
 
-type DownloadTarget struct {
+type DownloadFormat struct {
 	Format      string                `json:"format"`
 	Label       string                `json:"label"`
 	Recommended bool                  `json:"recommended"`
@@ -327,7 +320,7 @@ type OriginalUpload struct {
 
 type ListWorksParams struct {
 	Type     *ListWorksParamsType `json:"type,omitempty"`
-	Platform *string              `json:"platform,omitempty"`
+	App      *string              `json:"app,omitempty"`
 	Creator  *string              `json:"creator,omitempty"`
 	Q        *string              `json:"q,omitempty"`
 	Facet    *[]string            `json:"facet,omitempty"`
@@ -425,5 +418,6 @@ type RecordedVersion struct {
 
 type PreservedNamespace struct {
 	Bytes int    `json:"bytes"`
+	Label string `json:"label"`
 	Name  string `json:"name"`
 }

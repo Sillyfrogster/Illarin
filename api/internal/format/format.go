@@ -30,7 +30,7 @@ type Parsed struct {
 	Header    Header
 	Elements  []block.Element
 	Remainder []Remainder
-	Protected ProtectedImport
+	Protected []ProtectedPrompt
 	Readme    *Readme
 }
 
@@ -38,11 +38,6 @@ type Parsed struct {
 type Readme struct {
 	Text         string
 	Root, Folder string
-}
-
-type ProtectedImport struct {
-	Prompts []ProtectedPrompt
-	Apps    []string
 }
 
 type ProtectedPrompt struct {
@@ -409,8 +404,9 @@ type Declaration struct {
 	Preservation     PreservationDeclaration
 	TestedOrigins    []string
 	PreservesOrigins []string
-	CrossPlatform    bool
 	KeepsUpload      bool
+	// KeepsPrivatePrompts says an app reading this format keeps a work's private prompts out of sight.
+	KeepsPrivatePrompts bool
 }
 
 func ValidateDeclaration(d Declaration) error {
@@ -657,5 +653,5 @@ func (t ValueType) known() bool {
 		t == ValueObject || t == ValueArray
 }
 
-// RawTarget names the uploaded file itself as a download or send target
-const RawTarget = "raw"
+// Raw names the uploaded file itself as a download or send format
+const Raw = "raw"

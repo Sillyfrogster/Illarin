@@ -19,7 +19,7 @@ func (h *Handlers) startWorkFromNothing(c *gin.Context, owner api.Account) {
 	}
 	app := ""
 	if request.App != nil {
-		app = string(*request.App)
+		app = *request.App
 	}
 	id, err := h.uploads.StartFromNothing(c.Request.Context(), owner.ID, request.Type, app)
 	if errors.Is(err, ErrTypeNotBuildable) {
@@ -49,8 +49,13 @@ func (h *Handlers) startWorkFromNothing(c *gin.Context, owner api.Account) {
 	c.JSON(http.StatusCreated, page)
 }
 
+// GetBuildChoices answers which types can be built from nothing and which apps each asks for
+func (h *Handlers) GetBuildChoices(c *gin.Context) {
+	c.JSON(http.StatusOK, h.uploads.BuildChoices())
+}
+
 func appAnswerRefusal(workType string) string {
-	apps := Apps(workType)
+	apps := appsAsked(workType)
 	if len(apps) == 0 {
 		return "Nothing about this type depends on an app, so do not send one."
 	}

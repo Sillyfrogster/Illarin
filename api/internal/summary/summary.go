@@ -51,7 +51,7 @@ func writeFormats(ctx context.Context, tx pgx.Tx, reg *format.Registry, workID u
 }
 
 // Formats works out the formats a work can be downloaded in from its drafted blocks
-func Formats(ctx context.Context, q db.DBTX, reg *format.Registry, workID uuid.UUID) ([]format.Target, error) {
+func Formats(ctx context.Context, q db.DBTX, reg *format.Registry, workID uuid.UUID) ([]format.Offered, error) {
 	var workType string
 	var origin pgtype.Text
 	err := q.QueryRow(ctx, `
@@ -71,23 +71,23 @@ func Formats(ctx context.Context, q db.DBTX, reg *format.Registry, workID uuid.U
 	for _, holder := range blocks {
 		elements = append(elements, holder.Elements...)
 	}
-	return reg.OfferedTargets(format.CapabilitySubject{
+	return reg.OfferedFormats(format.CapabilitySubject{
 		Type: workType, Origin: origin.String, Elements: elements,
 	}), nil
 }
 
-func Offered(ctx context.Context, q db.DBTX, workID uuid.UUID) ([]format.Target, error) {
+func Offered(ctx context.Context, q db.DBTX, workID uuid.UUID) ([]format.Offered, error) {
 	var stored []byte
 	err := q.QueryRow(ctx,
 		`select export from work_summaries where work_id = $1`, workID,
 	).Scan(&stored)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return []format.Target{}, nil
+		return []format.Offered{}, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("read the export summary: %w", err)
 	}
-	targets := make([]format.Target, 0)
+	targets := make([]format.Offered, 0)
 	if err := json.Unmarshal(stored, &targets); err != nil {
 		return nil, fmt.Errorf("read the stored export summary: %w", err)
 	}

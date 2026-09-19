@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 )
 
@@ -82,5 +84,51 @@ func TestBrowseStillFiltersOnTheOldNameForTheType(t *testing.T) {
 	}
 	if listed.NSFWPreference != "blurred" {
 		t.Fatalf("browse visibility = %q, want the blurred preference under its old name", listed.NSFWPreference)
+	}
+}
+
+func TestBrowseAndTheWorkPageStillAnswerToTheOldAppNames(t *testing.T) {
+	t.Parallel()
+	registry := format.NewRegistry()
+	for _, module := range character.Modules() {
+		if err := registry.Register(module); err != nil {
+			t.Fatalf("register %s: %v", module.ID(), err)
+		}
+	}
+	router, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	metadata := apitest.ExampleMetadata("Ana")
+	metadata["filename"] = "ana.json"
+	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(`{
+		"spec":"chara_card_v3","spec_version":"3.0",
+		"data":{"name":"Ana","description":"Keeps the archive.","first_mes":"Welcome back."}
+	}`)))
+
+	var listed struct {
+		Items     []map[string]any `json:"items"`
+		Platforms []map[string]any `json:"platforms"`
+		Apps      []map[string]any `json:"apps"`
+	}
+	answer := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works?platform=sillytavern", nil))
+	if err := json.Unmarshal(answer.Body.Bytes(), &listed); err != nil {
+		t.Fatalf("decode browse: %v", err)
+	}
+	if len(listed.Items) != 1 || len(listed.Platforms) == 0 || len(listed.Platforms) != len(listed.Apps) {
+		t.Fatalf("browse by platform = %s, want Ana and the app control under both names", answer.Body.String())
+	}
+	if none := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works?platform=notepad", nil)); !json.Valid(none.Body.Bytes()) ||
+		strings.Contains(none.Body.String(), `"name":"Ana"`) {
+		t.Fatalf("an unknown platform answered %s, want nothing", none.Body.String())
+	}
+
+	var page struct {
+		AppTargets []format.AppFormat `json:"appTargets"`
+		AppFormats []format.AppFormat `json:"appFormats"`
+	}
+	opened := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
+	if err := json.Unmarshal(opened.Body.Bytes(), &page); err != nil {
+		t.Fatalf("decode work page: %v", err)
+	}
+	if len(page.AppFormats) == 0 || len(page.AppTargets) != len(page.AppFormats) {
+		t.Fatalf("work page = %s, want appTargets repeating appFormats", opened.Body.String())
 	}
 }

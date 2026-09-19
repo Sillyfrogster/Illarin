@@ -12,8 +12,8 @@ import (
 type Type string
 
 const (
-	InstanceAccess  Type = "ia1"
-	InstanceRefresh Type = "ir1"
+	AppAccess  Type = "ia1"
+	AppRefresh Type = "ir1"
 )
 
 type Secret struct {

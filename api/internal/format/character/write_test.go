@@ -359,7 +359,7 @@ func images(role block.Role, items ...block.ImageItem) block.Element {
 	}
 }
 
-func TestEveryCharacterOriginWritesEveryCharacterTarget(t *testing.T) {
+func TestEveryCharacterOriginWritesEveryCharacterFormat(t *testing.T) {
 	t.Parallel()
 	body := `"name":"Ana","description":"Keeps the archive.","first_mes":"Hello",
 		"alternate_greetings":["You again."],

@@ -47,7 +47,7 @@ func (h *Handlers) ListNotifications(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read your notifications.")
 		return
 	}
-	sends, err := h.sendTargetsFor(c, current.ID, page.Entries)
+	sends, err := h.sendAppsFor(c, current.ID, page.Entries)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read your notifications.")
 		return
@@ -139,12 +139,12 @@ func (h *Handlers) ClearNotifications(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// sendTargetsFor gathers the instances that can take each update entry on one page.
-func (h *Handlers) sendTargetsFor(
+// sendAppsFor gathers the connected apps that can take each update entry on one page.
+func (h *Handlers) sendAppsFor(
 	c *gin.Context,
 	account uuid.UUID,
 	entries []Entry,
-) (map[uuid.UUID][]NotificationSendTarget, error) {
+) (map[uuid.UUID][]NotificationSendApp, error) {
 	updated := make([]uuid.UUID, 0, len(entries))
 	seen := make(map[uuid.UUID]bool, len(entries))
 	for _, entry := range entries {
@@ -154,44 +154,44 @@ func (h *Handlers) sendTargetsFor(
 		seen[*entry.Work] = true
 		updated = append(updated, *entry.Work)
 	}
-	holders, err := h.deliveries.UpdatableInstances(c.Request.Context(), account, updated)
+	holders, err := h.sends.UpdatableApps(c.Request.Context(), account, updated)
 	if err != nil {
 		return nil, err
 	}
-	offered := make(map[uuid.UUID][]NotificationSendTarget, len(holders))
-	for workID, instances := range holders {
-		for _, state := range instances {
-			offered[workID] = append(offered[workID], NotificationSendTarget{
-				InstanceId:      state.InstanceID,
-				InstanceName:    state.InstanceName,
-				ApplicationName: state.ApplicationName,
-				Waiting:         waitingToCollect(state),
+	offered := make(map[uuid.UUID][]NotificationSendApp, len(holders))
+	for workID, apps := range holders {
+		for _, state := range apps {
+			offered[workID] = append(offered[workID], NotificationSendApp{
+				ConnectedAppId: state.ConnectedAppID,
+				Name:           state.Name,
+				AppName:        state.AppName,
+				Waiting:        waitingToCollect(state),
 			})
 		}
-		slices.SortFunc(offered[workID], byInstanceName)
+		slices.SortFunc(offered[workID], byName)
 	}
 	return offered, nil
 }
 
-// waitingToCollect says whether a delivery of the work is already waiting for the instance.
-func waitingToCollect(state connect.InstanceState) bool {
-	if state.Delivery == nil {
+// waitingToCollect says whether a send of the work is already waiting for the connected app.
+func waitingToCollect(state connect.AppState) bool {
+	if state.Send == nil {
 		return false
 	}
-	return state.Delivery.State == connect.StateQueued || state.Delivery.State == connect.StateReleased
+	return state.Send.State == connect.StateQueued || state.Send.State == connect.StateReleased
 }
 
-// byInstanceName keeps the sends an entry offers in the order a reader would read them.
-func byInstanceName(first, second NotificationSendTarget) int {
-	if named := strings.Compare(first.ApplicationName, second.ApplicationName); named != 0 {
+// byName keeps the sends an entry offers in the order a reader would read them.
+func byName(first, second NotificationSendApp) int {
+	if named := strings.Compare(first.AppName, second.AppName); named != 0 {
 		return named
 	}
-	return strings.Compare(first.InstanceName, second.InstanceName)
+	return strings.Compare(first.Name, second.Name)
 }
 
 func toAPINotification(
 	entry Entry,
-	sends map[uuid.UUID][]NotificationSendTarget,
+	sends map[uuid.UUID][]NotificationSendApp,
 ) Notification {
 	shown := Notification{
 		Id: entry.ID, Type: NotificationType(entry.Type), CreatedAt: entry.CreatedAt, ReadAt: entry.ReadAt,
@@ -215,7 +215,7 @@ func toAPINotification(
 			return shown
 		}
 		if offered := sends[*entry.Work]; len(offered) > 0 {
-			shown.SendTargets = &offered
+			shown.SendTo = &offered
 		}
 	}
 	return shown

@@ -92,7 +92,7 @@ func TestDraftedChangesMediaIsPrivateOnAPublishedWork(t *testing.T) {
 	}
 }
 
-func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
+func TestPrivateProtectedTextDoesNotReachASend(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	id := apitest.PublishSealedPreset(t, router, session, "Recorded preset", "Recorded secret")
@@ -102,24 +102,24 @@ func TestPrivateProtectedTextDoesNotReachLinkedDelivery(t *testing.T) {
 	if got := apitest.SaveBlock(t, router, session, id, apitest.BlockNamed(t, owner.Blocks, "preset_core").ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save private protected text: %d %s", got.Code, got.Body.String())
 	}
-	exported, err := download.NewService(pool, works).OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), "preset_lumiverse")
+	exported, err := download.NewService(pool, works).OpenExportForSend(t.Context(), uuid.MustParse(id), "preset_lumiverse")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(exported.Body), "Unpublished secret") || !strings.Contains(string(exported.Body), "Recorded secret") {
-		t.Fatal("linked delivery did not use the recorded protected payload")
+		t.Fatal("linked send did not use the recorded protected payload")
 	}
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Replacement","role":"system","text":"New private prompt","enabled":true}]}`)
 	if got := apitest.SaveBlock(t, router, session, id, apitest.BlockNamed(t, owner.Blocks, "preset_core").ID, core); got.Code != http.StatusOK {
 		t.Fatalf("replace protected drafted-changes prompt: %d %s", got.Code, got.Body.String())
 	}
 	for _, target := range []string{"preset_lumiverse", "preset_sillytavern"} {
-		if _, err := download.NewService(pool, works).OpenExportForLinkedInstance(t.Context(), uuid.MustParse(id), target); !errors.Is(err, download.ErrLinkedInstallOnly) {
-			t.Fatalf("delivery without a policy for %s: %v", target, err)
+		if _, err := download.NewService(pool, works).OpenExportForSend(t.Context(), uuid.MustParse(id), target); !errors.Is(err, download.ErrLinkedInstallOnly) {
+			t.Fatalf("send without a policy for %s: %v", target, err)
 		}
 	}
-	if _, err := works.DeliverableWork(t.Context(), pool, uuid.MustParse(id)); !errors.Is(err, connect.ErrNotDeliverable) {
-		t.Fatalf("advertised delivery without a policy: %v", err)
+	if _, err := works.SendableWork(t.Context(), pool, uuid.MustParse(id)); !errors.Is(err, connect.ErrNotSendable) {
+		t.Fatalf("advertised send without a policy: %v", err)
 	}
 }
 

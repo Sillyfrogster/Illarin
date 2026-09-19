@@ -9,10 +9,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// takeWithheldNotices returns each withhold of an installed type the instance has not been told about, and records that it now has.
-func takeWithheldNotices(ctx context.Context, queries *db.Queries, instanceID uuid.UUID) ([]WithheldWork, error) {
+// takeWithheldNotices returns each withhold of an installed type the connected app has not been told about, and records that it now has.
+func takeWithheldNotices(ctx context.Context, queries *db.Queries, appID uuid.UUID) ([]WithheldWork, error) {
 	rows, err := queries.TakeWithheldNotices(ctx, db.TakeWithheldNoticesParams{
-		InstanceID: uuidValue(instanceID), Types: format.InstalledTypes(),
+		ConnectedAppID: uuidValue(appID), Types: format.InstalledTypes(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("take withheld notices: %w", err)

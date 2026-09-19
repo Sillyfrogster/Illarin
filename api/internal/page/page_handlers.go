@@ -75,7 +75,7 @@ func (h *Handlers) GetWork(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "could not read the work")
 		return
 	}
-	page.InstalledAppVersions, err = h.deliveries.InstalledAppVersions(c.Request.Context(), found.ID, found.InstallCapabilities)
+	page.InstalledAppVersions, err = h.sends.InstalledAppVersions(c.Request.Context(), found.ID, found.InstallCapabilities)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "could not read the work")
 		return
@@ -120,10 +120,10 @@ func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
 		Lifecycle:             WorkDetailLifecycle(found.Lifecycle),
 		IsOwner:               found.IsOwner,
 		LinkedInstallOnly:     found.LinkedInstallOnly,
-		AllowedApps:           apiAllowedApps(found.AllowedApps),
-		EligibleApps:          apiEligibleApps(found.EligibleApps),
+		AllowedApps:           AppNames(found.AllowedApps),
+		EligibleApps:          AppNames(found.EligibleApps),
 		Downloads:             ToDownloads(found.Downloads),
-		AppTargets:            ToAppTargets(found.AppTargets),
+		AppFormats:            ToAppFormats(found.AppFormats),
 		Original:              toAPIOriginalUpload(found.Original),
 		CreatedAt:             found.CreatedAt,
 		Blocks:                blocks,
@@ -175,27 +175,11 @@ func toAPILatestVersion(recorded *work.Version) *RecordedVersion {
 	return &served
 }
 
-func apiAllowedApps(apps []string) []WorkDetailAllowedApps {
-	result := make([]WorkDetailAllowedApps, len(apps))
-	for i, app := range apps {
-		result[i] = WorkDetailAllowedApps(app)
-	}
-	return result
-}
-
-func apiEligibleApps(apps []string) []WorkDetailEligibleApps {
-	result := make([]WorkDetailEligibleApps, len(apps))
-	for i, app := range apps {
-		result[i] = WorkDetailEligibleApps(app)
-	}
-	return result
-}
-
-func ToDownloads(targets []format.Target) []DownloadTarget {
-	downloads := make([]DownloadTarget, 0, len(targets))
-	for _, target := range targets {
-		roles := make([]DownloadRoleVerdict, 0, len(target.Roles))
-		for _, role := range target.Roles {
+func ToDownloads(offered []format.Offered) []DownloadFormat {
+	downloads := make([]DownloadFormat, 0, len(offered))
+	for _, one := range offered {
+		roles := make([]DownloadRoleVerdict, 0, len(one.Roles))
+		for _, role := range one.Roles {
 			roles = append(roles, DownloadRoleVerdict{
 				Role: string(role.Role), Label: role.Label,
 				Verdict:     DownloadRoleVerdictVerdict(role.Verdict),
@@ -205,20 +189,29 @@ func ToDownloads(targets []format.Target) []DownloadTarget {
 				Sample:      toAPIDownloadSample(role.Sample),
 			})
 		}
-		downloads = append(downloads, DownloadTarget{
-			Format: target.Format, Label: target.Label,
-			Recommended: target.Recommended, Roles: roles,
+		downloads = append(downloads, DownloadFormat{
+			Format: one.Format, Label: one.Label,
+			Recommended: one.Recommended, Roles: roles,
 		})
 	}
 	return downloads
 }
 
-func ToAppTargets(apps []format.AppTarget) []AppTarget {
-	targets := make([]AppTarget, 0, len(apps))
-	for _, app := range apps {
-		targets = append(targets, AppTarget{Id: app.ID, Label: app.Label, Format: app.Format})
+// AppNames labels each app id from the app registry
+func AppNames(ids []string) []AppName {
+	names := make([]AppName, len(ids))
+	for i, id := range ids {
+		names[i] = AppName{Id: id, Label: format.AppLabel(id)}
 	}
-	return targets
+	return names
+}
+
+func ToAppFormats(apps []format.AppFormat) []AppFormat {
+	picked := make([]AppFormat, 0, len(apps))
+	for _, app := range apps {
+		picked = append(picked, AppFormat{Id: app.ID, Label: app.Label, Format: app.Format})
+	}
+	return picked
 }
 
 func toAPIDownloadSample(sample block.Sample) DownloadSample {

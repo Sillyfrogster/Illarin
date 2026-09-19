@@ -98,7 +98,7 @@ type preparedIngest struct {
 	SuppliedRoles []block.Role
 	Header        format.Header
 	Remainder     []format.Remainder
-	Protected     format.ProtectedImport
+	Protected     []format.ProtectedPrompt
 	Media         []work.PreparedMedia
 	Vault         []WaitingPicture
 	CreatedAt     *time.Time
@@ -560,19 +560,21 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 	return nil
 }
 
-func importProtectedPrompts(
+// importProtectedPrompts seals the file's private prompts for the apps that keep them private in its format
+func (s *Service) importProtectedPrompts(
 	ctx context.Context,
 	tx pgx.Tx,
 	workID uuid.UUID,
 	blocks []block.Block,
 	carried map[uuid.UUID]string,
-	imported format.ProtectedImport,
+	prepared preparedIngest,
 ) error {
-	if len(imported.Prompts) == 0 {
+	if len(prepared.Protected) == 0 {
 		return nil
 	}
+	apps := private.EligibleApps(s.reg, []string{prepared.Format})
 	if err := private.ImportPromptFragments(
-		ctx, tx, workID, blocks, carried, imported.Prompts, imported.Apps,
+		ctx, tx, workID, blocks, carried, prepared.Protected, apps,
 	); err != nil {
 		return fmt.Errorf("import protected prompts: %w", err)
 	}
@@ -616,7 +618,7 @@ func (s *Service) writeIngestResultWithDecisions(
 			if err != nil {
 				return uuid.Nil, err
 			}
-			exposed, err := private.UnsealedReplacement(ctx, tx, job.Target.WorkID, blocks, identities, prepared.Protected.Prompts)
+			exposed, err := private.UnsealedReplacement(ctx, tx, job.Target.WorkID, blocks, identities, prepared.Protected)
 			if err != nil {
 				return uuid.Nil, err
 			}
@@ -649,9 +651,7 @@ func (s *Service) writeIngestResultWithDecisions(
 	if err := replacePreservedData(ctx, tx, workID, prepared.Remainder); err != nil {
 		return uuid.Nil, err
 	}
-	if err := importProtectedPrompts(
-		ctx, tx, workID, blocks, nil, prepared.Protected,
-	); err != nil {
+	if err := s.importProtectedPrompts(ctx, tx, workID, blocks, nil, prepared); err != nil {
 		return uuid.Nil, err
 	}
 	if err := writeOriginalFile(ctx, tx, workID, 1, job, prepared); err != nil {
@@ -688,10 +688,8 @@ func (s *Service) replaceContent(
 	if err := replacePreservedData(ctx, tx, job.Target.WorkID, remainder); err != nil {
 		return err
 	}
-	if len(prepared.Protected.Prompts) > 0 {
-		if err := importProtectedPrompts(
-			ctx, tx, job.Target.WorkID, blocks, carried, prepared.Protected,
-		); err != nil {
+	if len(prepared.Protected) > 0 {
+		if err := s.importProtectedPrompts(ctx, tx, job.Target.WorkID, blocks, carried, prepared); err != nil {
 			return err
 		}
 	} else if err := private.SyncPromptFragments(

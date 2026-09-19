@@ -21,10 +21,10 @@ func newHub(limit int) *hub {
 	return &hub{waiting: make(map[uuid.UUID]*waiter), limit: limit}
 }
 
-func (h *hub) hold(instanceID uuid.UUID) (*waiter, bool) {
+func (h *hub) hold(appID uuid.UUID) (*waiter, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	previous, held := h.waiting[instanceID]
+	previous, held := h.waiting[appID]
 	if !held && len(h.waiting) >= h.limit {
 		return nil, false
 	}
@@ -35,22 +35,22 @@ func (h *hub) hold(instanceID uuid.UUID) (*waiter, bool) {
 		work:       make(chan struct{}, 1),
 		superseded: make(chan struct{}),
 	}
-	h.waiting[instanceID] = current
+	h.waiting[appID] = current
 	return current, true
 }
 
-func (h *hub) release(instanceID uuid.UUID, held *waiter) {
+func (h *hub) release(appID uuid.UUID, held *waiter) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.waiting[instanceID] == held {
-		delete(h.waiting, instanceID)
+	if h.waiting[appID] == held {
+		delete(h.waiting, appID)
 	}
 }
 
-func (h *hub) signal(instanceID uuid.UUID) {
+func (h *hub) signal(appID uuid.UUID) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	held, waiting := h.waiting[instanceID]
+	held, waiting := h.waiting[appID]
 	if !waiting {
 		return
 	}

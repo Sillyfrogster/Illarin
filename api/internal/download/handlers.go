@@ -28,7 +28,7 @@ func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
 	routes.Handle(http.MethodGet, "/v1/works/:id/versions/:number/downloads", d.JSON, h.GetRecordedVersionDownloads)
 	routes.Handle(http.MethodGet, "/download/:id", d.Download, h.DownloadSource)
-	routes.Handle(http.MethodGet, "/download/:id/:target", d.Download, h.DownloadExport)
+	routes.Handle(http.MethodGet, "/download/:id/:format", d.Download, h.DownloadExport)
 	registerAliases(routes, h)
 }
 
@@ -54,7 +54,7 @@ func (h *Handlers) DownloadExport(c *gin.Context) {
 	if !ok {
 		return
 	}
-	target := c.Param("target")
+	formatID := c.Param("format")
 	q := api.ReadQuery(c)
 	params := DownloadExportParams{
 		Images:  api.QueryText[string](q, "images"),
@@ -75,10 +75,10 @@ func (h *Handlers) DownloadExport(c *gin.Context) {
 	var err error
 	var download Export
 	if params.Version == nil {
-		download, err = h.downloads.OpenExport(c.Request.Context(), id, viewerID, target, gallery)
+		download, err = h.downloads.OpenExport(c.Request.Context(), id, viewerID, formatID, gallery)
 	} else {
 		download, err = h.downloads.OpenRecordedExport(
-			c.Request.Context(), id, viewerID, *params.Version, target, gallery)
+			c.Request.Context(), id, viewerID, *params.Version, formatID, gallery)
 	}
 	if err != nil {
 		Refuse(c, err)
@@ -109,7 +109,7 @@ func chosenGallery(images *string) (*GallerySelection, bool) {
 // Refuse answers a download that could not be made
 func Refuse(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrTargetNotOffered),
+	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrFormatNotOffered),
 		errors.Is(err, ErrLinkedInstallOnly):
 		api.Refuse(c, http.StatusNotFound, "no such download")
 	case errors.Is(err, ErrExportTooLarge):
@@ -137,7 +137,8 @@ func (h *Handlers) HandOffExport(c *gin.Context, download Export) {
 	}
 	c.Header("Content-Disposition", `attachment; filename="`+download.Filename+`"`)
 	c.Header("X-Content-Type-Options", "nosniff")
-	c.Header("X-Illarin-Export-Target", download.Target)
+	c.Header("X-Illarin-Format", download.Format)
+	c.Header(oldFormatHeader, download.Format)
 	c.Data(http.StatusOK, download.MediaType, download.Body)
 }
 
@@ -207,16 +208,16 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 		Type:              RecordedVersionDownloadsType(offered.Type),
 		LinkedInstallOnly: offered.LinkedInstallOnly,
 		Downloads:         page.ToDownloads(offered.Downloads),
-		AppTargets:        page.ToAppTargets(offered.AppTargets),
+		AppFormats:        page.ToAppFormats(offered.AppFormats),
 		Blocks:            blocks,
 		Media:             page.ToImages(offered.Media),
 	})
 }
 
-// LinkedInstanceFile hands a connected app the file it was sent
-func (h *Handlers) LinkedInstanceFile(c *gin.Context, workID uuid.UUID, target string) {
-	if target == format.RawTarget {
-		download, err := h.downloads.SourceForLinkedInstance(c.Request.Context(), workID)
+// ServeSendFile hands a connected app the file it was sent
+func (h *Handlers) ServeSendFile(c *gin.Context, workID uuid.UUID, formatID string) {
+	if formatID == format.Raw {
+		download, err := h.downloads.SourceForSend(c.Request.Context(), workID)
 		if err != nil {
 			Refuse(c, err)
 			return
@@ -224,7 +225,7 @@ func (h *Handlers) LinkedInstanceFile(c *gin.Context, workID uuid.UUID, target s
 		h.HandOffSource(c, download)
 		return
 	}
-	download, err := h.downloads.OpenExportForLinkedInstance(c.Request.Context(), workID, target)
+	download, err := h.downloads.OpenExportForSend(c.Request.Context(), workID, formatID)
 	if err != nil {
 		Refuse(c, err)
 		return

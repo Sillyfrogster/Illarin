@@ -58,7 +58,7 @@ func TestAnUploadArrivingSlowlyRunsToCompletion(t *testing.T) {
 		JSON:     300 * time.Millisecond,
 		Upload:   30 * time.Second,
 		Download: 30 * time.Second,
-		Deliver:  30 * time.Second,
+		Collect:  30 * time.Second,
 		Verify:   30 * time.Second,
 	})
 	base := serve(t, r, config.ServerTimeouts{ReadHeader: 300 * time.Millisecond, Idle: time.Minute})

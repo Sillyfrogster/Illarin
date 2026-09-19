@@ -47,10 +47,10 @@ func downloadVersion(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
-	workID, target, query string,
+	workID, formatID, query string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	request := httptest.NewRequest(http.MethodGet, "/download/"+workID+"/"+target+query, nil)
+	request := httptest.NewRequest(http.MethodGet, "/download/"+workID+"/"+formatID+query, nil)
 	if session != nil {
 		request = apitest.Authorized(request, session)
 	}
@@ -373,7 +373,7 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 
 	for _, want := range []struct {
 		query  string
-		target string
+		format string
 		status int
 	}{
 		{"?version=1", "lorebook_sillytavern", http.StatusOK},
@@ -384,9 +384,9 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 		{"?version=3", "lorebook", http.StatusNotFound},
 		{"?version=0", "lorebook", http.StatusNotFound},
 	} {
-		got := downloadVersion(t, r, nil, workID, want.target, want.query)
+		got := downloadVersion(t, r, nil, workID, want.format, want.query)
 		if got.Code != want.status {
-			t.Errorf("%s %q = %d, want %d: %s", want.target, want.query, got.Code, want.status, got.Body.String())
+			t.Errorf("%s %q = %d, want %d: %s", want.format, want.query, got.Code, want.status, got.Body.String())
 		}
 	}
 
@@ -527,8 +527,8 @@ type recordedDownloadsBody struct {
 	Version           apitest.RecordedVersionBody `json:"version"`
 	Type              string                      `json:"type"`
 	LinkedInstallOnly bool                        `json:"linkedInstallOnly"`
-	Downloads         []apitest.DownloadTarget    `json:"downloads"`
-	AppTargets        []apitest.AppTarget         `json:"appTargets"`
+	Downloads         []apitest.DownloadFormat    `json:"downloads"`
+	AppFormats        []apitest.AppFormat         `json:"appFormats"`
 	Blocks            []apitest.StartedBlock      `json:"blocks"`
 	Media             []struct {
 		ID       string `json:"id"`
@@ -554,10 +554,10 @@ func readVersionDownloads(
 	return apitest.Send(t, r, request)
 }
 
-func offeredFormats(targets []apitest.DownloadTarget) []string {
-	formats := make([]string, 0, len(targets))
-	for _, target := range targets {
-		formats = append(formats, target.Format)
+func offeredFormats(menu []apitest.DownloadFormat) []string {
+	formats := make([]string, 0, len(menu))
+	for _, choice := range menu {
+		formats = append(formats, choice.Format)
 	}
 	return formats
 }
@@ -616,7 +616,7 @@ func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
 			t.Fatalf("sealed version downloads: %d %s", answer.Code, answer.Body.String())
 		}
 		offered := apitest.DecodeResponse[recordedDownloadsBody](t, answer)
-		if !offered.LinkedInstallOnly || len(offered.Downloads) != 0 || len(offered.AppTargets) != 0 {
+		if !offered.LinkedInstallOnly || len(offered.Downloads) != 0 || len(offered.AppFormats) != 0 {
 			t.Fatalf("a sealed version offered a file: %+v", offered)
 		}
 		if strings.Contains(answer.Body.String(), secret) {

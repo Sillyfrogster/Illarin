@@ -17,37 +17,37 @@ const holdMargin = 2 * time.Second
 
 func (s *Sends) Collect(
 	ctx context.Context,
-	instance Instance,
+	app ConnectedApp,
 	acknowledged []uuid.UUID,
 ) (Collected, error) {
 	if len(acknowledged) > s.settings.MaxAcknowledged {
 		return Collected{}, ErrAcknowledgement
 	}
-	if err := s.instances.Throttle(
-		ctx, actionCollect, instance.ID.String(), collectLimit, time.Hour,
+	if err := s.apps.Throttle(
+		ctx, actionCollect, app.ID.String(), collectLimit, time.Hour,
 	); err != nil {
 		return Collected{}, err
 	}
 	if len(acknowledged) > 0 {
-		if _, err := db.New(s.pool).AcknowledgeDeliveries(ctx, db.AcknowledgeDeliveriesParams{
-			InstanceID: uuidValue(instance.ID), DeliveryIds: uuidValues(acknowledged),
+		if _, err := db.New(s.pool).AcknowledgeSends(ctx, db.AcknowledgeSendsParams{
+			ConnectedAppID: uuidValue(app.ID), SendIds: uuidValues(acknowledged),
 		}); err != nil {
-			return Collected{}, fmt.Errorf("acknowledge deliveries: %w", err)
+			return Collected{}, fmt.Errorf("acknowledge sends: %w", err)
 		}
 	}
 
-	held, admitted := s.waiting.hold(instance.ID)
+	held, admitted := s.waiting.hold(app.ID)
 	if !admitted {
 		return Collected{}, ErrTooManyCollectors
 	}
-	defer s.waiting.release(instance.ID, held)
+	defer s.waiting.release(app.ID, held)
 
 	recheck := time.NewTicker(s.settings.Recheck)
 	defer recheck.Stop()
 	waitedOut := time.NewTimer(s.hold(ctx))
 	defer waitedOut.Stop()
 	for {
-		collected, err := s.claim(ctx, instance)
+		collected, err := s.claim(ctx, app)
 		if err != nil {
 			return Collected{}, err
 		}
@@ -87,30 +87,30 @@ func (s *Sends) hold(ctx context.Context) time.Duration {
 	return wait
 }
 
-func (s *Sends) claim(ctx context.Context, instance Instance) (Collected, error) {
+func (s *Sends) claim(ctx context.Context, app ConnectedApp) (Collected, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Collected{}, fmt.Errorf("begin a delivery claim: %w", err)
+		return Collected{}, fmt.Errorf("begin a send claim: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
-	if _, err := queries.AbandonExhaustedDeliveries(ctx, db.AbandonExhaustedDeliveriesParams{
-		InstanceID: uuidValue(instance.ID), MaxAttempts: int32(s.settings.MaxAttempts),
+	if _, err := queries.AbandonExhaustedSends(ctx, db.AbandonExhaustedSendsParams{
+		ConnectedAppID: uuidValue(app.ID), MaxAttempts: int32(s.settings.MaxAttempts),
 	}); err != nil {
-		return Collected{}, fmt.Errorf("abandon exhausted deliveries: %w", err)
+		return Collected{}, fmt.Errorf("abandon exhausted sends: %w", err)
 	}
-	claimed, err := queries.ClaimDeliveries(ctx, db.ClaimDeliveriesParams{
+	claimed, err := queries.ClaimSends(ctx, db.ClaimSendsParams{
 		LeaseExpiresAt: timestamptz(s.now().Add(s.settings.Lease)),
-		InstanceID:     uuidValue(instance.ID),
+		ConnectedAppID: uuidValue(app.ID),
 		MaxAttempts:    int32(s.settings.MaxAttempts),
 		BatchSize:      int32(s.settings.Batch),
 	})
 	if err != nil {
-		return Collected{}, fmt.Errorf("claim deliveries: %w", err)
+		return Collected{}, fmt.Errorf("claim sends: %w", err)
 	}
 	work := make([]Work, 0, len(claimed))
 	for _, row := range claimed {
-		released, err := s.release(ctx, tx, instance, row)
+		released, err := s.release(ctx, tx, app, row)
 		if err != nil {
 			return Collected{}, err
 		}
@@ -118,12 +118,12 @@ func (s *Sends) claim(ctx context.Context, instance Instance) (Collected, error)
 			work = append(work, *released)
 		}
 	}
-	withheld, err := takeWithheldNotices(ctx, queries, instance.ID)
+	withheld, err := takeWithheldNotices(ctx, queries, app.ID)
 	if err != nil {
 		return Collected{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Collected{}, fmt.Errorf("commit a delivery claim: %w", err)
+		return Collected{}, fmt.Errorf("commit a send claim: %w", err)
 	}
 	return Collected{Work: work, Withheld: withheld}, nil
 }
@@ -131,37 +131,37 @@ func (s *Sends) claim(ctx context.Context, instance Instance) (Collected, error)
 func (s *Sends) release(
 	ctx context.Context,
 	tx pgx.Tx,
-	instance Instance,
-	row db.ClaimDeliveriesRow,
+	app ConnectedApp,
+	row db.ClaimSendsRow,
 ) (*Work, error) {
 	queries := db.New(tx)
-	deliveryID := uuid.UUID(row.ID.Bytes)
+	sendID := uuid.UUID(row.ID.Bytes)
 	workID := uuid.UUID(row.WorkID.Bytes)
-	sendable, err := s.works.DeliverableWork(ctx, tx, workID)
-	if errors.Is(err, ErrNotDeliverable) || errors.Is(err, pgx.ErrNoRows) {
+	sendable, err := s.works.SendableWork(ctx, tx, workID)
+	if errors.Is(err, ErrNotSendable) || errors.Is(err, pgx.ErrNoRows) {
 		return nil, stop(ctx, queries, row.ID, ReasonWithdrawn)
 	}
 	if err != nil {
 		return nil, err
 	}
-	target, label, chosen := chooseTarget(
-		instance.AcceptedTargets, sendable.Targets, sendable.HasOriginal,
+	chosenFormat, label, chosen := chooseFormat(
+		app.AcceptedFormats, sendable.Formats, sendable.HasOriginal,
 	)
-	if !chosen || !installs(instance.Capabilities, sendable) {
+	if !chosen || !installs(app.Declared, sendable) {
 		return nil, stop(ctx, queries, row.ID, ReasonUnsupported)
 	}
-	if err := queries.SetDeliveryTarget(ctx, db.SetDeliveryTargetParams{
-		ChosenTarget: textValue(target), ID: row.ID,
+	if err := queries.SetSendFormat(ctx, db.SetSendFormatParams{
+		ChosenFormat: textValue(chosenFormat), ID: row.ID,
 	}); err != nil {
 		return nil, fmt.Errorf("record the chosen format: %w", err)
 	}
 	return &Work{
-		ID: deliveryID, WorkID: workID,
+		ID: sendID, WorkID: workID,
 		VersionNumber: sendable.VersionNumber,
 		Type:          sendable.Type, Name: sendable.Name,
-		Format: target, Label: label,
+		Format: chosenFormat, Label: label,
 		QueuedAt: row.QueuedAt.Time, LeaseExpiresAt: row.LeaseExpiresAt.Time,
-		Files: s.files(deliveryID, sendable),
+		Files: s.files(sendID, sendable),
 	}, nil
 }
 
@@ -171,19 +171,19 @@ func stop(
 	id pgtype.UUID,
 	reason Reason,
 ) error {
-	if err := queries.FailDelivery(ctx, db.FailDeliveryParams{
+	if err := queries.FailSend(ctx, db.FailSendParams{
 		SettledReason: textValue(string(reason)), ID: id,
 	}); err != nil {
-		return fmt.Errorf("stop a delivery: %w", err)
+		return fmt.Errorf("stop a send: %w", err)
 	}
 	return nil
 }
 
-func (s *Sends) files(deliveryID uuid.UUID, sendable Deliverable) []File {
+func (s *Sends) files(sendID uuid.UUID, sendable Sendable) []File {
 	files := make([]File, 0, len(sendable.Pictures)+1)
 	files = append(files, File{
 		Type: FileExport,
-		URL:  s.works.SignedURL(deliveryPathStart + deliveryID.String() + "/export"),
+		URL:  s.works.SignedURL(sendPathStart + sendID.String() + "/export"),
 	})
 	for _, picture := range sendable.Pictures {
 		mediaID := picture.MediaID

@@ -271,7 +271,7 @@ func (h *Handlers) allowAccountAttempt(
 	limit int32,
 	window time.Duration,
 ) bool {
-	err := h.links.Throttle(c.Request.Context(), action, api.RequestSource(c), limit, window)
+	err := h.apps.Throttle(c.Request.Context(), action, api.RequestSource(c), limit, window)
 	if err == nil {
 		return true
 	}

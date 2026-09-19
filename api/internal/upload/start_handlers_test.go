@@ -161,3 +161,37 @@ func TestStartingAnWorkNeedsAVerifiedAccount(t *testing.T) {
 		t.Errorf("status = %d, want 401 with no account signed in", response.Code)
 	}
 }
+
+func TestBuildChoicesNameEachBuildableTypeAndTheAppsItAsksFor(t *testing.T) {
+	t.Parallel()
+	r, _, _, _ := harness.NewExtensionRouter(t)
+
+	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/build-choices", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+	choices := apitest.DecodeResponse[struct {
+		Types []struct {
+			Type string `json:"type"`
+			Apps []struct {
+				ID    string `json:"id"`
+				Label string `json:"label"`
+			} `json:"apps"`
+		} `json:"types"`
+	}](t, response)
+	asked := map[string]int{}
+	for _, choice := range choices.Types {
+		asked[choice.Type] = len(choice.Apps)
+		for _, app := range choice.Apps {
+			if app.ID == "" || app.Label == "" {
+				t.Errorf("%s offers an app with no id or label: %+v", choice.Type, app)
+			}
+		}
+	}
+	if asked["character"] != 0 || asked["preset"] == 0 || asked["theme"] == 0 {
+		t.Fatalf("choices = %s, want a character asking for no app and a preset and theme asking for one", response.Body.String())
+	}
+	if _, listed := asked["extension"]; listed {
+		t.Fatalf("choices = %s, want no extension, which only arrives as an upload", response.Body.String())
+	}
+}

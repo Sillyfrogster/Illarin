@@ -18,7 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-var ErrTargetNotOffered = errors.New("that download is not offered for this work")
+var ErrFormatNotOffered = errors.New("that download is not offered for this work")
 
 var ErrLinkedInstallOnly = errors.New("this work is linked-install-only")
 
@@ -42,7 +42,7 @@ type Export struct {
 	Body      []byte
 	MediaType string
 	Filename  string
-	Target    string
+	Format    string
 	Event     *Event
 }
 
@@ -65,7 +65,7 @@ func (s *Service) OpenExport(
 	ctx context.Context,
 	workID uuid.UUID,
 	viewerID *uuid.UUID,
-	target string,
+	formatID string,
 	gallery *GallerySelection,
 ) (Export, error) {
 	tx, err := s.works.BeginReadSnapshot(ctx)
@@ -89,18 +89,18 @@ func (s *Service) OpenExport(
 	if len(apps) > 0 || private.HasPromptFragments(subject.blocks) {
 		return Export{}, ErrLinkedInstallOnly
 	}
-	offered := s.reg.OfferedTargets(subject.capability())
-	if !offersTarget(offered, target) {
-		return Export{}, ErrTargetNotOffered
+	offered := s.reg.OfferedFormats(subject.capability())
+	if !offersFormat(offered, formatID) {
+		return Export{}, ErrFormatNotOffered
 	}
-	module, known := s.reg.ByID(target)
+	module, known := s.reg.ByID(formatID)
 	if !known {
-		return Export{}, ErrTargetNotOffered
+		return Export{}, ErrFormatNotOffered
 	}
 	declaration := module.Declaration()
 	writer, writes := module.(format.Writer)
 	if !writes {
-		return Export{}, ErrTargetNotOffered
+		return Export{}, ErrFormatNotOffered
 	}
 	written, err := s.writeExport(ctx, tx, subject, writer)
 	if err != nil {
@@ -109,20 +109,20 @@ func (s *Service) OpenExport(
 	if err := tx.Commit(ctx); err != nil {
 		return Export{}, fmt.Errorf("finish export snapshot: %w", err)
 	}
-	return subject.export(written, target, declaration.Label, viewerID), nil
+	return subject.export(written, formatID, declaration.Label, viewerID), nil
 }
 
 func (subject exportSubject) export(
 	written format.MainFile,
-	target, label string,
+	formatID, label string,
 	viewerID *uuid.UUID,
 ) Export {
 	export := Export{
-		Body: written.Body, MediaType: written.MediaType, Target: target,
+		Body: written.Body, MediaType: written.MediaType, Format: formatID,
 		Filename: format.Filename(subject.name, subject.versionName(), label, written.Extension),
 	}
 	if subject.lifecycle == work.LifecyclePublished {
-		event := newEvent(subject.workID, subject.originalFileID, target, subject.ownerID, viewerID)
+		event := newEvent(subject.workID, subject.originalFileID, formatID, subject.ownerID, viewerID)
 		export.Event = &event
 	}
 	return export
@@ -135,14 +135,14 @@ func (subject exportSubject) versionName() string {
 	return fmt.Sprintf("version %d", subject.recorded.Number)
 }
 
-func (s *Service) OpenExportForLinkedInstance(
+func (s *Service) OpenExportForSend(
 	ctx context.Context,
 	workID uuid.UUID,
-	target string,
+	formatID string,
 ) (Export, error) {
 	tx, err := s.works.BeginReadSnapshot(ctx)
 	if err != nil {
-		return Export{}, fmt.Errorf("begin linked export snapshot: %w", err)
+		return Export{}, fmt.Errorf("begin send export snapshot: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -154,8 +154,8 @@ func (s *Service) OpenExportForLinkedInstance(
 	if err != nil {
 		return Export{}, err
 	}
-	if len(apps) > 0 && !private.AllowsTarget(apps, subject.workType, target) {
-		return Export{}, ErrTargetNotOffered
+	if len(apps) > 0 && !private.AllowsFormat(s.reg, apps, formatID) {
+		return Export{}, ErrFormatNotOffered
 	}
 	if len(apps) == 0 {
 		if err := private.ApplyPublishedPolicy(ctx, tx, workID, subject.blocks); err != nil {
@@ -168,25 +168,25 @@ func (s *Service) OpenExportForLinkedInstance(
 	if err := private.RestorePromptFragments(ctx, tx, workID, subject.blocks); err != nil {
 		return Export{}, err
 	}
-	if !offersTarget(s.reg.OfferedTargets(subject.capability()), target) {
-		return Export{}, ErrTargetNotOffered
+	if !offersFormat(s.reg.OfferedFormats(subject.capability()), formatID) {
+		return Export{}, ErrFormatNotOffered
 	}
-	module, known := s.reg.ByID(target)
+	module, known := s.reg.ByID(formatID)
 	if !known {
-		return Export{}, ErrTargetNotOffered
+		return Export{}, ErrFormatNotOffered
 	}
 	writer, writes := module.(format.Writer)
 	if !writes {
-		return Export{}, ErrTargetNotOffered
+		return Export{}, ErrFormatNotOffered
 	}
 	written, err := s.writeExport(ctx, tx, subject, writer)
 	if err != nil {
 		return Export{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Export{}, fmt.Errorf("finish linked export snapshot: %w", err)
+		return Export{}, fmt.Errorf("finish send export snapshot: %w", err)
 	}
-	export := subject.export(written, target, module.Declaration().Label, nil)
+	export := subject.export(written, formatID, module.Declaration().Label, nil)
 	if export.Event != nil {
 		export.Event.AuthorizationClass = AuthorizationLinkedInstance
 	}
@@ -231,7 +231,7 @@ func (s *Service) writeExport(
 // readUpload reads the file behind the version being exported.
 func (s *Service) readUpload(ctx context.Context, q db.DBTX, subject exportSubject) ([]byte, error) {
 	if subject.originalFileID == nil {
-		return nil, fmt.Errorf("%w: no upload is recorded for this version", ErrTargetNotOffered)
+		return nil, fmt.Errorf("%w: no upload is recorded for this version", ErrFormatNotOffered)
 	}
 	var blobID uuid.UUID
 	if err := q.QueryRow(ctx,
@@ -290,9 +290,9 @@ func (subject exportSubject) capability() format.CapabilitySubject {
 	}
 }
 
-func offersTarget(offered []format.Target, target string) bool {
+func offersFormat(offered []format.Offered, formatID string) bool {
 	for _, candidate := range offered {
-		if candidate.Format == target {
+		if candidate.Format == formatID {
 			return true
 		}
 	}
@@ -344,12 +344,12 @@ func (s *Service) travellingPreservedData(
 	ctx context.Context,
 	q db.DBTX,
 	subject exportSubject,
-	target string,
+	formatID string,
 ) ([]format.Remainder, error) {
 	if subject.origin == "" {
 		return nil, nil
 	}
-	written, writes := s.reg.Declaration(target)
+	written, writes := s.reg.Declaration(formatID)
 	if !writes || !s.reg.TravelsWithOrigin(subject.origin, written) {
 		return nil, nil
 	}

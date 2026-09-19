@@ -12,7 +12,7 @@ func InstalledTypes() []string {
 	return []string{extensionType}
 }
 
-// InstallCapabilities names what an instance must declare, one entry per app, before a work of this type is sent to it.
+// InstallCapabilities names what a connected app must declare, one entry per app, before a work of this type is sent to it.
 func InstallCapabilities(workType string, formats []string) []string {
 	if !slices.Contains(InstalledTypes(), workType) {
 		return nil

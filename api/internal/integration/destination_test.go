@@ -303,8 +303,8 @@ func newDestinationStackThrough(
 	outbox := &apitest.VerificationOutbox{}
 	to := newReceiver(t)
 	discord := newDiscordServer(t)
-	handlers := apitest.NewServicesWithDelivery(
-		t, pool, 1<<20, outbox, apitest.DeliverySettings(),
+	handlers := apitest.NewServicesWithSends(
+		t, pool, 1<<20, outbox, apitest.SendSettings(),
 		throughLoopback{receiver: to.server.URL, discord: discord.server.URL, resolves: resolves},
 	)
 	router := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())

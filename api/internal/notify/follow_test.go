@@ -96,14 +96,14 @@ func TestADraftCannotBeFollowedButAnUnlistedWorkCan(t *testing.T) {
 func TestAnInstallReportedByLibrarySyncCountsAsFollowingUntilTheReaderStops(t *testing.T) {
 	t.Parallel()
 	s := newFollowStack(t)
-	studio := apitest.LinkDeviceInstance(t, s.router, s.creator, "Lumiverse", "Studio", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
-	apitest.ReportInstalled(t, s.router, studio.AccessToken, "", s.workID)
+	studio := apitest.ConnectApp(t, s.router, s.creator, "Lumiverse", "Studio", []string{apitest.ReceivePermission, apitest.LibrarySyncPermission})
+	apitest.ReportLibrary(t, s.router, studio.AccessToken, "", s.workID)
 	if got := s.followState(t, s.reader); got == nil || got.State != "none" || len(got.InstalledOn) != 0 {
 		t.Fatalf("another account's install gave the reader %+v, want none", got)
 	}
 
-	desk := apitest.LinkDeviceInstance(t, s.router, s.reader, "Lumiverse", "Reading desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
-	apitest.ReportInstalled(t, s.router, desk.AccessToken, "", s.workID)
+	desk := apitest.ConnectApp(t, s.router, s.reader, "Lumiverse", "Reading desk", []string{apitest.ReceivePermission, apitest.LibrarySyncPermission})
+	apitest.ReportLibrary(t, s.router, desk.AccessToken, "", s.workID)
 	if got := s.followState(t, s.reader); got == nil || got.State != "installed" ||
 		!slices.Equal(got.InstalledOn, []string{"Reading desk"}) {
 		t.Fatalf("follow with the work installed = %+v, want installed on Reading desk", got)
@@ -112,7 +112,7 @@ func TestAnInstallReportedByLibrarySyncCountsAsFollowingUntilTheReaderStops(t *t
 	if got := s.setFollow(t, s.reader, http.MethodDelete); got.State != "stopped" {
 		t.Fatalf("stopping an installed work answered %+v, want stopped", got)
 	}
-	apitest.ReportInstalled(t, s.router, desk.AccessToken, "", s.workID)
+	apitest.ReportLibrary(t, s.router, desk.AccessToken, "", s.workID)
 	if got := s.followState(t, s.reader); got == nil || got.State != "stopped" ||
 		!slices.Equal(got.InstalledOn, []string{"Reading desk"}) {
 		t.Fatalf("follow after the next library sync = %+v, want it still stopped", got)
@@ -123,21 +123,21 @@ func TestAnInstallReportedByLibrarySyncCountsAsFollowingUntilTheReaderStops(t *t
 	}
 }
 
-func TestARevokedInstanceNoLongerCountsAsAFollow(t *testing.T) {
+func TestARevokedConnectedAppNoLongerCountsAsAFollow(t *testing.T) {
 	t.Parallel()
 	s := newFollowStack(t)
-	desk := apitest.LinkDeviceInstance(t, s.router, s.reader, "Lumiverse", "Reading desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
-	laptop := apitest.LinkDeviceInstance(t, s.router, s.reader, "Lumiverse", "Travel laptop", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
-	apitest.ReportInstalled(t, s.router, desk.AccessToken, "", s.workID)
-	apitest.ReportInstalled(t, s.router, laptop.AccessToken, "", s.workID)
+	desk := apitest.ConnectApp(t, s.router, s.reader, "Lumiverse", "Reading desk", []string{apitest.ReceivePermission, apitest.LibrarySyncPermission})
+	laptop := apitest.ConnectApp(t, s.router, s.reader, "Lumiverse", "Travel laptop", []string{apitest.ReceivePermission, apitest.LibrarySyncPermission})
+	apitest.ReportLibrary(t, s.router, desk.AccessToken, "", s.workID)
+	apitest.ReportLibrary(t, s.router, laptop.AccessToken, "", s.workID)
 	if got := s.followState(t, s.reader); got == nil || got.State != "installed" ||
 		!slices.Equal(got.InstalledOn, []string{"Reading desk", "Travel laptop"}) {
 		t.Fatalf("follow with two installs = %+v, want installed on both", got)
 	}
 
-	revoke := func(grant apitest.TokenGrant) {
+	revoke := func(credentials apitest.AppCredentials) {
 		t.Helper()
-		revoked := apitest.Send(t, s.router, apitest.BrowserRequest(t, http.MethodDelete, "/v1/instances/"+grant.Instance.ID, nil, s.reader))
+		revoked := apitest.Send(t, s.router, apitest.BrowserRequest(t, http.MethodDelete, "/v1/connected-apps/"+credentials.ConnectedApp.ID, nil, s.reader))
 		if revoked.Code != http.StatusNoContent {
 			t.Fatalf("revoke status = %d, want 204: %s", revoked.Code, revoked.Body.String())
 		}

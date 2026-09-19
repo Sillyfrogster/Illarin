@@ -19,105 +19,105 @@ func publishedSpindleExtension(t *testing.T, r http.Handler, session *http.Cooki
 	return apitest.PublishExtension(t, r, session, works, "Quiet Toolbox", upload)
 }
 
-func TestAnExtensionGoesOnlyToAnInstanceDeclaringItsAppsInstallCapability(t *testing.T) {
+func TestAnExtensionGoesOnlyToAConnectedAppDeclaringItsAppsInstallCapability(t *testing.T) {
 	t.Parallel()
 	r, session, works, _ := harness.NewExtensionRouter(t)
 	workID := publishedSpindleExtension(t, r, session, works)
-	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
+	credentials := apitest.ConnectApp(t, r, session, "Lumiverse", "desk", []string{apitest.ReceivePermission, apitest.LibrarySyncPermission})
 
 	for name, capabilities := range map[string][]string{
 		"no capability":         {},
 		"another app's":         {apitest.SillyTavernInstalls},
 		"an unknown capability": {"lumiverse:extension-install", "chat.lumiverse:extension-installer"},
 	} {
-		apitest.Declare(t, r, grant.AccessToken, capabilities, []string{extension.SpindleID})
-		if state := apitest.WorkInstances(t, r, session, workID).Items[0]; state.CanReceive {
-			t.Errorf("%s: the page offers the extension to the instance", name)
+		apitest.DeclareCapabilities(t, r, credentials.AccessToken, capabilities, []string{extension.SpindleID})
+		if state := apitest.WorkConnectedApps(t, r, session, workID).Items[0]; state.CanReceive {
+			t.Errorf("%s: the page offers the extension to the connected app", name)
 		}
-		refused := apitest.SendToInstance(t, r, session, workID, grant.Instance.ID)
+		refused := apitest.SendToApp(t, r, session, workID, credentials.ConnectedApp.ID)
 		if refused.Code != http.StatusConflict || !strings.Contains(refused.Body.String(), "does not install extensions") {
 			t.Errorf("%s: send = %d %s, want 409 naming the missing capability", name, refused.Code, refused.Body.String())
 		}
 	}
 
-	apitest.Declare(t, r, grant.AccessToken, []string{"chat.lumiverse:preset-install", apitest.LumiverseInstalls}, []string{extension.SpindleID})
-	if state := apitest.WorkInstances(t, r, session, workID).Items[0]; !state.CanReceive {
-		t.Fatal("the page does not offer the extension to an instance declaring the capability")
+	apitest.DeclareCapabilities(t, r, credentials.AccessToken, []string{"chat.lumiverse:preset-install", apitest.LumiverseInstalls}, []string{extension.SpindleID})
+	if state := apitest.WorkConnectedApps(t, r, session, workID).Items[0]; !state.CanReceive {
+		t.Fatal("the page does not offer the extension to a connected app declaring the capability")
 	}
-	queued := apitest.SendToInstance(t, r, session, workID, grant.Instance.ID)
+	queued := apitest.SendToApp(t, r, session, workID, credentials.ConnectedApp.ID)
 	if queued.Code != http.StatusAccepted {
 		t.Fatalf("send = %d: %s", queued.Code, queued.Body.String())
 	}
-	if first := apitest.DecodeResponse[apitest.QueuedDelivery](t, queued); first.State != "queued" || first.UpdatesInstall {
-		t.Fatalf("delivery = %+v, want a queued first install", first)
+	if first := apitest.DecodeResponse[apitest.QueuedSend](t, queued); first.State != "queued" || first.UpdatesInstall {
+		t.Fatalf("send = %+v, want a queued first install", first)
 	}
 }
 
-func TestTheInstallTrackFollowsTheDeliveryAndTheLibrary(t *testing.T) {
+func TestTheInstallTrackFollowsTheSendAndTheLibrary(t *testing.T) {
 	t.Parallel()
 	r, session, works, _ := harness.NewExtensionRouter(t)
 	workID := publishedSpindleExtension(t, r, session, works)
-	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
-	apitest.Declare(t, r, grant.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
-	apitest.SendToInstance(t, r, session, workID, grant.Instance.ID)
+	credentials := apitest.ConnectApp(t, r, session, "Lumiverse", "desk", []string{apitest.ReceivePermission, apitest.LibrarySyncPermission})
+	apitest.DeclareCapabilities(t, r, credentials.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
+	apitest.SendToApp(t, r, session, workID, credentials.ConnectedApp.ID)
 
-	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, r, grant.AccessToken, nil)).Deliveries[0]
+	work := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, r, credentials.AccessToken, nil)).Sends[0]
 	if work.Format != extension.SpindleID || work.Type != "extension" {
-		t.Fatalf("delivery = %+v, want the Spindle archive", work)
+		t.Fatalf("send = %+v, want the Spindle archive", work)
 	}
-	if picked := apitest.WorkInstances(t, r, session, workID).Items[0].Delivery; picked == nil || picked.State != "released" {
-		t.Fatalf("delivery = %+v, want it picked up", picked)
+	if picked := apitest.WorkConnectedApps(t, r, session, workID).Items[0].Send; picked == nil || picked.State != "released" {
+		t.Fatalf("send = %+v, want it picked up", picked)
 	}
 
-	apitest.Collect(t, r, grant.AccessToken, []string{work.ID})
-	installed := apitest.WorkInstances(t, r, session, workID).Items[0]
-	if installed.Delivery == nil || installed.Delivery.State != "delivered" || installed.Delivery.SettledAt == nil {
-		t.Fatalf("delivery = %+v, want it delivered", installed.Delivery)
+	apitest.Collect(t, r, credentials.AccessToken, []string{work.ID})
+	installed := apitest.WorkConnectedApps(t, r, session, workID).Items[0]
+	if installed.Send == nil || installed.Send.State != "delivered" || installed.Send.SettledAt == nil {
+		t.Fatalf("send = %+v, want it delivered", installed.Send)
 	}
 	if installed.InstalledVersion != nil {
-		t.Fatalf("instance = %+v, want no library word yet", installed)
+		t.Fatalf("connected app = %+v, want no library word yet", installed)
 	}
 
-	syncLibrary(t, r, grant.AccessToken, false, []map[string]any{
+	syncLibrary(t, r, credentials.AccessToken, false, []map[string]any{
 		{"workId": workID, "versionNumber": 1},
 	}, nil)
-	reported := apitest.WorkInstances(t, r, session, workID).Items[0]
+	reported := apitest.WorkConnectedApps(t, r, session, workID).Items[0]
 	if reported.InstalledVersion == nil || *reported.InstalledVersion != 1 {
-		t.Fatalf("instance = %+v, want version 1 installed", reported)
+		t.Fatalf("connected app = %+v, want version 1 installed", reported)
 	}
 
-	again := apitest.DecodeResponse[apitest.QueuedDelivery](t, apitest.SendToInstance(t, r, session, workID, grant.Instance.ID))
+	again := apitest.DecodeResponse[apitest.QueuedSend](t, apitest.SendToApp(t, r, session, workID, credentials.ConnectedApp.ID))
 	if !again.UpdatesInstall || again.State != "queued" {
-		t.Fatalf("second delivery = %+v, want one that updates the install", again)
+		t.Fatalf("second send = %+v, want one that updates the install", again)
 	}
 }
 
-func TestAnInstanceThatDropsTheInstallCapabilityStopsTheDeliveryAsUnsupported(t *testing.T) {
+func TestAConnectedAppThatDropsTheInstallCapabilityStopsTheSendAsUnsupported(t *testing.T) {
 	t.Parallel()
 	r, session, works, pool := harness.NewExtensionRouter(t)
 	workID := publishedSpindleExtension(t, r, session, works)
-	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
-	apitest.Declare(t, r, grant.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
-	if queued := apitest.SendToInstance(t, r, session, workID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	credentials := apitest.ConnectApp(t, r, session, "Lumiverse", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareCapabilities(t, r, credentials.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
+	if queued := apitest.SendToApp(t, r, session, workID, credentials.ConnectedApp.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send = %d: %s", queued.Code, queued.Body.String())
 	}
-	apitest.Declare(t, r, grant.AccessToken, []string{}, []string{extension.SpindleID})
+	apitest.DeclareCapabilities(t, r, credentials.AccessToken, []string{}, []string{extension.SpindleID})
 
-	if rec := apitest.Collect(t, r, grant.AccessToken, nil); rec.Code != http.StatusNoContent {
+	if rec := apitest.Collect(t, r, credentials.AccessToken, nil); rec.Code != http.StatusNoContent {
 		t.Fatalf("collect = %d, want 204: %s", rec.Code, rec.Body.String())
 	}
 	var state, reason string
 	if err := pool.QueryRow(context.Background(),
-		`select state, coalesce(settled_reason, '') from instance_deliveries where work_id = $1`, workID,
+		`select state, coalesce(settled_reason, '') from sends where work_id = $1`, workID,
 	).Scan(&state, &reason); err != nil {
-		t.Fatalf("read the delivery: %v", err)
+		t.Fatalf("read the send: %v", err)
 	}
 	if state != "failed" || reason != "unsupported" {
-		t.Fatalf("delivery = %s/%s, want failed/unsupported", state, reason)
+		t.Fatalf("send = %s/%s, want failed/unsupported", state, reason)
 	}
-	stopped := apitest.WorkInstances(t, r, session, workID).Items[0]
-	if stopped.CanReceive || stopped.Delivery == nil || stopped.Delivery.Reason == nil || *stopped.Delivery.Reason != "unsupported" {
-		t.Fatalf("instance = %+v, want the stop and its reason on the page", stopped)
+	stopped := apitest.WorkConnectedApps(t, r, session, workID).Items[0]
+	if stopped.CanReceive || stopped.Send == nil || stopped.Send.Reason == nil || *stopped.Send.Reason != "unsupported" {
+		t.Fatalf("connected app = %+v, want the stop and its reason on the page", stopped)
 	}
 }
 
@@ -125,10 +125,10 @@ func TestALibraryEntryAddressMustBeAWebAddress(t *testing.T) {
 	t.Parallel()
 	r, session, works, _ := harness.NewExtensionRouter(t)
 	workID := publishedSpindleExtension(t, r, session, works)
-	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
+	credentials := apitest.ConnectApp(t, r, session, "Lumiverse", "desk", []string{apitest.ReceivePermission, apitest.LibrarySyncPermission})
 
 	for _, bad := range []string{"javascript:alert(1)", "lumiverse://extensions/x", "/extensions/x", "http://localhost/" + strings.Repeat("a", 600)} {
-		rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodPost, "/v1/library/sync", grant.AccessToken, map[string]any{
+		rec := apitest.Send(t, r, apitest.AsApp(t, http.MethodPost, "/v1/library/sync", credentials.AccessToken, map[string]any{
 			"snapshot": false,
 			"entries":  []map[string]any{{"workId": workID, "address": bad}},
 		}))
@@ -136,7 +136,7 @@ func TestALibraryEntryAddressMustBeAWebAddress(t *testing.T) {
 			t.Errorf("address %q = %d, want 400: %s", bad, rec.Code, rec.Body.String())
 		}
 	}
-	if state := apitest.WorkInstances(t, r, session, workID).Items[0]; state.InstalledVersion != nil {
+	if state := apitest.WorkConnectedApps(t, r, session, workID).Items[0]; state.InstalledVersion != nil {
 		t.Fatal("a refused report still recorded the install")
 	}
 }

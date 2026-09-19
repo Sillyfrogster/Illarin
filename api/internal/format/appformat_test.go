@@ -11,13 +11,13 @@ import (
 func TestEveryAppIsOfferedTheFormatThatLandsMostOfTheWorkInIt(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"), plainDeclaration("charx"))
-	targets := registry.OfferedTargets(galleryCharacter())
-	byFormat := make(map[string]Target, len(targets))
-	for _, target := range targets {
-		byFormat[target.Format] = target
+	formats := registry.OfferedFormats(galleryCharacter())
+	byFormat := make(map[string]Offered, len(formats))
+	for _, one := range formats {
+		byFormat[one.Format] = one
 	}
 
-	offered := AppTargets(targets, registry)
+	offered := AppFormats(formats, registry)
 	if len(offered) != len(Apps()) {
 		t.Fatalf("offered %d apps, want all %d", len(offered), len(Apps()))
 	}
@@ -31,9 +31,9 @@ func TestEveryAppIsOfferedTheFormatThatLandsMostOfTheWorkInIt(t *testing.T) {
 func TestNoAppIsSentAFormatOthersWillNotShowWhenOneReadsEverywhere(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"), plainDeclaration("charx"))
-	targets := registry.OfferedTargets(galleryCharacter())
+	formats := registry.OfferedFormats(galleryCharacter())
 
-	for _, app := range AppTargets(targets, registry) {
+	for _, app := range AppFormats(formats, registry) {
 		if app.Format != "charx" {
 			t.Errorf("%s = %q, want the format whose gallery every app shows", app.ID, app.Format)
 		}
@@ -43,9 +43,9 @@ func TestNoAppIsSentAFormatOthersWillNotShowWhenOneReadsEverywhere(t *testing.T)
 func TestAnAppThatUnpacksTheNoteIsOfferedTheFormatCarryingIt(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"))
-	targets := registry.OfferedTargets(galleryCharacter())
+	formats := registry.OfferedFormats(galleryCharacter())
 
-	offered := AppTargets(targets, registry)
+	offered := AppFormats(formats, registry)
 	if len(offered) == 0 {
 		t.Fatal("no app was offered anything")
 	}
@@ -59,9 +59,9 @@ func TestAnAppThatUnpacksTheNoteIsOfferedTheFormatCarryingIt(t *testing.T) {
 func TestAnAppThatReadsNoOfferedFormatIsOfferedNothing(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, plainDeclaration("byaf"))
-	targets := registry.OfferedTargets(galleryCharacter())
+	formats := registry.OfferedFormats(galleryCharacter())
 
-	if offered := AppTargets(targets, registry); len(offered) != 0 {
+	if offered := AppFormats(formats, registry); len(offered) != 0 {
 		t.Fatalf("offered = %v, want nothing for a format no app reads", offered)
 	}
 }
@@ -69,12 +69,12 @@ func TestAnAppThatReadsNoOfferedFormatIsOfferedNothing(t *testing.T) {
 func TestAFormatOnlySomeAppsUnpackCountsAsALossToTheRest(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"))
-	target := registry.OfferedTargets(galleryCharacter())[0]
+	one := registry.OfferedFormats(galleryCharacter())[0]
 
-	if lost := target.LossesFor("risu"); lost != 0 {
+	if lost := one.LossesFor("risu"); lost != 0 {
 		t.Errorf("RisuAI loses %d, want nothing from a format it unpacks", lost)
 	}
-	if lost := target.LossesFor("sillytavern"); lost != 1 {
+	if lost := one.LossesFor("sillytavern"); lost != 1 {
 		t.Errorf("SillyTavern loses %d, want the gallery it never shows", lost)
 	}
 }
@@ -82,9 +82,9 @@ func TestAFormatOnlySomeAppsUnpackCountsAsALossToTheRest(t *testing.T) {
 func TestARoleCarriesTheAppsThatShowIt(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, noteDeclaration("chara_card_v3"))
-	target := registry.OfferedTargets(galleryCharacter())[0]
+	one := registry.OfferedFormats(galleryCharacter())[0]
 
-	for _, role := range target.Roles {
+	for _, role := range one.Roles {
 		if role.Role != block.RoleGallery {
 			continue
 		}

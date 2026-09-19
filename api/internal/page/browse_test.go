@@ -193,9 +193,9 @@ type browseFacetGroup struct {
 }
 
 type browseReading struct {
-	Names     []string
-	Platforms []browseOption
-	Facets    []browseFacetGroup
+	Names  []string
+	Apps   []browseOption
+	Facets []browseFacetGroup
 }
 
 func readBrowse(t *testing.T, router http.Handler, path string) browseReading {
@@ -208,13 +208,13 @@ func readBrowse(t *testing.T, router http.Handler, path string) browseReading {
 		Items []struct {
 			Name string `json:"name"`
 		} `json:"items"`
-		Platforms []browseOption     `json:"platforms"`
-		Facets    []browseFacetGroup `json:"facets"`
+		Apps   []browseOption     `json:"apps"`
+		Facets []browseFacetGroup `json:"facets"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode browse response: %v", err)
 	}
-	reading := browseReading{Platforms: body.Platforms, Facets: body.Facets}
+	reading := browseReading{Apps: body.Apps, Facets: body.Facets}
 	for _, item := range body.Items {
 		reading.Names = append(reading.Names, item.Name)
 	}
@@ -372,7 +372,7 @@ func TestAnEmptyBlockNeverAnswersAsCarried(t *testing.T) {
 	}
 }
 
-func TestThePlatformControlNamesAppsAndMatchesThroughOfferedTargets(t *testing.T) {
+func TestTheAppControlNamesAppsAndMatchesThroughOfferedFormats(t *testing.T) {
 	t.Parallel()
 	registry := format.NewRegistry()
 	for _, module := range character.Modules() {
@@ -389,24 +389,24 @@ func TestThePlatformControlNamesAppsAndMatchesThroughOfferedTargets(t *testing.T
 	}`))
 
 	all := readBrowse(t, router, "/v1/works")
-	labels := make([]string, 0, len(all.Platforms))
-	for _, option := range all.Platforms {
+	labels := make([]string, 0, len(all.Apps))
+	for _, option := range all.Apps {
 		labels = append(labels, option.Label)
 	}
 	if !slices.Equal(labels, []string{"SillyTavern", "RisuAI", "Lumiverse"}) {
-		t.Fatalf("the platform control offered %v, want the apps Illarin names", labels)
+		t.Fatalf("the app control offered %v, want the apps Illarin names", labels)
 	}
-	for _, option := range all.Platforms {
+	for _, option := range all.Apps {
 		if option.Count != 1 {
 			t.Errorf("%s count = %d, want the card every named app can open", option.Label, option.Count)
 		}
 	}
 
-	named := readBrowse(t, router, "/v1/works?platform=sillytavern")
+	named := readBrowse(t, router, "/v1/works?app=sillytavern")
 	if !slices.Equal(named.Names, []string{"Ana"}) {
 		t.Fatalf("SillyTavern returned %v, want Ana", named.Names)
 	}
-	unknown := readBrowse(t, router, "/v1/works?platform=notepad")
+	unknown := readBrowse(t, router, "/v1/works?app=notepad")
 	if len(unknown.Names) != 0 {
 		t.Fatalf("an app Illarin does not name returned %v", unknown.Names)
 	}

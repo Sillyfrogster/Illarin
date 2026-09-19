@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type DeliveryFile struct {
+type SendFile struct {
 	Type    string  `json:"type"`
 	URL     string  `json:"url"`
 	MediaID *string `json:"mediaId"`
@@ -23,27 +23,27 @@ type DeliveryFile struct {
 	IsCover *bool   `json:"isCover"`
 }
 
-type DeliveryWork struct {
-	ID             string         `json:"id"`
-	WorkID         string         `json:"workId"`
-	VersionNumber  int            `json:"versionNumber"`
-	Type           string         `json:"type"`
-	Name           string         `json:"name"`
-	Format         string         `json:"format"`
-	Label          string         `json:"label"`
-	QueuedAt       time.Time      `json:"queuedAt"`
-	LeaseExpiresAt time.Time      `json:"leaseExpiresAt"`
-	Files          []DeliveryFile `json:"files"`
-}
-
-type DeliveryWorkList struct {
-	Deliveries []DeliveryWork   `json:"deliveries"`
-	Withheld   []WithheldNotice `json:"withheld"`
-}
-
-type QueuedDelivery struct {
+type CollectedSend struct {
 	ID             string     `json:"id"`
-	InstanceID     string     `json:"instanceId"`
+	WorkID         string     `json:"workId"`
+	VersionNumber  int        `json:"versionNumber"`
+	Type           string     `json:"type"`
+	Name           string     `json:"name"`
+	Format         string     `json:"format"`
+	Label          string     `json:"label"`
+	QueuedAt       time.Time  `json:"queuedAt"`
+	LeaseExpiresAt time.Time  `json:"leaseExpiresAt"`
+	Files          []SendFile `json:"files"`
+}
+
+type CollectedSends struct {
+	Sends    []CollectedSend  `json:"sends"`
+	Withheld []WithheldNotice `json:"withheld"`
+}
+
+type QueuedSend struct {
+	ID             string     `json:"id"`
+	ConnectedAppID string     `json:"connectedAppId"`
 	WorkID         string     `json:"workId"`
 	State          string     `json:"state"`
 	Reason         *string    `json:"reason"`
@@ -53,39 +53,39 @@ type QueuedDelivery struct {
 	UpdatesInstall bool       `json:"updatesInstall"`
 }
 
-type WorkInstance struct {
-	InstanceID       string          `json:"instanceId"`
-	ApplicationName  string          `json:"applicationName"`
-	InstanceName     string          `json:"instanceName"`
-	LastSeenAt       *time.Time      `json:"lastSeenAt"`
-	CanReceive       bool            `json:"canReceive"`
-	ReportsLibrary   bool            `json:"reportsLibrary"`
-	Delivery         *QueuedDelivery `json:"delivery"`
-	InstalledVersion *int            `json:"installedVersion"`
-	UpdateAvailable  bool            `json:"updateAvailable"`
+type WorkConnectedApp struct {
+	ConnectedAppID   string      `json:"connectedAppId"`
+	AppName          string      `json:"appName"`
+	Name             string      `json:"name"`
+	LastSeenAt       *time.Time  `json:"lastSeenAt"`
+	CanReceive       bool        `json:"canReceive"`
+	ReportsLibrary   bool        `json:"reportsLibrary"`
+	Send             *QueuedSend `json:"send"`
+	InstalledVersion *int        `json:"installedVersion"`
+	UpdateAvailable  bool        `json:"updateAvailable"`
 }
 
-type WorkInstanceList struct {
-	VersionNumber int            `json:"versionNumber"`
-	Items         []WorkInstance `json:"items"`
+type WorkConnectedAppList struct {
+	VersionNumber int                `json:"versionNumber"`
+	Items         []WorkConnectedApp `json:"items"`
 }
 
-func (h Harness) NewLinkingRouter(t *testing.T) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
+func (h Harness) NewConnectRouter(t *testing.T) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
 	t.Helper()
-	return h.NewLinkingRouterWith(t, DeliverySettings())
+	return h.NewConnectRouterWith(t, SendSettings())
 }
 
-func (h Harness) NewLinkingRouterWith(
+func (h Harness) NewConnectRouterWith(
 	t *testing.T,
 	settings connect.Settings,
 ) (*gin.Engine, *http.Cookie, *pgxpool.Pool) {
 	t.Helper()
 	pool := testdb.Connect(t)
 	outbox := &VerificationOutbox{}
-	handlers := NewServicesWithDelivery(t, pool, 1<<20, outbox, settings, nil)
+	handlers := NewServicesWithSends(t, pool, 1<<20, outbox, settings, nil)
 	router := h.RegisterRouter(t, handlers, api.DefaultDeadlines())
 
-	session := SignUp(t, router, "creator@example.com", "linking.creator")
+	session := SignUp(t, router, "creator@example.com", "connect.creator")
 	link, err := url.Parse(outbox.Messages[0].Link)
 	if err != nil {
 		t.Fatalf("parse verification link: %v", err)
@@ -98,7 +98,7 @@ func (h Harness) NewLinkingRouterWith(
 	return router, session, pool
 }
 
-func AddVerifiedLinkingUser(
+func AddVerifiedUser(
 	t *testing.T,
 	r *gin.Engine,
 	pool *pgxpool.Pool,
@@ -112,40 +112,40 @@ func AddVerifiedLinkingUser(
 		`update users set email_verified_at = now() where email = $1`,
 		email,
 	); err != nil {
-		t.Fatalf("verify second linking user: %v", err)
+		t.Fatalf("verify second user: %v", err)
 	}
 	return session
 }
 
-func Declare(t *testing.T, r *gin.Engine, token string, capabilities, targets []string) {
+func DeclareCapabilities(t *testing.T, r *gin.Engine, token string, capabilities, formats []string) {
 	t.Helper()
-	rec := Send(t, r, AsInstance(t, http.MethodPut, "/v1/instances/me", token, map[string]any{
-		"applicationVersion": "1.0.0",
-		"protocolVersion":    1,
-		"capabilities":       capabilities,
-		"acceptedTargets":    targets,
+	rec := Send(t, r, AsApp(t, http.MethodPut, "/v1/connected-apps/me", token, map[string]any{
+		"appVersion":      "1.0.0",
+		"protocolVersion": 1,
+		"capabilities":    capabilities,
+		"acceptedFormats": formats,
 	}))
 	if rec.Code != http.StatusOK {
-		t.Fatalf("declare status = %d, want 200: %s", rec.Code, rec.Body.String())
+		t.Fatalf("capabilities status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
 }
 
-func DeclareTargets(t *testing.T, r *gin.Engine, token string, targets []string) {
+func DeclareFormats(t *testing.T, r *gin.Engine, token string, formats []string) {
 	t.Helper()
-	Declare(t, r, token, []string{}, targets)
+	DeclareCapabilities(t, r, token, []string{}, formats)
 }
 
-func SendToInstance(
+func SendToApp(
 	t *testing.T,
 	r *gin.Engine,
 	session *http.Cookie,
 	workID string,
-	instanceID string,
+	connectedAppID string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return Send(t, r, BrowserRequest(
-		t, http.MethodPost, "/v1/works/"+workID+"/deliveries",
-		map[string]string{"instanceId": instanceID}, session,
+		t, http.MethodPost, "/v1/works/"+workID+"/sends",
+		map[string]string{"connectedAppId": connectedAppID}, session,
 	))
 }
 
@@ -154,30 +154,30 @@ func Collect(t *testing.T, r *gin.Engine, token string, acknowledge []string) *h
 	if acknowledge == nil {
 		acknowledge = []string{}
 	}
-	return Send(t, r, AsInstance(t, http.MethodPost, "/v1/deliveries/collect", token,
+	return Send(t, r, AsApp(t, http.MethodPost, "/v1/sends/collect", token,
 		map[string]any{"acknowledge": acknowledge}))
 }
 
-func WorkInstances(
+func WorkConnectedApps(
 	t *testing.T,
 	r *gin.Engine,
 	session *http.Cookie,
 	workID string,
-) WorkInstanceList {
+) WorkConnectedAppList {
 	t.Helper()
 	rec := Send(t, r, Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"/instances", nil), session))
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"/connected-apps", nil), session))
 	if rec.Code != http.StatusOK {
-		t.Fatalf("asset instances status = %d, want 200: %s", rec.Code, rec.Body.String())
+		t.Fatalf("work connected apps status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
-	return DecodeResponse[WorkInstanceList](t, rec)
+	return DecodeResponse[WorkConnectedAppList](t, rec)
 }
 
 func FetchSigned(t *testing.T, r *gin.Engine, address string) *httptest.ResponseRecorder {
 	t.Helper()
 	parsed, err := url.Parse(address)
 	if err != nil {
-		t.Fatalf("parse a delivery address: %v", err)
+		t.Fatalf("parse a send address: %v", err)
 	}
 	return Send(t, r, httptest.NewRequest(http.MethodGet, parsed.RequestURI(), nil))
 }

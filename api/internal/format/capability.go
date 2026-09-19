@@ -36,6 +36,16 @@ func Apps() []App {
 	}
 }
 
+// AppLabel names the app with the given id, or gives the id back for an app Illarin no longer knows
+func AppLabel(id string) string {
+	for _, app := range Apps() {
+		if app.ID == id {
+			return app.Label
+		}
+	}
+	return id
+}
+
 func reach(formatID string) int {
 	count := 0
 	for _, app := range Apps() {
@@ -74,14 +84,15 @@ func (l RoleLoss) reaches(app string) bool {
 
 func (l RoleLoss) Lossy() bool { return l.Verdict != Carried }
 
-type Target struct {
+// Offered is one format a work can be downloaded or sent in, with what that format leaves out
+type Offered struct {
 	Format      string     `json:"format"`
 	Label       string     `json:"label"`
 	Recommended bool       `json:"recommended"`
 	Roles       []RoleLoss `json:"roles"`
 }
 
-func (t Target) Losses() []RoleLoss {
+func (t Offered) Losses() []RoleLoss {
 	losses := make([]RoleLoss, 0, len(t.Roles))
 	for _, role := range t.Roles {
 		if role.Lossy() {
@@ -91,8 +102,8 @@ func (t Target) Losses() []RoleLoss {
 	return losses
 }
 
-// LossesFor counts what this target leaves out of the named app.
-func (t Target) LossesFor(app string) int {
+// LossesFor counts what this format leaves out of the named app.
+func (t Offered) LossesFor(app string) int {
 	lost := 0
 	for _, role := range t.Roles {
 		if !role.reaches(app) {
@@ -102,8 +113,8 @@ func (t Target) LossesFor(app string) int {
 	return lost
 }
 
-// Notes counts the roles this target carries somewhere only some apps read.
-func (t Target) Notes() int {
+// Notes counts the roles this format carries somewhere only some apps read.
+func (t Offered) Notes() int {
 	notes := 0
 	for _, role := range t.Roles {
 		if !role.Lossy() && role.Destination != "" {
@@ -114,10 +125,9 @@ func (t Target) Notes() int {
 }
 
 type CapabilitySubject struct {
-	Type                 string
-	Origin               string
-	Elements             []block.Element
-	AllowedCrossPlatform []string
+	Type     string
+	Origin   string
+	Elements []block.Element
 }
 
 func (s CapabilitySubject) origin() string {
@@ -148,14 +158,14 @@ func (r *Registry) BuildsFromNothing(workType string) bool {
 	return true
 }
 
-func (r *Registry) OfferedTargets(subject CapabilitySubject) []Target {
+func (r *Registry) OfferedFormats(subject CapabilitySubject) []Offered {
 	ids := make([]string, 0, len(r.modules))
 	for id := range r.modules {
 		ids = append(ids, id)
 	}
 	slices.Sort(ids)
 
-	offered := make([]Target, 0, len(ids))
+	offered := make([]Offered, 0, len(ids))
 	for _, id := range ids {
 		declaration := r.modules[id].Declaration()
 		if !declaration.Direction.Write || declaration.Type != subject.Type {
@@ -164,15 +174,11 @@ func (r *Registry) OfferedTargets(subject CapabilitySubject) []Target {
 		if !slices.Contains(declaration.TestedOrigins, subject.origin()) {
 			continue
 		}
-		if declaration.CrossPlatform &&
-			!slices.Contains(subject.AllowedCrossPlatform, declaration.ID) {
-			continue
-		}
 		roles, survives := lossReport(declaration, subject)
 		if !survives {
 			continue
 		}
-		offered = append(offered, Target{
+		offered = append(offered, Offered{
 			Format: declaration.ID, Label: declaration.Label, Roles: roles,
 		})
 	}
@@ -237,19 +243,19 @@ func matchesAny(condition *ContentCondition, written []block.Content) bool {
 	return false
 }
 
-func recommend(targets []Target, r *Registry) {
+func recommend(offered []Offered, r *Registry) {
 	best := -1
-	for i := range targets {
-		if best < 0 || outranks(targets[i], targets[best], r) {
+	for i := range offered {
+		if best < 0 || outranks(offered[i], offered[best], r) {
 			best = i
 		}
 	}
 	if best >= 0 {
-		targets[best].Recommended = true
+		offered[best].Recommended = true
 	}
 }
 
-func outranks(candidate, holder Target, r *Registry) bool {
+func outranks(candidate, holder Offered, r *Registry) bool {
 	for _, comparison := range []int{
 		reach(candidate.Format) - reach(holder.Format),
 		len(holder.Losses()) - len(candidate.Losses()),
@@ -294,9 +300,9 @@ func (r *Registry) CapabilityStamp() string {
 		if !declaration.Direction.Write {
 			continue
 		}
-		fmt.Fprintf(digest, "module\x00%s\x00%s\x00%s\x00%v\x00%s\n",
+		fmt.Fprintf(digest, "module\x00%s\x00%s\x00%s\x00%s\n",
 			declaration.ID, declaration.Type, declaration.Label,
-			declaration.CrossPlatform, strings.Join(declaration.TestedOrigins, ","))
+			strings.Join(declaration.TestedOrigins, ","))
 		for _, role := range block.Roles() {
 			support := declaration.Roles[role].Write
 			condition := ""

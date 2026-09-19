@@ -6,31 +6,31 @@ import (
 	"github.com/google/uuid"
 )
 
-// ErrNotDeliverable says the work cannot be sent to an instance
-var ErrNotDeliverable = errors.New("that work cannot be sent to an instance")
+// ErrNotSendable says the work cannot be sent to a connected app
+var ErrNotSendable = errors.New("that work cannot be sent to a connected app")
 
-// DeliveryTarget is one format the work can be written in for a send
-type DeliveryTarget struct {
+// SendFormat is one format the work can be written in for a send
+type SendFormat struct {
 	Format string
 	Label  string
 }
 
-// DeliveryPicture is one image that travels with the work
-type DeliveryPicture struct {
+// SendPicture is one image that travels with the work
+type SendPicture struct {
 	MediaID uuid.UUID
 	Role    string
 	IsCover bool
 	URL     string
 }
 
-// Deliverable is what a send carries about the work it is sending
-type Deliverable struct {
+// Sendable is what a send carries about the work it is sending
+type Sendable struct {
 	Type          string
 	Name          string
 	VersionNumber int
-	Targets       []DeliveryTarget
+	Formats       []SendFormat
 	HasOriginal   bool
-	Pictures      []DeliveryPicture
-	// InstallCapabilities lists what an instance must declare, any one of them, before the work is sent to it.
+	Pictures      []SendPicture
+	// InstallCapabilities lists what a connected app must declare, any one of them, before the work is sent to it.
 	InstallCapabilities []string
 }

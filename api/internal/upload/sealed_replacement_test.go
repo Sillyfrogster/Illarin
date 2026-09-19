@@ -9,7 +9,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
@@ -19,10 +18,11 @@ type sealingModule struct {
 	parsed *format.Parsed
 }
 
-func (sealingModule) ID() string { return "sealing" }
+func (sealingModule) ID() string { return "preset_lumiverse" }
 
 func (sealingModule) Declaration() format.Declaration {
-	declaration := testReaderDeclaration("sealing", "preset")
+	declaration := testReaderDeclaration("preset_lumiverse", "preset")
+	declaration.KeepsPrivatePrompts = true
 	declaration.Label = "Sealing format"
 	declaration.Direction.Write = true
 	declaration.Header = []format.HeaderField{format.HeaderName}
@@ -60,7 +60,7 @@ func sealingRemainder(fragmentID uuid.UUID, sourceID string) format.Remainder {
 
 func promptListParsed(fragment block.PromptFragment, sourceID string) format.Parsed {
 	return format.Parsed{
-		Type: "preset", Format: "sealing", Header: format.Header{Name: "Sample preset"},
+		Type: "preset", Format: "preset_lumiverse", Header: format.Header{Name: "Sample preset"},
 		Elements: []block.Element{{
 			Type: block.TypePromptList, Role: block.RolePromptFragments,
 			Content: block.PromptList{Fragments: []block.PromptFragment{fragment}},
@@ -84,12 +84,9 @@ func TestASealedPlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 	replacement := promptListParsed(block.PromptFragment{
 		ID: arriving, Name: "Setup", Protected: true, Enabled: true,
 	}, "setup")
-	replacement.Protected = format.ProtectedImport{
-		Prompts: []format.ProtectedPrompt{{
-			FragmentID: arriving, SourceKey: "setup", ReuseExisting: true,
-		}},
-		Apps: []string{private.AppLumiverse},
-	}
+	replacement.Protected = []format.ProtectedPrompt{{
+		FragmentID: arriving, SourceKey: "setup", ReuseExisting: true,
+	}}
 	parsed = replacement
 
 	operation := stageReplacementFile(t, svc, owner, created.ID)
@@ -131,12 +128,9 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 	replacement := promptListParsed(block.PromptFragment{
 		ID: arriving, Name: "Late addition", Protected: true, Enabled: true,
 	}, "late")
-	replacement.Protected = format.ProtectedImport{
-		Prompts: []format.ProtectedPrompt{{
-			FragmentID: arriving, SourceKey: "late", ReuseExisting: true,
-		}},
-		Apps: []string{private.AppLumiverse},
-	}
+	replacement.Protected = []format.ProtectedPrompt{{
+		FragmentID: arriving, SourceKey: "late", ReuseExisting: true,
+	}}
 	parsed = replacement
 
 	operation := stageReplacementFile(t, svc, owner, created.ID)

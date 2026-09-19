@@ -178,7 +178,7 @@ func TestSillyTavernReportsAndAvoidsFlatteningExtraColourModes(t *testing.T) {
 	elements := []block.Element{{
 		ID: uuid.New(), Type: block.TypeColorSet, Role: block.RoleThemeTokens, Content: palette,
 	}}
-	targets := registry.OfferedTargets(format.CapabilitySubject{Type: Type, Elements: elements})
+	targets := registry.OfferedFormats(format.CapabilitySubject{Type: Type, Elements: elements})
 	if len(targets) != 1 {
 		t.Fatalf("targets = %+v, want the SillyTavern target", targets)
 	}
@@ -300,7 +300,7 @@ func TestSillyTavernStylesheetLossMatchesWhatItCanWrite(t *testing.T) {
 				ID: uuid.New(), Type: block.TypeStylesheetSet, Role: block.RoleStylesheets,
 				Content: test.styles,
 			})
-			targets := registry.OfferedTargets(format.CapabilitySubject{
+			targets := registry.OfferedFormats(format.CapabilitySubject{
 				Type: Type, Elements: elements,
 			})
 			if len(targets) != 1 || targets[0].Format != SillyTavernID {
@@ -354,7 +354,7 @@ func TestLumiverseMarkerOutsideTheDeclaredSetIsNotClaimed(t *testing.T) {
 	}
 }
 
-func roleLoss(target format.Target, role block.Role) (format.RoleLoss, bool) {
+func roleLoss(target format.Offered, role block.Role) (format.RoleLoss, bool) {
 	for _, loss := range target.Roles {
 		if loss.Role == role {
 			return loss, true

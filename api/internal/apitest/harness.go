@@ -39,8 +39,8 @@ type Services struct {
 	Uploads            *upload.Service
 	Downloads          *download.Service
 	Accounts           *account.Service
-	Links              *connect.Apps
-	Deliveries         *connect.Sends
+	Apps               *connect.Apps
+	Sends              *connect.Sends
 	Publications       *blog.Service
 	UpdateDestinations *integration.Service
 	Notifications      *notify.Service
@@ -118,10 +118,10 @@ func NewServicesWithPool(
 	sender account.EmailSender,
 ) Services {
 	t.Helper()
-	return NewServicesWithDelivery(t, pool, maxUploadBytes, sender, DeliverySettings(), nil)
+	return NewServicesWithSends(t, pool, maxUploadBytes, sender, SendSettings(), nil)
 }
 
-func NewServicesWithDelivery(
+func NewServicesWithSends(
 	t *testing.T,
 	pool *pgxpool.Pool,
 	maxUploadBytes int64,
@@ -136,7 +136,7 @@ func NewServicesWithDelivery(
 	}
 	works := work.NewService(pool, Registry(t), blob)
 	accounts := NewAccounts(pool, sender, nil, MediaLibrary(blob))
-	links := NewLinkingService(pool)
+	apps := NewAppsService(pool)
 	updateDestinations := integration.NewService(
 		pool, SealingKey(), Publishing(to).Sender, "http://localhost:3000",
 	)
@@ -150,8 +150,8 @@ func NewServicesWithDelivery(
 		Uploads:            upload.NewService(pool, works),
 		Downloads:          download.NewService(pool, works),
 		Accounts:           accounts,
-		Links:              links,
-		Deliveries:         connect.NewSends(pool, works, links, settings),
+		Apps:               apps,
+		Sends:              connect.NewSends(pool, works, apps, settings),
 		Publications:       blog.NewService(pool, MediaLibrary(blob), Publishing(to)),
 		UpdateDestinations: updateDestinations,
 		Notifications:      NewNotifications(pool),
@@ -167,7 +167,7 @@ func NewServicesOver(
 	sender account.EmailSender,
 	provider account.DiscordProvider,
 ) Services {
-	links := NewLinkingService(pool)
+	apps := NewAppsService(pool)
 	destinations := NewUpdateDestinations(pool)
 	versions := version.NewService(pool, works)
 	versions.OnPublished(destinations.Announce, version.TellFollowers)
@@ -179,8 +179,8 @@ func NewServicesOver(
 		Uploads:            upload.NewService(pool, works),
 		Downloads:          download.NewService(pool, works),
 		Accounts:           NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
-		Links:              links,
-		Deliveries:         NewDeliveryService(pool, works, links),
+		Apps:               apps,
+		Sends:              NewSendsService(pool, works, apps),
 		Publications:       NewPublicationService(pool, blobs),
 		UpdateDestinations: destinations,
 		Notifications:      NewNotifications(pool),

@@ -9,11 +9,11 @@ import (
 
 type Handlers struct {
 	notifications *Service
-	deliveries    *connect.Sends
+	sends         *connect.Sends
 }
 
-func NewHandlers(notifications *Service, deliveries *connect.Sends) *Handlers {
-	return &Handlers{notifications: notifications, deliveries: deliveries}
+func NewHandlers(notifications *Service, sends *connect.Sends) *Handlers {
+	return &Handlers{notifications: notifications, sends: sends}
 }
 
 func Register(routes api.Routes, h *Handlers) {

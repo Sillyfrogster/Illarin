@@ -15,15 +15,15 @@ import (
 )
 
 type ListFilter struct {
-	Type        string
-	Profile     *ProfileListingScope
-	Platform    *string
-	PlatformSet bool
-	Tags        []string
-	Facets      []FacetSelection
-	Query       string
-	Limit       int
-	Before      *Cursor
+	Type    string
+	Profile *ProfileListingScope
+	App     *string
+	AppSet  bool
+	Tags    []string
+	Facets  []FacetSelection
+	Query   string
+	Limit   int
+	Before  *Cursor
 }
 
 type ProfileListingScope struct {
@@ -65,7 +65,7 @@ type BrowsePage struct {
 	Suppressed int
 	Next       *Cursor
 	EmptyState string
-	Platforms  []Option
+	Apps       []Option
 	Facets     []Filter
 }
 
@@ -107,11 +107,11 @@ func (s *Service) Browse(
 	search := parseBrowseQuery(f.Query)
 	facetDefinitions := block.Facets(f.Type)
 	chosen := declaredFacetSelections(f.Type, f.Facets)
-	platform := ""
-	if f.Platform != nil {
-		platform = normalizeBrowseText(*f.Platform)
+	app := ""
+	if f.App != nil {
+		app = normalizeBrowseText(*f.App)
 	}
-	formats := formatsForPlatform(platform)
+	formats := formatsForApp(app)
 	facetKeys, facetLows, facetHighs := facetRanges(chosen)
 	creatorID, ownProfile := profileListingValues(f.Profile)
 	params := db.BrowseWorksParams{
@@ -119,7 +119,7 @@ func (s *Service) Browse(
 		CreatorID:  uuidToNullable(creatorID),
 		OwnProfile: ownProfile,
 		SearchText: search.Text, Author: search.Author, Tags: search.Tags,
-		Platform: platform, Formats: formats,
+		App: app, Formats: formats,
 		FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
 		PageSize: int32(f.Limit + 1),
 	}
@@ -175,7 +175,7 @@ func (s *Service) Browse(
 		CreatorID:  uuidToNullable(creatorID),
 		OwnProfile: ownProfile,
 		SearchText: search.Text, Author: search.Author, Tags: search.Tags,
-		Platform: platform, Formats: formats,
+		App: app, Formats: formats,
 		FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
 	}
 	count, err := queries.CountBrowseWorks(ctx, countParams)
@@ -188,7 +188,7 @@ func (s *Service) Browse(
 			ctx, db.CountSuppressedBrowseWorksParams{
 				Type: f.Type, SearchText: search.Text, Author: search.Author, Tags: search.Tags,
 				CreatorID: uuidToNullable(creatorID),
-				Platform:  platform, Formats: formats,
+				App:       app, Formats: formats,
 				FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
 			},
 		)
@@ -197,7 +197,7 @@ func (s *Service) Browse(
 		}
 		page.Suppressed = int(suppressed)
 	}
-	page.Platforms, err = countedPlatforms(ctx, queries, countParams, platform)
+	page.Apps, err = countedApps(ctx, queries, countParams, app)
 	if err != nil {
 		return BrowsePage{}, err
 	}
@@ -209,7 +209,7 @@ func (s *Service) Browse(
 		if page.Suppressed > 0 {
 			page.EmptyState = "suppressed"
 		} else if f.Type == "" && search.Text == "" && search.Author == "" &&
-			len(search.Tags) == 0 && f.Platform == nil && len(chosen) == 0 {
+			len(search.Tags) == 0 && f.App == nil && len(chosen) == 0 {
 			page.EmptyState = "nothing_published"
 		} else {
 			page.EmptyState = "no_matches"
@@ -226,11 +226,9 @@ func profileListingValues(scope *ProfileListingScope) (*uuid.UUID, bool) {
 	return &scope.CreatorID, ownedByViewer
 }
 
-func browsePlatforms() []format.App { return format.Apps() }
-
-func formatsForPlatform(platform string) []string {
+func formatsForApp(chosen string) []string {
 	for _, app := range format.Apps() {
-		if normalizeBrowseText(app.ID) == platform {
+		if normalizeBrowseText(app.ID) == chosen {
 			return app.Reads
 		}
 	}
@@ -275,21 +273,21 @@ func facetRanges(chosen []chosenFacet) (keys []string, lows, highs []int32) {
 	return keys, lows, highs
 }
 
-func countedPlatforms(
+func countedApps(
 	ctx context.Context,
 	queries *db.Queries,
 	base db.CountBrowseWorksParams,
 	selected string,
 ) ([]Option, error) {
-	apps := browsePlatforms()
+	apps := format.Apps()
 	result := make([]Option, 0, len(apps))
 	for _, app := range apps {
 		params := base
-		params.Platform = app.ID
+		params.App = app.ID
 		params.Formats = app.Reads
 		count, err := queries.CountBrowseWorks(ctx, params)
 		if err != nil {
-			return nil, fmt.Errorf("count platform %s: %w", app.ID, err)
+			return nil, fmt.Errorf("count app %s: %w", app.ID, err)
 		}
 		result = append(result, Option{
 			Value: app.ID, Label: app.Label, Count: int(count),

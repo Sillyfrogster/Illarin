@@ -378,11 +378,11 @@ type inboxEntry struct {
 		Summary      string `json:"summary"`
 		Count        int    `json:"count"`
 	} `json:"update"`
-	SendTargets []struct {
-		InstanceID      string `json:"instanceId"`
-		InstanceName    string `json:"instanceName"`
-		ApplicationName string `json:"applicationName"`
-	} `json:"sendTargets"`
+	SendTo []struct {
+		ConnectedAppID string `json:"connectedAppId"`
+		Name           string `json:"name"`
+		AppName        string `json:"appName"`
+	} `json:"sendTo"`
 }
 
 type inboxPage struct {

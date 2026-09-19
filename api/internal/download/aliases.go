@@ -13,8 +13,11 @@ func registerAliases(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodGet, "/v1/works/:id/updates/:number/downloads", d.JSON, h.GetRecordedVersionDownloads)
 }
 
-// The field name a version's downloads answered to before the rename, kept for sixty days
-var recordedDownloadsAliases = map[string]string{"type": "kind"}
+// The field names a version's downloads answered to before the renames, kept for sixty days
+var recordedDownloadsAliases = map[string]string{"type": "kind", "appFormats": "appTargets"}
+
+// oldFormatHeader is the header a download named its format in before the rename, sent for sixty days
+const oldFormatHeader = "X-Illarin-Export-Target"
 
 func (d RecordedVersionDownloads) MarshalJSON() ([]byte, error) {
 	type plain RecordedVersionDownloads

@@ -78,7 +78,7 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	}
 
 	owner := apitest.FetchStartedWork(t, r, session, started.ID)
-	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
+	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != (apitest.AppName{ID: "lumiverse", Label: "Lumiverse"}) {
 		t.Fatalf("sealed prompt policy = linked install only %t, allowed apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
 	ownerContent := string(owner.Blocks[0].Elements[0].Content)

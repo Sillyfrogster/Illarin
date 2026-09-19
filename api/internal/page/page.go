@@ -36,8 +36,8 @@ type Detail struct {
 	Visibility            work.Visibility
 	Lifecycle             work.Lifecycle
 	IsOwner               bool
-	Downloads             []format.Target
-	AppTargets            []format.AppTarget
+	Downloads             []format.Offered
+	AppFormats            []format.AppFormat
 	Original              *work.OriginalUpload
 	CreatedAt             time.Time
 	Blocks                []block.Block
@@ -199,16 +199,13 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		return Detail{}, err
 	}
 	found.LinkedInstallOnly = len(found.AllowedApps) > 0 || private.HasPromptFragments(found.Blocks)
-	offered := make([]string, len(found.Downloads))
-	for i, target := range found.Downloads {
-		offered[i] = target.Format
-	}
-	found.EligibleApps = private.EligibleApps(found.Type, offered)
+	offered := format.OfferedIDs(found.Downloads)
+	found.EligibleApps = private.EligibleApps(s.reg, offered)
 	found.InstallCapabilities = format.InstallCapabilities(found.Type, offered)
-	found.AppTargets = format.AppTargets(found.Downloads, s.reg)
+	found.AppFormats = format.AppFormats(found.Downloads, s.reg)
 	if found.LinkedInstallOnly {
-		found.Downloads = []format.Target{}
-		found.AppTargets = []format.AppTarget{}
+		found.Downloads = []format.Offered{}
+		found.AppFormats = []format.AppFormat{}
 	}
 	if draft || working {
 		return found, nil

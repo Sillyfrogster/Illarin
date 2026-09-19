@@ -79,7 +79,7 @@ func (s *Service) CandidateReadiness(
 	blocks []block.Block,
 ) ([]ReadinessItem, error) {
 	items := Readiness(workType, name, isNSFW, blocks)
-	targets, err := summary.Formats(ctx, tx, s.reg, workID)
+	formats, err := summary.Formats(ctx, tx, s.reg, workID)
 	if err != nil {
 		return nil, missingWork(err)
 	}
@@ -87,7 +87,7 @@ func (s *Service) CandidateReadiness(
 		ID:     exportRequirement,
 		Label:  "A file to download",
 		Detail: fmt.Sprintf("No format Illarin writes can hold this %s as it stands.", workType),
-		Met:    len(targets) > 0 || !s.reg.WritesType(workType),
+		Met:    len(formats) > 0 || !s.reg.WritesType(workType),
 	})
 	pictures, err := picturesReady(ctx, tx, workID)
 	if err != nil {

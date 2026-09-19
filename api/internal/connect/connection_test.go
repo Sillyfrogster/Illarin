@@ -13,56 +13,56 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func TestCanonicalScopesAcceptsEachKnownScopeOnce(t *testing.T) {
+func TestCanonicalPermissionsAcceptsEachKnownPermissionOnce(t *testing.T) {
 	t.Parallel()
-	both, err := canonicalScopes([]Scope{ScopeLibrarySync, ScopeWorkReceive})
+	both, err := canonicalPermissions([]Permission{PermissionSyncLibrary, PermissionReceiveWorks})
 	if err != nil {
-		t.Fatalf("both scopes: %v", err)
+		t.Fatalf("both permissions: %v", err)
 	}
-	if len(both) != 2 || both[0] != ScopeWorkReceive || both[1] != ScopeLibrarySync {
+	if len(both) != 2 || both[0] != PermissionReceiveWorks || both[1] != PermissionSyncLibrary {
 		t.Errorf("canonical order = %v", both)
 	}
 
-	one, err := canonicalScopes([]Scope{ScopeLibrarySync})
-	if err != nil || len(one) != 1 || one[0] != ScopeLibrarySync {
-		t.Errorf("one scope = %v, %v", one, err)
+	one, err := canonicalPermissions([]Permission{PermissionSyncLibrary})
+	if err != nil || len(one) != 1 || one[0] != PermissionSyncLibrary {
+		t.Errorf("one permission = %v, %v", one, err)
 	}
 
-	for _, requested := range [][]Scope{
+	for _, requested := range [][]Permission{
 		{},
 		{"asset:write"},
-		{ScopeWorkReceive, ScopeWorkReceive},
-		{ScopeWorkReceive, "asset:write"},
+		{PermissionReceiveWorks, PermissionReceiveWorks},
+		{PermissionReceiveWorks, "asset:write"},
 	} {
-		if _, err := canonicalScopes(requested); !errors.Is(err, ErrInvalidScopes) {
-			t.Errorf("canonicalScopes(%v) error = %v, want a refusal", requested, err)
+		if _, err := canonicalPermissions(requested); !errors.Is(err, ErrInvalidPermissions) {
+			t.Errorf("canonicalPermissions(%v) error = %v, want a refusal", requested, err)
 		}
 	}
 }
 
-func TestDeclarationIdentifiersAreNamespacedBoundedAndOrdered(t *testing.T) {
+func TestCapabilitiesAreNamespacedBoundedAndOrdered(t *testing.T) {
 	t.Parallel()
-	declaration, err := validateDeclaration(testDeclaration())
+	capabilities, err := validateCapabilities(testCapabilities())
 	if err != nil {
-		t.Fatalf("valid declaration: %v", err)
+		t.Fatalf("valid capabilities: %v", err)
 	}
-	if strings.Join(declaration.Capabilities, ",") != "paper-lantern:install,paper-lantern:sync" {
-		t.Errorf("capability order = %v", declaration.Capabilities)
+	if strings.Join(capabilities.Declared, ",") != "paper-lantern:install,paper-lantern:sync" {
+		t.Errorf("capability order = %v", capabilities.Declared)
 	}
-	if strings.Join(declaration.AcceptedTargets, ",") != "character-card-v3,lorebook-v2" {
-		t.Errorf("target order = %v", declaration.AcceptedTargets)
+	if strings.Join(capabilities.AcceptedFormats, ",") != "character-card-v3,lorebook-v2" {
+		t.Errorf("format order = %v", capabilities.AcceptedFormats)
 	}
 
-	invalid := []Declaration{
-		{ApplicationName: "App", InstanceName: "Desk", ProtocolVersion: 1},
-		withCapabilities(testDeclaration(), []string{"not-namespaced"}),
-		withCapabilities(testDeclaration(), []string{"paper-lantern:sync", "paper-lantern:sync"}),
-		withTargets(testDeclaration(), []string{"UPPERCASE"}),
-		withProtocol(testDeclaration(), 2),
+	invalid := []Capabilities{
+		{ProtocolVersion: 1},
+		withDeclared(testCapabilities(), []string{"not-namespaced"}),
+		withDeclared(testCapabilities(), []string{"paper-lantern:sync", "paper-lantern:sync"}),
+		withFormats(testCapabilities(), []string{"UPPERCASE"}),
+		withProtocol(testCapabilities(), 2),
 	}
 	for _, candidate := range invalid {
-		if _, err := validateDeclaration(candidate); !errors.Is(err, ErrInvalidDeclaration) {
-			t.Errorf("validateDeclaration(%+v) error = %v, want a refusal", candidate, err)
+		if _, err := validateCapabilities(candidate); !errors.Is(err, ErrInvalidCapabilities) {
+			t.Errorf("validateCapabilities(%+v) error = %v, want a refusal", candidate, err)
 		}
 	}
 }
@@ -148,10 +148,7 @@ func TestAuthorizationAcceptsOnlyExactLoopbackCallbacksAndS256(t *testing.T) {
 	digest := sha256.Sum256([]byte(verifier))
 	challenge := base64.RawURLEncoding.EncodeToString(digest[:])
 	base := AuthorizationInput{
-		StartInput: StartInput{
-			Declaration: testDeclaration(),
-			Scopes:      []Scope{ScopeWorkReceive},
-		},
+		StartInput:          testStart(PermissionReceiveWorks),
 		RedirectURI:         "http://127.0.0.1:49152/link/callback",
 		State:               strings.Repeat("s", 43),
 		CodeChallenge:       challenge,
@@ -194,7 +191,7 @@ func TestAuthorizationAcceptsOnlyExactLoopbackCallbacksAndS256(t *testing.T) {
 	}
 }
 
-func TestAnInstanceIsRefusedAScopeItWasNotGranted(t *testing.T) {
+func TestAConnectedAppIsRefusedAPermissionItWasNotGranted(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
@@ -205,10 +202,7 @@ func TestAnInstanceIsRefusedAScopeItWasNotGranted(t *testing.T) {
 	)
 	creator := insertCreator(t, pool)
 
-	started, err := service.Start(ctx, "127.0.0.1", StartInput{
-		Declaration: testDeclaration(),
-		Scopes:      []Scope{ScopeWorkReceive},
-	})
+	started, err := service.Start(ctx, "127.0.0.1", testStart(PermissionReceiveWorks))
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
@@ -219,46 +213,52 @@ func TestAnInstanceIsRefusedAScopeItWasNotGranted(t *testing.T) {
 	if _, err := service.Approve(ctx, creator, started.UserCode, pending.ApprovalToken); err != nil {
 		t.Fatalf("approve: %v", err)
 	}
-	grant, linked, err := service.Poll(ctx, "127.0.0.1", started.DeviceCode)
-	if err != nil || !linked {
-		t.Fatalf("poll: %v, linked %v", err, linked)
+	credentials, connected, err := service.Poll(ctx, "127.0.0.1", started.DeviceCode)
+	if err != nil || !connected {
+		t.Fatalf("poll: %v, connected %v", err, connected)
 	}
 
-	if _, err := service.Authenticate(ctx, grant.AccessToken, ScopeWorkReceive); err != nil {
-		t.Errorf("granted scope refused: %v", err)
+	if _, err := service.Authenticate(ctx, credentials.AccessToken, PermissionReceiveWorks); err != nil {
+		t.Errorf("granted permission refused: %v", err)
 	}
-	if _, err := service.Authenticate(ctx, grant.AccessToken, ScopeLibrarySync); !errors.Is(
-		err, ErrInstanceMissingScope,
+	if _, err := service.Authenticate(ctx, credentials.AccessToken, PermissionSyncLibrary); !errors.Is(
+		err, ErrMissingPermission,
 	) {
-		t.Errorf("ungranted scope error = %v, want a refusal", err)
+		t.Errorf("ungranted permission error = %v, want a refusal", err)
 	}
-	if _, err := service.Authenticate(ctx, grant.AccessToken, ""); err != nil {
-		t.Errorf("an endpoint needing no scope refused a live credential: %v", err)
-	}
-}
-
-func testDeclaration() Declaration {
-	return Declaration{
-		ApplicationName: "Paper Lantern", InstanceName: "studio workstation",
-		ApplicationVersion: "2.4.0", ProtocolVersion: 1,
-		Capabilities:    []string{"paper-lantern:install", "paper-lantern:sync"},
-		AcceptedTargets: []string{"character-card-v3", "lorebook-v2"},
+	if _, err := service.Authenticate(ctx, credentials.AccessToken, ""); err != nil {
+		t.Errorf("an endpoint needing no permission refused a live credential: %v", err)
 	}
 }
 
-func withCapabilities(declaration Declaration, capabilities []string) Declaration {
-	declaration.Capabilities = capabilities
-	return declaration
+func testCapabilities() Capabilities {
+	return Capabilities{
+		AppVersion: "2.4.0", ProtocolVersion: 1,
+		Declared:        []string{"paper-lantern:install", "paper-lantern:sync"},
+		AcceptedFormats: []string{"character-card-v3", "lorebook-v2"},
+	}
 }
 
-func withTargets(declaration Declaration, targets []string) Declaration {
-	declaration.AcceptedTargets = targets
-	return declaration
+func testStart(permissions ...Permission) StartInput {
+	return StartInput{
+		AppName: "Paper Lantern", Name: "studio workstation",
+		Capabilities: testCapabilities(), Permissions: permissions,
+	}
 }
 
-func withProtocol(declaration Declaration, version int) Declaration {
-	declaration.ProtocolVersion = version
-	return declaration
+func withDeclared(capabilities Capabilities, declared []string) Capabilities {
+	capabilities.Declared = declared
+	return capabilities
+}
+
+func withFormats(capabilities Capabilities, formats []string) Capabilities {
+	capabilities.AcceptedFormats = formats
+	return capabilities
+}
+
+func withProtocol(capabilities Capabilities, version int) Capabilities {
+	capabilities.ProtocolVersion = version
+	return capabilities
 }
 
 func insertCreator(t *testing.T, pool *pgxpool.Pool) uuid.UUID {
@@ -266,7 +266,7 @@ func insertCreator(t *testing.T, pool *pgxpool.Pool) uuid.UUID {
 	id := uuid.New()
 	if _, err := pool.Exec(context.Background(),
 		`insert into users (id, username, email, email_source, email_verified_at)
-		 values ($1, 'linking.creator', 'creator@example.com', 'creator', now())`,
+		 values ($1, 'connect.creator', 'creator@example.com', 'creator', now())`,
 		id); err != nil {
 		t.Fatalf("create creator: %v", err)
 	}

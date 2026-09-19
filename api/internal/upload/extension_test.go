@@ -14,7 +14,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
 )
 
-func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *testing.T) {
+func TestASpindleExtensionIsListedDownloadedAndSentAsTheUploadedArchive(t *testing.T) {
 	t.Parallel()
 	r, session, works, pool := harness.NewExtensionRouter(t)
 	upload := apitest.ExtensionZip(t, map[string]string{
@@ -64,18 +64,18 @@ func TestASpindleExtensionIsListedDownloadedAndDeliveredAsTheUploadedArchive(t *
 	}
 	assertSameBytes(t, "download", download.Body.Bytes(), upload)
 
-	grant := apitest.LinkDeviceInstance(t, r, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
-	apitest.Declare(t, r, grant.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
-	if queued := apitest.SendToInstance(t, r, session, workID, grant.Instance.ID); queued.Code != http.StatusAccepted {
-		t.Fatalf("send to the instance = %d: %s", queued.Code, queued.Body.String())
+	credentials := apitest.ConnectApp(t, r, session, "Lumiverse", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareCapabilities(t, r, credentials.AccessToken, []string{apitest.LumiverseInstalls}, []string{extension.SpindleID})
+	if queued := apitest.SendToApp(t, r, session, workID, credentials.ConnectedApp.ID); queued.Code != http.StatusAccepted {
+		t.Fatalf("send to the connected app = %d: %s", queued.Code, queued.Body.String())
 	}
-	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, r, grant.AccessToken, nil)).Deliveries[0]
+	work := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, r, credentials.AccessToken, nil)).Sends[0]
 	if work.Format != extension.SpindleID || work.Type != "extension" {
-		t.Fatalf("delivery = %+v, want the Spindle archive", work)
+		t.Fatalf("send = %+v, want the Spindle archive", work)
 	}
 	fetched := apitest.FetchSigned(t, r, work.Files[0].URL)
 	if fetched.Code != http.StatusOK {
-		t.Fatalf("fetch the delivery = %d: %s", fetched.Code, fetched.Body.String())
+		t.Fatalf("fetch the send = %d: %s", fetched.Code, fetched.Body.String())
 	}
 	assertSameBytes(t, "delivery", fetched.Body.Bytes(), upload)
 

@@ -141,15 +141,13 @@ func (s *Service) validateProtectedApps(
 	for _, holder := range blocks {
 		elements = append(elements, holder.Elements...)
 	}
-	offered := s.reg.OfferedTargets(format.CapabilitySubject{
+	offered := s.reg.OfferedFormats(format.CapabilitySubject{
 		Type: workType, Origin: origin, Elements: elements,
 	})
+	eligible := private.EligibleApps(s.reg, format.OfferedIDs(offered))
 	for _, app := range *allowedApps {
-		available := slices.ContainsFunc(private.AppTargets(workType, app), func(wanted string) bool {
-			return slices.ContainsFunc(offered, func(target format.Target) bool { return target.Format == wanted })
-		})
-		if !available {
-			return fmt.Errorf("%q has no usable export target for this work", app)
+		if !slices.Contains(eligible, app) {
+			return fmt.Errorf("%q has no format that keeps this work's private prompts private", app)
 		}
 	}
 	return nil

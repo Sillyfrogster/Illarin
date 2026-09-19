@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
@@ -13,39 +14,37 @@ import (
 
 const maxLibraryBodyBytes = 256 << 10
 
-func (h *Handlers) CollectDeliveries(c *gin.Context) {
-	noStoreLink(c)
-	instance, ok := h.instance(c, ScopeWorkReceive)
+func (h *Handlers) CollectSends(c *gin.Context) {
+	noStore(c)
+	app, ok := h.connectedApp(c, PermissionReceiveWorks)
 	if !ok {
 		return
 	}
-	var request CollectDeliveries
-	if !readLinkJSON(c, &request) {
+	var request CollectSends
+	if !readConnectJSON(c, &request) {
 		return
 	}
-	collected, err := h.sends.Collect(
-		c.Request.Context(), instance, uuidsFrom(request.Acknowledge),
-	)
+	collected, err := h.sends.Collect(c.Request.Context(), app, request.Acknowledge)
 	if err != nil {
-		h.deliveryError(c, err)
+		h.sendError(c, err)
 		return
 	}
 	if len(collected.Work) == 0 && len(collected.Withheld) == 0 {
 		c.Status(http.StatusNoContent)
 		return
 	}
-	items := make([]DeliveryWork, 0, len(collected.Work))
+	items := make([]CollectedSend, 0, len(collected.Work))
 	for _, released := range collected.Work {
-		items = append(items, toAPIDeliveryWork(released))
+		items = append(items, toAPICollectedSend(released))
 	}
-	c.JSON(http.StatusOK, DeliveryWorkList{
-		Deliveries: items, Withheld: toAPIWithheldNotices(collected.Withheld),
+	c.JSON(http.StatusOK, CollectedSends{
+		Sends: items, Withheld: toAPIWithheldNotices(collected.Withheld),
 	})
 }
 
 func (h *Handlers) SyncLibrary(c *gin.Context) {
-	noStoreLink(c)
-	instance, ok := h.instance(c, ScopeLibrarySync)
+	noStore(c)
+	app, ok := h.connectedApp(c, PermissionSyncLibrary)
 	if !ok {
 		return
 	}
@@ -53,9 +52,9 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 	if !api.ReadBoundedJSON(c, &request, maxLibraryBodyBytes, "The library report is too large.") {
 		return
 	}
-	result, err := h.sends.Sync(c.Request.Context(), instance, toLibraryReport(request))
+	result, err := h.sends.Sync(c.Request.Context(), app, toLibraryReport(request))
 	if err != nil {
-		h.deliveryError(c, err)
+		h.sendError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, LibraryReportResult{
@@ -64,31 +63,31 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 	})
 }
 
-func (h *Handlers) GetWorkInstances(c *gin.Context) {
+func (h *Handlers) GetWorkConnectedApps(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	noStoreLink(c)
-	creator, ok := api.SignedIn(c, "sending a work to an application")
+	noStore(c)
+	creator, ok := api.SignedIn(c, "sending a work to an app")
 	if !ok {
 		return
 	}
-	found, err := h.sends.WorkInstances(c.Request.Context(), creator.ID, id)
+	found, err := h.sends.WorkApps(c.Request.Context(), creator.ID, id)
 	if err != nil {
-		h.deliveryError(c, err)
+		h.sendError(c, err)
 		return
 	}
-	items := make([]WorkInstance, 0, len(found.Items))
+	items := make([]WorkConnectedApp, 0, len(found.Items))
 	for _, state := range found.Items {
-		items = append(items, toAPIWorkInstance(state))
+		items = append(items, toAPIWorkConnectedApp(state))
 	}
-	c.JSON(http.StatusOK, WorkInstanceList{
+	c.JSON(http.StatusOK, WorkConnectedAppList{
 		VersionNumber: found.VersionNumber, Items: items,
 	})
 }
 
-func (h *Handlers) SendWorkToInstance(c *gin.Context) {
+func (h *Handlers) SendWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -96,26 +95,24 @@ func (h *Handlers) SendWorkToInstance(c *gin.Context) {
 	if !api.FromIllarin(c) {
 		return
 	}
-	noStoreLink(c)
-	creator, ok := api.SignedIn(c, "sending a work to an application")
+	noStore(c)
+	creator, ok := api.SignedIn(c, "sending a work to an app")
 	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
 	var request SendWorkRequest
-	if !readLinkJSON(c, &request) {
+	if !readConnectJSON(c, &request) {
 		return
 	}
-	queued, err := h.sends.Queue(
-		c.Request.Context(), creator.ID, request.InstanceId, id,
-	)
+	queued, err := h.sends.Queue(c.Request.Context(), creator.ID, request.ConnectedAppId, id)
 	if err != nil {
-		h.deliveryError(c, err)
+		h.sendError(c, err)
 		return
 	}
-	c.JSON(http.StatusAccepted, toAPIQueuedDelivery(queued))
+	c.JSON(http.StatusAccepted, toAPIQueuedSend(queued))
 }
 
-func (h *Handlers) DiscardDelivery(c *gin.Context) {
+func (h *Handlers) DiscardSend(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -123,25 +120,26 @@ func (h *Handlers) DiscardDelivery(c *gin.Context) {
 	if !api.FromIllarin(c) {
 		return
 	}
-	noStoreLink(c)
-	creator, ok := api.SignedIn(c, "managing deliveries")
+	noStore(c)
+	creator, ok := api.SignedIn(c, "managing sends")
 	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
 	if err := h.sends.Discard(c.Request.Context(), creator.ID, id); err != nil {
-		h.deliveryError(c, err)
+		h.sendError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
+// DownloadSendFile checks the signature against the address the request came in on
+func (h *Handlers) DownloadSendFile(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
 	q := api.ReadQuery(c)
-	params := DownloadDeliveryExportParams{
+	params := SendFileParams{
 		Expires:   api.QueryRequired(q, "expires"),
 		Signature: api.QueryRequired(q, "signature"),
 	}
@@ -149,25 +147,22 @@ func (h *Handlers) DownloadDeliveryExport(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "private, no-store")
-	workID, target, err := h.sends.MainFile(
-		c.Request.Context(), id, params.Expires, params.Signature,
+	pathStart := strings.TrimSuffix(c.FullPath(), ":id/export")
+	workID, chosenFormat, err := h.sends.MainFile(
+		c.Request.Context(), pathStart, id, params.Expires, params.Signature,
 	)
-	if err != nil {
-		h.deliveryArtifactError(c, err)
-		return
-	}
-	h.files.LinkedInstanceFile(c, workID, target)
-}
-
-func (h *Handlers) deliveryArtifactError(c *gin.Context, err error) {
 	if errors.Is(err, ErrMainFileNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no such download")
 		return
 	}
-	api.Refuse(c, http.StatusInternalServerError, "could not read the file")
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "could not read the file")
+		return
+	}
+	h.files.ServeSendFile(c, workID, chosenFormat)
 }
 
-func (h *Handlers) deliveryError(c *gin.Context, err error) {
+func (h *Handlers) sendError(c *gin.Context, err error) {
 	var limited *RateLimitError
 	switch {
 	case errors.As(err, &limited):
@@ -176,29 +171,29 @@ func (h *Handlers) deliveryError(c *gin.Context, err error) {
 		api.Refuse(c, http.StatusTooManyRequests, "Too many requests. Try again later.")
 	case errors.Is(err, ErrTooManyCollectors):
 		c.Header("Retry-After", strconv.Itoa(collectorsBusySeconds))
-		api.Refuse(c, http.StatusServiceUnavailable, "Too many applications are waiting for work. Try again shortly.")
-	case errors.Is(err, ErrNoInstanceOfYours):
-		api.Refuse(c, http.StatusNotFound, "No live application of yours has that id.")
-	case errors.Is(err, ErrMissingScope):
-		api.Refuse(c, http.StatusForbidden, "That application cannot receive works.")
+		api.Refuse(c, http.StatusServiceUnavailable, "Too many apps are waiting for work. Try again shortly.")
+	case errors.Is(err, ErrNoAppOfYours):
+		api.Refuse(c, http.StatusNotFound, "No live connected app of yours has that id.")
+	case errors.Is(err, ErrMissingPermission):
+		api.Refuse(c, http.StatusForbidden, "That connected app cannot receive works.")
 	case errors.Is(err, ErrWorkNotFound), errors.Is(err, ErrWorkNotSendable):
 		api.Refuse(c, http.StatusNotFound, "No work that can be sent has that id.")
-	case errors.Is(err, ErrNoTarget):
-		api.Refuse(c, http.StatusConflict, "That application accepts no format this work can be written in.")
+	case errors.Is(err, ErrNoFormat):
+		api.Refuse(c, http.StatusConflict, "That connected app accepts no format this work can be written in.")
 	case errors.Is(err, ErrCannotInstall):
-		api.Refuse(c, http.StatusConflict, "That application does not install extensions from Illarin.")
+		api.Refuse(c, http.StatusConflict, "That connected app does not install extensions from Illarin.")
 	case errors.Is(err, ErrQueueFull):
-		api.Refuse(c, http.StatusConflict, "That application already has as many deliveries waiting as it may hold.")
-	case errors.Is(err, ErrDeliveryNotFound):
-		api.Refuse(c, http.StatusNotFound, "No delivery of yours has that id.")
+		api.Refuse(c, http.StatusConflict, "That connected app already has as many sends waiting as it may hold.")
+	case errors.Is(err, ErrSendNotFound):
+		api.Refuse(c, http.StatusNotFound, "No send of yours has that id.")
 	case errors.Is(err, ErrLibraryTooLarge):
 		api.Refuse(c, http.StatusRequestEntityTooLarge, "Report fewer installed works in one request.")
 	case errors.Is(err, ErrLibraryReport):
 		api.Refuse(c, http.StatusBadRequest, "That report is not valid.")
 	case errors.Is(err, ErrLibraryVersion):
-		api.Refuse(c, http.StatusBadRequest, "The application version must be printable text of at most 64 characters.")
+		api.Refuse(c, http.StatusBadRequest, "The app version must be printable text of at most 64 characters.")
 	case errors.Is(err, ErrAcknowledgement):
-		api.Refuse(c, http.StatusBadRequest, "Acknowledge at most 32 deliveries in one request.")
+		api.Refuse(c, http.StatusBadRequest, "Acknowledge at most 32 sends in one request.")
 	default:
 		api.Refuse(c, http.StatusInternalServerError, "Could not complete the request.")
 	}
@@ -215,31 +210,29 @@ func toLibraryReport(request LibraryReport) ReportedLibrary {
 	}
 	var removed []uuid.UUID
 	if request.Removed != nil {
-		removed = uuidsFrom(*request.Removed)
+		removed = *request.Removed
 	}
 	report := ReportedLibrary{
 		Snapshot: request.Snapshot, Entries: entries, Removed: removed,
 	}
-	if request.ApplicationVersion != nil {
-		report.ApplicationVersion = *request.ApplicationVersion
+	if request.AppVersion != nil {
+		report.AppVersion = *request.AppVersion
 	}
 	return report
 }
 
-func toAPIDeliveryWork(released Work) DeliveryWork {
-	files := make([]DeliveryFile, 0, len(released.Files))
-	for _, artifact := range released.Files {
-		item := DeliveryFile{
-			Type: DeliveryFileType(artifact.Type), Url: artifact.URL,
-		}
-		if artifact.MediaID != nil {
-			mediaID := *artifact.MediaID
-			role, isCover := artifact.Role, artifact.IsCover
+func toAPICollectedSend(released Work) CollectedSend {
+	files := make([]SendFile, 0, len(released.Files))
+	for _, file := range released.Files {
+		item := SendFile{Type: SendFileType(file.Type), Url: file.URL}
+		if file.MediaID != nil {
+			mediaID := *file.MediaID
+			role, isCover := file.Role, file.IsCover
 			item.MediaId, item.Role, item.IsCover = &mediaID, &role, &isCover
 		}
 		files = append(files, item)
 	}
-	return DeliveryWork{
+	return CollectedSend{
 		Id: released.ID, WorkId: released.WorkID,
 		VersionNumber: released.VersionNumber, Type: released.Type,
 		Name: released.Name, Format: released.Format, Label: released.Label,
@@ -248,31 +241,31 @@ func toAPIDeliveryWork(released Work) DeliveryWork {
 	}
 }
 
-func toAPIQueuedDelivery(queued Delivery) QueuedDelivery {
-	item := QueuedDelivery{
-		Id: queued.ID, InstanceId: queued.InstanceID,
-		WorkId: queued.WorkID, State: QueuedDeliveryState(queued.State),
+func toAPIQueuedSend(queued Send) QueuedSend {
+	item := QueuedSend{
+		Id: queued.ID, ConnectedAppId: queued.ConnectedAppID,
+		WorkId: queued.WorkID, State: QueuedSendState(queued.State),
 		QueuedAt: queued.QueuedAt, SettledAt: queued.SettledAt, ExpiresAt: queued.ExpiresAt,
 		UpdatesInstall: queued.UpdatesInstall,
 	}
 	if queued.Reason != "" {
-		reason := QueuedDeliveryReason(queued.Reason)
+		reason := QueuedSendReason(queued.Reason)
 		item.Reason = &reason
 	}
 	return item
 }
 
-func toAPIWorkInstance(state InstanceState) WorkInstance {
-	item := WorkInstance{
-		InstanceId: state.InstanceID, ApplicationName: state.ApplicationName,
-		InstanceName: state.InstanceName, LastSeenAt: state.LastSeenAt,
+func toAPIWorkConnectedApp(state AppState) WorkConnectedApp {
+	item := WorkConnectedApp{
+		ConnectedAppId: state.ConnectedAppID, AppName: state.AppName,
+		Name: state.Name, LastSeenAt: state.LastSeenAt,
 		CanReceive: state.CanReceive, ReportsLibrary: state.ReportsLibrary,
 		InstalledVersion: state.InstalledVersion,
 		UpdateAvailable:  state.UpdateAvailable,
 	}
-	if state.Delivery != nil {
-		queued := toAPIQueuedDelivery(*state.Delivery)
-		item.Delivery = &queued
+	if state.Send != nil {
+		queued := toAPIQueuedSend(*state.Send)
+		item.Send = &queued
 	}
 	return item
 }
@@ -285,12 +278,4 @@ func toAPIWithheldNotices(notices []WithheldWork) []WithheldNotice {
 		})
 	}
 	return items
-}
-
-func uuidsFrom(values []uuid.UUID) []uuid.UUID {
-	converted := make([]uuid.UUID, len(values))
-	for index, value := range values {
-		converted[index] = value
-	}
-	return converted
 }

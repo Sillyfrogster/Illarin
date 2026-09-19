@@ -17,7 +17,6 @@ import (
 const (
 	promptOwnerType = "prompt_fragment"
 	promptPayload   = "prompt_fragment_text"
-	AppLumiverse    = "lumiverse"
 )
 
 var ErrPolicyRequired = errors.New("choose at least one allowed app before sealing a prompt")
@@ -190,40 +189,21 @@ func promptTextBySourceKey(
 	return texts[0], true, nil
 }
 
-func AppTargets(workType, app string) []string {
-	if workType == "preset" && app == AppLumiverse {
-		return []string{"preset_lumiverse"}
-	}
-	return nil
+// AllowsFormat says whether any of the apps keeps private prompts private in the format
+func AllowsFormat(reg *format.Registry, apps []string, formatID string) bool {
+	return slices.ContainsFunc(apps, func(app string) bool {
+		return slices.Contains(reg.PrivatePromptFormats(app), formatID)
+	})
 }
 
-// AllowsTarget says whether any of the apps may receive the work in the target format
-func AllowsTarget(apps []string, workType, target string) bool {
-	for _, app := range apps {
-		if slices.Contains(AppTargets(workType, app), target) {
-			return true
-		}
-	}
-	return false
-}
-
-func EligibleApps(workType string, offered []string) []string {
+// EligibleApps lists the apps that keep private prompts private in one of the offered formats
+func EligibleApps(reg *format.Registry, offered []string) []string {
 	apps := []string{}
-	for _, app := range []string{AppLumiverse} {
-		eligible := false
-		for _, target := range AppTargets(workType, app) {
-			for _, candidate := range offered {
-				if candidate == target {
-					eligible = true
-					break
-				}
-			}
-			if eligible {
-				break
-			}
-		}
-		if eligible {
-			apps = append(apps, app)
+	for _, app := range format.Apps() {
+		if slices.ContainsFunc(offered, func(formatID string) bool {
+			return AllowsFormat(reg, []string{app.ID}, formatID)
+		}) {
+			apps = append(apps, app.ID)
 		}
 	}
 	return apps
@@ -357,8 +337,8 @@ func policy(ctx context.Context, tx pgx.Tx, workID uuid.UUID, supplied *[]string
 		seen := map[string]bool{}
 		apps := make([]string, 0, len(*supplied))
 		for _, app := range *supplied {
-			if len(AppTargets("preset", app)) == 0 || seen[app] {
-				return nil, fmt.Errorf("%q is not an allowed app", app)
+			if seen[app] {
+				return nil, fmt.Errorf("%q is listed twice", app)
 			}
 			seen[app] = true
 			apps = append(apps, app)

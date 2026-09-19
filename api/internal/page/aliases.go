@@ -11,8 +11,9 @@ var (
 	workDetailAliases = map[string]string{
 		"type": "kind", "visibility": "discovery", "follow": "watch",
 		"draftedChangesVersion": "workingCopyVersion", "latestVersion": "latestUpdate",
+		"appFormats": "appTargets",
 	}
-	workListAliases          = map[string]string{"nsfwPreference": "visibility"}
+	workListAliases          = map[string]string{"nsfwPreference": "visibility", "apps": "platforms"}
 	browseWorkAliases        = map[string]string{"type": "kind"}
 	deletedWorkAliases       = map[string]string{"type": "kind"}
 	dependencyAliases        = map[string]string{"works": "assets"}
@@ -35,6 +36,7 @@ func registerAliases(routes api.Routes, h *Handlers) {
 
 func aliasBrowseQuery(q *api.Query) {
 	q.Alias("type", "kind")
+	q.Alias("app", "platform")
 }
 
 func aliasPageQuery(q *api.Query) {

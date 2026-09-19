@@ -2,46 +2,52 @@ package upload
 
 import (
 	"context"
+	"slices"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/theme"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 )
 
-var typesAskedForAnApp = map[string]struct{}{"preset": {}, "theme": {}}
-
-func TypeAsksForAnApp(workType string) bool {
-	_, asked := typesAskedForAnApp[workType]
-	return asked
-}
-
-func Apps(workType string) []string {
-	if !TypeAsksForAnApp(workType) {
-		return nil
-	}
-	var supported []string
+// appsAsked lists the apps a type built from nothing is made for, as its format modules name them
+func appsAsked(workType string) []string {
 	switch workType {
 	case "preset":
-		for _, app := range preset.Apps() {
-			supported = append(supported, string(app))
-		}
+		return appIDs(preset.Apps())
 	case "theme":
-		for _, app := range theme.Apps() {
-			supported = append(supported, string(app))
+		return appIDs(theme.Apps())
+	}
+	return []string{}
+}
+
+func appIDs[A ~string](apps []A) []string {
+	ids := make([]string, len(apps))
+	for i, app := range apps {
+		ids[i] = string(app)
+	}
+	return ids
+}
+
+// BuildChoices lists every type that can be built from nothing, with the apps each asks for
+func (s *Service) BuildChoices() BuildChoices {
+	choices := BuildChoices{Types: []BuildChoice{}}
+	for _, workType := range slices.Sorted(slices.Values(block.Types())) {
+		if s.buildable(workType) {
+			choices.Types = append(choices.Types, BuildChoice{Type: workType, Apps: page.AppNames(appsAsked(workType))})
 		}
 	}
-	return supported
+	return choices
+}
+
+func (s *Service) buildable(workType string) bool {
+	_, defined := block.Definitions(workType)
+	return defined && s.reg.BuildsFromNothing(workType)
 }
 
 func seedElements(workType string, app string) ([]block.Element, error) {
-	if !TypeAsksForAnApp(workType) {
-		if app != "" {
-			return nil, ErrAppNotAnswered
-		}
-		return nil, nil
-	}
 	switch workType {
 	case "preset":
 		chosen := preset.App(app)
@@ -55,17 +61,20 @@ func seedElements(workType string, app string) ([]block.Element, error) {
 			return nil, ErrAppNotAnswered
 		}
 		return theme.Seed(chosen)
-	default:
+	}
+	if app != "" {
 		return nil, ErrAppNotAnswered
 	}
+	return nil, nil
 }
+
 func (s *Service) StartFromNothing(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	workType string,
 	app string,
 ) (uuid.UUID, error) {
-	if _, ok := block.Definitions(workType); !ok || !s.reg.BuildsFromNothing(workType) {
+	if !s.buildable(workType) {
 		return uuid.Nil, ErrTypeNotBuildable
 	}
 	seeded, err := seedElements(workType, app)

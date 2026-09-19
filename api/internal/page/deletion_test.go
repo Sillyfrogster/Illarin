@@ -121,7 +121,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	}
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) ||
-		!owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
+		!owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0].ID != "lumiverse" {
 		t.Fatalf("restored protected work lost its prompt or policy: %+v", owner)
 	}
 

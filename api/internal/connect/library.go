@@ -11,14 +11,14 @@ import (
 
 func (s *Sends) Sync(
 	ctx context.Context,
-	instance Instance,
+	app ConnectedApp,
 	report ReportedLibrary,
 ) (LibraryResult, error) {
 	entries, removed, err := s.readReport(report)
 	if err != nil {
 		return LibraryResult{}, err
 	}
-	version, err := checkApplicationVersion(report.ApplicationVersion)
+	version, err := checkAppVersion(report.AppVersion)
 	if err != nil {
 		return LibraryResult{}, ErrLibraryVersion
 	}
@@ -26,21 +26,21 @@ func (s *Sends) Sync(
 	if report.Snapshot {
 		action, limit = actionSyncWhole, int32(syncWholeLimit)
 	}
-	if err := s.instances.Throttle(
-		ctx, action, instance.ID.String(), limit, time.Hour,
+	if err := s.apps.Throttle(
+		ctx, action, app.ID.String(), limit, time.Hour,
 	); err != nil {
 		return LibraryResult{}, err
 	}
 
 	workIDs := make([]uuid.UUID, 0, len(entries))
-	generations := make([]int32, 0, len(entries))
+	versions := make([]int32, 0, len(entries))
 	for _, entry := range entries {
 		workIDs = append(workIDs, entry.WorkID)
 		reported := int32(0)
 		if entry.VersionNumber != nil {
 			reported = int32(*entry.VersionNumber)
 		}
-		generations = append(generations, reported)
+		versions = append(versions, reported)
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -50,31 +50,31 @@ func (s *Sends) Sync(
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 	accepted, err := queries.ReportLibraryEntries(ctx, db.ReportLibraryEntriesParams{
-		InstanceID: uuidValue(instance.ID), WorkIds: uuidValues(workIDs),
-		VersionNumbers: generations,
+		ConnectedAppID: uuidValue(app.ID), WorkIds: uuidValues(workIDs),
+		VersionNumbers: versions,
 	})
 	if err != nil {
 		return LibraryResult{}, fmt.Errorf("record a library report: %w", err)
 	}
-	if err := queries.RecordLibraryApplicationVersion(ctx, db.RecordLibraryApplicationVersionParams{
-		ApplicationVersion: version, InstanceID: uuidValue(instance.ID),
+	if err := queries.RecordLibraryAppVersion(ctx, db.RecordLibraryAppVersionParams{
+		AppVersion: version, ConnectedAppID: uuidValue(app.ID),
 	}); err != nil {
-		return LibraryResult{}, fmt.Errorf("record the reported application version: %w", err)
+		return LibraryResult{}, fmt.Errorf("record the reported app version: %w", err)
 	}
 	var dropped int64
 	if report.Snapshot {
 		dropped, err = queries.PruneLibraryToWhole(ctx, db.PruneLibraryToWholeParams{
-			InstanceID: uuidValue(instance.ID), WorkIds: uuidValues(workIDs),
+			ConnectedAppID: uuidValue(app.ID), WorkIds: uuidValues(workIDs),
 		})
 	} else if len(removed) > 0 {
 		dropped, err = queries.RemoveLibraryEntries(ctx, db.RemoveLibraryEntriesParams{
-			InstanceID: uuidValue(instance.ID), WorkIds: uuidValues(removed),
+			ConnectedAppID: uuidValue(app.ID), WorkIds: uuidValues(removed),
 		})
 	}
 	if err != nil {
 		return LibraryResult{}, fmt.Errorf("remove library entries: %w", err)
 	}
-	withheld, err := takeWithheldNotices(ctx, queries, instance.ID)
+	withheld, err := takeWithheldNotices(ctx, queries, app.ID)
 	if err != nil {
 		return LibraryResult{}, err
 	}
@@ -117,17 +117,17 @@ func (s *Sends) readReport(report ReportedLibrary) ([]ReportedEntry, []uuid.UUID
 	return entries, removed, nil
 }
 
-func (s *Sends) LibraryCountsByInstance(
+func (s *Sends) LibraryCountsByApp(
 	ctx context.Context,
 	userID uuid.UUID,
 ) (map[uuid.UUID]LibraryCounts, error) {
-	rows, err := db.New(s.pool).InstanceLibraryCounts(ctx, uuidValue(userID))
+	rows, err := db.New(s.pool).AppLibraryCounts(ctx, uuidValue(userID))
 	if err != nil {
 		return nil, fmt.Errorf("count installed works: %w", err)
 	}
 	counts := make(map[uuid.UUID]LibraryCounts, len(rows))
 	for _, row := range rows {
-		counts[uuid.UUID(row.InstanceID.Bytes)] = LibraryCounts{
+		counts[uuid.UUID(row.ConnectedAppID.Bytes)] = LibraryCounts{
 			Installed: int(row.Installed), UpdatesAvailable: int(row.UpdatesAvailable),
 		}
 	}

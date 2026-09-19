@@ -156,8 +156,8 @@ func run() error {
 	updateDestinations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	versions := version.NewService(pool, svc)
 	versions.OnPublished(updateDestinations.Announce, version.TellFollowers)
-	links := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
-	deliveries := connect.NewSends(pool, svc, links, connect.DefaultSettings())
+	apps := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
+	sends := connect.NewSends(pool, svc, apps, connect.DefaultSettings())
 	notifications := notify.NewService(pool)
 	background.Add(8)
 	go func() {
@@ -186,8 +186,8 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		deliveries.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("delivery sweeper: %v", err)
+		sends.RunSweeper(runtimeContext, func(err error) {
+			log.Printf("send sweeper: %v", err)
 		})
 	}()
 	go func() {
@@ -219,8 +219,8 @@ func run() error {
 		Uploads:            uploads,
 		Downloads:          download.NewService(pool, svc),
 		Accounts:           accounts,
-		Links:              links,
-		Deliveries:         deliveries,
+		Apps:               apps,
+		Sends:              sends,
 		Publications:       publications,
 		UpdateDestinations: updateDestinations,
 		Notifications:      notifications,

@@ -1,13 +1,17 @@
 package upload
 
+import "github.com/Sillyfrogster/Illarin/api/internal/page"
+
 type StartWorkRequest struct {
-	App  *StartWorkRequestApp `json:"app,omitempty"`
-	Type string               `json:"type"`
+	App  *string `json:"app,omitempty"`
+	Type string  `json:"type"`
 }
 
-type StartWorkRequestApp string
+type BuildChoices struct {
+	Types []BuildChoice `json:"types"`
+}
 
-const (
-	StartWorkRequestAppLumiverse   StartWorkRequestApp = "lumiverse"
-	StartWorkRequestAppSillytavern StartWorkRequestApp = "sillytavern"
-)
+type BuildChoice struct {
+	Type string         `json:"type"`
+	Apps []page.AppName `json:"apps"`
+}

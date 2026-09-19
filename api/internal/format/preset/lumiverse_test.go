@@ -309,10 +309,10 @@ func TestReadingAKeyedSealedPromptSeparatesItsText(t *testing.T) {
 	if !sealed.Protected || sealed.Text != "" {
 		t.Errorf("sealed stub = %+v, want a protected fragment with no public text", sealed)
 	}
-	if len(parsed.Protected.Prompts) != 1 {
-		t.Fatalf("protected prompts = %d, want 1", len(parsed.Protected.Prompts))
+	if len(parsed.Protected) != 1 {
+		t.Fatalf("protected prompts = %d, want 1", len(parsed.Protected))
 	}
-	private := parsed.Protected.Prompts[0]
+	private := parsed.Protected[0]
 	if private.FragmentID != sealed.ID || private.SourceKey != "dialogue.frame" ||
 		private.Text != privateText || private.ReuseExisting {
 		t.Errorf("protected prompt = %+v", private)
@@ -362,10 +362,10 @@ func TestReadingAKeyedPlaceholderMarksItForReuse(t *testing.T) {
 	if !fragment.Protected || fragment.Text != "" {
 		t.Errorf("placeholder stub = %+v", fragment)
 	}
-	if len(parsed.Protected.Prompts) != 1 {
-		t.Fatalf("protected prompts = %d, want 1", len(parsed.Protected.Prompts))
+	if len(parsed.Protected) != 1 {
+		t.Fatalf("protected prompts = %d, want 1", len(parsed.Protected))
 	}
-	private := parsed.Protected.Prompts[0]
+	private := parsed.Protected[0]
 	if private.FragmentID != fragment.ID || private.SourceKey != "dialogue.frame" ||
 		private.Text != "" || !private.ReuseExisting {
 		t.Errorf("protected prompt = %+v", private)
@@ -424,18 +424,14 @@ func TestMalformedKeyedSealingMetadataIsRefused(t *testing.T) {
 	}
 }
 
-func TestASillyTavernOriginDoesNotOfferLumiverseForProtectedDelivery(t *testing.T) {
+func TestASillyTavernOriginOffersNoAppForPrivatePrompts(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, sillyTavernPreset)
-	offered := testRegistry(t).OfferedTargets(format.CapabilitySubject{
+	offered := testRegistry(t).OfferedFormats(format.CapabilitySubject{
 		Type: Type, Origin: SillyTavernID, Elements: parsed.Elements,
 	})
-	targets := make([]string, len(offered))
-	for i, target := range offered {
-		targets[i] = target.Format
-	}
-	if apps := private.EligibleApps(Type, targets); len(apps) != 0 {
-		t.Fatalf("SillyTavern protected-delivery apps = %v, want none", apps)
+	if apps := private.EligibleApps(testRegistry(t), format.OfferedIDs(offered)); len(apps) != 0 {
+		t.Fatalf("apps allowed private prompts from a SillyTavern origin = %v, want none", apps)
 	}
 }
 

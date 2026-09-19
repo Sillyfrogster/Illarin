@@ -16,7 +16,7 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	aliasBrowseQuery(q)
 	params := ListWorksParams{
 		Type:     api.QueryText[ListWorksParamsType](q, "type"),
-		Platform: api.QueryText[string](q, "platform"),
+		App:      api.QueryText[string](q, "app"),
 		Creator:  api.QueryText[string](q, "creator"),
 		Q:        api.QueryText[string](q, "q"),
 		Facet:    api.QueryList(q, "facet"),
@@ -54,8 +54,8 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	if params.Type != nil {
 		f.Type = string(*params.Type)
 	}
-	if params.Platform != nil {
-		f.Platform, f.PlatformSet = params.Platform, true
+	if params.App != nil {
+		f.App, f.AppSet = params.App, true
 	}
 	if params.Q != nil {
 		f.Query = *params.Q
@@ -118,9 +118,9 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 		value := WorkListEmptyState(found.EmptyState)
 		empty = &value
 	}
-	platforms := make([]BrowseOption, 0, len(found.Platforms))
-	for _, option := range found.Platforms {
-		platforms = append(platforms, BrowseOption{
+	apps := make([]BrowseOption, 0, len(found.Apps))
+	for _, option := range found.Apps {
+		apps = append(apps, BrowseOption{
 			Value: option.Value, Label: option.Label, Count: option.Count, Selected: option.Selected,
 		})
 	}
@@ -137,7 +137,7 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	c.JSON(http.StatusOK, WorkList{
 		Items: items, Total: found.Total, Suppressed: found.Suppressed,
 		NSFWPreference: WorkListNSFWPreference(preference),
-		NextCursor:     next, Platforms: platforms, Facets: facets, EmptyState: empty,
+		NextCursor:     next, Apps: apps, Facets: facets, EmptyState: empty,
 	})
 }
 

@@ -31,11 +31,11 @@ type StartedWork struct {
 	Readiness         []ReadinessItem  `json:"readiness"`
 	Blocks            []StartedBlock   `json:"blocks"`
 	AddableBlocks     []AddableBlock   `json:"addableBlocks"`
-	Downloads         []DownloadTarget `json:"downloads"`
-	AppTargets        []AppTarget      `json:"appTargets"`
+	Downloads         []DownloadFormat `json:"downloads"`
+	AppFormats        []AppFormat      `json:"appFormats"`
 	LinkedInstallOnly bool             `json:"linkedInstallOnly"`
-	AllowedApps       []string         `json:"allowedApps"`
-	EligibleApps      []string         `json:"eligibleApps"`
+	AllowedApps       []AppName        `json:"allowedApps"`
+	EligibleApps      []AppName        `json:"eligibleApps"`
 	Original          *OriginalUpload  `json:"original"`
 }
 
@@ -80,14 +80,19 @@ type AddableBlock struct {
 	} `json:"choices"`
 }
 
-type DownloadTarget struct {
+type DownloadFormat struct {
 	Format      string        `json:"format"`
 	Label       string        `json:"label"`
 	Recommended bool          `json:"recommended"`
 	Roles       []RoleVerdict `json:"roles"`
 }
 
-type AppTarget struct {
+type AppName struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+type AppFormat struct {
 	ID     string `json:"id"`
 	Label  string `json:"label"`
 	Format string `json:"format"`
@@ -356,7 +361,7 @@ func PublishWorkVersion(
 	return Send(t, r, Authorized(request, session))
 }
 
-func DownloadMenu(t *testing.T, r http.Handler, session *http.Cookie, workID string) []DownloadTarget {
+func DownloadMenu(t *testing.T, r http.Handler, session *http.Cookie, workID string) []DownloadFormat {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil)
 	if session != nil {

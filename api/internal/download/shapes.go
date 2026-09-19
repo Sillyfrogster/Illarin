@@ -11,9 +11,9 @@ type DownloadExportParams struct {
 }
 
 type RecordedVersionDownloads struct {
-	AppTargets        []page.AppTarget             `json:"appTargets"`
+	AppFormats        []page.AppFormat             `json:"appFormats"`
 	Blocks            []block.WorkBlock            `json:"blocks"`
-	Downloads         []page.DownloadTarget        `json:"downloads"`
+	Downloads         []page.DownloadFormat        `json:"downloads"`
 	Type              RecordedVersionDownloadsType `json:"type"`
 	LinkedInstallOnly bool                         `json:"linkedInstallOnly"`
 	Media             []page.WorkImage             `json:"media"`

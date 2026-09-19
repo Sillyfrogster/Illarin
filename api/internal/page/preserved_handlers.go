@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +29,7 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context) {
 		served := make([]PreservedNamespace, 0, len(found))
 		for _, namespace := range found {
 			served = append(served, PreservedNamespace{
-				Name: namespace.Name, Bytes: namespace.Bytes,
+				Name: namespace.Name, Label: format.PreservedLabel(namespace.Name), Bytes: namespace.Bytes,
 			})
 		}
 		c.JSON(http.StatusOK, served)

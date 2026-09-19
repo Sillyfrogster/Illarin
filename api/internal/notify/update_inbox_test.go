@@ -260,14 +260,14 @@ func TestAnEntryAboutAWithheldOrDeletedWorkLeavesEveryInboxButTheOwners(t *testi
 	}
 }
 
-func TestAnUpdateEntryOffersASendToEachInstanceHoldingAnOlderCopy(t *testing.T) {
+func TestAnUpdateEntryOffersASendToEachConnectedAppHoldingAnOlderCopy(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
 	reader := s.reader(t, "reader@example.com", "moon.reader")
 	desk := s.install(t, reader, "Reading desk")
 	laptop := s.install(t, reader, "Travel laptop")
-	tablet := apitest.LinkDeviceInstance(t, s.router, reader, "Lumiverse", "Old tablet", []string{apitest.LibrarySyncScope})
-	apitest.ReportInstalled(t, s.router, tablet.AccessToken, "", s.workID)
+	tablet := apitest.ConnectApp(t, s.router, reader, "Lumiverse", "Old tablet", []string{apitest.LibrarySyncPermission})
+	apitest.ReportLibrary(t, s.router, tablet.AccessToken, "", s.workID)
 
 	s.describe(t, "A change worth sending on")
 	s.publishUpdate(t, `{"summary":"A change worth sending on"}`)
@@ -276,23 +276,27 @@ func TestAnUpdateEntryOffersASendToEachInstanceHoldingAnOlderCopy(t *testing.T) 
 
 	entry := s.inbox(t, reader, "").Items[0]
 	var offered []string
-	for _, target := range entry.SendTargets {
-		offered = append(offered, target.ApplicationName+" — "+target.InstanceName)
+	for _, app := range entry.SendTo {
+		offered = append(offered, app.AppName+" — "+app.Name)
 	}
 	want := []string{"Lumiverse — Reading desk", "Lumiverse — Travel laptop"}
 	if strings.Join(offered, ", ") != strings.Join(want, ", ") {
 		t.Fatalf("the entry offers %q, want %q", offered, want)
 	}
-	for _, sent := range entry.SendTargets {
-		if sent.InstanceID != desk.Instance.ID && sent.InstanceID != laptop.Instance.ID {
-			t.Fatalf("the entry offers an instance it should not: %+v", sent)
+	raw := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/notifications", nil), reader)).Body.String()
+	if !strings.Contains(raw, `"sendTargets":[{`) || !strings.Contains(raw, `"instanceId":"`+desk.ConnectedApp.ID+`"`) {
+		t.Fatalf("the entry = %s, want sendTargets and instanceId repeating the new names", raw)
+	}
+	for _, sent := range entry.SendTo {
+		if sent.ConnectedAppID != desk.ConnectedApp.ID && sent.ConnectedAppID != laptop.ConnectedApp.ID {
+			t.Fatalf("the entry offers a connected app it should not: %+v", sent)
 		}
-		if queued := apitest.SendToInstance(t, s.router, reader, s.workID, sent.InstanceID); queued.Code != http.StatusAccepted {
+		if queued := apitest.SendToApp(t, s.router, reader, s.workID, sent.ConnectedAppID); queued.Code != http.StatusAccepted {
 			t.Fatalf("sending from the entry = %d, want 202: %s", queued.Code, queued.Body.String())
 		}
 	}
-	if current.Instance.ID == "" {
-		t.Fatal("the up-to-date instance was never linked")
+	if current.ConnectedApp.ID == "" {
+		t.Fatal("the up-to-date connected app was never connected")
 	}
 
 	owner := s.inbox(t, s.creator, "")
@@ -335,12 +339,12 @@ func (s updateInboxStack) setFollow(t *testing.T, session *http.Cookie, method s
 	}
 }
 
-func (s updateInboxStack) install(t *testing.T, session *http.Cookie, instance string) apitest.TokenGrant {
+func (s updateInboxStack) install(t *testing.T, session *http.Cookie, name string) apitest.AppCredentials {
 	t.Helper()
-	grant := apitest.LinkDeviceInstance(t, s.router, session, "Lumiverse", instance, []string{apitest.ReceiveScope, apitest.LibrarySyncScope})
-	apitest.DeclareTargets(t, s.router, grant.AccessToken, []string{"test_opaque"})
-	apitest.ReportInstalled(t, s.router, grant.AccessToken, "", s.workID)
-	return grant
+	credentials := apitest.ConnectApp(t, s.router, session, "Lumiverse", name, []string{apitest.ReceivePermission, apitest.LibrarySyncPermission})
+	apitest.DeclareFormats(t, s.router, credentials.AccessToken, []string{"test_opaque"})
+	apitest.ReportLibrary(t, s.router, credentials.AccessToken, "", s.workID)
+	return credentials
 }
 
 // with points the same stack at another of the creator's works.

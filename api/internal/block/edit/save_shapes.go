@@ -8,19 +8,13 @@ import (
 )
 
 type SaveWorkBlockRequest struct {
-	AllowedApps     *[]SaveWorkBlockRequestAllowedApps `json:"allowedApps,omitempty" tstype:"'lumiverse'[]"`
-	Elements        []SaveWorkElement                  `json:"elements"`
-	ExposeProtected *bool                              `json:"exposeProtected,omitempty"`
-	Layout          SaveWorkBlockRequestLayout         `json:"layout"`
-	Title           *string                            `json:"title" tstype:"string | null,required"`
-	Width           SaveWorkBlockRequestWidth          `json:"width"`
+	AllowedApps     *[]string                  `json:"allowedApps,omitempty"`
+	Elements        []SaveWorkElement          `json:"elements"`
+	ExposeProtected *bool                      `json:"exposeProtected,omitempty"`
+	Layout          SaveWorkBlockRequestLayout `json:"layout"`
+	Title           *string                    `json:"title" tstype:"string | null,required"`
+	Width           SaveWorkBlockRequestWidth  `json:"width"`
 }
-
-type SaveWorkBlockRequestAllowedApps string
-
-const (
-	SaveWorkBlockRequestAllowedAppsLumiverse SaveWorkBlockRequestAllowedApps = "lumiverse"
-)
 
 type SaveWorkBlockRequestLayout string
 

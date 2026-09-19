@@ -169,7 +169,7 @@ func TestAReadinessListStandsOnADraftForItsOwnerAlone(t *testing.T) {
 	}
 }
 
-func TestADraftHasNoDownloadNoDeliveryAndNoVisibilityToSet(t *testing.T) {
+func TestADraftHasNoDownloadNoSendAndNoVisibilityToSet(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartCharacter(t, r, session)

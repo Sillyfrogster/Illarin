@@ -267,7 +267,7 @@ func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 		{SillyTavernID, SillyTavernID},
 	} {
 		t.Run(test.origin, func(t *testing.T) {
-			targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
+			targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
 				Type: Type, Origin: test.origin,
 				Elements: []block.Element{{
 					ID: uuid.New(), Type: block.TypePromptList, Role: block.RolePromptFragments,
@@ -283,7 +283,7 @@ func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 
 func TestAPresetBuiltHereIsOfferedBothWriters(t *testing.T) {
 	t.Parallel()
-	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
+	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
 		Type: Type,
 		Elements: []block.Element{{
 			ID: uuid.New(), Type: block.TypePromptList, Role: block.RolePromptFragments,
@@ -554,7 +554,7 @@ func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
 	if _, written := body["topP"]; written {
 		t.Error("a name belonging to the other preset format was written into the file")
 	}
-	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
+	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
 		Type: Type, Origin: SillyTavernID,
 		Elements: []block.Element{{
 			ID: uuid.New(), Type: block.TypeSettingGroup, Role: block.RoleSamplerSettings,

@@ -31,17 +31,17 @@ func TestASavedGalleryImageTravelsInEveryFormatThatCarriesIt(t *testing.T) {
 	})
 	apitest.PublishCharacter(t, r, session, workID)
 
-	for _, target := range apitest.DownloadMenu(t, r, nil, workID) {
-		if roleVerdictNamed(t, target, "gallery").Verdict == "dropped" {
+	for _, choice := range apitest.DownloadMenu(t, r, nil, workID) {
+		if roleVerdictNamed(t, choice, "gallery").Verdict == "dropped" {
 			continue
 		}
-		carried := imagesInDownload(t, r, workID, target.Format)
+		carried := imagesInDownload(t, r, workID, choice.Format)
 		for name, wanted := range map[string][]byte{
 			"At the door": first, "On the stair": second,
 		} {
 			if !carriesImage(carried, name, wanted) {
 				t.Errorf("%s says it carries the gallery but %q is not in it: %+v",
-					target.Format, name, describe(carried))
+					choice.Format, name, describe(carried))
 			}
 		}
 	}
@@ -85,28 +85,28 @@ func giveGallery(
 	}
 }
 
-func imagesInDownload(t *testing.T, r http.Handler, workID, target string) []carriedImage {
+func imagesInDownload(t *testing.T, r http.Handler, workID, formatID string) []carriedImage {
 	t.Helper()
-	return imagesInChosenDownload(t, r, workID, target, nil)
+	return imagesInChosenDownload(t, r, workID, formatID, nil)
 }
 
 func imagesInChosenDownload(
 	t *testing.T,
 	r http.Handler,
-	workID, target string,
+	workID, formatID string,
 	images *string,
 ) []carriedImage {
 	t.Helper()
-	address := "/download/" + workID + "/" + target
+	address := "/download/" + workID + "/" + formatID
 	if images != nil {
 		address += "?images=" + *images
 	}
 	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, address, nil))
 	if download.Code != http.StatusOK {
-		t.Fatalf("download %s: %d %s", target, download.Code, download.Body.String())
+		t.Fatalf("download %s: %d %s", formatID, download.Code, download.Body.String())
 	}
 	body := download.Body.Bytes()
-	if target == "charx" {
+	if formatID == "charx" {
 		return archivedCardImages(t, body)
 	}
 	return inlineCardImages(t, body)
@@ -254,7 +254,7 @@ func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 	imagesInChosenDownload(t, r, workID, "charx", &chosen)
 
 	rows, err := pool.Query(context.Background(), `
-		select export_target, authorization_class
+		select format, authorization_class
 		  from download_events where work_id = $1
 	`, workID)
 	if err != nil {
@@ -263,12 +263,12 @@ func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 	defer rows.Close()
 	recorded := 0
 	for rows.Next() {
-		var target, class string
-		if err := rows.Scan(&target, &class); err != nil {
+		var formatID, class string
+		if err := rows.Scan(&formatID, &class); err != nil {
 			t.Fatalf("read a download event: %v", err)
 		}
-		if target != "charx" || class != "anonymous" {
-			t.Errorf("event = %q by %q, want the format and a coarse class", target, class)
+		if formatID != "charx" || class != "anonymous" {
+			t.Errorf("event = %q by %q, want the format and a coarse class", formatID, class)
 		}
 		recorded++
 	}

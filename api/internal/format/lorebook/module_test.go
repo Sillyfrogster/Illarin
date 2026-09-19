@@ -272,7 +272,7 @@ func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 
 func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 	t.Parallel()
-	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
+	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
 		Type: Type, Origin: ID,
 		Elements: []block.Element{
 			{
@@ -302,7 +302,7 @@ func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 
 func TestNoCardWriterIsOfferedForABook(t *testing.T) {
 	t.Parallel()
-	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
+	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
 		Type: "character", Origin: ID,
 	})
 	if len(targets) != 0 {

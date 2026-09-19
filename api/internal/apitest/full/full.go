@@ -34,7 +34,7 @@ func Register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
 	routes := api.NewRoutes(r.Group(
 		"",
 		api.NoStoreCredentialResponses(),
-		api.GuardBrowserMutations(s.Links.BrowserOrigin()),
+		api.GuardBrowserMutations(s.Apps.BrowserOrigin()),
 		api.Sessions(s.Accounts.Current),
 	), d)
 	routes.Handle(http.MethodGet, "/healthz", d.JSON, ok)
@@ -44,17 +44,17 @@ func Register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
 	downloads := download.NewHandlers(s.Downloads, s.Accounts)
 	posts := blog.NewHandlers(s.Publications, s.Accounts, s.MaxUploadBytes)
 
-	account.Register(routes, account.NewHandlers(s.Accounts, s.Links, s.Publications))
+	account.Register(routes, account.NewHandlers(s.Accounts, s.Apps, s.Publications))
 	profile.Register(routes, profile.NewHandlers(s.Accounts, s.MaxUploadBytes))
-	notify.Register(routes, notify.NewHandlers(s.Notifications, s.Deliveries))
-	page.Register(routes, page.NewHandlers(s.Pages, s.Accounts, s.Deliveries, s.Notifications))
+	notify.Register(routes, notify.NewHandlers(s.Notifications, s.Sends))
+	page.Register(routes, page.NewHandlers(s.Pages, s.Accounts, s.Sends, s.Notifications))
 	edit.Register(routes, edit.NewHandlers(s.Blocks))
 	version.Register(routes, version.NewHandlers(s.Versions, s.Accounts))
 	upload.Register(routes, upload.NewHandlers(s.Uploads, s.Pages, s.MaxUploadBytes))
 	download.Register(routes, downloads)
 	image.Register(routes, image.NewHandlers(s.Works, s.Accounts, s.Publications, s.MaxUploadBytes))
 	private.Register(routes, private.NewHandlers(private.NewService(s.Works.Pool())))
-	connect.Register(routes, connect.NewHandlers(s.Links, s.Deliveries, downloads))
+	connect.Register(routes, connect.NewHandlers(s.Apps, s.Sends, downloads))
 	blog.Register(routes, posts)
 	integration.Register(routes, integration.NewHandlers(
 		s.Publications, s.UpdateDestinations, posts.IntegrationAccess()))

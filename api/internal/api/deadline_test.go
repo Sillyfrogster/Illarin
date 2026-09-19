@@ -20,7 +20,7 @@ const alreadyPast = time.Nanosecond
 func deadlines(json time.Duration) api.Deadlines {
 	return api.Deadlines{
 		JSON: json, Upload: time.Minute, Download: time.Minute,
-		Deliver: time.Minute, Verify: time.Minute,
+		Collect: time.Minute, Verify: time.Minute,
 	}
 }
 
@@ -50,8 +50,8 @@ func TestARouteWithNoDeadlineIsRefused(t *testing.T) {
 	t.Parallel()
 	err := full.Register(
 		gin.New(),
-		apitest.Services{Works: &work.Service{}, Links: &connect.Apps{}},
-		api.Deadlines{Upload: time.Minute, Download: time.Minute, Deliver: time.Minute},
+		apitest.Services{Works: &work.Service{}, Apps: &connect.Apps{}},
+		api.Deadlines{Upload: time.Minute, Download: time.Minute, Collect: time.Minute},
 	)
 
 	if err == nil {

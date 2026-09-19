@@ -14,7 +14,7 @@ type Deadlines struct {
 	JSON     time.Duration
 	Upload   time.Duration
 	Download time.Duration
-	Deliver  time.Duration
+	Collect  time.Duration
 	Verify   time.Duration
 }
 
@@ -23,7 +23,7 @@ func DefaultDeadlines() Deadlines {
 		JSON:     5 * time.Second,
 		Upload:   15 * time.Minute,
 		Download: 15 * time.Minute,
-		Deliver:  45 * time.Second,
+		Collect:  45 * time.Second,
 		Verify:   20 * time.Second,
 	}
 }
@@ -32,7 +32,7 @@ func DefaultDeadlines() Deadlines {
 func (d Deadlines) Check() error {
 	for name, limit := range map[string]time.Duration{
 		"JSON": d.JSON, "Upload": d.Upload, "Download": d.Download,
-		"Deliver": d.Deliver, "Verify": d.Verify,
+		"Collect": d.Collect, "Verify": d.Verify,
 	} {
 		if limit <= 0 {
 			return fmt.Errorf("the %s deadline is not set", name)

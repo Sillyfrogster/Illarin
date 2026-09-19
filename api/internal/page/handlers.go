@@ -12,17 +12,17 @@ import (
 type Handlers struct {
 	works         *Service
 	accounts      *account.Service
-	deliveries    *connect.Sends
+	sends         *connect.Sends
 	notifications *notify.Service
 }
 
 func NewHandlers(
 	works *Service,
 	accounts *account.Service,
-	deliveries *connect.Sends,
+	sends *connect.Sends,
 	notifications *notify.Service,
 ) *Handlers {
-	return &Handlers{works: works, accounts: accounts, deliveries: deliveries, notifications: notifications}
+	return &Handlers{works: works, accounts: accounts, sends: sends, notifications: notifications}
 }
 
 func Register(routes api.Routes, h *Handlers) {

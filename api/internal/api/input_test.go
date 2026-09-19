@@ -72,8 +72,8 @@ func TestAppActionsWithoutTheIllarinHeaderAreRefused(t *testing.T) {
 	t.Parallel()
 	router := harness.NewRouter(t)
 	for _, target := range []string{
-		"/v1/link/requests/ABCD-EFGH/approve",
-		"/v1/link/authorizations/some-code/deny",
+		"/v1/connect/requests/ABCD-EFGH/approve",
+		"/v1/connect/authorizations/some-code/deny",
 	} {
 		rec := apitest.Send(t, router, httptest.NewRequest(http.MethodPost, target, nil))
 		if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "Open this action from Illarin") {

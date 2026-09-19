@@ -1,3 +1,3 @@
 package connect
 
-const MaxLinkBodyBytes = maxLinkBodyBytes
+const MaxConnectBodyBytes = maxConnectBodyBytes

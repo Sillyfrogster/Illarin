@@ -106,10 +106,12 @@ packages:
     preserve_comments: "none"
     frontmatter: |
       import type { VersionChangeGroup } from "./version";
+      import type { AppName } from "./work";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
       version.VersionChangeGroup: "VersionChangeGroup"
+      page.AppName: "AppName"
     include_files:
       - "shapes.go"
       - "start_shapes.go"
@@ -121,17 +123,17 @@ packages:
     frontmatter: |
       import type { WorkBlock } from "./block";
       import type {
-        AppTarget,
+        AppFormat,
         WorkImage,
-        DownloadTarget,
+        DownloadFormat,
         RecordedVersion,
       } from "./work";
     type_mappings:
       uuid.UUID: "string"
       block.WorkBlock: "WorkBlock"
-      page.AppTarget: "AppTarget"
+      page.AppFormat: "AppFormat"
       page.WorkImage: "WorkImage"
-      page.DownloadTarget: "DownloadTarget"
+      page.DownloadFormat: "DownloadFormat"
       page.RecordedVersion: "RecordedVersion"
     include_files:
       - "shapes.go"
@@ -143,7 +145,7 @@ packages:
       time.Time: "string"
       uuid.UUID: "string"
     include_files:
-      - "link_shapes.go"
+      - "connection_shapes.go"
       - "send_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/integration"
     output_path: "../web/src/lib/api/shapes/integration.ts"

@@ -41,7 +41,7 @@ Features, one per thing the product has:
 - `download` — formats, the main file, download records, format comparison.
 - `image` — the pictures a work, a profile or a post owns.
 - `private` — private prompts.
-- `connect` — connected apps: linking, permissions, sending, the app's library.
+- `connect` — connected apps: connecting, permissions, sends, the app's library.
 - `integration` — outgoing announcements: `integration/blog` picks the
   destinations, `integration/discord` and `integration/dispatch` send them.
 - `notify` — the inbox and what a person follows.

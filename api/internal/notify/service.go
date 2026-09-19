@@ -128,10 +128,10 @@ func writeEntries(ctx context.Context, tx pgx.Tx, event recorded) error {
 				select account_id from work_follows
 				 where work_id = $2 and state = 'following'
 				union
-				select instance.user_id
-				  from instance_library_entries entry
-				  join linked_instances instance on instance.id = entry.instance_id
-				 where entry.work_id = $2 and instance.revoked_at is null
+				select app.user_id
+				  from app_library_entries entry
+				  join connected_apps app on app.id = entry.connected_app_id
+				 where entry.work_id = $2 and app.revoked_at is null
 				except
 				select account_id from work_follows
 				 where work_id = $2 and state = 'stopped'

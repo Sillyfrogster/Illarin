@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
@@ -15,78 +16,72 @@ import (
 )
 
 type Works interface {
-	DeliverableWork(ctx context.Context, q db.DBTX, workID uuid.UUID) (Deliverable, error)
+	SendableWork(ctx context.Context, q db.DBTX, workID uuid.UUID) (Sendable, error)
 	SignedURL(path string) string
 	ValidSignature(path, expires, signature string) bool
 }
 
-type Instances interface {
-	Live(ctx context.Context, userID uuid.UUID) ([]Instance, error)
-	LiveByID(ctx context.Context, userID, instanceID uuid.UUID) (Instance, error)
-	Throttle(ctx context.Context, action, source string, limit int32, window time.Duration) error
-}
-
 type Settings struct {
-	HoldFloor          time.Duration
-	HoldCeiling        time.Duration
-	Recheck            time.Duration
-	Lease              time.Duration
-	Retention          time.Duration
-	SweepInterval      time.Duration
-	Batch              int
-	MaxAttempts        int
-	PendingPerInstance int
-	ConcurrentHolds    int
-	MaxAcknowledged    int
-	MaxLibraryEntries  int
+	HoldFloor         time.Duration
+	HoldCeiling       time.Duration
+	Recheck           time.Duration
+	Lease             time.Duration
+	Retention         time.Duration
+	SweepInterval     time.Duration
+	Batch             int
+	MaxAttempts       int
+	PendingPerApp     int
+	ConcurrentHolds   int
+	MaxAcknowledged   int
+	MaxLibraryEntries int
 }
 
 func DefaultSettings() Settings {
 	return Settings{
-		HoldFloor:          25 * time.Second,
-		HoldCeiling:        30 * time.Second,
-		Recheck:            5 * time.Second,
-		Lease:              dispatch.Life,
-		Retention:          7 * 24 * time.Hour,
-		SweepInterval:      5 * time.Minute,
-		Batch:              10,
-		MaxAttempts:        5,
-		PendingPerInstance: 100,
-		ConcurrentHolds:    512,
-		MaxAcknowledged:    32,
-		MaxLibraryEntries:  2000,
+		HoldFloor:         25 * time.Second,
+		HoldCeiling:       30 * time.Second,
+		Recheck:           5 * time.Second,
+		Lease:             dispatch.Life,
+		Retention:         7 * 24 * time.Hour,
+		SweepInterval:     5 * time.Minute,
+		Batch:             10,
+		MaxAttempts:       5,
+		PendingPerApp:     100,
+		ConcurrentHolds:   512,
+		MaxAcknowledged:   32,
+		MaxLibraryEntries: 2000,
 	}
 }
 
 const (
-	actionQueue       = "delivery-queue"
-	actionCollect     = "delivery-collect"
-	actionSyncPart    = "library-sync"
-	actionSyncWhole   = "library-snapshot"
-	queueLimit        = 120
-	collectLimit      = 400
-	syncPartLimit     = 120
-	syncWholeLimit    = 24
-	deliveryPathStart = "/delivery/"
+	actionQueue     = "send-queue"
+	actionCollect   = "send-collect"
+	actionSyncPart  = "library-sync"
+	actionSyncWhole = "library-snapshot"
+	queueLimit      = 120
+	collectLimit    = 400
+	syncPartLimit   = 120
+	syncWholeLimit  = 24
+	sendPathStart   = "/send/"
 )
 
 type Sends struct {
-	pool      *pgxpool.Pool
-	works     Works
-	instances Instances
-	settings  Settings
-	waiting   *hub
-	now       func() time.Time
+	pool     *pgxpool.Pool
+	works    Works
+	apps     *Apps
+	settings Settings
+	waiting  *hub
+	now      func() time.Time
 }
 
 func NewSends(
 	pool *pgxpool.Pool,
 	works Works,
-	instances Instances,
+	apps *Apps,
 	settings Settings,
 ) *Sends {
 	return &Sends{
-		pool: pool, works: works, instances: instances, settings: settings,
+		pool: pool, works: works, apps: apps, settings: settings,
 		waiting: newHub(settings.ConcurrentHolds), now: time.Now,
 	}
 }
@@ -94,146 +89,146 @@ func NewSends(
 func (s *Sends) Queue(
 	ctx context.Context,
 	userID uuid.UUID,
-	instanceID uuid.UUID,
+	appID uuid.UUID,
 	workID uuid.UUID,
-) (Delivery, error) {
-	if err := s.instances.Throttle(
+) (Send, error) {
+	if err := s.apps.Throttle(
 		ctx, actionQueue, userID.String(), queueLimit, time.Hour,
 	); err != nil {
-		return Delivery{}, err
+		return Send{}, err
 	}
-	instance, err := s.instances.LiveByID(ctx, userID, instanceID)
-	if errors.Is(err, ErrInstanceNotFound) {
-		return Delivery{}, ErrNoInstanceOfYours
-	}
-	if err != nil {
-		return Delivery{}, err
-	}
-	if !instance.Grants(ScopeWorkReceive) {
-		return Delivery{}, ErrMissingScope
-	}
-	sendable, err := s.works.DeliverableWork(ctx, s.pool, workID)
-	if errors.Is(err, ErrNotDeliverable) {
-		return Delivery{}, ErrWorkNotSendable
+	app, err := s.apps.LiveByID(ctx, userID, appID)
+	if errors.Is(err, ErrAppNotFound) {
+		return Send{}, ErrNoAppOfYours
 	}
 	if err != nil {
-		return Delivery{}, err
+		return Send{}, err
 	}
-	if !installs(instance.Capabilities, sendable) {
-		return Delivery{}, ErrCannotInstall
+	if !app.Grants(PermissionReceiveWorks) {
+		return Send{}, ErrMissingPermission
 	}
-	if _, _, chosen := chooseTarget(
-		instance.AcceptedTargets, sendable.Targets, sendable.HasOriginal,
+	sendable, err := s.works.SendableWork(ctx, s.pool, workID)
+	if errors.Is(err, ErrNotSendable) {
+		return Send{}, ErrWorkNotSendable
+	}
+	if err != nil {
+		return Send{}, err
+	}
+	if !installs(app.Declared, sendable) {
+		return Send{}, ErrCannotInstall
+	}
+	if _, _, chosen := chooseFormat(
+		app.AcceptedFormats, sendable.Formats, sendable.HasOriginal,
 	); !chosen {
-		return Delivery{}, ErrNoTarget
+		return Send{}, ErrNoFormat
 	}
 
 	queries := db.New(s.pool)
-	waiting, err := queries.CountLiveDeliveries(ctx, uuidValue(instanceID))
+	waiting, err := queries.CountLiveSends(ctx, uuidValue(appID))
 	if err != nil {
-		return Delivery{}, fmt.Errorf("count waiting deliveries: %w", err)
+		return Send{}, fmt.Errorf("count waiting sends: %w", err)
 	}
-	if waiting >= int64(s.settings.PendingPerInstance) {
-		return Delivery{}, ErrQueueFull
+	if waiting >= int64(s.settings.PendingPerApp) {
+		return Send{}, ErrQueueFull
 	}
-	row, err := queries.QueueDelivery(ctx, db.QueueDeliveryParams{
-		ID: uuidValue(uuid.New()), InstanceID: uuidValue(instanceID),
+	row, err := queries.QueueSend(ctx, db.QueueSendParams{
+		ID: uuidValue(uuid.New()), ConnectedAppID: uuidValue(appID),
 		WorkID:    uuidValue(workID),
 		ExpiresAt: timestamptz(s.now().Add(s.settings.Retention)),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return s.liveDelivery(ctx, instanceID, workID)
+		return s.liveSend(ctx, appID, workID)
 	}
 	if err != nil {
-		return Delivery{}, fmt.Errorf("queue a delivery: %w", err)
+		return Send{}, fmt.Errorf("queue a send: %w", err)
 	}
-	s.waiting.signal(instanceID)
-	return deliveryFrom(
-		row.ID, row.InstanceID, row.WorkID, row.State, row.SettledReason,
+	s.waiting.signal(appID)
+	return sendFrom(
+		row.ID, row.ConnectedAppID, row.WorkID, row.State, row.SettledReason,
 		row.QueuedAt, row.SettledAt, row.ExpiresAt, row.UpdatesInstall,
 	), nil
 }
 
-func (s *Sends) liveDelivery(
+func (s *Sends) liveSend(
 	ctx context.Context,
-	instanceID uuid.UUID,
+	appID uuid.UUID,
 	workID uuid.UUID,
-) (Delivery, error) {
-	row, err := db.New(s.pool).LiveDeliveryForWork(ctx, db.LiveDeliveryForWorkParams{
-		InstanceID: uuidValue(instanceID), WorkID: uuidValue(workID),
+) (Send, error) {
+	row, err := db.New(s.pool).LiveSendForWork(ctx, db.LiveSendForWorkParams{
+		ConnectedAppID: uuidValue(appID), WorkID: uuidValue(workID),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Delivery{}, ErrDeliveryNotFound
+		return Send{}, ErrSendNotFound
 	}
 	if err != nil {
-		return Delivery{}, fmt.Errorf("read the waiting delivery: %w", err)
+		return Send{}, fmt.Errorf("read the waiting send: %w", err)
 	}
-	return deliveryFrom(
-		row.ID, row.InstanceID, row.WorkID, row.State, row.SettledReason,
+	return sendFrom(
+		row.ID, row.ConnectedAppID, row.WorkID, row.State, row.SettledReason,
 		row.QueuedAt, row.SettledAt, row.ExpiresAt, row.UpdatesInstall,
 	), nil
 }
 
-func (s *Sends) Discard(ctx context.Context, userID, deliveryID uuid.UUID) error {
-	discarded, err := db.New(s.pool).DiscardDelivery(ctx, db.DiscardDeliveryParams{
-		DeliveryID: uuidValue(deliveryID), UserID: uuidValue(userID),
+func (s *Sends) Discard(ctx context.Context, userID, sendID uuid.UUID) error {
+	discarded, err := db.New(s.pool).DiscardSend(ctx, db.DiscardSendParams{
+		SendID: uuidValue(sendID), UserID: uuidValue(userID),
 	})
 	if err != nil {
-		return fmt.Errorf("discard a delivery: %w", err)
+		return fmt.Errorf("discard a send: %w", err)
 	}
 	if discarded == 0 {
-		return ErrDeliveryNotFound
+		return ErrSendNotFound
 	}
 	return nil
 }
 
-func (s *Sends) WorkInstances(
+func (s *Sends) WorkApps(
 	ctx context.Context,
 	userID uuid.UUID,
 	workID uuid.UUID,
-) (WorkInstances, error) {
+) (WorkApps, error) {
 	queries := db.New(s.pool)
 	number, err := queries.SendableWorkVersion(ctx, uuidValue(workID))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return WorkInstances{}, ErrWorkNotFound
+		return WorkApps{}, ErrWorkNotFound
 	}
 	if err != nil {
-		return WorkInstances{}, fmt.Errorf("read the work to send: %w", err)
+		return WorkApps{}, fmt.Errorf("read the work to send: %w", err)
 	}
-	sendable, err := s.works.DeliverableWork(ctx, s.pool, workID)
-	if errors.Is(err, ErrNotDeliverable) {
-		return WorkInstances{}, ErrWorkNotFound
+	sendable, err := s.works.SendableWork(ctx, s.pool, workID)
+	if errors.Is(err, ErrNotSendable) {
+		return WorkApps{}, ErrWorkNotFound
 	}
 	if err != nil {
-		return WorkInstances{}, fmt.Errorf("read available delivery formats: %w", err)
+		return WorkApps{}, fmt.Errorf("read the formats a send can use: %w", err)
 	}
-	rows, err := queries.WorkInstanceStates(ctx, db.WorkInstanceStatesParams{
+	rows, err := queries.WorkConnectedAppStates(ctx, db.WorkConnectedAppStatesParams{
 		WorkID: uuidValue(workID), UserID: uuidValue(userID),
 	})
 	if err != nil {
-		return WorkInstances{}, fmt.Errorf("read instance state for a work: %w", err)
+		return WorkApps{}, fmt.Errorf("read connected app state for a work: %w", err)
 	}
-	found := WorkInstances{VersionNumber: int(number), Items: []InstanceState{}}
+	found := WorkApps{VersionNumber: int(number), Items: []AppState{}}
 	for _, row := range rows {
-		_, _, canReceive := chooseTarget(
-			row.AcceptedTargets, sendable.Targets, sendable.HasOriginal,
+		_, _, canReceive := chooseFormat(
+			row.AcceptedFormats, sendable.Formats, sendable.HasOriginal,
 		)
-		state := InstanceState{
-			InstanceID:      uuid.UUID(row.ID.Bytes),
-			ApplicationName: row.ApplicationName,
-			InstanceName:    row.InstanceName,
-			LastSeenAt:      optionalTime(row.LastSeenAt),
-			CanReceive: holdsScope(row.Scopes, ScopeWorkReceive) &&
+		state := AppState{
+			ConnectedAppID: uuid.UUID(row.ID.Bytes),
+			AppName:        row.AppName,
+			Name:           row.Name,
+			LastSeenAt:     optionalTime(row.LastSeenAt),
+			CanReceive: holdsPermission(row.Permissions, PermissionReceiveWorks) &&
 				installs(row.Capabilities, sendable) && canReceive,
-			ReportsLibrary: holdsScope(row.Scopes, ScopeLibrarySync),
+			ReportsLibrary: holdsPermission(row.Permissions, PermissionSyncLibrary),
 		}
-		if row.DeliveryID.Valid {
-			waiting := deliveryFrom(
-				row.DeliveryID, row.ID, uuidValue(workID), row.DeliveryState,
+		if row.SendID.Valid {
+			waiting := sendFrom(
+				row.SendID, row.ID, uuidValue(workID), row.SendState,
 				row.SettledReason, row.QueuedAt, row.SettledAt, row.ExpiresAt,
 				row.UpdatesInstall,
 			)
-			state.Delivery = &waiting
+			state.Send = &waiting
 		}
 		if row.InstalledVersion.Valid {
 			installed := int(row.InstalledVersion.Int32)
@@ -245,19 +240,19 @@ func (s *Sends) WorkInstances(
 	return found, nil
 }
 
-// UpdatableInstances names the account's instances that hold an older copy of a work and can receive it.
-func (s *Sends) UpdatableInstances(
+// UpdatableApps names the account's connected apps that hold an older copy of a work and can receive it.
+func (s *Sends) UpdatableApps(
 	ctx context.Context,
 	userID uuid.UUID,
 	workIDs []uuid.UUID,
-) (map[uuid.UUID][]InstanceState, error) {
+) (map[uuid.UUID][]AppState, error) {
 	behind, err := s.worksInstalledBehind(ctx, userID, workIDs)
 	if err != nil {
 		return nil, err
 	}
-	offered := make(map[uuid.UUID][]InstanceState, len(behind))
+	offered := make(map[uuid.UUID][]AppState, len(behind))
 	for _, workID := range behind {
-		found, err := s.WorkInstances(ctx, userID, workID)
+		found, err := s.WorkApps(ctx, userID, workID)
 		if errors.Is(err, ErrWorkNotFound) {
 			continue
 		}
@@ -273,7 +268,7 @@ func (s *Sends) UpdatableInstances(
 	return offered, nil
 }
 
-// worksInstalledBehind keeps only the works one of the account's instances holds an older copy of.
+// worksInstalledBehind keeps only the works one of the account's connected apps holds an older copy of.
 func (s *Sends) worksInstalledBehind(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -284,12 +279,12 @@ func (s *Sends) worksInstalledBehind(
 	}
 	rows, err := s.pool.Query(ctx, `
 		select distinct entry.work_id
-		  from instance_library_entries entry
-		  join linked_instances instance on instance.id = entry.instance_id
+		  from app_library_entries entry
+		  join connected_apps app on app.id = entry.connected_app_id
 		  join works subject on subject.id = entry.work_id
 		  join work_versions published on published.id = subject.published_version_id
-		 where instance.user_id = $1
-		   and instance.revoked_at is null
+		 where app.user_id = $1
+		   and app.revoked_at is null
 		   and entry.work_id = any($2::uuid[])
 		   and entry.version_number < published.number
 		   and subject.deleted_at is null
@@ -297,35 +292,30 @@ func (s *Sends) worksInstalledBehind(
 		   and subject.lifecycle = 'published'
 	`, userID, workIDs)
 	if err != nil {
-		return nil, fmt.Errorf("find the works an instance holds an older copy of: %w", err)
+		return nil, fmt.Errorf("find the works a connected app holds an older copy of: %w", err)
 	}
 	defer rows.Close()
 	behind := make([]uuid.UUID, 0, len(workIDs))
 	for rows.Next() {
 		var workID uuid.UUID
 		if err := rows.Scan(&workID); err != nil {
-			return nil, fmt.Errorf("read a work an instance holds an older copy of: %w", err)
+			return nil, fmt.Errorf("read a work a connected app holds an older copy of: %w", err)
 		}
 		behind = append(behind, workID)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("find the works an instance holds an older copy of: %w", err)
+		return nil, fmt.Errorf("find the works a connected app holds an older copy of: %w", err)
 	}
 	return behind, nil
 }
 
-func holdsScope(scopes []string, wanted Scope) bool {
-	for _, scope := range scopes {
-		if Scope(scope) == wanted {
-			return true
-		}
-	}
-	return false
+func holdsPermission(permissions []string, wanted Permission) bool {
+	return slices.Contains(permissions, string(wanted))
 }
 
-func deliveryFrom(
+func sendFrom(
 	id pgtype.UUID,
-	instanceID pgtype.UUID,
+	appID pgtype.UUID,
 	workID pgtype.UUID,
 	state string,
 	reason pgtype.Text,
@@ -333,9 +323,9 @@ func deliveryFrom(
 	settledAt pgtype.Timestamptz,
 	expiresAt pgtype.Timestamptz,
 	updatesInstall bool,
-) Delivery {
-	return Delivery{
-		ID: uuid.UUID(id.Bytes), InstanceID: uuid.UUID(instanceID.Bytes),
+) Send {
+	return Send{
+		ID: uuid.UUID(id.Bytes), ConnectedAppID: uuid.UUID(appID.Bytes),
 		WorkID: uuid.UUID(workID.Bytes), State: State(state),
 		Reason: Reason(reason.String), QueuedAt: queuedAt.Time,
 		SettledAt: optionalTime(settledAt), ExpiresAt: expiresAt.Time,

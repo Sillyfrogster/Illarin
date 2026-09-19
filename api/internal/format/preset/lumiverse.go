@@ -9,7 +9,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/private"
 	"github.com/google/uuid"
 )
 
@@ -177,8 +176,9 @@ func (LumiverseModule) Declaration() format.Declaration {
 		Preservation: format.PreservationDeclaration{
 			Body: lumiverseNamespace, Container: []string{lvExtensions},
 		},
-		TestedOrigins:    []string{LumiverseID, format.OriginIllarin, format.OriginV1},
-		PreservesOrigins: []string{format.OriginV1},
+		TestedOrigins:       []string{LumiverseID, format.OriginIllarin, format.OriginV1},
+		PreservesOrigins:    []string{format.OriginV1},
+		KeepsPrivatePrompts: true,
 	}
 }
 
@@ -274,18 +274,8 @@ func (m LumiverseModule) Parse(
 			source, read.leftovers,
 			scriptLeftovers(scripts, lumiverseScriptNamespace, scriptFields),
 		),
-		Protected: protectedImport(read.protected),
+		Protected: read.protected,
 	}, nil
-}
-
-func protectedImport(prompts []format.ProtectedPrompt) format.ProtectedImport {
-	if len(prompts) == 0 {
-		return format.ProtectedImport{}
-	}
-	return format.ProtectedImport{
-		Prompts: prompts,
-		Apps:    []string{private.AppLumiverse},
-	}
 }
 
 func boundBlurb(source map[string]json.RawMessage) string {

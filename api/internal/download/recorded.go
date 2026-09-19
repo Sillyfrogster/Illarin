@@ -16,13 +16,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// OpenRecordedExport writes one recorded version through the current writer for the target.
+// OpenRecordedExport writes one recorded version through the current writer for the format.
 func (s *Service) OpenRecordedExport(
 	ctx context.Context,
 	workID uuid.UUID,
 	viewerID *uuid.UUID,
 	number int,
-	target string,
+	formatID string,
 	gallery *GallerySelection,
 ) (Export, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
@@ -39,10 +39,10 @@ func (s *Service) OpenRecordedExport(
 		return Export{}, ErrLinkedInstallOnly
 	}
 	subject.gallery = gallery
-	module, known := s.reg.ByID(target)
+	module, known := s.reg.ByID(formatID)
 	writer, writes := module.(format.Writer)
-	if !known || !writes || !offersTarget(s.reg.OfferedTargets(subject.capability()), target) {
-		return Export{}, ErrTargetNotOffered
+	if !known || !writes || !offersFormat(s.reg.OfferedFormats(subject.capability()), formatID) {
+		return Export{}, ErrFormatNotOffered
 	}
 	written, err := s.writeExport(ctx, tx, subject, writer)
 	if err != nil {
@@ -51,7 +51,7 @@ func (s *Service) OpenRecordedExport(
 	if err := tx.Commit(ctx); err != nil {
 		return Export{}, fmt.Errorf("finish recorded export snapshot: %w", err)
 	}
-	return subject.export(written, target, module.Declaration().Label, viewerID), nil
+	return subject.export(written, formatID, module.Declaration().Label, viewerID), nil
 }
 
 // RecordedDownloads lists the formats and media available for a historical download.
@@ -59,8 +59,8 @@ type RecordedDownloads struct {
 	Version           work.Version
 	Type              string
 	LinkedInstallOnly bool
-	Downloads         []format.Target
-	AppTargets        []format.AppTarget
+	Downloads         []format.Offered
+	AppFormats        []format.AppFormat
 	Blocks            []block.Block
 	Media             []work.DetailImage
 }
@@ -85,11 +85,11 @@ func (s *Service) RecordedDownloads(
 	}
 	offered := RecordedDownloads{
 		Version: subject.recorded.Version, Type: subject.workType, LinkedInstallOnly: sealed,
-		Downloads: []format.Target{}, AppTargets: []format.AppTarget{}, Blocks: []block.Block{},
+		Downloads: []format.Offered{}, AppFormats: []format.AppFormat{}, Blocks: []block.Block{},
 	}
 	if !sealed {
-		offered.Downloads = s.reg.OfferedTargets(subject.capability())
-		offered.AppTargets = format.AppTargets(offered.Downloads, s.reg)
+		offered.Downloads = s.reg.OfferedFormats(subject.capability())
+		offered.AppFormats = format.AppFormats(offered.Downloads, s.reg)
 		offered.Blocks = subject.blocks
 	}
 	offered.Media, err = s.recordedPictures(ctx, tx, subject, preference)

@@ -16,11 +16,11 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
+func TestASealedPromptLeavesOnlyThroughAnAllowedConnectedApp(t *testing.T) {
 	t.Parallel()
-	router, session, pool := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Lumiverse", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"preset_lumiverse"})
+	router, session, pool := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Lumiverse", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"preset_lumiverse"})
 
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
@@ -37,15 +37,15 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	if got := apitest.PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
 		t.Fatalf("publish status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	unsupported := apitest.LinkDeviceInstance(t, router, session, "Other app", "tablet", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, unsupported.AccessToken, []string{"portable-card-v1"})
-	for _, state := range apitest.WorkInstances(t, router, session, started.ID).Items {
-		if state.InstanceID == unsupported.Instance.ID && state.CanReceive {
-			t.Fatal("an instance without an allowed target was offered sealed content")
+	unsupported := apitest.ConnectApp(t, router, session, "Other app", "tablet", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, unsupported.AccessToken, []string{"portable-card-v1"})
+	for _, state := range apitest.WorkConnectedApps(t, router, session, started.ID).Items {
+		if state.ConnectedAppID == unsupported.ConnectedApp.ID && state.CanReceive {
+			t.Fatal("a connected app without an allowed format was offered sealed content")
 		}
 	}
-	if got := apitest.SendToInstance(t, router, session, started.ID, unsupported.Instance.ID); got.Code != http.StatusConflict {
-		t.Fatalf("queue incompatible instance = %d, want 409: %s", got.Code, got.Body.String())
+	if got := apitest.SendToApp(t, router, session, started.ID, unsupported.ConnectedApp.ID); got.Code != http.StatusConflict {
+		t.Fatalf("queue incompatible connected app = %d, want 409: %s", got.Code, got.Body.String())
 	}
 
 	ordinary := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+started.ID+"/preset_lumiverse", nil))
@@ -56,23 +56,23 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create export store: %v", err)
 	}
-	linkedExport, err := download.NewService(pool, work.NewService(pool, apitest.Registry(t), store)).OpenExportForLinkedInstance(
+	linkedExport, err := download.NewService(pool, work.NewService(pool, apitest.Registry(t), store)).OpenExportForSend(
 		context.Background(), uuid.MustParse(started.ID), "preset_lumiverse",
 	)
 	if err != nil {
-		t.Fatalf("write linked export: %v", err)
+		t.Fatalf("write send export: %v", err)
 	}
 	if !strings.Contains(string(linkedExport.Body), privateText) {
-		t.Fatal("the linked export did not restore the protected prompt")
+		t.Fatal("the send export did not restore the protected prompt")
 	}
 
-	queued := apitest.SendToInstance(t, router, session, started.ID, grant.Instance.ID)
+	queued := apitest.SendToApp(t, router, session, started.ID, credentials.ConnectedApp.ID)
 	if queued.Code != http.StatusAccepted {
 		t.Fatalf("queue status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
-	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
+	work := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil)).Sends[0]
 	if work.Format != "preset_lumiverse" {
-		t.Fatalf("delivery format = %q, want Lumiverse", work.Format)
+		t.Fatalf("send format = %q, want Lumiverse", work.Format)
 	}
 	artifact := apitest.FetchSigned(t, router, work.Files[0].URL)
 	if artifact.Code != http.StatusOK {
@@ -82,13 +82,13 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedLinkedInstance(t *testing.T) {
 		t.Fatalf("artifact cache policy = %q", artifact.Header().Get("Cache-Control"))
 	}
 	if !strings.Contains(artifact.Body.String(), privateText) || strings.Contains(artifact.Body.String(), `"protected"`) {
-		t.Fatalf("delivery did not contain one ordinary complete preset: %s", artifact.Body.String())
+		t.Fatalf("send did not contain one ordinary complete preset: %s", artifact.Body.String())
 	}
 }
 
 func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
+	router, session, _ := harness.NewConnectRouter(t)
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	groupID := uuid.NewString()
@@ -121,7 +121,7 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 		t.Fatal("the complete reader response contains protected text")
 	}
 	for _, visible := range []string{
-		`"linkedInstallOnly":true`, `"allowedApps":["lumiverse"]`,
+		`"linkedInstallOnly":true`, `"allowedApps":[{"id":"lumiverse","label":"Lumiverse"}]`,
 		`"name":"Private shape"`, `"role":"assistant"`,
 		`"placement":"post_history"`, `"protected":true`,
 		`"enabled":false`, `"groupId":"` + groupID + `"`, `"text":""`,
@@ -159,10 +159,10 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 
 func TestProtectedWorksRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *testing.T) {
 	t.Parallel()
-	router, session, pool := harness.NewLinkingRouter(t)
+	router, session, pool := harness.NewConnectRouter(t)
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	if len(started.Downloads) == 0 {
-		t.Fatal("the ordinary preset has no generated export target to protect")
+		t.Fatal("the ordinary preset has no generated format to protect")
 	}
 
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
@@ -300,7 +300,7 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 	}
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
-		t.Fatalf("replacement kept protected delivery policy: linked install only %t, apps %v",
+		t.Fatalf("replacement kept protected send policy: linked install only %t, apps %v",
 			owner.LinkedInstallOnly, owner.AllowedApps)
 	}
 }

@@ -16,7 +16,7 @@ func TestRecoveryLogsTheRouteWithoutASecretPathValue(t *testing.T) {
 	var output bytes.Buffer
 	router := gin.New()
 	router.Use(Recovery(log.New(&output, "", 0)))
-	router.GET("/v1/link/authorizations/:requestCode", func(*gin.Context) {
+	router.GET("/v1/connect/authorizations/:requestCode", func(*gin.Context) {
 		panic("synthetic panic")
 	})
 
@@ -24,7 +24,7 @@ func TestRecoveryLogsTheRouteWithoutASecretPathValue(t *testing.T) {
 	response := httptest.NewRecorder()
 	router.ServeHTTP(
 		response,
-		httptest.NewRequest(nethttp.MethodGet, "/v1/link/authorizations/"+secret, nil),
+		httptest.NewRequest(nethttp.MethodGet, "/v1/connect/authorizations/"+secret, nil),
 	)
 
 	if response.Code != nethttp.StatusInternalServerError {
@@ -33,7 +33,7 @@ func TestRecoveryLogsTheRouteWithoutASecretPathValue(t *testing.T) {
 	if strings.Contains(output.String(), secret) {
 		t.Fatalf("recovery log exposed the request secret: %s", output.String())
 	}
-	if !strings.Contains(output.String(), "/v1/link/authorizations/:requestCode") {
+	if !strings.Contains(output.String(), "/v1/connect/authorizations/:requestCode") {
 		t.Fatalf("recovery log did not identify the safe route: %s", output.String())
 	}
 }

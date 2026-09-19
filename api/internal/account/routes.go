@@ -16,12 +16,12 @@ type Authority interface {
 
 type Handlers struct {
 	accounts     *Service
-	links        *connect.Apps
+	apps         *connect.Apps
 	publications Authority
 }
 
-func NewHandlers(accounts *Service, links *connect.Apps, publications Authority) *Handlers {
-	return &Handlers{accounts: accounts, links: links, publications: publications}
+func NewHandlers(accounts *Service, apps *connect.Apps, publications Authority) *Handlers {
+	return &Handlers{accounts: accounts, apps: apps, publications: publications}
 }
 
 func Register(routes api.Routes, h *Handlers) {

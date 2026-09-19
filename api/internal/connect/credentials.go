@@ -12,38 +12,38 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *Apps) Refresh(ctx context.Context, source, refreshToken string) (TokenGrant, error) {
+func (s *Apps) Refresh(ctx context.Context, source, refreshToken string) (Credentials, error) {
 	if err := s.takeRate(ctx, "refresh", source, 600, time.Hour); err != nil {
-		return TokenGrant{}, err
+		return Credentials{}, err
 	}
 	oldHash, ok := credentialHash(refreshToken, refreshTokenType)
 	if !ok {
-		return TokenGrant{}, ErrInstanceCredential
+		return Credentials{}, ErrNotLive
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return TokenGrant{}, fmt.Errorf("begin token refresh: %w", err)
+		return Credentials{}, fmt.Errorf("begin token refresh: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
-	instance, err := queries.LockLinkedInstanceByRefreshToken(ctx, oldHash)
+	app, err := queries.LockConnectedAppByRefreshToken(ctx, oldHash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return TokenGrant{}, handleRefreshReuse(ctx, tx, queries, oldHash)
+		return Credentials{}, handleRefreshReuse(ctx, tx, queries, oldHash)
 	}
 	if err != nil {
-		return TokenGrant{}, fmt.Errorf("read refresh token: %w", err)
+		return Credentials{}, fmt.Errorf("read refresh token: %w", err)
 	}
-	if refreshExpired(instance) {
-		return TokenGrant{}, revokeInactiveRefresh(ctx, tx, queries, instance.ID)
+	if refreshExpired(app) {
+		return Credentials{}, revokeInactiveRefresh(ctx, tx, queries, app.ID)
 	}
-	grant, err := rotateRefreshGrant(ctx, queries, instance, oldHash)
+	rotated, err := rotateCredentials(ctx, queries, app, oldHash)
 	if err != nil {
-		return TokenGrant{}, err
+		return Credentials{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return TokenGrant{}, fmt.Errorf("commit token refresh: %w", err)
+		return Credentials{}, fmt.Errorf("commit token refresh: %w", err)
 	}
-	return grant, nil
+	return rotated, nil
 }
 
 func handleRefreshReuse(
@@ -52,14 +52,14 @@ func handleRefreshReuse(
 	queries *db.Queries,
 	oldHash []byte,
 ) error {
-	used, err := queries.InstanceForUsedRefreshToken(ctx, oldHash)
+	used, err := queries.ConnectedAppForUsedRefreshToken(ctx, oldHash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrInstanceCredential
+		return ErrNotLive
 	}
 	if err != nil {
 		return fmt.Errorf("check refresh reuse: %w", err)
 	}
-	if _, err := queries.RevokeLinkedInstanceByID(ctx, used.InstanceID); err != nil {
+	if _, err := queries.RevokeConnectedAppByID(ctx, used.ConnectedAppID); err != nil {
 		return fmt.Errorf("revoke reused refresh token: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -68,10 +68,10 @@ func handleRefreshReuse(
 	return ErrRefreshReuse
 }
 
-func refreshExpired(instance db.LockLinkedInstanceByRefreshTokenRow) bool {
-	lastActive := instance.LinkedAt.Time
-	if instance.LastSeenAt.Valid && instance.LastSeenAt.Time.After(lastActive) {
-		lastActive = instance.LastSeenAt.Time
+func refreshExpired(app db.LockConnectedAppByRefreshTokenRow) bool {
+	lastActive := app.ConnectedAt.Time
+	if app.LastSeenAt.Valid && app.LastSeenAt.Time.After(lastActive) {
+		lastActive = app.LastSeenAt.Time
 	}
 	return time.Now().After(lastActive.Add(refreshIdleLifetime))
 }
@@ -80,134 +80,134 @@ func revokeInactiveRefresh(
 	ctx context.Context,
 	tx pgx.Tx,
 	queries *db.Queries,
-	instanceID pgtype.UUID,
+	appID pgtype.UUID,
 ) error {
-	if _, err := queries.RevokeLinkedInstanceByID(ctx, instanceID); err != nil {
+	if _, err := queries.RevokeConnectedAppByID(ctx, appID); err != nil {
 		return fmt.Errorf("revoke inactive refresh token: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit inactive refresh revocation: %w", err)
 	}
-	return ErrInstanceCredential
+	return ErrNotLive
 }
 
-func rotateRefreshGrant(
+func rotateCredentials(
 	ctx context.Context,
 	queries *db.Queries,
-	instance db.LockLinkedInstanceByRefreshTokenRow,
+	app db.LockConnectedAppByRefreshTokenRow,
 	oldHash []byte,
-) (TokenGrant, error) {
+) (Credentials, error) {
 	accessToken, _, accessHash, err := newCredential(accessTokenType)
 	if err != nil {
-		return TokenGrant{}, err
+		return Credentials{}, err
 	}
 	refreshToken, refreshPrefix, refreshHash, err := newCredential(refreshTokenType)
 	if err != nil {
-		return TokenGrant{}, err
+		return Credentials{}, err
 	}
 	expiresAt := time.Now().Add(accessTokenLifetime)
-	_, err = queries.RotateInstanceRefreshToken(ctx, db.RotateInstanceRefreshTokenParams{
+	_, err = queries.RotateAppRefreshToken(ctx, db.RotateAppRefreshTokenParams{
 		OldRefreshTokenHash:   oldHash,
 		DetectableUntil:       timestamptz(time.Now().Add(refreshReuseWindow)),
 		NewRefreshTokenHash:   refreshHash,
 		NewRefreshTokenPrefix: refreshPrefix,
-		InstanceID:            instance.ID,
+		ConnectedAppID:        app.ID,
 	})
 	if err != nil {
-		return TokenGrant{}, fmt.Errorf("rotate refresh token: %w", err)
+		return Credentials{}, fmt.Errorf("rotate refresh token: %w", err)
 	}
-	if _, err := queries.InsertInstanceAccessToken(ctx, db.InsertInstanceAccessTokenParams{
-		TokenHash: accessHash, InstanceID: instance.ID, ExpiresAt: timestamptz(expiresAt),
+	if _, err := queries.InsertAppAccessToken(ctx, db.InsertAppAccessTokenParams{
+		TokenHash: accessHash, ConnectedAppID: app.ID, ExpiresAt: timestamptz(expiresAt),
 	}); err != nil {
-		return TokenGrant{}, fmt.Errorf("store access token: %w", err)
+		return Credentials{}, fmt.Errorf("store access token: %w", err)
 	}
-	_, _ = queries.DeleteExpiredInstanceAccessTokens(ctx, cleanupBatch)
-	_, _ = queries.DeleteExpiredInstanceRefreshHistory(ctx, cleanupBatch)
-	return TokenGrant{
-		Instance: Instance{
-			ID: uuid.UUID(instance.ID.Bytes), UserID: uuid.UUID(instance.UserID.Bytes),
-			Declaration: declarationFrom(
-				instance.ApplicationName, instance.InstanceName, instance.ApplicationVersion,
-				instance.ProtocolVersion.Int32, instance.Capabilities, instance.AcceptedTargets,
+	_, _ = queries.DeleteExpiredAppAccessTokens(ctx, cleanupBatch)
+	_, _ = queries.DeleteExpiredAppRefreshHistory(ctx, cleanupBatch)
+	return Credentials{
+		ConnectedApp: ConnectedApp{
+			ID: uuid.UUID(app.ID.Bytes), UserID: uuid.UUID(app.UserID.Bytes),
+			AppName: app.AppName, Name: app.Name,
+			Capabilities: capabilitiesFrom(
+				app.AppVersion, app.ProtocolVersion.Int32, app.Capabilities, app.AcceptedFormats,
 			),
-			Prefix: refreshPrefix, Scopes: scopesFrom(instance.Scopes),
-			LinkedAt: instance.LinkedAt.Time, LastSeenAt: optionalTime(instance.LastSeenAt),
+			Prefix: refreshPrefix, Permissions: permissionsFrom(app.Permissions),
+			ConnectedAt: app.ConnectedAt.Time, LastSeenAt: optionalTime(app.LastSeenAt),
 		},
 		AccessToken: accessToken, AccessTokenExpiresAt: expiresAt,
 		RefreshToken: refreshToken,
 	}, nil
 }
 
-func (s *Apps) Authenticate(ctx context.Context, token string, needs Scope) (Instance, error) {
+func (s *Apps) Authenticate(ctx context.Context, token string, needs Permission) (ConnectedApp, error) {
 	hash, ok := credentialHash(token, accessTokenType)
 	if !ok {
-		return Instance{}, ErrInstanceCredential
+		return ConnectedApp{}, ErrNotLive
 	}
-	row, err := db.New(s.pool).TouchLinkedInstanceByAccessToken(ctx, hash)
+	row, err := db.New(s.pool).TouchConnectedAppByAccessToken(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Instance{}, ErrInstanceCredential
+		return ConnectedApp{}, ErrNotLive
 	}
 	if err != nil {
-		return Instance{}, fmt.Errorf("read access token: %w", err)
+		return ConnectedApp{}, fmt.Errorf("read access token: %w", err)
 	}
-	instance := Instance{
+	app := ConnectedApp{
 		ID: uuid.UUID(row.ID.Bytes), UserID: uuid.UUID(row.UserID.Bytes),
-		Declaration: declarationFrom(
-			row.ApplicationName, row.InstanceName, row.ApplicationVersion,
-			row.ProtocolVersion.Int32, row.Capabilities, row.AcceptedTargets,
+		AppName: row.AppName, Name: row.Name,
+		Capabilities: capabilitiesFrom(
+			row.AppVersion, row.ProtocolVersion.Int32, row.Capabilities, row.AcceptedFormats,
 		),
-		Prefix: row.RefreshTokenPrefix, Scopes: scopesFrom(row.Scopes),
-		LinkedAt: row.LinkedAt.Time, LastSeenAt: optionalTime(row.LastSeenAt),
+		Prefix: row.RefreshTokenPrefix, Permissions: permissionsFrom(row.Permissions),
+		ConnectedAt: row.ConnectedAt.Time, LastSeenAt: optionalTime(row.LastSeenAt),
 	}
-	if needs != "" && !instance.Grants(needs) {
-		return Instance{}, ErrInstanceMissingScope
+	if needs != "" && !app.Grants(needs) {
+		return ConnectedApp{}, ErrMissingPermission
 	}
-	return instance, nil
+	return app, nil
 }
 
-func issueGrant(
+func issueCredentials(
 	ctx context.Context,
 	queries *db.Queries,
 	userID pgtype.UUID,
-	declaration Declaration,
-	scopes []Scope,
-) (TokenGrant, error) {
+	start StartInput,
+) (Credentials, error) {
 	accessToken, _, accessHash, err := newCredential(accessTokenType)
 	if err != nil {
-		return TokenGrant{}, err
+		return Credentials{}, err
 	}
 	refreshToken, refreshPrefix, refreshHash, err := newCredential(refreshTokenType)
 	if err != nil {
-		return TokenGrant{}, err
+		return Credentials{}, err
 	}
-	instanceID := uuid.New()
-	row, err := queries.InsertLinkedInstance(ctx, db.InsertLinkedInstanceParams{
-		ID: uuidValue(instanceID), UserID: userID,
-		ApplicationName:    declaration.ApplicationName,
-		InstanceName:       declaration.InstanceName,
-		ApplicationVersion: optionalText(declaration.ApplicationVersion),
-		ProtocolVersion:    pgtype.Int4{Int32: int32(declaration.ProtocolVersion), Valid: true},
-		Capabilities:       declaration.Capabilities,
-		AcceptedTargets:    declaration.AcceptedTargets,
-		RefreshTokenHash:   refreshHash, RefreshTokenPrefix: refreshPrefix,
-		Scopes: scopeStrings(scopes),
+	appID := uuid.New()
+	row, err := queries.InsertConnectedApp(ctx, db.InsertConnectedAppParams{
+		ID: uuidValue(appID), UserID: userID,
+		AppName:          start.AppName,
+		Name:             start.Name,
+		AppVersion:       optionalText(start.AppVersion),
+		ProtocolVersion:  pgtype.Int4{Int32: int32(start.ProtocolVersion), Valid: true},
+		Capabilities:     start.Declared,
+		AcceptedFormats:  start.AcceptedFormats,
+		RefreshTokenHash: refreshHash, RefreshTokenPrefix: refreshPrefix,
+		Permissions: permissionStrings(start.Permissions),
 	})
 	if err != nil {
-		return TokenGrant{}, fmt.Errorf("create linked instance: %w", err)
+		return Credentials{}, fmt.Errorf("create a connected app: %w", err)
 	}
 	expiresAt := time.Now().Add(accessTokenLifetime)
-	if _, err := queries.InsertInstanceAccessToken(ctx, db.InsertInstanceAccessTokenParams{
-		TokenHash: accessHash, InstanceID: uuidValue(instanceID),
+	if _, err := queries.InsertAppAccessToken(ctx, db.InsertAppAccessTokenParams{
+		TokenHash: accessHash, ConnectedAppID: uuidValue(appID),
 		ExpiresAt: timestamptz(expiresAt),
 	}); err != nil {
-		return TokenGrant{}, fmt.Errorf("store access token: %w", err)
+		return Credentials{}, fmt.Errorf("store access token: %w", err)
 	}
-	_, _ = queries.DeleteExpiredInstanceAccessTokens(ctx, cleanupBatch)
-	return TokenGrant{
-		Instance: Instance{
-			ID: instanceID, UserID: uuid.UUID(userID.Bytes),
-			Declaration: declaration, Prefix: row.RefreshTokenPrefix,
-			Scopes: scopesFrom(row.Scopes), LinkedAt: row.LinkedAt.Time,
+	_, _ = queries.DeleteExpiredAppAccessTokens(ctx, cleanupBatch)
+	return Credentials{
+		ConnectedApp: ConnectedApp{
+			ID: appID, UserID: uuid.UUID(userID.Bytes),
+			AppName: start.AppName, Name: start.Name,
+			Capabilities: start.Capabilities, Prefix: row.RefreshTokenPrefix,
+			Permissions: permissionsFrom(row.Permissions), ConnectedAt: row.ConnectedAt.Time,
 		},
 		AccessToken: accessToken, AccessTokenExpiresAt: expiresAt,
 		RefreshToken: refreshToken,

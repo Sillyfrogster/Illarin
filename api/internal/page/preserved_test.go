@@ -24,6 +24,7 @@ func preservedNamespaces(
 	workID string,
 ) []struct {
 	Name  string `json:"name"`
+	Label string `json:"label"`
 	Bytes int    `json:"bytes"`
 } {
 	t.Helper()
@@ -35,6 +36,7 @@ func preservedNamespaces(
 	}
 	var found []struct {
 		Name  string `json:"name"`
+		Label string `json:"label"`
 		Bytes int    `json:"bytes"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &found); err != nil {
@@ -45,6 +47,7 @@ func preservedNamespaces(
 
 func namespaceNames(rows []struct {
 	Name  string `json:"name"`
+	Label string `json:"label"`
 	Bytes int    `json:"bytes"`
 }) []string {
 	names := make([]string, 0, len(rows))
@@ -59,10 +62,16 @@ func TestThePanelNamesTheNamespacesAnWorkCarries(t *testing.T) {
 	r, session, works := harness.NewCharacterIngestRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 
-	names := namespaceNames(preservedNamespaces(t, r, session, workID))
+	found := preservedNamespaces(t, r, session, workID)
+	names := namespaceNames(found)
 	for _, want := range []string{"card", "character_book", "chub", "tavern_helper"} {
 		if !contains(names, want) {
 			t.Errorf("the panel does not name %s: %v", want, names)
+		}
+	}
+	for _, namespace := range found {
+		if namespace.Name == "chub" && namespace.Label != "Chub metadata" {
+			t.Errorf("chub is labelled %q, want the words a reader recognises", namespace.Label)
 		}
 	}
 	for _, hidden := range []string{"depth_prompt", "fav", "world", "talkativeness"} {

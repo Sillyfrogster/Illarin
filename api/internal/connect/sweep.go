@@ -24,9 +24,9 @@ func (s *Sends) RunSweeper(ctx context.Context, onError func(error)) {
 }
 
 func (s *Sends) Sweep(ctx context.Context) (int64, error) {
-	swept, err := db.New(s.pool).DeleteExpiredDeliveries(ctx, sweepBatch)
+	swept, err := db.New(s.pool).DeleteExpiredSends(ctx, sweepBatch)
 	if err != nil {
-		return 0, fmt.Errorf("sweep expired deliveries: %w", err)
+		return 0, fmt.Errorf("sweep expired sends: %w", err)
 	}
 	return swept, nil
 }

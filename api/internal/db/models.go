@@ -8,6 +8,28 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AppAccessToken struct {
+	TokenHash      []byte
+	ConnectedAppID pgtype.UUID
+	CreatedAt      pgtype.Timestamptz
+	ExpiresAt      pgtype.Timestamptz
+}
+
+type AppLibraryEntry struct {
+	ConnectedAppID     pgtype.UUID
+	WorkID             pgtype.UUID
+	VersionNumber      int32
+	ReportedAt         pgtype.Timestamptz
+	NotifiedWithheldAt pgtype.Timestamptz
+}
+
+type AppRefreshHistory struct {
+	TokenHash       []byte
+	ConnectedAppID  pgtype.UUID
+	RotatedAt       pgtype.Timestamptz
+	DetectableUntil pgtype.Timestamptz
+}
+
 type Blob struct {
 	ID         pgtype.UUID
 	Sha256     []byte
@@ -27,11 +49,82 @@ type BlobTombstone struct {
 	ActorID    pgtype.UUID
 }
 
+type ConnectedApp struct {
+	ID                 pgtype.UUID
+	UserID             pgtype.UUID
+	Name               string
+	RefreshTokenPrefix string
+	Permissions        []string
+	ConnectedAt        pgtype.Timestamptz
+	LastSeenAt         pgtype.Timestamptz
+	RevokedAt          pgtype.Timestamptz
+	RefreshTokenHash   []byte
+	AppName            string
+	AppVersion         pgtype.Text
+	ProtocolVersion    pgtype.Int4
+	Capabilities       []string
+	AcceptedFormats    []string
+	LibraryAppVersion  pgtype.Text
+}
+
+type ConnectionAuthorization struct {
+	RequestHash           []byte
+	AuthorizationCodeHash []byte
+	RedirectUri           string
+	State                 string
+	CodeChallenge         string
+	AppName               string
+	Name                  string
+	AppVersion            pgtype.Text
+	ProtocolVersion       int32
+	Capabilities          []string
+	AcceptedFormats       []string
+	Permissions           []string
+	ReviewedBy            pgtype.UUID
+	ApprovedBy            pgtype.UUID
+	ApprovedAt            pgtype.Timestamptz
+	DeniedBy              pgtype.UUID
+	DeniedAt              pgtype.Timestamptz
+	RedeemedAt            pgtype.Timestamptz
+	CreatedAt             pgtype.Timestamptz
+	ExpiresAt             pgtype.Timestamptz
+}
+
+type ConnectionRateLimit struct {
+	KeyHash     []byte
+	Action      string
+	Attempts    int32
+	WindowStart pgtype.Timestamptz
+}
+
+type ConnectionRequest struct {
+	DeviceCodeHash      []byte
+	UserCodeHash        []byte
+	AppName             string
+	Name                string
+	AppVersion          pgtype.Text
+	ProtocolVersion     int32
+	Capabilities        []string
+	AcceptedFormats     []string
+	Permissions         []string
+	ReviewTokenHash     []byte
+	ReviewedBy          pgtype.UUID
+	ApprovedBy          pgtype.UUID
+	ApprovedAt          pgtype.Timestamptz
+	DeniedBy            pgtype.UUID
+	DeniedAt            pgtype.Timestamptz
+	RedeemedAt          pgtype.Timestamptz
+	LastPolledAt        pgtype.Timestamptz
+	CreatedAt           pgtype.Timestamptz
+	ExpiresAt           pgtype.Timestamptz
+	PollIntervalSeconds int32
+}
+
 type DownloadEvent struct {
 	ID                 int64
 	WorkID             pgtype.UUID
 	OriginalFileID     pgtype.UUID
-	ExportTarget       string
+	Format             string
 	HandedOffAt        pgtype.Timestamptz
 	AuthorizationClass string
 	Visibility         string
@@ -78,114 +171,6 @@ type IngestOperation struct {
 	FailureMessage     pgtype.Text
 	CandidateVersion   pgtype.Int8
 	ReplacementPreview []byte
-}
-
-type InstanceAccessToken struct {
-	TokenHash  []byte
-	InstanceID pgtype.UUID
-	CreatedAt  pgtype.Timestamptz
-	ExpiresAt  pgtype.Timestamptz
-}
-
-type InstanceDelivery struct {
-	ID             pgtype.UUID
-	InstanceID     pgtype.UUID
-	WorkID         pgtype.UUID
-	State          string
-	Attempts       int32
-	QueuedAt       pgtype.Timestamptz
-	LeaseExpiresAt pgtype.Timestamptz
-	ChosenTarget   pgtype.Text
-	SettledAt      pgtype.Timestamptz
-	SettledReason  pgtype.Text
-	ExpiresAt      pgtype.Timestamptz
-	UpdatesInstall bool
-}
-
-type InstanceLibraryEntry struct {
-	InstanceID         pgtype.UUID
-	WorkID             pgtype.UUID
-	VersionNumber      int32
-	ReportedAt         pgtype.Timestamptz
-	NotifiedWithheldAt pgtype.Timestamptz
-}
-
-type InstanceRefreshHistory struct {
-	TokenHash       []byte
-	InstanceID      pgtype.UUID
-	RotatedAt       pgtype.Timestamptz
-	DetectableUntil pgtype.Timestamptz
-}
-
-type LinkAuthorization struct {
-	RequestHash           []byte
-	AuthorizationCodeHash []byte
-	RedirectUri           string
-	State                 string
-	CodeChallenge         string
-	ApplicationName       string
-	InstanceName          string
-	ApplicationVersion    pgtype.Text
-	ProtocolVersion       int32
-	Capabilities          []string
-	AcceptedTargets       []string
-	Scopes                []string
-	ReviewedBy            pgtype.UUID
-	ApprovedBy            pgtype.UUID
-	ApprovedAt            pgtype.Timestamptz
-	DeniedBy              pgtype.UUID
-	DeniedAt              pgtype.Timestamptz
-	RedeemedAt            pgtype.Timestamptz
-	CreatedAt             pgtype.Timestamptz
-	ExpiresAt             pgtype.Timestamptz
-}
-
-type LinkRateLimit struct {
-	KeyHash     []byte
-	Action      string
-	Attempts    int32
-	WindowStart pgtype.Timestamptz
-}
-
-type LinkRequest struct {
-	DeviceCodeHash      []byte
-	UserCodeHash        []byte
-	ApplicationName     string
-	InstanceName        string
-	ApplicationVersion  pgtype.Text
-	ProtocolVersion     int32
-	Capabilities        []string
-	AcceptedTargets     []string
-	Scopes              []string
-	ReviewTokenHash     []byte
-	ReviewedBy          pgtype.UUID
-	ApprovedBy          pgtype.UUID
-	ApprovedAt          pgtype.Timestamptz
-	DeniedBy            pgtype.UUID
-	DeniedAt            pgtype.Timestamptz
-	RedeemedAt          pgtype.Timestamptz
-	LastPolledAt        pgtype.Timestamptz
-	CreatedAt           pgtype.Timestamptz
-	ExpiresAt           pgtype.Timestamptz
-	PollIntervalSeconds int32
-}
-
-type LinkedInstance struct {
-	ID                        pgtype.UUID
-	UserID                    pgtype.UUID
-	InstanceName              string
-	RefreshTokenPrefix        string
-	Scopes                    []string
-	LinkedAt                  pgtype.Timestamptz
-	LastSeenAt                pgtype.Timestamptz
-	RevokedAt                 pgtype.Timestamptz
-	RefreshTokenHash          []byte
-	ApplicationName           string
-	ApplicationVersion        pgtype.Text
-	ProtocolVersion           pgtype.Int4
-	Capabilities              []string
-	AcceptedTargets           []string
-	LibraryApplicationVersion pgtype.Text
 }
 
 type MigrationException struct {
@@ -638,6 +623,21 @@ type PublicationToken struct {
 
 type RetiredHandle struct {
 	Handle string
+}
+
+type Send struct {
+	ID             pgtype.UUID
+	ConnectedAppID pgtype.UUID
+	WorkID         pgtype.UUID
+	State          string
+	Attempts       int32
+	QueuedAt       pgtype.Timestamptz
+	LeaseExpiresAt pgtype.Timestamptz
+	ChosenFormat   pgtype.Text
+	SettledAt      pgtype.Timestamptz
+	SettledReason  pgtype.Text
+	ExpiresAt      pgtype.Timestamptz
+	UpdatesInstall bool
 }
 
 type Session struct {

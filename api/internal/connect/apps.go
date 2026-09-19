@@ -76,7 +76,7 @@ func (s *Apps) Start(ctx context.Context, source string, input StartInput) (Requ
 		return Request{}, err
 	}
 	queries := db.New(s.pool)
-	if _, err := queries.DeleteExpiredDeviceLinkRequests(ctx, cleanupBatch); err != nil {
+	if _, err := queries.DeleteExpiredConnectionRequests(ctx, cleanupBatch); err != nil {
 		return Request{}, fmt.Errorf("clear device requests: %w", err)
 	}
 	if err := deleteExpiredRates(ctx, queries); err != nil {
@@ -93,22 +93,22 @@ func (s *Apps) Start(ctx context.Context, source string, input StartInput) (Requ
 		if err != nil {
 			return Request{}, err
 		}
-		err = queries.InsertDeviceLinkRequest(ctx, db.InsertDeviceLinkRequestParams{
-			DeviceCodeHash:     deviceHash,
-			UserCodeHash:       s.digest("user-code", userCode),
-			ApplicationName:    in.ApplicationName,
-			InstanceName:       in.InstanceName,
-			ApplicationVersion: optionalText(in.ApplicationVersion),
-			ProtocolVersion:    int32(in.ProtocolVersion),
-			Capabilities:       in.Capabilities,
-			AcceptedTargets:    in.AcceptedTargets,
-			Scopes:             scopeStrings(in.Scopes),
-			ExpiresAt:          timestamptz(expiresAt),
+		err = queries.InsertConnectionRequest(ctx, db.InsertConnectionRequestParams{
+			DeviceCodeHash:  deviceHash,
+			UserCodeHash:    s.digest("user-code", userCode),
+			AppName:         in.AppName,
+			Name:            in.Name,
+			AppVersion:      optionalText(in.AppVersion),
+			ProtocolVersion: int32(in.ProtocolVersion),
+			Capabilities:    in.Declared,
+			AcceptedFormats: in.AcceptedFormats,
+			Permissions:     permissionStrings(in.Permissions),
+			ExpiresAt:       timestamptz(expiresAt),
 		})
 		if err == nil {
 			return Request{
 				DeviceCode: deviceCode, UserCode: FormatUserCode(userCode),
-				VerifyURL: s.siteURL + "/link", ExpiresAt: expiresAt,
+				VerifyURL: s.siteURL + "/connect", ExpiresAt: expiresAt,
 				Interval: pollInterval,
 			}, nil
 		}
@@ -116,7 +116,7 @@ func (s *Apps) Start(ctx context.Context, source string, input StartInput) (Requ
 			return Request{}, fmt.Errorf("store device request: %w", err)
 		}
 	}
-	return Request{}, errors.New("could not allocate a link code")
+	return Request{}, errors.New("could not allocate a connection code")
 }
 
 func (s *Apps) StartAuthorization(
@@ -132,7 +132,7 @@ func (s *Apps) StartAuthorization(
 		return Authorization{}, err
 	}
 	queries := db.New(s.pool)
-	if _, err := queries.DeleteExpiredLinkAuthorizations(ctx, cleanupBatch); err != nil {
+	if _, err := queries.DeleteExpiredConnectionAuthorizations(ctx, cleanupBatch); err != nil {
 		return Authorization{}, fmt.Errorf("clear browser authorizations: %w", err)
 	}
 	if err := deleteExpiredRates(ctx, queries); err != nil {
@@ -144,18 +144,18 @@ func (s *Apps) StartAuthorization(
 		if err != nil {
 			return Authorization{}, err
 		}
-		err = queries.InsertLinkAuthorization(ctx, db.InsertLinkAuthorizationParams{
+		err = queries.InsertConnectionAuthorization(ctx, db.InsertConnectionAuthorizationParams{
 			RequestHash: requestHash, RedirectUri: in.RedirectURI,
 			State: in.State, CodeChallenge: in.CodeChallenge,
-			ApplicationName: in.ApplicationName, InstanceName: in.InstanceName,
-			ApplicationVersion: optionalText(in.ApplicationVersion),
-			ProtocolVersion:    int32(in.ProtocolVersion),
-			Capabilities:       in.Capabilities, AcceptedTargets: in.AcceptedTargets,
-			Scopes: scopeStrings(in.Scopes), ExpiresAt: timestamptz(expiresAt),
+			AppName: in.AppName, Name: in.Name,
+			AppVersion:      optionalText(in.AppVersion),
+			ProtocolVersion: int32(in.ProtocolVersion),
+			Capabilities:    in.Declared, AcceptedFormats: in.AcceptedFormats,
+			Permissions: permissionStrings(in.Permissions), ExpiresAt: timestamptz(expiresAt),
 		})
 		if err == nil {
 			return Authorization{
-				URL:       s.siteURL + "/link?request=" + url.QueryEscape(requestCode),
+				URL:       s.siteURL + "/connect?request=" + url.QueryEscape(requestCode),
 				ExpiresAt: expiresAt,
 			}, nil
 		}
@@ -172,14 +172,14 @@ func (s *Apps) Pending(ctx context.Context, userID uuid.UUID, rawCode string) (P
 	}
 	code, ok := normalizeUserCode(rawCode)
 	if !ok {
-		return Pending{}, ErrLinkRequestNotFound
+		return Pending{}, ErrRequestNotFound
 	}
-	row, err := db.New(s.pool).ReviewDeviceLinkRequest(ctx, db.ReviewDeviceLinkRequestParams{
+	row, err := db.New(s.pool).ReviewConnectionRequest(ctx, db.ReviewConnectionRequestParams{
 		ReviewedBy:   uuidValue(userID),
 		UserCodeHash: s.digest("user-code", code),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Pending{}, ErrLinkRequestNotFound
+		return Pending{}, ErrRequestNotFound
 	}
 	if err != nil {
 		return Pending{}, fmt.Errorf("review device request: %w", err)
@@ -196,14 +196,14 @@ func (s *Apps) Approve(
 	code, ok := normalizeUserCode(rawCode)
 	tokenHash, tokenOK := s.deviceApprovalProofHash(userID, code, approvalToken)
 	if !ok || !tokenOK {
-		return Pending{}, ErrLinkRequestNotFound
+		return Pending{}, ErrRequestNotFound
 	}
-	row, err := db.New(s.pool).ApproveDeviceLinkRequest(ctx, db.ApproveDeviceLinkRequestParams{
+	row, err := db.New(s.pool).ApproveConnectionRequest(ctx, db.ApproveConnectionRequestParams{
 		ReviewedBy: uuidValue(userID), ReviewTokenHash: tokenHash,
 		UserCodeHash: s.digest("user-code", code),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Pending{}, ErrLinkRequestNotFound
+		return Pending{}, ErrRequestNotFound
 	}
 	if err != nil {
 		return Pending{}, fmt.Errorf("approve device request: %w", err)
@@ -220,9 +220,9 @@ func (s *Apps) Deny(
 	code, ok := normalizeUserCode(rawCode)
 	tokenHash, tokenOK := s.deviceApprovalProofHash(userID, code, approvalToken)
 	if !ok || !tokenOK {
-		return ErrLinkRequestNotFound
+		return ErrRequestNotFound
 	}
-	denied, err := db.New(s.pool).DenyDeviceLinkRequest(ctx, db.DenyDeviceLinkRequestParams{
+	denied, err := db.New(s.pool).DenyConnectionRequest(ctx, db.DenyConnectionRequestParams{
 		ReviewedBy: uuidValue(userID), ReviewTokenHash: tokenHash,
 		UserCodeHash: s.digest("user-code", code),
 	})
@@ -230,7 +230,7 @@ func (s *Apps) Deny(
 		return fmt.Errorf("deny device request: %w", err)
 	}
 	if denied == 0 {
-		return ErrLinkRequestNotFound
+		return ErrRequestNotFound
 	}
 	return nil
 }
@@ -242,23 +242,23 @@ func (s *Apps) PendingAuthorization(
 ) (Pending, error) {
 	hash, ok := opaqueCodeHash(requestCode)
 	if !ok {
-		return Pending{}, ErrLinkRequestNotFound
+		return Pending{}, ErrRequestNotFound
 	}
-	row, err := db.New(s.pool).ReviewLinkAuthorization(ctx, db.ReviewLinkAuthorizationParams{
+	row, err := db.New(s.pool).ReviewConnectionAuthorization(ctx, db.ReviewConnectionAuthorizationParams{
 		ReviewedBy: uuidValue(userID), RequestHash: hash,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Pending{}, ErrLinkRequestNotFound
+		return Pending{}, ErrRequestNotFound
 	}
 	if err != nil {
 		return Pending{}, fmt.Errorf("review browser authorization: %w", err)
 	}
 	return Pending{
-		Declaration: declarationFrom(
-			row.ApplicationName, row.InstanceName, row.ApplicationVersion,
-			row.ProtocolVersion, row.Capabilities, row.AcceptedTargets,
+		StartInput: startFrom(
+			row.AppName, row.Name, row.AppVersion, row.ProtocolVersion,
+			row.Capabilities, row.AcceptedFormats, row.Permissions,
 		),
-		Scopes: scopesFrom(row.Scopes), ExpiresAt: row.ExpiresAt.Time,
+		ExpiresAt: row.ExpiresAt.Time,
 	}, nil
 }
 
@@ -269,18 +269,18 @@ func (s *Apps) ApproveAuthorization(
 ) (Redirect, error) {
 	requestHash, ok := opaqueCodeHash(requestCode)
 	if !ok {
-		return Redirect{}, ErrLinkRequestNotFound
+		return Redirect{}, ErrRequestNotFound
 	}
 	code, codeHash, err := newOpaqueCode()
 	if err != nil {
 		return Redirect{}, err
 	}
-	row, err := db.New(s.pool).ApproveLinkAuthorization(ctx, db.ApproveLinkAuthorizationParams{
+	row, err := db.New(s.pool).ApproveConnectionAuthorization(ctx, db.ApproveConnectionAuthorizationParams{
 		AuthorizationCodeHash: codeHash, ReviewedBy: uuidValue(userID),
 		RequestHash: requestHash,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Redirect{}, ErrLinkRequestNotFound
+		return Redirect{}, ErrRequestNotFound
 	}
 	if err != nil {
 		return Redirect{}, fmt.Errorf("approve browser authorization: %w", err)
@@ -299,13 +299,13 @@ func (s *Apps) DenyAuthorization(
 ) (Redirect, error) {
 	hash, ok := opaqueCodeHash(requestCode)
 	if !ok {
-		return Redirect{}, ErrLinkRequestNotFound
+		return Redirect{}, ErrRequestNotFound
 	}
-	row, err := db.New(s.pool).DenyLinkAuthorization(ctx, db.DenyLinkAuthorizationParams{
+	row, err := db.New(s.pool).DenyConnectionAuthorization(ctx, db.DenyConnectionAuthorizationParams{
 		ReviewedBy: uuidValue(userID), RequestHash: hash,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Redirect{}, ErrLinkRequestNotFound
+		return Redirect{}, ErrRequestNotFound
 	}
 	if err != nil {
 		return Redirect{}, fmt.Errorf("deny browser authorization: %w", err)
@@ -321,77 +321,75 @@ func (s *Apps) Poll(
 	ctx context.Context,
 	source string,
 	deviceCode string,
-) (TokenGrant, bool, error) {
+) (Credentials, bool, error) {
 	if err := s.takeRate(ctx, "poll", source, 600, time.Minute); err != nil {
-		return TokenGrant{}, false, err
+		return Credentials{}, false, err
 	}
 	hash, ok := opaqueCodeHash(deviceCode)
 	if !ok {
-		return TokenGrant{}, false, ErrLinkRequestNotFound
+		return Credentials{}, false, ErrRequestNotFound
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return TokenGrant{}, false, fmt.Errorf("begin device poll: %w", err)
+		return Credentials{}, false, fmt.Errorf("begin device poll: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
-	request, err := queries.LockDeviceLinkRequest(ctx, hash)
+	request, err := queries.LockConnectionRequest(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return TokenGrant{}, false, ErrLinkRequestNotFound
+		return Credentials{}, false, ErrRequestNotFound
 	}
 	if err != nil {
-		return TokenGrant{}, false, fmt.Errorf("read device request: %w", err)
+		return Credentials{}, false, fmt.Errorf("read device request: %w", err)
 	}
 	if request.RedeemedAt.Valid {
-		return TokenGrant{}, false, ErrLinkRequestNotFound
+		return Credentials{}, false, ErrRequestNotFound
 	}
 	if time.Now().After(request.ExpiresAt.Time) {
-		return TokenGrant{}, false, ErrLinkExpired
+		return Credentials{}, false, ErrRequestExpired
 	}
 	if request.DeniedAt.Valid {
-		return TokenGrant{}, false, ErrAccessDenied
+		return Credentials{}, false, ErrAccessDenied
 	}
 	currentInterval := time.Duration(request.PollIntervalSeconds) * time.Second
 	tooSoon := request.LastPolledAt.Valid &&
 		time.Since(request.LastPolledAt.Time) < currentInterval
-	nextInterval, err := queries.RecordDeviceLinkPoll(ctx, db.RecordDeviceLinkPollParams{
+	nextInterval, err := queries.RecordConnectionPoll(ctx, db.RecordConnectionPollParams{
 		SlowDown: tooSoon, DeviceCodeHash: hash,
 	})
 	if err != nil {
-		return TokenGrant{}, false, fmt.Errorf("record device poll: %w", err)
+		return Credentials{}, false, fmt.Errorf("record device poll: %w", err)
 	}
 	if tooSoon {
 		if err := tx.Commit(ctx); err != nil {
-			return TokenGrant{}, false, fmt.Errorf("commit slow down: %w", err)
+			return Credentials{}, false, fmt.Errorf("commit slow down: %w", err)
 		}
-		return TokenGrant{}, false, &PollDelayError{After: time.Duration(nextInterval) * time.Second}
+		return Credentials{}, false, &PollDelayError{After: time.Duration(nextInterval) * time.Second}
 	}
 	if !request.ApprovedBy.Valid {
 		if err := tx.Commit(ctx); err != nil {
-			return TokenGrant{}, false, fmt.Errorf("commit pending poll: %w", err)
+			return Credentials{}, false, fmt.Errorf("commit pending poll: %w", err)
 		}
-		return TokenGrant{}, false, nil
+		return Credentials{}, false, nil
 	}
-	grant, err := issueGrant(ctx, queries, request.ApprovedBy, Declaration{
-		ApplicationName: request.ApplicationName, InstanceName: request.InstanceName,
-		ApplicationVersion: textFrom(request.ApplicationVersion),
-		ProtocolVersion:    int(request.ProtocolVersion), Capabilities: request.Capabilities,
-		AcceptedTargets: request.AcceptedTargets,
-	}, scopesFrom(request.Scopes))
+	issued, err := issueCredentials(ctx, queries, request.ApprovedBy, startFrom(
+		request.AppName, request.Name, request.AppVersion, request.ProtocolVersion,
+		request.Capabilities, request.AcceptedFormats, request.Permissions,
+	))
 	if err != nil {
-		return TokenGrant{}, false, err
+		return Credentials{}, false, err
 	}
-	redeemed, err := queries.RedeemDeviceLinkRequest(ctx, hash)
+	redeemed, err := queries.RedeemConnectionRequest(ctx, hash)
 	if err != nil || redeemed != 1 {
 		if err == nil {
-			err = ErrLinkRequestNotFound
+			err = ErrRequestNotFound
 		}
-		return TokenGrant{}, false, fmt.Errorf("redeem device request: %w", err)
+		return Credentials{}, false, fmt.Errorf("redeem device request: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return TokenGrant{}, false, fmt.Errorf("commit device grant: %w", err)
+		return Credentials{}, false, fmt.Errorf("commit device grant: %w", err)
 	}
-	return grant, true, nil
+	return issued, true, nil
 }
 
 func (s *Apps) Exchange(
@@ -400,157 +398,167 @@ func (s *Apps) Exchange(
 	authorizationCode string,
 	verifier string,
 	redirectURI string,
-) (TokenGrant, error) {
+) (Credentials, error) {
 	if err := s.takeRate(ctx, "exchange", source, 60, time.Hour); err != nil {
-		return TokenGrant{}, err
+		return Credentials{}, err
 	}
 	codeHash, ok := opaqueCodeHash(authorizationCode)
 	if !ok || !validLoopbackRedirect(redirectURI) {
-		return TokenGrant{}, ErrInvalidPKCE
+		return Credentials{}, ErrInvalidPKCE
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return TokenGrant{}, fmt.Errorf("begin code exchange: %w", err)
+		return Credentials{}, fmt.Errorf("begin code exchange: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
-	request, err := queries.LockLinkAuthorization(ctx, codeHash)
+	request, err := queries.LockConnectionAuthorization(ctx, codeHash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return TokenGrant{}, ErrInvalidPKCE
+		return Credentials{}, ErrInvalidPKCE
 	}
 	if err != nil {
-		return TokenGrant{}, fmt.Errorf("read authorization code: %w", err)
+		return Credentials{}, fmt.Errorf("read authorization code: %w", err)
 	}
 	if request.RedeemedAt.Valid || request.DeniedAt.Valid ||
 		!request.ApprovedBy.Valid || time.Now().After(request.ExpiresAt.Time) ||
 		request.RedirectUri != redirectURI ||
 		!challengeMatches(verifier, request.CodeChallenge) {
-		return TokenGrant{}, ErrInvalidPKCE
+		return Credentials{}, ErrInvalidPKCE
 	}
-	grant, err := issueGrant(ctx, queries, request.ApprovedBy, Declaration{
-		ApplicationName: request.ApplicationName, InstanceName: request.InstanceName,
-		ApplicationVersion: textFrom(request.ApplicationVersion),
-		ProtocolVersion:    int(request.ProtocolVersion), Capabilities: request.Capabilities,
-		AcceptedTargets: request.AcceptedTargets,
-	}, scopesFrom(request.Scopes))
+	issued, err := issueCredentials(ctx, queries, request.ApprovedBy, startFrom(
+		request.AppName, request.Name, request.AppVersion, request.ProtocolVersion,
+		request.Capabilities, request.AcceptedFormats, request.Permissions,
+	))
 	if err != nil {
-		return TokenGrant{}, err
+		return Credentials{}, err
 	}
-	redeemed, err := queries.RedeemLinkAuthorization(ctx, codeHash)
+	redeemed, err := queries.RedeemConnectionAuthorization(ctx, codeHash)
 	if err != nil || redeemed != 1 {
 		if err == nil {
 			err = ErrInvalidPKCE
 		}
-		return TokenGrant{}, fmt.Errorf("redeem authorization code: %w", err)
+		return Credentials{}, fmt.Errorf("redeem authorization code: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return TokenGrant{}, fmt.Errorf("commit code exchange: %w", err)
+		return Credentials{}, fmt.Errorf("commit code exchange: %w", err)
 	}
-	return grant, nil
+	return issued, nil
 }
 
-func (s *Apps) List(ctx context.Context, userID uuid.UUID) ([]Instance, error) {
-	rows, err := db.New(s.pool).ListLinkedInstances(ctx, uuidValue(userID))
+func (s *Apps) List(ctx context.Context, userID uuid.UUID) ([]ConnectedApp, error) {
+	rows, err := db.New(s.pool).ListConnectedApps(ctx, uuidValue(userID))
 	if err != nil {
-		return nil, fmt.Errorf("list linked instances: %w", err)
+		return nil, fmt.Errorf("list connected apps: %w", err)
 	}
-	instances := make([]Instance, 0, len(rows))
+	apps := make([]ConnectedApp, 0, len(rows))
 	for _, row := range rows {
-		instances = append(instances, Instance{
+		apps = append(apps, ConnectedApp{
 			ID: uuid.UUID(row.ID.Bytes), UserID: userID,
-			Declaration: declarationFrom(
-				row.ApplicationName, row.InstanceName, row.ApplicationVersion,
-				row.ProtocolVersion.Int32, row.Capabilities, row.AcceptedTargets,
+			AppName: row.AppName, Name: row.Name,
+			Capabilities: capabilitiesFrom(
+				row.AppVersion, row.ProtocolVersion.Int32, row.Capabilities, row.AcceptedFormats,
 			),
-			Prefix: row.RefreshTokenPrefix, Scopes: scopesFrom(row.Scopes),
-			LinkedAt: row.LinkedAt.Time, LastSeenAt: optionalTime(row.LastSeenAt),
+			Prefix: row.RefreshTokenPrefix, Permissions: permissionsFrom(row.Permissions),
+			ConnectedAt: row.ConnectedAt.Time, LastSeenAt: optionalTime(row.LastSeenAt),
 			RevokedAt: optionalTime(row.RevokedAt),
 		})
 	}
-	return instances, nil
+	return apps, nil
 }
 
-func (s *Apps) Revoke(ctx context.Context, userID, instanceID uuid.UUID) error {
-	revoked, err := db.New(s.pool).RevokeLinkedInstance(ctx, db.RevokeLinkedInstanceParams{
-		InstanceID: uuidValue(instanceID), UserID: uuidValue(userID),
+func (s *Apps) Revoke(ctx context.Context, userID, appID uuid.UUID) error {
+	revoked, err := db.New(s.pool).RevokeConnectedApp(ctx, db.RevokeConnectedAppParams{
+		ConnectedAppID: uuidValue(appID), UserID: uuidValue(userID),
 	})
 	if err != nil {
-		return fmt.Errorf("revoke linked instance: %w", err)
+		return fmt.Errorf("revoke a connected app: %w", err)
 	}
 	if !revoked {
-		return ErrInstanceNotFound
+		return ErrAppNotFound
 	}
 	return nil
 }
 
-func (s *Apps) UpdateDeclaration(
+func (s *Apps) UpdateCapabilities(
 	ctx context.Context,
-	instanceID uuid.UUID,
-	declaration Declaration,
-) (Instance, error) {
-	validated, err := validateDeclaration(declaration)
+	app ConnectedApp,
+	capabilities Capabilities,
+) (ConnectedApp, error) {
+	validated, err := validateCapabilities(capabilities)
 	if err != nil {
-		return Instance{}, err
+		return ConnectedApp{}, err
 	}
-	row, err := db.New(s.pool).UpdateLinkedInstanceDeclaration(
+	row, err := db.New(s.pool).UpdateConnectedAppCapabilities(
 		ctx,
-		db.UpdateLinkedInstanceDeclarationParams{
-			ApplicationVersion: optionalText(validated.ApplicationVersion),
-			ProtocolVersion:    pgtype.Int4{Int32: int32(validated.ProtocolVersion), Valid: true},
-			Capabilities:       validated.Capabilities, AcceptedTargets: validated.AcceptedTargets,
-			InstanceID: uuidValue(instanceID),
+		db.UpdateConnectedAppCapabilitiesParams{
+			AppVersion:      optionalText(validated.AppVersion),
+			ProtocolVersion: pgtype.Int4{Int32: int32(validated.ProtocolVersion), Valid: true},
+			Capabilities:    validated.Declared, AcceptedFormats: validated.AcceptedFormats,
+			ConnectedAppID: uuidValue(app.ID),
 		},
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Instance{}, ErrInstanceNotFound
+		return ConnectedApp{}, ErrAppNotFound
 	}
 	if err != nil {
-		return Instance{}, fmt.Errorf("update instance declaration: %w", err)
+		return ConnectedApp{}, fmt.Errorf("update the capabilities of a connected app: %w", err)
 	}
-	return Instance{
-		ID: uuid.UUID(row.ID.Bytes),
-		Declaration: declarationFrom(
-			row.ApplicationName, row.InstanceName, row.ApplicationVersion,
-			row.ProtocolVersion.Int32, row.Capabilities, row.AcceptedTargets,
+	return ConnectedApp{
+		ID: uuid.UUID(row.ID.Bytes), UserID: app.UserID,
+		AppName: row.AppName, Name: row.Name,
+		Capabilities: capabilitiesFrom(
+			row.AppVersion, row.ProtocolVersion.Int32, row.Capabilities, row.AcceptedFormats,
 		),
-		Prefix: row.RefreshTokenPrefix, Scopes: scopesFrom(row.Scopes),
-		LinkedAt: row.LinkedAt.Time, LastSeenAt: optionalTime(row.LastSeenAt),
+		Prefix: row.RefreshTokenPrefix, Permissions: permissionsFrom(row.Permissions),
+		ConnectedAt: row.ConnectedAt.Time, LastSeenAt: optionalTime(row.LastSeenAt),
 	}, nil
 }
 
-func pendingFromDeviceReview(row db.ReviewDeviceLinkRequestRow, token string) Pending {
+func pendingFromDeviceReview(row db.ReviewConnectionRequestRow, token string) Pending {
 	return Pending{
-		Declaration: declarationFrom(
-			row.ApplicationName, row.InstanceName, row.ApplicationVersion,
-			row.ProtocolVersion, row.Capabilities, row.AcceptedTargets,
+		StartInput: startFrom(
+			row.AppName, row.Name, row.AppVersion, row.ProtocolVersion,
+			row.Capabilities, row.AcceptedFormats, row.Permissions,
 		),
-		Scopes: scopesFrom(row.Scopes), ExpiresAt: row.ExpiresAt.Time,
-		ApprovalToken: token,
+		ExpiresAt: row.ExpiresAt.Time, ApprovalToken: token,
 	}
 }
 
-func pendingFromDeviceApproval(row db.ApproveDeviceLinkRequestRow) Pending {
+func pendingFromDeviceApproval(row db.ApproveConnectionRequestRow) Pending {
 	return Pending{
-		Declaration: declarationFrom(
-			row.ApplicationName, row.InstanceName, row.ApplicationVersion,
-			row.ProtocolVersion, row.Capabilities, row.AcceptedTargets,
+		StartInput: startFrom(
+			row.AppName, row.Name, row.AppVersion, row.ProtocolVersion,
+			row.Capabilities, row.AcceptedFormats, row.Permissions,
 		),
-		Scopes: scopesFrom(row.Scopes), ExpiresAt: row.ExpiresAt.Time,
+		ExpiresAt: row.ExpiresAt.Time,
 	}
 }
 
-func declarationFrom(
-	applicationName string,
-	instanceName string,
-	applicationVersion pgtype.Text,
-	version int32,
-	capabilities []string,
-	targets []string,
-) Declaration {
-	return Declaration{
-		ApplicationName: applicationName, InstanceName: instanceName,
-		ApplicationVersion: textFrom(applicationVersion), ProtocolVersion: int(version),
-		Capabilities: capabilities, AcceptedTargets: targets,
+func startFrom(
+	appName string,
+	name string,
+	appVersion pgtype.Text,
+	protocol int32,
+	declared []string,
+	formats []string,
+	permissions []string,
+) StartInput {
+	return StartInput{
+		AppName: appName, Name: name,
+		Capabilities: capabilitiesFrom(appVersion, protocol, declared, formats),
+		Permissions:  permissionsFrom(permissions),
+	}
+}
+
+func capabilitiesFrom(
+	appVersion pgtype.Text,
+	protocol int32,
+	declared []string,
+	formats []string,
+) Capabilities {
+	return Capabilities{
+		AppVersion: textFrom(appVersion), ProtocolVersion: int(protocol),
+		Declared: declared, AcceptedFormats: formats,
 	}
 }
 
@@ -564,12 +572,12 @@ func (s *Apps) takeRate(
 	if source == "" {
 		source = "unknown"
 	}
-	row, err := db.New(s.pool).TakeLinkRateLimit(ctx, db.TakeLinkRateLimitParams{
+	row, err := db.New(s.pool).TakeConnectionRateLimit(ctx, db.TakeConnectionRateLimitParams{
 		KeyHash: s.digest("rate:"+action, source), Action: action,
 		WindowCutoff: timestamptz(time.Now().Add(-window)),
 	})
 	if err != nil {
-		return fmt.Errorf("rate link request: %w", err)
+		return fmt.Errorf("rate a connection request: %w", err)
 	}
 	if row.Attempts > limit {
 		after := time.Until(row.WindowStart.Time.Add(window))
@@ -582,12 +590,12 @@ func (s *Apps) takeRate(
 }
 
 func deleteExpiredRates(ctx context.Context, queries *db.Queries) error {
-	_, err := queries.DeleteExpiredLinkRateLimits(ctx, db.DeleteExpiredLinkRateLimitsParams{
+	_, err := queries.DeleteExpiredConnectionRateLimits(ctx, db.DeleteExpiredConnectionRateLimitsParams{
 		WindowCutoff: timestamptz(time.Now().Add(-24 * time.Hour)),
 		BatchSize:    cleanupBatch,
 	})
 	if err != nil {
-		return fmt.Errorf("clear link rate limits: %w", err)
+		return fmt.Errorf("clear connection rate limits: %w", err)
 	}
 	return nil
 }

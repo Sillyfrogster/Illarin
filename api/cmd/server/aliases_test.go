@@ -61,8 +61,28 @@ var renamedPaths = []struct{ method, was, now string }{
 	{"PATCH", "/v1/works/:id/updates/:number/notes", "/v1/works/:id/versions/:number/notes"},
 	{"GET", "/v1/works/:id/updates/:number/downloads", "/v1/works/:id/versions/:number/downloads"},
 	{"GET", "/v1/assets/:id/sealed", "/v1/works/:id/sealed"},
-	{"GET", "/v1/assets/:id/instances", "/v1/works/:id/instances"},
-	{"POST", "/v1/assets/:id/deliveries", "/v1/works/:id/deliveries"},
+	{"GET", "/v1/assets/:id/instances", "/v1/works/:id/connected-apps"},
+	{"POST", "/v1/assets/:id/deliveries", "/v1/works/:id/sends"},
+	{"GET", "/v1/works/:id/instances", "/v1/works/:id/connected-apps"},
+	{"POST", "/v1/works/:id/deliveries", "/v1/works/:id/sends"},
+	{"POST", "/v1/link/requests", "/v1/connect/requests"},
+	{"POST", "/v1/link/poll", "/v1/connect/poll"},
+	{"GET", "/v1/link/requests/:userCode", "/v1/connect/requests/:userCode"},
+	{"POST", "/v1/link/requests/:userCode/approve", "/v1/connect/requests/:userCode/approve"},
+	{"POST", "/v1/link/requests/:userCode/deny", "/v1/connect/requests/:userCode/deny"},
+	{"POST", "/v1/link/authorizations", "/v1/connect/authorizations"},
+	{"GET", "/v1/link/authorizations/:requestCode", "/v1/connect/authorizations/:requestCode"},
+	{"POST", "/v1/link/authorizations/:requestCode/approve", "/v1/connect/authorizations/:requestCode/approve"},
+	{"POST", "/v1/link/authorizations/:requestCode/deny", "/v1/connect/authorizations/:requestCode/deny"},
+	{"POST", "/v1/link/token", "/v1/connect/token"},
+	{"POST", "/v1/link/refresh", "/v1/connect/refresh"},
+	{"GET", "/v1/instances", "/v1/connected-apps"},
+	{"GET", "/v1/instances/me", "/v1/connected-apps/me"},
+	{"PUT", "/v1/instances/me", "/v1/connected-apps/me"},
+	{"DELETE", "/v1/instances/:id", "/v1/connected-apps/:id"},
+	{"POST", "/v1/deliveries/collect", "/v1/sends/collect"},
+	{"DELETE", "/v1/deliveries/:id", "/v1/sends/:id"},
+	{"GET", "/delivery/:id/export", "/send/:id/export"},
 	{"GET", "/v1/assets/:id/update-destinations", "/v1/works/:id/update-destinations"},
 	{"PUT", "/v1/assets/:id/update-destinations", "/v1/works/:id/update-destinations"},
 	{"GET", "/v1/assets/:id/announcements", "/v1/works/:id/announcements"},
@@ -98,7 +118,7 @@ func handlerNames(t *testing.T) map[string]string {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	err := registerRoutes(
-		r, services{Works: &work.Service{}, Links: &connect.Apps{}}, api.DefaultDeadlines(), apitest.Ready)
+		r, services{Works: &work.Service{}, Apps: &connect.Apps{}}, api.DefaultDeadlines(), apitest.Ready)
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}

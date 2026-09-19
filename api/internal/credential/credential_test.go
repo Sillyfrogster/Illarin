@@ -7,14 +7,14 @@ import (
 
 func TestAFreshSecretReadsBackAsWhatWasStored(t *testing.T) {
 	t.Parallel()
-	minted, err := Mint(InstanceRefresh)
+	minted, err := Mint(AppRefresh)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
-	if !strings.HasPrefix(minted.Value, string(InstanceRefresh)+"."+minted.Prefix+".") {
+	if !strings.HasPrefix(minted.Value, string(AppRefresh)+"."+minted.Prefix+".") {
 		t.Fatalf("secret %q does not carry its type and prefix", minted.Value)
 	}
-	read, ok := Read(minted.Value, InstanceRefresh)
+	read, ok := Read(minted.Value, AppRefresh)
 	if !ok {
 		t.Fatal("a fresh secret was refused")
 	}
@@ -25,11 +25,11 @@ func TestAFreshSecretReadsBackAsWhatWasStored(t *testing.T) {
 
 func TestTwoMintsShareNothing(t *testing.T) {
 	t.Parallel()
-	first, err := Mint(InstanceRefresh)
+	first, err := Mint(AppRefresh)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
-	second, err := Mint(InstanceRefresh)
+	second, err := Mint(AppRefresh)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
@@ -40,20 +40,20 @@ func TestTwoMintsShareNothing(t *testing.T) {
 
 func TestOneTypeNeverReadsAsAnother(t *testing.T) {
 	t.Parallel()
-	minted, err := Mint(InstanceAccess)
+	minted, err := Mint(AppAccess)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
-	for _, other := range []Type{InstanceRefresh} {
+	for _, other := range []Type{AppRefresh} {
 		if _, ok := Read(minted.Value, other); ok {
-			t.Fatalf("an %s secret was accepted as %s", InstanceAccess, other)
+			t.Fatalf("an %s secret was accepted as %s", AppAccess, other)
 		}
 	}
 }
 
 func TestMalformedAndOversizedSecretsAreRefusedBeforeDecoding(t *testing.T) {
 	t.Parallel()
-	minted, err := Mint(InstanceRefresh)
+	minted, err := Mint(AppRefresh)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestMalformedAndOversizedSecretsAreRefusedBeforeDecoding(t *testing.T) {
 		minted.Value[:len(minted.Value)-1],
 	}
 	for _, value := range refused {
-		if _, ok := Read(value, InstanceRefresh); ok {
+		if _, ok := Read(value, AppRefresh); ok {
 			t.Errorf("Read(%q) accepted a malformed value", value)
 		}
 	}
@@ -74,11 +74,11 @@ func TestMalformedAndOversizedSecretsAreRefusedBeforeDecoding(t *testing.T) {
 
 func TestMatchesComparesWholeDigests(t *testing.T) {
 	t.Parallel()
-	first, err := Mint(InstanceRefresh)
+	first, err := Mint(AppRefresh)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
-	second, err := Mint(InstanceRefresh)
+	second, err := Mint(AppRefresh)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}

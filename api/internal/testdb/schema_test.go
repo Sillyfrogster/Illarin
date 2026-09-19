@@ -423,7 +423,7 @@ func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 		"id",
 		"work_id",
 		"original_file_id",
-		"export_target",
+		"format",
 		"handed_off_at",
 		"authorization_class",
 		"visibility",
@@ -434,7 +434,7 @@ func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 
 	_, err = pool.Exec(context.Background(), `
 		insert into download_events
-			(work_id, original_file_id, export_target, authorization_class, visibility)
+			(work_id, original_file_id, format, authorization_class, visibility)
 		values ($1, $2, 'raw', 'anonymous', 'listed')
 	`, workID, originalFileID)
 	if err != nil {
@@ -456,7 +456,7 @@ func TestDownloadEventMayOmitAnOriginalFile(t *testing.T) {
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into download_events
-			(work_id, original_file_id, export_target, authorization_class, visibility)
+			(work_id, original_file_id, format, authorization_class, visibility)
 		values ($1, null, 'chara_card_v3', 'anonymous', 'listed')
 	`, workID); err != nil {
 		t.Fatalf("insert download event without an original file: %v", err)
@@ -472,7 +472,7 @@ func TestDownloadEventsAreImmutable(t *testing.T) {
 	var eventID int64
 	err := pool.QueryRow(ctx, `
 		insert into download_events
-			(work_id, original_file_id, export_target, authorization_class, visibility)
+			(work_id, original_file_id, format, authorization_class, visibility)
 		values ($1, $2, 'raw', 'anonymous', 'listed')
 		returning id
 	`, workID, originalFileID).Scan(&eventID)
@@ -544,7 +544,7 @@ func TestDownloadEventOriginalFileMustBelongToItsWork(t *testing.T) {
 
 	_, err := pool.Exec(context.Background(), `
 		insert into download_events
-			(work_id, original_file_id, export_target, authorization_class, visibility)
+			(work_id, original_file_id, format, authorization_class, visibility)
 		values ($1, $2, 'raw', 'anonymous', 'listed')
 	`, secondWorkID, firstOriginalFileID)
 	if err == nil {
@@ -564,7 +564,7 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 	} {
 		_, err := pool.Exec(ctx, `
 			insert into download_events
-				(work_id, original_file_id, export_target, authorization_class, visibility)
+				(work_id, original_file_id, format, authorization_class, visibility)
 			values ($1, $2, 'raw', $3, 'listed')
 		`, workID, originalFileID, authorizationClass)
 		if err != nil {
@@ -580,7 +580,7 @@ func TestDownloadEventVocabularyIsClosed(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			_, err := pool.Exec(ctx, `
 				insert into download_events
-					(work_id, original_file_id, export_target, authorization_class, visibility)
+					(work_id, original_file_id, format, authorization_class, visibility)
 				values ($1, $2, $3, $4, $5)
 			`, workID, originalFileID, values[0], values[1], values[2])
 			if err == nil {

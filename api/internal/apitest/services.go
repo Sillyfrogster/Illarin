@@ -100,19 +100,19 @@ func (ClosedSender) Post(
 	return dispatch.Answer{}, errors.New("this test stack sends nowhere")
 }
 
-func NewLinkingService(pool *pgxpool.Pool) *connect.Apps {
+func NewAppsService(pool *pgxpool.Pool) *connect.Apps {
 	return connect.NewApps(pool, "http://localhost:3000", []byte("01234567890123456789012345678901"))
 }
 
-func NewDeliveryService(
+func NewSendsService(
 	pool *pgxpool.Pool,
 	works *work.Service,
-	links *connect.Apps,
+	apps *connect.Apps,
 ) *connect.Sends {
-	return connect.NewSends(pool, works, links, DeliverySettings())
+	return connect.NewSends(pool, works, apps, SendSettings())
 }
 
-func DeliverySettings() connect.Settings {
+func SendSettings() connect.Settings {
 	settings := connect.DefaultSettings()
 	settings.HoldFloor = 50 * time.Millisecond
 	settings.HoldCeiling = 80 * time.Millisecond

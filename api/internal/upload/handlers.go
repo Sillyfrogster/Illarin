@@ -20,6 +20,7 @@ func NewHandlers(uploads *Service, works *page.Service, maxUploadBytes int64) *H
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
 	routes.Handle(http.MethodPost, "/v1/works", d.Upload, h.CreateWork)
+	routes.Handle(http.MethodGet, "/v1/build-choices", d.JSON, h.GetBuildChoices)
 	routes.Handle(http.MethodGet, "/v1/works/:id/original-file", d.JSON, h.GetWorkReplacement)
 	routes.Handle(http.MethodPost, "/v1/works/:id/original-file", d.Upload, h.AddWorkOriginalFile)
 	routes.Handle(http.MethodPost, "/v1/works/:id/original-file/:operationId/accept", d.JSON, h.AcceptWorkOriginalFile)

@@ -16,12 +16,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *Service) DeliverableWork(
+func (s *Service) SendableWork(
 	ctx context.Context,
 	q db.DBTX,
 	workID uuid.UUID,
-) (connect.Deliverable, error) {
-	var found connect.Deliverable
+) (connect.Sendable, error) {
+	var found connect.Sendable
 	var number int32
 	var originalFileID, coverID pgtype.UUID
 	err := q.QueryRow(ctx, `
@@ -33,96 +33,96 @@ func (s *Service) DeliverableWork(
 		   and lifecycle = 'published'
 	`, workID).Scan(&found.Type, &found.Name, &number, &originalFileID, &coverID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return connect.Deliverable{}, connect.ErrNotDeliverable
+		return connect.Sendable{}, connect.ErrNotSendable
 	}
 	if err != nil {
-		return connect.Deliverable{}, fmt.Errorf("read the work to deliver: %w", err)
+		return connect.Sendable{}, fmt.Errorf("read the work to send: %w", err)
 	}
 	found.VersionNumber = int(number)
 	found.HasOriginal = originalFileID.Valid
 
-	offered, err := deliveryTargets(ctx, q, workID)
+	offered, err := sendFormats(ctx, q, workID)
 	if err != nil {
-		return connect.Deliverable{}, err
+		return connect.Sendable{}, err
 	}
-	found.Targets = offered
+	found.Formats = offered
 	apps, err := private.Apps(ctx, q, workID)
 	if err != nil {
-		return connect.Deliverable{}, err
+		return connect.Sendable{}, err
 	}
 	if len(apps) == 0 {
 		blocks, err := ReadPublishedBlocks(ctx, q, workID)
 		if err != nil {
-			return connect.Deliverable{}, err
+			return connect.Sendable{}, err
 		}
 		if err := private.ApplyPublishedPolicy(ctx, q, workID, blocks); err != nil {
-			return connect.Deliverable{}, err
+			return connect.Sendable{}, err
 		}
 		if private.HasPromptFragments(blocks) {
-			return connect.Deliverable{}, connect.ErrNotDeliverable
+			return connect.Sendable{}, connect.ErrNotSendable
 		}
 	}
 	if len(apps) > 0 {
 		found.HasOriginal = false
-		filtered := make([]connect.DeliveryTarget, 0, len(found.Targets))
-		for _, target := range found.Targets {
-			if private.AllowsTarget(apps, found.Type, target.Format) {
-				filtered = append(filtered, target)
+		filtered := make([]connect.SendFormat, 0, len(found.Formats))
+		for _, one := range found.Formats {
+			if private.AllowsFormat(s.reg, apps, one.Format) {
+				filtered = append(filtered, one)
 			}
 		}
-		found.Targets = filtered
+		found.Formats = filtered
 	}
-	found.Pictures, err = s.deliveryPictures(ctx, q, workID, uuidOrNil(coverID))
+	found.Pictures, err = s.sendPictures(ctx, q, workID, uuidOrNil(coverID))
 	if err != nil {
-		return connect.Deliverable{}, err
+		return connect.Sendable{}, err
 	}
-	found.InstallCapabilities = format.InstallCapabilities(found.Type, targetFormats(found.Targets))
+	found.InstallCapabilities = format.InstallCapabilities(found.Type, formatIDs(found.Formats))
 	return found, nil
 }
 
-func targetFormats(targets []connect.DeliveryTarget) []string {
-	formats := make([]string, 0, len(targets))
-	for _, target := range targets {
-		formats = append(formats, target.Format)
+func formatIDs(offered []connect.SendFormat) []string {
+	ids := make([]string, 0, len(offered))
+	for _, one := range offered {
+		ids = append(ids, one.Format)
 	}
-	return formats
+	return ids
 }
 
-func deliveryTargets(
+func sendFormats(
 	ctx context.Context,
 	q db.DBTX,
 	workID uuid.UUID,
-) ([]connect.DeliveryTarget, error) {
+) ([]connect.SendFormat, error) {
 	var stored []byte
 	err := q.QueryRow(ctx,
 		`select export from work_public.work_summaries where work_id = $1`, workID,
 	).Scan(&stored)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return []connect.DeliveryTarget{}, nil
+		return []connect.SendFormat{}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read the export summary to deliver: %w", err)
+		return nil, fmt.Errorf("read the formats summary to send: %w", err)
 	}
-	offered := make([]format.Target, 0)
+	offered := make([]format.Offered, 0)
 	if err := json.Unmarshal(stored, &offered); err != nil {
 		return nil, fmt.Errorf("read the stored export summary: %w", err)
 	}
-	targets := make([]connect.DeliveryTarget, 0, len(offered))
-	for _, target := range offered {
-		targets = append(targets, connect.DeliveryTarget{Format: target.Format, Label: target.Label})
+	formats := make([]connect.SendFormat, 0, len(offered))
+	for _, one := range offered {
+		formats = append(formats, connect.SendFormat{Format: one.Format, Label: one.Label})
 	}
-	return targets, nil
+	return formats, nil
 }
 
-func (s *Service) deliveryPictures(
+func (s *Service) sendPictures(
 	ctx context.Context,
 	q db.DBTX,
 	workID uuid.UUID,
 	coverID *uuid.UUID,
-) ([]connect.DeliveryPicture, error) {
+) ([]connect.SendPicture, error) {
 	blocks, err := ReadPublishedBlocks(ctx, q, workID)
 	if err != nil {
-		return nil, fmt.Errorf("read the blocks to deliver: %w", err)
+		return nil, fmt.Errorf("read the blocks to send: %w", err)
 	}
 	withheld := galleryImagesLeftBehind(blocks)
 	rows, err := q.Query(ctx, `
@@ -134,14 +134,14 @@ func (s *Service) deliveryPictures(
 		 order by created_at desc, id desc
 	`, workID)
 	if err != nil {
-		return nil, fmt.Errorf("list the pictures to deliver: %w", err)
+		return nil, fmt.Errorf("list the pictures to send: %w", err)
 	}
 	defer rows.Close()
-	pictures := make([]connect.DeliveryPicture, 0)
+	pictures := make([]connect.SendPicture, 0)
 	for rows.Next() {
-		var picture connect.DeliveryPicture
+		var picture connect.SendPicture
 		if err := rows.Scan(&picture.MediaID, &picture.Role); err != nil {
-			return nil, fmt.Errorf("read a picture to deliver: %w", err)
+			return nil, fmt.Errorf("read a picture to send: %w", err)
 		}
 		if withheld[picture.MediaID] {
 			continue

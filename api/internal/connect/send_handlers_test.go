@@ -23,10 +23,10 @@ import (
 
 func TestAWaitWithNothingQueuedAnswersWithNoContent(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
+	router, session, _ := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
 
-	rec := apitest.Collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, credentials.AccessToken, nil)
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("empty wait status = %d, want 204: %s", rec.Code, rec.Body.String())
@@ -34,31 +34,31 @@ func TestAWaitWithNothingQueuedAnswersWithNoContent(t *testing.T) {
 	apitest.AssertNoStore(t, rec)
 }
 
-func TestSendingAnWorkReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
+func TestSendingAWorkReleasesItInTheFormatTheConnectedAppAccepts(t *testing.T) {
 	t.Parallel()
-	router, session, pool := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, pool := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
 
-	queued := apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
+	queued := apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
 	if queued.Code != http.StatusAccepted {
 		t.Fatalf("send status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
-	waiting := apitest.DecodeResponse[apitest.QueuedDelivery](t, queued)
+	waiting := apitest.DecodeResponse[apitest.QueuedSend](t, queued)
 	if waiting.State != "queued" || waiting.WorkID != workID {
-		t.Fatalf("queued delivery = %+v, want a queued delivery for the work", waiting)
+		t.Fatalf("queued send = %+v, want a queued send for the work", waiting)
 	}
 
-	rec := apitest.Collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, credentials.AccessToken, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("collect status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
-	released := apitest.DecodeResponse[apitest.DeliveryWorkList](t, rec)
-	if len(released.Deliveries) != 1 {
-		t.Fatalf("released %d deliveries, want 1", len(released.Deliveries))
+	released := apitest.DecodeResponse[apitest.CollectedSends](t, rec)
+	if len(released.Sends) != 1 {
+		t.Fatalf("released %d sends, want 1", len(released.Sends))
 	}
-	work := released.Deliveries[0]
+	work := released.Sends[0]
 	if work.ID != waiting.ID || work.WorkID != workID || work.Format != "test_opaque" ||
 		work.Type != "character" || work.Name == "" || work.VersionNumber < 1 {
 		t.Fatalf("released work = %+v, want the queued work written as test_opaque", work)
@@ -79,7 +79,7 @@ func TestSendingAnWorkReleasesItInTheFormatTheInstanceAccepts(t *testing.T) {
 		  from download_events
 		 where work_id = $1 and authorization_class = 'linked_instance'
 	`, workID).Scan(&originalFileMissing); err != nil {
-		t.Fatalf("read linked-instance download event: %v", err)
+		t.Fatalf("read connected-app downloads event: %v", err)
 	}
 	if !originalFileMissing {
 		t.Fatal("work made in Illarin recorded an original file")
@@ -90,22 +90,22 @@ func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *tes
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"invented_by_the_client"})
 
-	if queued := apitest.SendToInstance(t, router, session, workID, grant.Instance.ID); queued.Code != http.StatusAccepted {
+	if queued := apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
 	if before := apitest.DownloadEventCount(t, pool, "linked_instance"); before != 0 {
 		t.Fatalf("queueing wrote %d download events, want 0", before)
 	}
 
-	rec := apitest.Collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, credentials.AccessToken, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("collect status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
-	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, rec).Deliveries[0]
-	if work.Format != format.RawTarget {
+	work := apitest.DecodeResponse[apitest.CollectedSends](t, rec).Sends[0]
+	if work.Format != format.Raw {
 		t.Fatalf("format = %q, want the creator's own file as raw", work.Format)
 	}
 	fetched := apitest.FetchSigned(t, router, work.Files[0].URL)
@@ -114,18 +114,18 @@ func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *tes
 		t.Fatalf("fetch = %d, headers %v", fetched.Code, fetched.Header())
 	}
 	if got := apitest.DownloadEventCount(t, pool, "linked_instance"); got != 1 {
-		t.Fatalf("recorded %d linked-instance downloads, want 1", got)
+		t.Fatalf("recorded %d connected-app downloads, want 1", got)
 	}
 }
 
-func TestATamperedOrUnsignedDeliveryAddressIsRefused(t *testing.T) {
+func TestATamperedOrUnsignedSendAddressIsRefused(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, _ := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
-	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
+	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
+	work := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil)).Sends[0]
 
 	address, err := url.Parse(work.Files[0].URL)
 	if err != nil {
@@ -146,67 +146,67 @@ func TestATamperedOrUnsignedDeliveryAddressIsRefused(t *testing.T) {
 	}
 }
 
-func TestAnAcknowledgedDeliveryLeavesTheQueueAndStaysOnRecordAsDelivered(t *testing.T) {
+func TestAnAcknowledgedSendLeavesTheQueueAndStaysOnRecordAsDelivered(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, _ := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
-	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil)).Deliveries[0]
+	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
+	work := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil)).Sends[0]
 
-	again := apitest.Collect(t, router, grant.AccessToken, []string{work.ID})
+	again := apitest.Collect(t, router, credentials.AccessToken, []string{work.ID})
 
 	if again.Code != http.StatusNoContent {
 		t.Fatalf("wait after acknowledgement status = %d, want 204: %s", again.Code, again.Body.String())
 	}
-	delivered := apitest.WorkInstances(t, router, session, workID).Items[0].Delivery
+	delivered := apitest.WorkConnectedApps(t, router, session, workID).Items[0].Send
 	if delivered == nil || delivered.State != "delivered" || delivered.SettledAt == nil || delivered.UpdatesInstall {
-		t.Fatalf("delivery = %+v, want it on record as delivered", delivered)
+		t.Fatalf("send = %+v, want it on record as delivered", delivered)
 	}
 	if fetched := apitest.FetchSigned(t, router, work.Files[0].URL); fetched.Code != http.StatusNotFound {
 		t.Fatalf("the export address still answers %d after acknowledgement", fetched.Code)
 	}
 
-	resent := apitest.DecodeResponse[apitest.QueuedDelivery](t, apitest.SendToInstance(t, router, session, workID, grant.Instance.ID))
+	resent := apitest.DecodeResponse[apitest.QueuedSend](t, apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID))
 	if resent.ID == work.ID || resent.State != "queued" {
-		t.Fatalf("sending again = %+v, want a new queued delivery", resent)
+		t.Fatalf("sending again = %+v, want a new queued send", resent)
 	}
-	dismissed := apitest.Send(t, router, apitest.BrowserRequest(t, http.MethodDelete, "/v1/deliveries/"+resent.ID, nil, session))
+	dismissed := apitest.Send(t, router, apitest.BrowserRequest(t, http.MethodDelete, "/v1/sends/"+resent.ID, nil, session))
 	if dismissed.Code != http.StatusNoContent {
 		t.Fatalf("dismiss status = %d, want 204: %s", dismissed.Code, dismissed.Body.String())
 	}
-	if after := apitest.WorkInstances(t, router, session, workID).Items[0].Delivery; after == nil || after.ID != work.ID {
-		t.Fatalf("delivery = %+v, want the delivered record back once the new one is dismissed", after)
+	if after := apitest.WorkConnectedApps(t, router, session, workID).Items[0].Send; after == nil || after.ID != work.ID {
+		t.Fatalf("send = %+v, want the delivered record back once the new one is dismissed", after)
 	}
 }
 
 func TestSendingTheSameWorkTwiceQueuesItOnce(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, _ := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
 
-	first := apitest.DecodeResponse[apitest.QueuedDelivery](t, apitest.SendToInstance(t, router, session, workID, grant.Instance.ID))
-	second := apitest.DecodeResponse[apitest.QueuedDelivery](t, apitest.SendToInstance(t, router, session, workID, grant.Instance.ID))
+	first := apitest.DecodeResponse[apitest.QueuedSend](t, apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID))
+	second := apitest.DecodeResponse[apitest.QueuedSend](t, apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID))
 
 	if first.ID != second.ID {
-		t.Fatalf("two sends made two deliveries, %s and %s", first.ID, second.ID)
+		t.Fatalf("two sends made two sends, %s and %s", first.ID, second.ID)
 	}
-	work := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil))
-	if len(work.Deliveries) != 1 {
-		t.Fatalf("released %d deliveries, want 1", len(work.Deliveries))
+	work := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil))
+	if len(work.Sends) != 1 {
+		t.Fatalf("released %d sends, want 1", len(work.Sends))
 	}
 }
 
 func TestAnWorkWithdrawnAfterQueueingIsRefusedAtCollection(t *testing.T) {
 	t.Parallel()
-	router, session, pool := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, pool := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
+	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
 	if _, err := pool.Exec(context.Background(), `
 		update works work
 		   set withheld_at = now(), withheld_by = work.owner_id,
@@ -216,95 +216,95 @@ func TestAnWorkWithdrawnAfterQueueingIsRefusedAtCollection(t *testing.T) {
 		t.Fatalf("withhold the work: %v", err)
 	}
 
-	rec := apitest.Collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, credentials.AccessToken, nil)
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("collect status = %d, want 204: %s", rec.Code, rec.Body.String())
 	}
 	var state, reason string
 	if err := pool.QueryRow(context.Background(),
-		`select state, coalesce(settled_reason, '') from instance_deliveries where work_id = $1`,
+		`select state, coalesce(settled_reason, '') from sends where work_id = $1`,
 		workID,
 	).Scan(&state, &reason); err != nil {
-		t.Fatalf("read the delivery: %v", err)
+		t.Fatalf("read the send: %v", err)
 	}
 	if state != "failed" || reason != "withdrawn" {
-		t.Fatalf("delivery = %s/%s, want failed/withdrawn", state, reason)
+		t.Fatalf("send = %s/%s, want failed/withdrawn", state, reason)
 	}
 }
 
-func TestAnInstanceThatAcceptsNoFormatWeCanWriteIsRefusedAtSend(t *testing.T) {
+func TestAConnectedAppThatAcceptsNoFormatWeCanWriteIsRefusedAtSend(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"invented_by_the_client"})
+	router, session, _ := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"invented_by_the_client"})
 	workID := apitest.PublishedCharacter(t, router, session)
 
-	rec := apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
+	rec := apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
 
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("send status = %d, want 409: %s", rec.Code, rec.Body.String())
 	}
 }
 
-func TestCollectingNeedsTheReceiveScope(t *testing.T) {
+func TestCollectingNeedsTheReceivePermission(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Reader", "desk", []string{"library:sync"})
+	router, session, _ := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Reader", "desk", []string{"library:sync"})
 
-	rec := apitest.Collect(t, router, grant.AccessToken, nil)
+	rec := apitest.Collect(t, router, credentials.AccessToken, nil)
 
 	if rec.Code != http.StatusForbidden {
-		t.Fatalf("collect without the scope status = %d, want 403: %s", rec.Code, rec.Body.String())
+		t.Fatalf("collect without the permission status = %d, want 403: %s", rec.Code, rec.Body.String())
 	}
 }
 
-func TestSendingNeedsAnInstanceOfYourOwnThatCanReceive(t *testing.T) {
+func TestSendingNeedsAConnectedAppOfYourOwnThatCanReceive(t *testing.T) {
 	t.Parallel()
-	router, session, pool := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, pool := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	stranger := apitest.AddVerifiedLinkingUser(t, router, pool, "stranger@example.com", "stranger.creator")
+	stranger := apitest.AddVerifiedUser(t, router, pool, "stranger@example.com", "stranger.creator")
 
-	rec := apitest.SendToInstance(t, router, stranger, workID, grant.Instance.ID)
+	rec := apitest.SendToApp(t, router, stranger, workID, credentials.ConnectedApp.ID)
 
 	if rec.Code != http.StatusNotFound {
-		t.Fatalf("send to another creator's instance status = %d, want 404: %s",
+		t.Fatalf("send to another creator's connected app status = %d, want 404: %s",
 			rec.Code, rec.Body.String())
 	}
 }
 
-func TestARevokedInstanceLosesItsQueueAndMirrorAndAnotherKeepsBoth(t *testing.T) {
+func TestARevokedConnectedAppLosesItsQueueAndMirrorAndAnotherKeepsBoth(t *testing.T) {
 	t.Parallel()
-	router, session, pool := harness.NewLinkingRouter(t)
-	cut := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "cut", []string{apitest.ReceiveScope, "library:sync"})
-	kept := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "kept", []string{apitest.ReceiveScope, "library:sync"})
-	apitest.DeclareTargets(t, router, cut.AccessToken, []string{"test_opaque"})
-	apitest.DeclareTargets(t, router, kept.AccessToken, []string{"test_opaque"})
+	router, session, pool := harness.NewConnectRouter(t)
+	cut := apitest.ConnectApp(t, router, session, "Paper Lantern", "cut", []string{apitest.ReceivePermission, "library:sync"})
+	kept := apitest.ConnectApp(t, router, session, "Paper Lantern", "kept", []string{apitest.ReceivePermission, "library:sync"})
+	apitest.DeclareFormats(t, router, cut.AccessToken, []string{"test_opaque"})
+	apitest.DeclareFormats(t, router, kept.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	apitest.SendToInstance(t, router, session, workID, cut.Instance.ID)
-	apitest.SendToInstance(t, router, session, workID, kept.Instance.ID)
+	apitest.SendToApp(t, router, session, workID, cut.ConnectedApp.ID)
+	apitest.SendToApp(t, router, session, workID, kept.ConnectedApp.ID)
 	syncLibrary(t, router, cut.AccessToken, false, []map[string]any{{"workId": workID}}, nil)
 	syncLibrary(t, router, kept.AccessToken, false, []map[string]any{{"workId": workID}}, nil)
 
 	revoked := apitest.Send(t, router, apitest.BrowserRequest(
-		t, http.MethodDelete, "/v1/instances/"+cut.Instance.ID, nil, session))
+		t, http.MethodDelete, "/v1/connected-apps/"+cut.ConnectedApp.ID, nil, session))
 	if revoked.Code != http.StatusNoContent {
 		t.Fatalf("revoke status = %d, want 204: %s", revoked.Code, revoked.Body.String())
 	}
 
-	if got := rowCount(t, pool, `select count(*) from instance_deliveries where instance_id = $1`, cut.Instance.ID); got != 0 {
-		t.Fatalf("the revoked instance kept %d deliveries", got)
+	if got := rowCount(t, pool, `select count(*) from sends where connected_app_id = $1`, cut.ConnectedApp.ID); got != 0 {
+		t.Fatalf("the revoked connected app kept %d sends", got)
 	}
-	if got := rowCount(t, pool, `select count(*) from instance_library_entries where instance_id = $1`, cut.Instance.ID); got != 0 {
-		t.Fatalf("the revoked instance kept %d library entries", got)
+	if got := rowCount(t, pool, `select count(*) from app_library_entries where connected_app_id = $1`, cut.ConnectedApp.ID); got != 0 {
+		t.Fatalf("the revoked connected app kept %d library entries", got)
 	}
-	if got := rowCount(t, pool, `select count(*) from instance_deliveries where instance_id = $1`, kept.Instance.ID); got != 1 {
-		t.Fatalf("the other instance has %d deliveries, want 1", got)
+	if got := rowCount(t, pool, `select count(*) from sends where connected_app_id = $1`, kept.ConnectedApp.ID); got != 1 {
+		t.Fatalf("the other connected app has %d sends, want 1", got)
 	}
-	if got := rowCount(t, pool, `select count(*) from instance_library_entries where instance_id = $1`, kept.Instance.ID); got != 1 {
-		t.Fatalf("the other instance has %d library entries, want 1", got)
+	if got := rowCount(t, pool, `select count(*) from app_library_entries where connected_app_id = $1`, kept.ConnectedApp.ID); got != 1 {
+		t.Fatalf("the other connected app has %d library entries, want 1", got)
 	}
 }
 
@@ -330,7 +330,7 @@ func syncLibrary(
 	if removed != nil {
 		body["removed"] = removed
 	}
-	rec := apitest.Send(t, r, apitest.AsInstance(t, http.MethodPost, "/v1/library/sync", token, body))
+	rec := apitest.Send(t, r, apitest.AsApp(t, http.MethodPost, "/v1/library/sync", token, body))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("library sync status = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
@@ -339,25 +339,25 @@ func syncLibrary(
 
 func TestAnInstallWithNoVersionNumberStaysCurrentAfterPrivateEdits(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk",
-		[]string{apitest.ReceiveScope, "library:sync"})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, _ := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk",
+		[]string{apitest.ReceivePermission, "library:sync"})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
 
-	result := syncLibrary(t, router, grant.AccessToken, true,
+	result := syncLibrary(t, router, credentials.AccessToken, true,
 		[]map[string]any{{"workId": workID}}, nil)
 	if result.Accepted != 1 {
 		t.Fatalf("library sync accepted %d, want 1", result.Accepted)
 	}
-	current := apitest.WorkInstances(t, router, session, workID)
+	current := apitest.WorkConnectedApps(t, router, session, workID)
 	if current.Items[0].InstalledVersion == nil || current.Items[0].UpdateAvailable {
 		t.Fatalf("state = %+v, want installed and current", current.Items[0])
 	}
 
 	changeTheWork(t, router, session, workID)
 
-	stale := apitest.WorkInstances(t, router, session, workID)
+	stale := apitest.WorkConnectedApps(t, router, session, workID)
 	if stale.Items[0].UpdateAvailable ||
 		*stale.Items[0].InstalledVersion != stale.VersionNumber {
 		t.Fatalf("state = %+v at version %d, want the published version number unchanged",
@@ -365,25 +365,25 @@ func TestAnInstallWithNoVersionNumberStaysCurrentAfterPrivateEdits(t *testing.T)
 	}
 }
 
-func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
+func TestASnapshotReplacesTheWholeMirrorForThatConnectedApp(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{"library:sync"})
+	router, session, _ := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{"library:sync"})
 	first := apitest.PublishedCharacter(t, router, session)
 	second := apitest.PublishedCharacter(t, router, session)
-	syncLibrary(t, router, grant.AccessToken, false, []map[string]any{
+	syncLibrary(t, router, credentials.AccessToken, false, []map[string]any{
 		{"workId": first, "versionNumber": 1},
 		{"workId": second, "versionNumber": 1},
 	}, nil)
 
-	result := syncLibrary(t, router, grant.AccessToken, true, []map[string]any{
+	result := syncLibrary(t, router, credentials.AccessToken, true, []map[string]any{
 		{"workId": second, "versionNumber": 1},
 	}, nil)
 
 	if result.Accepted != 1 || result.Removed != 1 {
 		t.Fatalf("snapshot = %+v, want one kept and one removed", result)
 	}
-	gone := apitest.WorkInstances(t, router, session, first)
+	gone := apitest.WorkConnectedApps(t, router, session, first)
 	if gone.Items[0].InstalledVersion != nil {
 		t.Fatalf("the first work is still installed after a snapshot without it")
 	}
@@ -391,11 +391,11 @@ func TestASnapshotReplacesTheWholeMirrorForThatInstance(t *testing.T) {
 
 func TestASnapshotMayNotAlsoCarryRemovals(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{"library:sync"})
+	router, session, _ := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{"library:sync"})
 	workID := apitest.PublishedCharacter(t, router, session)
 
-	rec := apitest.Send(t, router, apitest.AsInstance(t, http.MethodPost, "/v1/library/sync", grant.AccessToken,
+	rec := apitest.Send(t, router, apitest.AsApp(t, http.MethodPost, "/v1/library/sync", credentials.AccessToken,
 		map[string]any{
 			"snapshot": true,
 			"entries":  []map[string]any{{"workId": workID}},
@@ -407,122 +407,122 @@ func TestASnapshotMayNotAlsoCarryRemovals(t *testing.T) {
 	}
 }
 
-func TestTheWorkPageOffersTheMostRecentlySeenInstanceFirst(t *testing.T) {
+func TestTheWorkPageOffersTheMostRecentlySeenConnectedAppFirst(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	older := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "older", []string{apitest.ReceiveScope})
-	newer := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "newer", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, older.AccessToken, []string{"test_opaque"})
-	apitest.DeclareTargets(t, router, newer.AccessToken, []string{"test_opaque"})
+	router, session, _ := harness.NewConnectRouter(t)
+	older := apitest.ConnectApp(t, router, session, "Paper Lantern", "older", []string{apitest.ReceivePermission})
+	newer := apitest.ConnectApp(t, router, session, "Paper Lantern", "newer", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, older.AccessToken, []string{"test_opaque"})
+	apitest.DeclareFormats(t, router, newer.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
 
-	state := apitest.WorkInstances(t, router, session, workID)
+	state := apitest.WorkConnectedApps(t, router, session, workID)
 
 	if len(state.Items) != 2 {
-		t.Fatalf("listed %d instances, want 2", len(state.Items))
+		t.Fatalf("listed %d connected apps, want 2", len(state.Items))
 	}
-	if state.Items[0].InstanceID != newer.Instance.ID {
-		t.Fatalf("first instance = %s, want the most recently seen %s",
-			state.Items[0].InstanceName, newer.Instance.InstanceName)
+	if state.Items[0].ConnectedAppID != newer.ConnectedApp.ID {
+		t.Fatalf("first connected app = %s, want the most recently seen %s",
+			state.Items[0].Name, newer.ConnectedApp.Name)
 	}
 	if !state.Items[0].CanReceive || state.Items[0].ReportsLibrary {
-		t.Fatalf("scopes on the picker = %+v, want receive only", state.Items[0])
+		t.Fatalf("permissions on the picker = %+v, want receive only", state.Items[0])
 	}
 }
 
-func TestAnWorkNobodyMaySendHasNoInstanceState(t *testing.T) {
+func TestAWorkNobodyMaySendHasNoConnectedAppState(t *testing.T) {
 	t.Parallel()
-	router, session, _ := harness.NewLinkingRouter(t)
-	apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
+	router, session, _ := harness.NewConnectRouter(t)
+	apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
 	draft := apitest.StartCharacter(t, router, session)
 
 	rec := apitest.Send(t, router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/works/"+draft.ID+"/instances", nil), session))
+		httptest.NewRequest(http.MethodGet, "/v1/works/"+draft.ID+"/connected-apps", nil), session))
 
 	if rec.Code != http.StatusNotFound {
-		t.Fatalf("draft instance state status = %d, want 404: %s", rec.Code, rec.Body.String())
+		t.Fatalf("draft connected app state status = %d, want 404: %s", rec.Code, rec.Body.String())
 	}
 }
 
-func TestALeaseThatRanOutBringsTheDeliveryBack(t *testing.T) {
+func TestALeaseThatRanOutBringsTheSendBack(t *testing.T) {
 	t.Parallel()
-	settings := apitest.DeliverySettings()
+	settings := apitest.SendSettings()
 	settings.Lease = time.Millisecond
-	router, session, _ := harness.NewLinkingRouterWith(t, settings)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, _ := harness.NewConnectRouterWith(t, settings)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
-	first := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil))
+	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
+	first := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil))
 
 	time.Sleep(10 * time.Millisecond)
-	second := apitest.DecodeResponse[apitest.DeliveryWorkList](t, apitest.Collect(t, router, grant.AccessToken, nil))
+	second := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil))
 
-	if len(second.Deliveries) != 1 || second.Deliveries[0].ID != first.Deliveries[0].ID {
-		t.Fatalf("second collect = %+v, want the same delivery back", second.Deliveries)
+	if len(second.Sends) != 1 || second.Sends[0].ID != first.Sends[0].ID {
+		t.Fatalf("second collect = %+v, want the same send back", second.Sends)
 	}
 }
 
-func TestADeliveryTakenTooManyTimesWithoutAcknowledgementStops(t *testing.T) {
+func TestASendTakenTooManyTimesWithoutAcknowledgementStops(t *testing.T) {
 	t.Parallel()
-	settings := apitest.DeliverySettings()
+	settings := apitest.SendSettings()
 	settings.Lease = time.Millisecond
 	settings.MaxAttempts = 2
-	router, session, pool := harness.NewLinkingRouterWith(t, settings)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, pool := harness.NewConnectRouterWith(t, settings)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
+	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
 
 	for attempt := 0; attempt < 3; attempt++ {
-		apitest.Collect(t, router, grant.AccessToken, nil)
+		apitest.Collect(t, router, credentials.AccessToken, nil)
 		time.Sleep(5 * time.Millisecond)
 	}
-	apitest.Collect(t, router, grant.AccessToken, nil)
+	apitest.Collect(t, router, credentials.AccessToken, nil)
 
 	var state, reason string
 	if err := pool.QueryRow(context.Background(),
-		`select state, coalesce(settled_reason, '') from instance_deliveries where work_id = $1`,
+		`select state, coalesce(settled_reason, '') from sends where work_id = $1`,
 		workID,
 	).Scan(&state, &reason); err != nil {
-		t.Fatalf("read the delivery: %v", err)
+		t.Fatalf("read the send: %v", err)
 	}
 	if state != "failed" || reason != "abandoned" {
-		t.Fatalf("delivery = %s/%s, want failed/abandoned", state, reason)
+		t.Fatalf("send = %s/%s, want failed/abandoned", state, reason)
 	}
 }
 
-func TestAnExpiredDeliveryIsSweptAway(t *testing.T) {
+func TestAnExpiredSendIsSweptAway(t *testing.T) {
 	t.Parallel()
-	settings := apitest.DeliverySettings()
+	settings := apitest.SendSettings()
 	settings.Retention = 250 * time.Millisecond
-	router, session, pool := harness.NewLinkingRouterWith(t, settings)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, pool := harness.NewConnectRouterWith(t, settings)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	if queued := apitest.SendToInstance(t, router, session, workID, grant.Instance.ID); queued.Code != http.StatusAccepted {
-		t.Fatalf("queue the delivery status = %d, want 202: %s", queued.Code, queued.Body.String())
+	if queued := apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID); queued.Code != http.StatusAccepted {
+		t.Fatalf("queue the send status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
 
 	time.Sleep(settings.Retention)
-	if rec := apitest.Collect(t, router, grant.AccessToken, nil); rec.Code != http.StatusNoContent {
-		t.Fatalf("collect an expired delivery status = %d, want 204: %s", rec.Code, rec.Body.String())
+	if rec := apitest.Collect(t, router, credentials.AccessToken, nil); rec.Code != http.StatusNoContent {
+		t.Fatalf("collect an expired send status = %d, want 204: %s", rec.Code, rec.Body.String())
 	}
-	swept := sweepDeliveries(t, pool)
+	swept := sweepSends(t, pool)
 
 	if swept != 1 {
-		t.Fatalf("swept %d deliveries, want 1", swept)
+		t.Fatalf("swept %d sends, want 1", swept)
 	}
 }
 
-func sweepDeliveries(t *testing.T, pool *pgxpool.Pool) int64 {
+func sweepSends(t *testing.T, pool *pgxpool.Pool) int64 {
 	t.Helper()
-	settings := apitest.DeliverySettings()
-	links := apitest.NewLinkingService(pool)
-	service := connect.NewSends(pool, nil, links, settings)
+	settings := apitest.SendSettings()
+	apps := apitest.NewAppsService(pool)
+	service := connect.NewSends(pool, nil, apps, settings)
 	swept, err := service.Sweep(context.Background())
 	if err != nil {
-		t.Fatalf("sweep deliveries: %v", err)
+		t.Fatalf("sweep sends: %v", err)
 	}
 	return swept
 }
@@ -547,73 +547,73 @@ func changeTheWork(t *testing.T, r *gin.Engine, session *http.Cookie, workID str
 	}
 }
 
-func TestAnInstanceThatLostTheReceiveScopeReleasesNothing(t *testing.T) {
+func TestAConnectedAppThatLostTheReceivePermissionReleasesNothing(t *testing.T) {
 	t.Parallel()
-	router, session, pool := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk",
-		[]string{apitest.ReceiveScope, "library:sync"})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, pool := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk",
+		[]string{apitest.ReceivePermission, "library:sync"})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
-	if before := claimable(t, pool, grant.Instance.ID); before != 1 {
-		t.Fatalf("%d deliveries were claimable before the scope went, want 1", before)
+	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
+	if before := claimable(t, pool, credentials.ConnectedApp.ID); before != 1 {
+		t.Fatalf("%d sends were claimable before the permission went, want 1", before)
 	}
 
 	if _, err := pool.Exec(context.Background(),
-		`update linked_instances set scopes = array['library:sync'] where id = $1`,
-		grant.Instance.ID,
+		`update connected_apps set permissions = array['library:sync'] where id = $1`,
+		credentials.ConnectedApp.ID,
 	); err != nil {
-		t.Fatalf("narrow the instance scopes: %v", err)
+		t.Fatalf("narrow the connected app permissions: %v", err)
 	}
 
-	if after := claimable(t, pool, grant.Instance.ID); after != 0 {
-		t.Fatalf("%d deliveries were released to an instance that cannot receive them", after)
+	if after := claimable(t, pool, credentials.ConnectedApp.ID); after != 0 {
+		t.Fatalf("%d sends were released to a connected app that cannot receive them", after)
 	}
 }
 
-func TestARevokedInstanceReleasesNothingEvenWithRowsLeftBehind(t *testing.T) {
+func TestARevokedConnectedAppReleasesNothingEvenWithRowsLeftBehind(t *testing.T) {
 	t.Parallel()
-	router, session, pool := harness.NewLinkingRouter(t)
-	grant := apitest.LinkDeviceInstance(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceiveScope})
-	apitest.DeclareTargets(t, router, grant.AccessToken, []string{"test_opaque"})
+	router, session, pool := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
-	apitest.SendToInstance(t, router, session, workID, grant.Instance.ID)
+	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
 
 	if _, err := pool.Exec(context.Background(),
-		`update linked_instances
+		`update connected_apps
 		    set revoked_at = now(), refresh_token_hash = null,
-		        application_version = null, protocol_version = null,
-		        capabilities = '{}', accepted_targets = '{}'
+		        app_version = null, protocol_version = null,
+		        capabilities = '{}', accepted_formats = '{}'
 		  where id = $1`,
-		grant.Instance.ID,
+		credentials.ConnectedApp.ID,
 	); err != nil {
-		t.Fatalf("revoke the instance without clearing its queue: %v", err)
+		t.Fatalf("revoke the connected app without clearing its queue: %v", err)
 	}
 
-	if after := claimable(t, pool, grant.Instance.ID); after != 0 {
-		t.Fatalf("%d deliveries were released to a revoked instance", after)
+	if after := claimable(t, pool, credentials.ConnectedApp.ID); after != 0 {
+		t.Fatalf("%d sends were released to a revoked connected app", after)
 	}
 }
 
-func claimable(t *testing.T, pool *pgxpool.Pool, instanceID string) int {
+func claimable(t *testing.T, pool *pgxpool.Pool, appID string) int {
 	t.Helper()
-	parsed, err := uuid.Parse(instanceID)
+	parsed, err := uuid.Parse(appID)
 	if err != nil {
-		t.Fatalf("parse the instance id: %v", err)
+		t.Fatalf("parse the connected app id: %v", err)
 	}
 	tx, err := pool.Begin(context.Background())
 	if err != nil {
 		t.Fatalf("begin a claim: %v", err)
 	}
 	defer tx.Rollback(context.Background())
-	claimed, err := db.New(tx).ClaimDeliveries(context.Background(), db.ClaimDeliveriesParams{
+	claimed, err := db.New(tx).ClaimSends(context.Background(), db.ClaimSendsParams{
 		LeaseExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(time.Minute), Valid: true},
-		InstanceID:     pgtype.UUID{Bytes: parsed, Valid: true},
+		ConnectedAppID: pgtype.UUID{Bytes: parsed, Valid: true},
 		MaxAttempts:    5,
 		BatchSize:      10,
 	})
 	if err != nil {
-		t.Fatalf("claim deliveries: %v", err)
+		t.Fatalf("claim sends: %v", err)
 	}
 	return len(claimed)
 }

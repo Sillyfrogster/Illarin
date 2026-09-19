@@ -7,14 +7,14 @@ import (
 )
 
 type Notification struct {
-	Work        *NotificationWork         `json:"work,omitempty"`
-	CreatedAt   time.Time                 `json:"createdAt"`
-	Id          uuid.UUID                 `json:"id"`
-	ReadAt      *time.Time                `json:"readAt,omitempty"`
-	Reason      *string                   `json:"reason,omitempty"`
-	SendTargets *[]NotificationSendTarget `json:"sendTargets,omitempty"`
-	Type        NotificationType          `json:"type"`
-	Update      *NotificationUpdate       `json:"update,omitempty"`
+	Work      *NotificationWork      `json:"work,omitempty"`
+	CreatedAt time.Time              `json:"createdAt"`
+	Id        uuid.UUID              `json:"id"`
+	ReadAt    *time.Time             `json:"readAt,omitempty"`
+	Reason    *string                `json:"reason,omitempty"`
+	SendTo    *[]NotificationSendApp `json:"sendTo,omitempty"`
+	Type      NotificationType       `json:"type"`
+	Update    *NotificationUpdate    `json:"update,omitempty"`
 }
 
 type NotificationWork struct {
@@ -32,11 +32,11 @@ type NotificationList struct {
 	NextCursor *NotificationCursor `json:"nextCursor,omitempty"`
 }
 
-type NotificationSendTarget struct {
-	ApplicationName string    `json:"applicationName"`
-	InstanceId      uuid.UUID `json:"instanceId"`
-	InstanceName    string    `json:"instanceName"`
-	Waiting         bool      `json:"waiting"`
+type NotificationSendApp struct {
+	AppName        string    `json:"appName"`
+	ConnectedAppId uuid.UUID `json:"connectedAppId"`
+	Name           string    `json:"name"`
+	Waiting        bool      `json:"waiting"`
 }
 
 type NotificationType string

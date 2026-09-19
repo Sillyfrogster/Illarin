@@ -24,7 +24,7 @@ var (
 	ErrOwnWork         = errors.New("a work's owner cannot follow it")
 )
 
-// Follow is an account's follow on one work and the linked instances that report having it installed.
+// Follow is an account's follow on one work and the connected apps that report having it installed.
 type Follow struct {
 	State       FollowState
 	InstalledOn []string
@@ -66,17 +66,17 @@ func (s *Service) setFollow(ctx context.Context, account, work uuid.UUID, state 
 	return s.FollowOf(ctx, account, work)
 }
 
-// FollowOf reads an account's follow on a work, where an install on one of its linked instances counts as following.
+// FollowOf reads an account's follow on a work, where an install on one of its connected apps counts as following.
 func (s *Service) FollowOf(ctx context.Context, account, work uuid.UUID) (Follow, error) {
 	var chosen *FollowState
 	follow := Follow{State: NotFollowing}
 	if err := s.pool.QueryRow(ctx, `
 		select (select state from work_follows where account_id = $1 and work_id = $2),
-		       array(select instance.instance_name
-		               from instance_library_entries entry
-		               join linked_instances instance on instance.id = entry.instance_id
-		              where entry.work_id = $2 and instance.user_id = $1 and instance.revoked_at is null
-		              order by instance.instance_name, instance.id)
+		       array(select app.name
+		               from app_library_entries entry
+		               join connected_apps app on app.id = entry.connected_app_id
+		              where entry.work_id = $2 and app.user_id = $1 and app.revoked_at is null
+		              order by app.name, app.id)
 	`, account, work).Scan(&chosen, &follow.InstalledOn); err != nil {
 		return Follow{}, fmt.Errorf("read a follow: %w", err)
 	}

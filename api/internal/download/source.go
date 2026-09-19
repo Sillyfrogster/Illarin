@@ -61,13 +61,13 @@ func (s *Service) Source(
 		InternalRedirect: redirect, MediaType: location.MediaType,
 		Inline: format.IsInlineMediaType(location.MediaType),
 		Event: newEvent(
-			location.WorkID, &originalFileID, format.RawTarget,
+			location.WorkID, &originalFileID, format.Raw,
 			location.OwnerID, viewerID,
 		),
 	}, nil
 }
 
-func (s *Service) SourceForLinkedInstance(ctx context.Context, workID uuid.UUID) (Source, error) {
+func (s *Service) SourceForSend(ctx context.Context, workID uuid.UUID) (Source, error) {
 	download, err := s.Source(ctx, workID, nil)
 	if err != nil {
 		return Source{}, err

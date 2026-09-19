@@ -6,58 +6,58 @@ import (
 	"github.com/google/uuid"
 )
 
-type WorkInstance struct {
-	ApplicationName  string          `json:"applicationName"`
-	CanReceive       bool            `json:"canReceive"`
-	Delivery         *QueuedDelivery `json:"delivery" tstype:"QueuedDelivery | null,required"`
-	InstalledVersion *int            `json:"installedVersion" tstype:"number | null,required"`
-	InstanceId       uuid.UUID       `json:"instanceId"`
-	InstanceName     string          `json:"instanceName"`
-	LastSeenAt       *time.Time      `json:"lastSeenAt" tstype:"string | null,required"`
-	ReportsLibrary   bool            `json:"reportsLibrary"`
-	UpdateAvailable  bool            `json:"updateAvailable"`
+type WorkConnectedApp struct {
+	ConnectedAppId   uuid.UUID   `json:"connectedAppId"`
+	AppName          string      `json:"appName"`
+	Name             string      `json:"name"`
+	CanReceive       bool        `json:"canReceive"`
+	Send             *QueuedSend `json:"send" tstype:"QueuedSend | null,required"`
+	InstalledVersion *int        `json:"installedVersion" tstype:"number | null,required"`
+	LastSeenAt       *time.Time  `json:"lastSeenAt" tstype:"string | null,required"`
+	ReportsLibrary   bool        `json:"reportsLibrary"`
+	UpdateAvailable  bool        `json:"updateAvailable"`
 }
 
-type WorkInstanceList struct {
-	VersionNumber int            `json:"versionNumber"`
-	Items         []WorkInstance `json:"items"`
+type WorkConnectedAppList struct {
+	VersionNumber int                `json:"versionNumber"`
+	Items         []WorkConnectedApp `json:"items"`
 }
 
-type CollectDeliveries struct {
+type CollectSends struct {
 	Acknowledge []uuid.UUID `json:"acknowledge"`
 }
 
-type DeliveryFile struct {
-	IsCover *bool            `json:"isCover,omitempty"`
-	Type    DeliveryFileType `json:"type"`
-	MediaId *uuid.UUID       `json:"mediaId,omitempty"`
-	Role    *string          `json:"role,omitempty"`
-	Url     string           `json:"url"`
+type SendFile struct {
+	IsCover *bool        `json:"isCover,omitempty"`
+	Type    SendFileType `json:"type"`
+	MediaId *uuid.UUID   `json:"mediaId,omitempty"`
+	Role    *string      `json:"role,omitempty"`
+	Url     string       `json:"url"`
 }
 
-type DeliveryFileType string
+type SendFileType string
 
 const (
-	DeliveryFileTypeExport  DeliveryFileType = "export"
-	DeliveryFileTypePicture DeliveryFileType = "picture"
+	SendFileTypeExport  SendFileType = "export"
+	SendFileTypePicture SendFileType = "picture"
 )
 
-type DeliveryWork struct {
-	Files          []DeliveryFile `json:"files"`
-	WorkId         uuid.UUID      `json:"workId"`
-	VersionNumber  int            `json:"versionNumber"`
-	Format         string         `json:"format"`
-	Id             uuid.UUID      `json:"id"`
-	Type           string         `json:"type"`
-	Label          string         `json:"label"`
-	LeaseExpiresAt time.Time      `json:"leaseExpiresAt"`
-	Name           string         `json:"name"`
-	QueuedAt       time.Time      `json:"queuedAt"`
+type CollectedSend struct {
+	Files          []SendFile `json:"files"`
+	WorkId         uuid.UUID  `json:"workId"`
+	VersionNumber  int        `json:"versionNumber"`
+	Format         string     `json:"format"`
+	Id             uuid.UUID  `json:"id"`
+	Type           string     `json:"type"`
+	Label          string     `json:"label"`
+	LeaseExpiresAt time.Time  `json:"leaseExpiresAt"`
+	Name           string     `json:"name"`
+	QueuedAt       time.Time  `json:"queuedAt"`
 }
 
-type DeliveryWorkList struct {
-	Deliveries []DeliveryWork   `json:"deliveries"`
-	Withheld   []WithheldNotice `json:"withheld"`
+type CollectedSends struct {
+	Sends    []CollectedSend  `json:"sends"`
+	Withheld []WithheldNotice `json:"withheld"`
 }
 
 type LibraryEntry struct {
@@ -66,10 +66,10 @@ type LibraryEntry struct {
 }
 
 type LibraryReport struct {
-	ApplicationVersion *string        `json:"applicationVersion,omitempty"`
-	Entries            []LibraryEntry `json:"entries"`
-	Removed            *[]uuid.UUID   `json:"removed,omitempty"`
-	Snapshot           bool           `json:"snapshot"`
+	AppVersion *string        `json:"appVersion,omitempty"`
+	Entries    []LibraryEntry `json:"entries"`
+	Removed    *[]uuid.UUID   `json:"removed,omitempty"`
+	Snapshot   bool           `json:"snapshot"`
 }
 
 type LibraryReportResult struct {
@@ -79,38 +79,37 @@ type LibraryReportResult struct {
 	Withheld []WithheldNotice `json:"withheld"`
 }
 
-type QueuedDelivery struct {
-	WorkId         uuid.UUID             `json:"workId"`
-	ExpiresAt      time.Time             `json:"expiresAt"`
-	Id             uuid.UUID             `json:"id"`
-	InstanceId     uuid.UUID             `json:"instanceId"`
-	QueuedAt       time.Time             `json:"queuedAt"`
-	Reason         *QueuedDeliveryReason `json:"reason,omitempty"`
-	SettledAt      *time.Time            `json:"settledAt" tstype:"string | null,required"`
-	State          QueuedDeliveryState   `json:"state"`
-	UpdatesInstall bool                  `json:"updatesInstall"`
+type QueuedSend struct {
+	WorkId         uuid.UUID         `json:"workId"`
+	ExpiresAt      time.Time         `json:"expiresAt"`
+	Id             uuid.UUID         `json:"id"`
+	ConnectedAppId uuid.UUID         `json:"connectedAppId"`
+	QueuedAt       time.Time         `json:"queuedAt"`
+	Reason         *QueuedSendReason `json:"reason,omitempty"`
+	SettledAt      *time.Time        `json:"settledAt" tstype:"string | null,required"`
+	State          QueuedSendState   `json:"state"`
+	UpdatesInstall bool              `json:"updatesInstall"`
 }
 
-type QueuedDeliveryReason string
+type QueuedSendReason string
 
 const (
-	QueuedDeliveryReasonAbandoned   QueuedDeliveryReason = "abandoned"
-	QueuedDeliveryReasonLessThannil QueuedDeliveryReason = "<nil>"
-	QueuedDeliveryReasonUnsupported QueuedDeliveryReason = "unsupported"
-	QueuedDeliveryReasonWithdrawn   QueuedDeliveryReason = "withdrawn"
+	QueuedSendReasonAbandoned   QueuedSendReason = "abandoned"
+	QueuedSendReasonUnsupported QueuedSendReason = "unsupported"
+	QueuedSendReasonWithdrawn   QueuedSendReason = "withdrawn"
 )
 
-type QueuedDeliveryState string
+type QueuedSendState string
 
 const (
-	QueuedDeliveryStateDelivered QueuedDeliveryState = "delivered"
-	QueuedDeliveryStateFailed    QueuedDeliveryState = "failed"
-	QueuedDeliveryStateQueued    QueuedDeliveryState = "queued"
-	QueuedDeliveryStateReleased  QueuedDeliveryState = "released"
+	QueuedSendStateDelivered QueuedSendState = "delivered"
+	QueuedSendStateFailed    QueuedSendState = "failed"
+	QueuedSendStateQueued    QueuedSendState = "queued"
+	QueuedSendStateReleased  QueuedSendState = "released"
 )
 
 type SendWorkRequest struct {
-	InstanceId uuid.UUID `json:"instanceId"`
+	ConnectedAppId uuid.UUID `json:"connectedAppId"`
 }
 
 type WithheldNotice struct {
@@ -119,7 +118,7 @@ type WithheldNotice struct {
 	WithheldAt time.Time `json:"withheldAt"`
 }
 
-type DownloadDeliveryExportParams struct {
+type SendFileParams struct {
 	Expires   string `json:"expires"`
 	Signature string `json:"signature"`
 }

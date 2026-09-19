@@ -27,24 +27,23 @@ const (
 )
 
 var (
-	ErrNoInstanceOfYours = errors.New("no live instance of yours has that id")
-	ErrMissingScope      = errors.New("that instance was not granted the scope this needs")
+	ErrNoAppOfYours      = errors.New("no live connected app of yours has that id")
 	ErrWorkNotFound      = errors.New("no such work")
-	ErrWorkNotSendable   = errors.New("only a published work can be sent to an instance")
-	ErrNoTarget          = errors.New("that instance accepts no format this work can be written in")
-	ErrCannotInstall     = errors.New("that instance does not install what this work is")
-	ErrQueueFull         = errors.New("that instance already has as many waiting deliveries as it may hold")
-	ErrDeliveryNotFound  = errors.New("no waiting delivery of yours has that id")
-	ErrTooManyCollectors = errors.New("too many instances are waiting for work at once")
+	ErrWorkNotSendable   = errors.New("only a published work can be sent to a connected app")
+	ErrNoFormat          = errors.New("that connected app accepts no format this work can be written in")
+	ErrCannotInstall     = errors.New("that connected app does not install what this work is")
+	ErrQueueFull         = errors.New("that connected app already has as many waiting sends as it may hold")
+	ErrSendNotFound      = errors.New("no waiting send of yours has that id")
+	ErrTooManyCollectors = errors.New("too many connected apps are waiting for work at once")
 	ErrLibraryTooLarge   = errors.New("the library report is larger than one request may carry")
 	ErrLibraryReport     = errors.New("the library report is not valid")
-	ErrLibraryVersion    = errors.New("the library report names an application version that is not short printable text")
+	ErrLibraryVersion    = errors.New("the library report names an app version that is not short printable text")
 	ErrAcknowledgement   = errors.New("the acknowledgement list is not valid")
 )
 
-type Delivery struct {
+type Send struct {
 	ID             uuid.UUID
-	InstanceID     uuid.UUID
+	ConnectedAppID uuid.UUID
 	WorkID         uuid.UUID
 	State          State
 	Reason         Reason
@@ -80,21 +79,21 @@ const (
 	FilePicture = "picture"
 )
 
-type InstanceState struct {
-	InstanceID       uuid.UUID
-	ApplicationName  string
-	InstanceName     string
+type AppState struct {
+	ConnectedAppID   uuid.UUID
+	AppName          string
+	Name             string
 	LastSeenAt       *time.Time
 	CanReceive       bool
 	ReportsLibrary   bool
-	Delivery         *Delivery
+	Send             *Send
 	InstalledVersion *int
 	UpdateAvailable  bool
 }
 
-type WorkInstances struct {
+type WorkApps struct {
 	VersionNumber int
-	Items         []InstanceState
+	Items         []AppState
 }
 
 type LibraryCounts struct {
@@ -103,10 +102,10 @@ type LibraryCounts struct {
 }
 
 type ReportedLibrary struct {
-	Snapshot           bool
-	ApplicationVersion string
-	Entries            []ReportedEntry
-	Removed            []uuid.UUID
+	Snapshot   bool
+	AppVersion string
+	Entries    []ReportedEntry
+	Removed    []uuid.UUID
 }
 
 type ReportedEntry struct {
@@ -132,34 +131,34 @@ type Collected struct {
 	Withheld []WithheldWork
 }
 
-func chooseTarget(accepted []string, offered []DeliveryTarget, hasOriginal bool) (string, string, bool) {
-	byID := make(map[string]DeliveryTarget, len(offered))
-	for _, target := range offered {
-		byID[target.Format] = target
+func chooseFormat(accepted []string, offered []SendFormat, hasOriginal bool) (string, string, bool) {
+	byID := make(map[string]SendFormat, len(offered))
+	for _, one := range offered {
+		byID[one.Format] = one
 	}
 	for _, wanted := range accepted {
-		if target, offers := byID[wanted]; offers {
-			return target.Format, target.Label, true
+		if one, offers := byID[wanted]; offers {
+			return one.Format, one.Label, true
 		}
-		if wanted == format.RawTarget && hasOriginal {
-			return format.RawTarget, rawLabel, true
+		if wanted == format.Raw && hasOriginal {
+			return format.Raw, rawLabel, true
 		}
 	}
 	if hasOriginal {
-		return format.RawTarget, rawLabel, true
+		return format.Raw, rawLabel, true
 	}
 	return "", "", false
 }
 
 const rawLabel = "The creator's own file"
 
-// installs says whether the instance declared one of the capabilities the work needs, or the work needs none.
-func installs(capabilities []string, sendable Deliverable) bool {
+// installs says whether the connected app declared one of the capabilities the work needs, or the work needs none.
+func installs(declared []string, sendable Sendable) bool {
 	if len(sendable.InstallCapabilities) == 0 {
 		return true
 	}
 	for _, needed := range sendable.InstallCapabilities {
-		if slices.Contains(capabilities, needed) {
+		if slices.Contains(declared, needed) {
 			return true
 		}
 	}

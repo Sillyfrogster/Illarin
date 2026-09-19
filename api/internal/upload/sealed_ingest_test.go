@@ -41,7 +41,7 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 	workID := apitest.WorkIDFromIngest(t, finished)
 
 	owner := apitest.FetchStartedWork(t, router, session, workID)
-	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != "lumiverse" {
+	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0].ID != "lumiverse" {
 		t.Fatalf("owner policy = linked install only %t, apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
 	}
 	ownerPrompts := promptListFromPage(t, owner).Fragments

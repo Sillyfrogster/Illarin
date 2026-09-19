@@ -94,14 +94,14 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, workID uuid
 	if err != nil {
 		return Preview{}, err
 	}
-	unfillable, err := private.UnfillablePrompts(ctx, tx, workID, carried, prepared.Protected.Prompts)
+	unfillable, err := private.UnfillablePrompts(ctx, tx, workID, carried, prepared.Protected)
 	if err != nil {
 		return Preview{}, err
 	}
 	missingWording := promptNames(incoming, unfillable)
-	keepMissingPromptsEmpty(prepared.Protected.Prompts, unfillable)
+	keepMissingPromptsEmpty(prepared.Protected, unfillable)
 	arriving := mergeReplacementBlocks(working, prepared.Blocks, prepared.SuppliedRoles, nil)
-	fillSealedPrompts(arriving, carried, prepared.Protected.Prompts)
+	fillSealedPrompts(arriving, carried, prepared.Protected)
 
 	currentRemainder, err := readRemainder(ctx, tx, "work_preserved_data", workID)
 	if err != nil {
@@ -157,7 +157,7 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, workID uuid
 	return Preview{
 		Format: prepared.Format, Groups: groups, Conflicts: conflicts,
 		Unrepresentable: unsupported, MissingWording: missingWording,
-		Seals: len(prepared.Protected.Prompts),
+		Seals: len(prepared.Protected),
 	}, nil
 }
 

@@ -76,7 +76,7 @@ func BrowserMutation(request *http.Request) *http.Request {
 	return request
 }
 
-func AsInstance(t *testing.T, method, target, token string, body any) *http.Request {
+func AsApp(t *testing.T, method, target, token string, body any) *http.Request {
 	t.Helper()
 	var req *http.Request
 	if body == nil {

@@ -150,7 +150,7 @@ func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(encoded)
-	for _, want := range []string{"First public prompt.", "First protected prompt.", `"allowedApps":["lumiverse"]`, `"linkedInstallOnly":true`} {
+	for _, want := range []string{"First public prompt.", "First protected prompt.", `"allowedApps":[{"id":"lumiverse","label":"Lumiverse"}]`, `"linkedInstallOnly":true`} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("restored drafted changes omitted %q: %s", want, text)
 		}
