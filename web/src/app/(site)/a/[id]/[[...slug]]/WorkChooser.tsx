@@ -75,7 +75,7 @@ export type WorkChooserProps = {
   images: WorkImage[];
   holdsNothing: boolean;
   isOwner: boolean;
-  linkedInstallOnly: boolean;
+  hasPrivatePrompts: boolean;
 };
 
 /** WorkChooser is the body of the download chooser, from formats and images to the file itself. */
@@ -89,7 +89,7 @@ export function WorkChooser({
   images,
   holdsNothing,
   isOwner,
-  linkedInstallOnly,
+  hasPrivatePrompts,
   connectedApps,
   refresh,
   onSent,
@@ -129,7 +129,7 @@ export function WorkChooser({
     choices.find((choice) => choice.format === format) ?? choices[0];
   const goingToAnApp = Boolean(app);
   const destinations = sendDestinations(connectedApps).filter(
-    (one) => one.id !== DOWNLOAD_DESTINATION || !linkedInstallOnly,
+    (one) => one.id !== DOWNLOAD_DESTINATION || !hasPrivatePrompts,
   );
   const goingTo =
     destinations.find((one) => one.id === destination) ?? destinations[0];
@@ -184,7 +184,7 @@ export function WorkChooser({
     <>
       {version ? <WrittenToday version={version} /> : null}
 
-      {choices.length > 0 && !linkedInstallOnly ? (
+      {choices.length > 0 && !hasPrivatePrompts ? (
         <>
           {appFormats.length === 0 ? (
             <fieldset className="min-w-0 border-0 p-0">
@@ -233,7 +233,7 @@ export function WorkChooser({
         </>
       ) : null}
 
-      {gallery.length > 0 && !linkedInstallOnly ? (
+      {gallery.length > 0 && !hasPrivatePrompts ? (
         <GalleryChoice
           bytes={bytes}
           carried={carriesGallery}
@@ -367,7 +367,7 @@ export function WorkChooser({
 
       {offering ? <FollowOffer /> : null}
 
-      {choices.length > 1 && !linkedInstallOnly && appFormats.length > 0 ? (
+      {choices.length > 1 && !hasPrivatePrompts && appFormats.length > 0 ? (
         <div className="mt-4 border-rule border-t pt-3">
           {openFormats ? (
             <fieldset className="min-w-0 border-0 p-0">

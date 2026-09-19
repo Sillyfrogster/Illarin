@@ -76,7 +76,7 @@ export function WorkHeader({
     isOwner: work.isOwner,
     type: work.type,
     typeLabel: typeLabel.toLowerCase(),
-    linkedInstallOnly: work.linkedInstallOnly,
+    hasPrivatePrompts: work.hasPrivatePrompts,
     original: work.original,
   };
   const sendable = canSendWork(work);
@@ -159,10 +159,10 @@ export function WorkHeader({
                   {ratingLabel(workspace.details.isNsfw)}
                 </>
               )}
-              {work.linkedInstallOnly ? (
+              {work.hasPrivatePrompts ? (
                 <>
                   <span aria-hidden="true">·</span>
-                  Linked install only
+                  Private prompts
                 </>
               ) : null}
               {isDraft ? (
@@ -313,10 +313,10 @@ export function WorkHeader({
               </div>
             )}
 
-            {work.linkedInstallOnly ? (
+            {work.hasPrivatePrompts ? (
               <p className="mt-4 max-w-[42ch] text-meta text-mute">
-                This {typeLabel.toLowerCase()} installs only through a connected
-                app. Allowed apps:{" "}
+                This {typeLabel.toLowerCase()} has private prompts, so only an
+                app its creator allows can use it:{" "}
                 {work.allowedApps.map((app) => app.label).join(", ")}.
               </p>
             ) : null}

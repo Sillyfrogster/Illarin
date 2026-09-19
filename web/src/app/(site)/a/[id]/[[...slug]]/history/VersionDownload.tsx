@@ -103,11 +103,10 @@ function VersionChoices({
     );
   }
   const { offered } = reading;
-  if (offered.linkedInstallOnly) {
+  if (offered.hasPrivatePrompts) {
     return (
       <Refusal onRetry={null}>
-        File downloads are unavailable because this version contains protected
-        prompt content.
+        File downloads are unavailable because this version has private prompts.
       </Refusal>
     );
   }
@@ -130,7 +129,7 @@ function VersionChoices({
       isOwner={false}
       type={offered.type}
       typeLabel={typeName}
-      linkedInstallOnly={false}
+      hasPrivatePrompts={false}
       original={null}
       refresh={noRefresh}
       version={version}

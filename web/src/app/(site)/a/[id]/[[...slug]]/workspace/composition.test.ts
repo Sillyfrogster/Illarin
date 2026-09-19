@@ -19,7 +19,7 @@ function element(id: string, extra: Partial<WorkElement> = {}): WorkElement {
     isEmpty: true,
     label: id,
     pinned: false,
-    locked: false,
+    fromFile: false,
     slot: "main",
     type: "prose",
     ...extra,

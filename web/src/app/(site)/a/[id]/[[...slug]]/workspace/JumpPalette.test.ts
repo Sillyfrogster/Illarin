@@ -10,7 +10,7 @@ function element(id: string, label: string): WorkElement {
     isEmpty: false,
     label,
     pinned: false,
-    locked: false,
+    fromFile: false,
     slot: id,
     type: "prose",
   };

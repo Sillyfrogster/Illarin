@@ -24,8 +24,8 @@ import {
   DRAFTED_CHANGES_STALE,
   useDraftedChanges,
 } from "@/lib/drafted-changes";
-import { hasSealedPrompts, NO_ALLOWED_APP } from "../SealedPolicy";
-import { unsealedPrompts } from "../UnsealConfirmation";
+import { promptsMadePublic } from "../MakePublicConfirmation";
+import { hasPrivatePrompts, NO_ALLOWED_APP } from "../PrivatePromptsControl";
 import { type Arrangement, useArrangement } from "./arrangement";
 import { seatElements } from "./composition";
 import { detailsHasChanged } from "./details";
@@ -54,7 +54,7 @@ export type Pane =
   | { kind: "remove"; blockId: string }
   | { kind: "element"; blockId: string; elementId: string };
 
-type Unsealing = { prompts: string[]; keepsASeal: boolean };
+type MakingPublic = { prompts: string[]; keepsAPrivatePrompt: boolean };
 
 type Workspace = {
   workId: string;
@@ -75,7 +75,7 @@ type Workspace = {
   saveState: SaveState;
   message: string;
   busy: boolean;
-  unsealing: Unsealing | null;
+  makingPublic: MakingPublic | null;
   startEditing: () => void;
   stopEditing: () => void;
   setCursor: (cursor: string | null) => void;
@@ -91,8 +91,8 @@ type Workspace = {
   closePane: () => void;
   say: (message: string) => void;
   save: () => void;
-  confirmUnseal: () => void;
-  cancelUnseal: () => void;
+  confirmMakePublic: () => void;
+  cancelMakePublic: () => void;
 };
 
 const WorkspaceContext = createContext<Workspace | null>(null);
@@ -141,7 +141,7 @@ export function WorkspaceProvider({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState("");
-  const [unsealing, setUnsealing] = useState<Unsealing | null>(null);
+  const [makingPublic, setMakingPublic] = useState<MakingPublic | null>(null);
   const exposeConfirmed = useRef(false);
   const lastCursor = useRef<string | null>(null);
   const savedBlocks = useRef(blocks);
@@ -179,10 +179,10 @@ export function WorkspaceProvider({
           ? "private"
           : "published";
 
-  const openSealedElement = useCallback((pages: WorkBlock[]) => {
+  const openPrivatePromptElement = useCallback((pages: WorkBlock[]) => {
     for (const block of pages) {
       const asking = block.elements.find((element) =>
-        hasSealedPrompts([element]),
+        hasPrivatePrompts([element]),
       );
       if (!asking) continue;
       setPane({ blockId: block.id, elementId: asking.id, kind: "element" });
@@ -206,23 +206,25 @@ export function WorkspaceProvider({
             const was = original.elements.find(
               (item) => item.id === element.id,
             );
-            if (was) exposed.push(...unsealedPrompts(was, element));
+            if (was) exposed.push(...promptsMadePublic(was, element));
           }
         }
         if (exposed.length > 0) {
-          const keepsASeal = draft.some((block) =>
-            hasSealedPrompts(block.elements),
+          const keepsAPrivatePrompt = draft.some((block) =>
+            hasPrivatePrompts(block.elements),
           );
-          setUnsealing({ prompts: exposed, keepsASeal });
+          setMakingPublic({ prompts: exposed, keepsAPrivatePrompt });
           return;
         }
       }
 
-      const sealed = draft.some((block) => hasSealedPrompts(block.elements));
-      if (sealed && apps.length === 0) {
+      const keepsPrivatePrompts = draft.some((block) =>
+        hasPrivatePrompts(block.elements),
+      );
+      if (keepsPrivatePrompts && apps.length === 0) {
         setFailed(true);
         setMessage(NO_ALLOWED_APP);
-        openSealedElement(draft);
+        openPrivatePromptElement(draft);
         return;
       }
 
@@ -240,8 +242,9 @@ export function WorkspaceProvider({
               workId,
               block.id,
               blockSaveRequest(block, {
-                exposeProtected: expose || exposeConfirmed.current || undefined,
-                allowedApps: sealed
+                makePromptsPublic:
+                  expose || exposeConfirmed.current || undefined,
+                allowedApps: keepsPrivatePrompts
                   ? apps.map((app) => app.id)
                   : allowedApps.length > 0
                     ? []
@@ -286,7 +289,7 @@ export function WorkspaceProvider({
       draftDetails,
       hasDetailsChanges,
       isDraft,
-      openSealedElement,
+      openPrivatePromptElement,
       router,
       saved,
     ],
@@ -356,7 +359,7 @@ export function WorkspaceProvider({
         event.key !== "Escape" ||
         event.defaultPrevented ||
         event.isComposing ||
-        unsealing
+        makingPublic
       )
         return;
       if (
@@ -371,7 +374,7 @@ export function WorkspaceProvider({
     };
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
-  }, [editing, pane, stopEditing, unsealing]);
+  }, [editing, pane, stopEditing, makingPublic]);
 
   const value: Workspace = {
     addableBlocks,
@@ -392,7 +395,7 @@ export function WorkspaceProvider({
     saveState,
     message,
     busy,
-    unsealing,
+    makingPublic,
     startEditing: () => {
       setEditing(true);
       setSweep((count) => count + 1);
@@ -430,12 +433,12 @@ export function WorkspaceProvider({
     closePane: () => setPane(null),
     say: setMessage,
     save: () => save(),
-    confirmUnseal: () => {
+    confirmMakePublic: () => {
       exposeConfirmed.current = true;
-      setUnsealing(null);
+      setMakingPublic(null);
       save(true);
     },
-    cancelUnseal: () => setUnsealing(null),
+    cancelMakePublic: () => setMakingPublic(null),
   };
 
   return (

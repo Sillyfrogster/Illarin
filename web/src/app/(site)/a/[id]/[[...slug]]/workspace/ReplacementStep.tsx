@@ -9,9 +9,9 @@ import {
   acceptWorkReplacement,
   cancelWorkReplacement,
   type IngestOperation,
+  PromptsMadePublicError,
   type ReplacementDecision,
   readIngestOperation,
-  SealedExposureError,
   uploadWorkReplacement,
   type VersionChangeGroup,
 } from "@/lib/api/query";
@@ -22,7 +22,7 @@ import {
   replacementReady,
   unsettledReplacement,
 } from "@/lib/work-publication";
-import { UnsealConfirmation } from "../UnsealConfirmation";
+import { MakePublicConfirmation } from "../MakePublicConfirmation";
 import { Note } from "./fields";
 import { ReplacementWarnings } from "./ReplacementWarnings";
 import { useWorkspace } from "./state";
@@ -109,7 +109,7 @@ export function ReplacementStep({
     try {
       await work();
     } catch (error) {
-      if (error instanceof SealedExposureError) {
+      if (error instanceof PromptsMadePublicError) {
         setExposure(error.prompts);
         return;
       }
@@ -124,7 +124,7 @@ export function ReplacementStep({
     }
   }
 
-  function act(exposeProtected = false) {
+  function act(makePromptsPublic = false) {
     if (operation?.status === "failed") {
       beginAgain();
       return;
@@ -137,7 +137,7 @@ export function ReplacementStep({
           workspace.workId,
           staged.id,
           decisions,
-          exposeProtected,
+          makePromptsPublic,
         );
         setExposure(null);
         onApplied(groups);
@@ -183,7 +183,7 @@ export function ReplacementStep({
         <div className="flex flex-col gap-5">
           <p className="text-ui text-ink">
             Read as {staged.preview.format}. New content stays private until you
-            publish. Removing prompt protection requires a separate confirmation
+            publish. Making private prompts public needs a separate confirmation
             because it can affect text already published.
           </p>
           <ReplacementWarnings preview={staged.preview} />
@@ -302,13 +302,15 @@ export function ReplacementStep({
         ) : null}
       </div>
       {exposure ? (
-        <UnsealConfirmation
+        <MakePublicConfirmation
           prompts={exposure}
-          keepsASeal={staged !== null && staged.preview.seals > 0}
+          keepsAPrivatePrompt={
+            staged !== null && staged.preview.privatePrompts > 0
+          }
           pending={busy}
           replacement
-          onKeepSealed={() => setExposure(null)}
-          onExpose={() => act(true)}
+          onKeepPrivate={() => setExposure(null)}
+          onMakePublic={() => act(true)}
         />
       ) : null}
     </div>

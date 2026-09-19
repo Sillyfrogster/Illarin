@@ -97,8 +97,8 @@ export default async function WorkPage({
           images={work.media}
           typeName={typeLabel.toLowerCase()}
           readiness={work.readiness}
-          sealedBlocks={work.sealedBlocks}
-          sealsPrompts={work.linkedInstallOnly}
+          preservedPrompts={work.preservedPrompts}
+          hasPrivatePrompts={work.hasPrivatePrompts}
           unpublishedChanges={Boolean(work.unpublishedChanges)}
           withheld={Boolean(work.withhold)}
         />

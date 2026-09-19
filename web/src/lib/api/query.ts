@@ -42,13 +42,13 @@ import type {
   PostSummary,
   PostWithdrawal,
   PreservedNamespace,
+  PrivatePromptMismatch,
+  PrivatePromptMismatchList,
   Profile,
   ProfileLink,
   ProfileRestriction,
   PromptCorrespondenceRequest,
   PromptListContent,
-  ProtectionMismatch,
-  ProtectionMismatchList,
   PublicationApp,
   PublicationAppList,
   PublicationCategory,
@@ -142,7 +142,7 @@ export type {
   ProfileRestriction,
   PromptCorrespondenceRequest,
   PromptListContent,
-  ProtectionMismatch,
+  PrivatePromptMismatch,
   PublicPost,
   PublicationApp,
   PublicationCategory,
@@ -215,7 +215,7 @@ export const workKeys = {
   ) => ["works", "list", creator, filters, preference] as const,
 };
 
-export class SealedExposureError extends Error {
+export class PromptsMadePublicError extends Error {
   constructor(
     message: string,
     readonly prompts: string[],
@@ -230,11 +230,11 @@ function writeRefusal(error: unknown, fallback: string): Error {
     | { error?: unknown; code?: unknown; prompts?: unknown }
     | undefined;
   if (
-    detail?.code === "sealed_exposure" &&
+    detail?.code === "prompts_made_public" &&
     Array.isArray(detail.prompts) &&
     detail.prompts.every((prompt) => typeof prompt === "string")
   ) {
-    return new SealedExposureError(
+    return new PromptsMadePublicError(
       typeof detail.error === "string" ? detail.error : fallback,
       detail.prompts,
     );
@@ -610,14 +610,14 @@ export async function acceptWorkReplacement(
   id: string,
   operationId: string,
   unrepresentable: ReplacementDecision,
-  exposeProtected = false,
+  makePromptsPublic = false,
 ): Promise<IngestOperation> {
   const { data, error, response } = await api<IngestOperation>(
     "POST",
     `/v1/works/${id}/original-file/${operationId}/accept`,
     {
       headers: { "X-Drafted-Changes-Version": String(candidate.version) },
-      body: { unrepresentable, exposeProtected },
+      body: { unrepresentable, makePromptsPublic },
     },
   );
   acceptCandidateVersion(candidate, response);
@@ -818,12 +818,12 @@ export async function compareWorkVersions(
   return unreadable;
 }
 
-export async function fetchProtectionMismatches(
+export async function fetchPrivatePromptMismatches(
   id: string,
-): Promise<ProtectionMismatch[]> {
-  const { data } = await api<ProtectionMismatchList>(
+): Promise<PrivatePromptMismatch[]> {
+  const { data } = await api<PrivatePromptMismatchList>(
     "GET",
-    `/v1/works/${id}/versions/protection`,
+    `/v1/works/${id}/versions/private-prompts`,
   );
   return data?.items ?? [];
 }
@@ -835,7 +835,7 @@ export async function resolvePromptCorrespondence(
 ) {
   const { error } = await api<void>(
     "PUT",
-    `/v1/works/${id}/versions/${number}/protection`,
+    `/v1/works/${id}/versions/${number}/private-prompts`,
     { body: { matches } },
   );
   if (error) {

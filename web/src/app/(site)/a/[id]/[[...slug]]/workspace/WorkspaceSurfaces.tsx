@@ -15,15 +15,15 @@ import { useAuth } from "@/lib/auth";
 import type { PageTarget } from "@/lib/readiness";
 import { DeleteControl } from "../DeleteControl";
 import { ElementFields, elementHint } from "../ElementEditors";
+import { MakePublicConfirmation } from "../MakePublicConfirmation";
 import { PreservedPanel } from "../PreservedPanel";
-import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
-import { SealedPanel } from "../SealedPanel";
+import { PreservedPromptsPanel } from "../PreservedPromptsPanel";
 import {
-  elementSealsAPrompt,
+  elementHasPrivatePrompts,
   NO_ALLOWED_APP,
-  SealedPolicy,
-} from "../SealedPolicy";
-import { UnsealConfirmation } from "../UnsealConfirmation";
+  PrivatePromptsControl,
+} from "../PrivatePromptsControl";
+import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
 import { VisibilityControl } from "../VisibilityControl";
 import { WithholdControl } from "../WithholdControl";
 import { AddBlock } from "./AddBlock";
@@ -43,8 +43,8 @@ export type WorkspaceSurfacesProps = {
   images: WorkImage[];
   typeName: string;
   readiness?: ReadinessItem[];
-  sealedBlocks?: number;
-  sealsPrompts: boolean;
+  preservedPrompts?: number;
+  hasPrivatePrompts: boolean;
   unpublishedChanges: boolean;
   withheld: boolean;
 };
@@ -191,8 +191,8 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
                   {workspace.message}
                 </p>
               ) : null}
-              {elementSealsAPrompt(element) ? (
-                <SealedPolicy
+              {elementHasPrivatePrompts(element) ? (
+                <PrivatePromptsControl
                   pending={workspace.busy}
                   policy={{
                     allowedApps: workspace.allowedApps,
@@ -289,13 +289,15 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
               {workspace.isOwner && props.hasOriginal ? (
                 <PreservedPanel workId={workspace.workId} />
               ) : null}
-              {workspace.isOwner && !workspace.isDraft && props.sealsPrompts ? (
+              {workspace.isOwner &&
+              !workspace.isDraft &&
+              props.hasPrivatePrompts ? (
                 <RecordedPromptsPanel workId={workspace.workId} />
               ) : null}
-              {workspace.isOwner && props.sealedBlocks ? (
-                <SealedPanel
+              {workspace.isOwner && props.preservedPrompts ? (
+                <PreservedPromptsPanel
                   workId={workspace.workId}
-                  count={props.sealedBlocks}
+                  count={props.preservedPrompts}
                 />
               ) : null}
               {workspace.isOwner ? (
@@ -319,13 +321,13 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
         ) : null}
       </AnimatePresence>
 
-      {workspace.unsealing ? (
-        <UnsealConfirmation
-          keepsASeal={workspace.unsealing.keepsASeal}
-          onExpose={workspace.confirmUnseal}
-          onKeepSealed={workspace.cancelUnseal}
+      {workspace.makingPublic ? (
+        <MakePublicConfirmation
+          keepsAPrivatePrompt={workspace.makingPublic.keepsAPrivatePrompt}
+          onMakePublic={workspace.confirmMakePublic}
+          onKeepPrivate={workspace.cancelMakePublic}
           pending={workspace.busy}
-          prompts={workspace.unsealing.prompts}
+          prompts={workspace.makingPublic.prompts}
         />
       ) : null}
 

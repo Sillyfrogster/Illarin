@@ -237,9 +237,9 @@ function VersionManagement({
         <div className="grid gap-4 pt-4 pb-1">
           <p className="text-meta text-mute">
             This replaces your drafted changes with this version, including its
-            pictures and page arrangement. Access, protection and allowed-app
-            choices stay current. Publishing it later needs fresh version notes
-            and a fresh check.
+            pictures and page arrangement. Access, private prompts and allowed
+            apps stay current. Publishing it later needs fresh version notes and
+            a fresh check.
           </p>
           <ActionRow
             busy={busy}

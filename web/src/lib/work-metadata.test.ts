@@ -19,7 +19,7 @@ function work(over: Partial<WorkDetail> = {}): WorkDetail {
     visibility: "listed",
     lifecycle: "published",
     isOwner: false,
-    linkedInstallOnly: false,
+    hasPrivatePrompts: false,
     allowedApps: [],
     eligibleApps: [],
     downloads: [],
@@ -88,12 +88,12 @@ test("asks not to be indexed while unlisted, and still invites following", () =>
   expect(workMetadata(work()).robots).toBeUndefined();
 });
 
-test("does not copy protected prompt text into page or social metadata", () => {
+test("does not copy private prompt text into page or social metadata", () => {
   const privateText = "metadata-disclosure-canary-1c7ed05b";
   const metadata = workMetadata(
     work({
       type: "preset",
-      linkedInstallOnly: true,
+      hasPrivatePrompts: true,
       allowedApps: [{ id: "lumiverse", label: "Lumiverse" }],
       blocks: [
         {
@@ -117,7 +117,7 @@ test("does not copy protected prompt text into page or social metadata", () => {
               slot: "main",
               label: "Prompt fragments",
               pinned: true,
-              locked: false,
+              fromFile: false,
               isEmpty: false,
               facts: ["1 fragment"],
               content: {
@@ -128,7 +128,7 @@ test("does not copy protected prompt text into page or social metadata", () => {
                     name: "Private instructions",
                     role: "system",
                     text: privateText,
-                    protected: true,
+                    private: true,
                     enabled: true,
                   },
                 ],

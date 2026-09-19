@@ -147,7 +147,7 @@ export function PromptListEditor({
         id: fragment.id,
         name: fragmentName(fragment, index),
         off: !fragment.enabled,
-        sealed: fragment.protected ?? false,
+        private: fragment.private ?? false,
         search: [
           fragmentName(fragment, index),
           fragment.text,
@@ -304,12 +304,10 @@ function FragmentFields({
 
       {!isMarker ? (
         <Switch
-          checked={fragment.protected ?? false}
+          checked={fragment.private ?? false}
           hint="Its text is sent only to an allowed connected app."
-          label="Sealed prompt"
-          onChange={(protectedPrompt) =>
-            onChange({ protected: protectedPrompt })
-          }
+          label="Private prompt"
+          onChange={(isPrivate) => onChange({ private: isPrivate })}
           pending={pending}
         />
       ) : null}

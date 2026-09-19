@@ -199,7 +199,7 @@ export function VersionHistory({
                     published ? (
                       download
                     ) : null
-                  ) : published && !work.linkedInstallOnly ? (
+                  ) : published && !work.hasPrivatePrompts ? (
                     <VersionDownload
                       workId={work.id}
                       typeName={typeName}
@@ -215,10 +215,10 @@ export function VersionHistory({
                 versions={listed}
               />
             ) : null}
-            {shown && work.linkedInstallOnly && published ? (
+            {shown && work.hasPrivatePrompts && published ? (
               <p className="mt-4 max-w-[60ch] font-ui text-meta text-mute">
-                This {typeName} can only be installed through a connected app.
-                File downloads are unavailable for all versions. Allowed apps:{" "}
+                This {typeName} has private prompts, so no version downloads as
+                a file. Only an allowed app can use it:{" "}
                 {work.allowedApps.map((app) => app.label).join(", ")}.
               </p>
             ) : null}

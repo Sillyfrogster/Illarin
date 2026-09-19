@@ -17,7 +17,7 @@ export function blockSaveRequest(
     width?: WorkBlock["width"];
     elements?: WorkElement[];
     allowedApps?: string[];
-    exposeProtected?: boolean;
+    makePromptsPublic?: boolean;
   } = {},
 ): SaveWorkBlockRequest {
   return {
@@ -30,7 +30,7 @@ export function blockSaveRequest(
     layout: changes.layout ?? block.layout,
     width: changes.width ?? block.width,
     allowedApps: changes.allowedApps,
-    exposeProtected: changes.exposeProtected,
+    makePromptsPublic: changes.makePromptsPublic,
     elements: (changes.elements ?? block.elements).map((element) => ({
       id: element.id,
       type: element.type,

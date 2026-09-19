@@ -45,7 +45,7 @@ export function GetWork({
     appFormats,
     original,
     holdsNothing,
-    linkedInstallOnly,
+    hasPrivatePrompts,
   } = props;
   const { account } = useAuth();
   const [connectedApps, setConnectedApps] = useState<WorkConnectedApp[]>([]);
@@ -111,7 +111,7 @@ export function GetWork({
     apps: appFormats,
   });
   const receiving = connectedApps.some((one) => one.canReceive);
-  const chooses = linkedInstallOnly
+  const chooses = hasPrivatePrompts
     ? receiving
     : choices.length > 0 || Boolean(original);
   if (!chooses) return aside ? <div className="flex">{aside}</div> : null;
