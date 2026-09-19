@@ -53,7 +53,7 @@ export function BrowseSurface({
   const { navigate, pending } = useBrowseNavigation(basePath);
   const panel = useId();
   const phone = useMediaQuery(PHONE_WIDTH);
-  const filtering = (filters.platform ? 1 : 0) + (filters.facet?.length ?? 0);
+  const filtering = (filters.app ? 1 : 0) + (filters.facet?.length ?? 0);
 
   const [refining, setRefining] = useState(false);
   const [preferenceOverride, setPreferenceOverride] =

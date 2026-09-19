@@ -9,26 +9,31 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { type BrowseType, type StartWorkApp, startWork } from "@/lib/api/query";
+import { type BrowseType, startWork } from "@/lib/api/query";
+import type { BuildChoices } from "@/lib/api/shapes";
 import { cn } from "@/lib/cn";
-import {
-  APP_CHOICES,
-  BUILDABLE_TYPES,
-  TYPE_LABELS,
-  TYPES_ASKING_FOR_AN_APP,
-} from "@/lib/work-types";
+import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
 
 const TYPE =
   "group flex min-h-14 items-center gap-3 rounded-control bg-inset px-4 font-ui text-ui font-medium text-ink outline-offset-3 transition-colors duration-200 hover:bg-accent-wash hover:text-accent disabled:opacity-45 motion-reduce:transition-none";
 
-export function StartFromNothing() {
+/** StartFromNothing offers each type the API can build from nothing, in the site's type order, asking for an app where the type needs one. */
+export function StartFromNothing({
+  choices,
+}: {
+  choices: BuildChoices | null;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState<BrowseType | null>(null);
   const [asking, setAsking] = useState<BrowseType | null>(null);
   const [message, setMessage] = useState("");
 
-  async function start(type: BrowseType, app?: StartWorkApp) {
+  const buildable = (Object.keys(TYPE_LABELS) as BrowseType[]).flatMap(
+    (type) => choices?.types.filter((choice) => choice.type === type) ?? [],
+  );
+
+  async function start(type: BrowseType, app?: string) {
     setPending(type);
     setAsking(null);
     setMessage("");
@@ -57,9 +62,16 @@ export function StartFromNothing() {
         later.
       </p>
 
+      {choices === null ? (
+        <p className="mt-5 text-meta text-mute" role="alert">
+          The types you can start could not be loaded. Reload the page to try
+          again.
+        </p>
+      ) : null}
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {BUILDABLE_TYPES.map((type) =>
-          TYPES_ASKING_FOR_AN_APP.includes(type) ? (
+        {buildable.map(({ type: listed, apps }) => {
+          const type = listed as BrowseType;
+          return apps.length > 0 ? (
             <Popover
               key={type}
               onOpenChange={(open) => setAsking(open ? type : null)}
@@ -81,14 +93,14 @@ export function StartFromNothing() {
                   sets the fields available in the editor.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {APP_CHOICES.map((app) => (
+                  {apps.map((app) => (
                     <button
                       className={cn(
                         TYPE,
                         "bg-accent-wash hover:bg-accent-wash/70",
                       )}
-                      key={app.value}
-                      onClick={() => void start(type, app.value)}
+                      key={app.id}
+                      onClick={() => void start(type, app.id)}
                       type="button"
                     >
                       {app.label}
@@ -107,8 +119,8 @@ export function StartFromNothing() {
             >
               <TypeLabel type={type} pending={pending === type} />
             </button>
-          ),
-        )}
+          );
+        })}
       </div>
 
       {message ? (

@@ -9,59 +9,61 @@ import { refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
 import {
-  isInstanceList,
-  type ManagedInstance,
+  isConnectedAppList,
+  type ManagedConnectedApp,
   revoked,
-} from "@/lib/instance-standing";
-import { InstanceRow } from "./InstanceRow";
+} from "@/lib/connected-app-standing";
+import { ConnectedAppRow } from "./ConnectedAppRow";
 
 type Notice = { kind: "said" | "trouble"; message: string };
 
 const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
 
-export function LinkedInstances() {
+export function ConnectedApps() {
   const { account } = useAuth();
-  const [instances, setInstances] = useState<
-    ManagedInstance[] | null | undefined
-  >(undefined);
+  const [apps, setApps] = useState<ManagedConnectedApp[] | null | undefined>(
+    undefined,
+  );
   const [loadTrouble, setLoadTrouble] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [revoking, setRevoking] = useState("");
 
   const load = useCallback(async () => {
     setLoadTrouble("");
-    setInstances(undefined);
+    setApps(undefined);
     try {
       const { data, error, response } = await api<unknown>(
         "GET",
-        "/v1/instances",
+        "/v1/connected-apps",
         { cache: "no-store" },
       );
       const answer = response.ok ? data : error;
       if (!response.ok) {
         setLoadTrouble(
-          refusalMessage(answer, "We could not read your linked instances."),
+          refusalMessage(answer, "We could not read your connected apps."),
         );
-        setInstances(null);
+        setApps(null);
         return;
       }
-      if (!isInstanceList(answer)) {
-        setLoadTrouble("Illarin returned an incomplete instance list.");
-        setInstances(null);
+      if (!isConnectedAppList(answer)) {
+        setLoadTrouble(
+          "Illarin returned an incomplete list of connected apps.",
+        );
+        setApps(null);
         return;
       }
-      setInstances(answer.items);
+      setApps(answer.items);
     } catch {
       setLoadTrouble(UNREACHABLE);
-      setInstances(null);
+      setApps(null);
     }
   }, []);
 
   useEffect(() => {
     if (account === undefined) return;
     if (!account) {
-      setInstances([]);
+      setApps([]);
       return;
     }
     void load();
@@ -69,15 +71,15 @@ export function LinkedInstances() {
 
   if (!account) return null;
 
-  async function revoke(instance: ManagedInstance) {
+  async function revoke(app: ManagedConnectedApp) {
     if (revoking) return;
     setNotice(null);
-    setRevoking(instance.id);
-    const named = `${instance.applicationName} — ${instance.instanceName}`;
+    setRevoking(app.id);
+    const named = `${app.appName} — ${app.name}`;
     try {
       const { error, response } = await api<void>(
         "DELETE",
-        `/v1/instances/${instance.id}`,
+        `/v1/connected-apps/${app.id}`,
       );
       const answer = error;
       if (!response.ok) {
@@ -89,15 +91,14 @@ export function LinkedInstances() {
       }
 
       const at = new Date().toISOString();
-      setInstances(
+      setApps(
         (current) =>
-          current?.map((one) =>
-            one.id === instance.id ? revoked(one, at) : one,
-          ) ?? current,
+          current?.map((one) => (one.id === app.id ? revoked(one, at) : one)) ??
+          current,
       );
       setNotice({
         kind: "said",
-        message: `${named} can no longer reach your account. Other linked instances were not changed.`,
+        message: `${named} can no longer reach your account. Your other connected apps were not changed.`,
       });
     } catch {
       setNotice({ kind: "trouble", message: UNREACHABLE });
@@ -107,22 +108,22 @@ export function LinkedInstances() {
   }
 
   return (
-    <section aria-labelledby="linked-applications">
+    <section aria-labelledby="connected-apps">
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div className="min-w-0 max-w-[52ch]">
           <h2
             className="font-display text-section font-medium tracking-tight text-ink"
-            id="linked-applications"
+            id="connected-apps"
           >
-            Linked applications
+            Connected apps
           </h2>
           <p className="mt-2 font-prose text-ui text-mute">
-            Each link connects one application installation to your account.
-            Revoke a link to stop that installation's access.
+            Each connected app is one copy of an app you approved. Revoke one to
+            stop its access; the others keep theirs.
           </p>
         </div>
         <Button asChild variant="secondary">
-          <Link href="/link">Link an application</Link>
+          <Link href="/connect">Connect an app</Link>
         </Button>
       </div>
 
@@ -136,12 +137,12 @@ export function LinkedInstances() {
         </div>
       ) : null}
 
-      <div aria-busy={instances === undefined} className="mt-6">
-        {instances === undefined ? (
+      <div aria-busy={apps === undefined} className="mt-6">
+        {apps === undefined ? (
           <p aria-live="polite" className="font-ui text-ui text-mute">
-            Loading your linked applications…
+            Loading your connected apps…
           </p>
-        ) : instances === null ? (
+        ) : apps === null ? (
           <div className="flex flex-wrap items-center gap-4 rounded-plate bg-stop-wash px-5 py-4">
             <RotateCcw
               aria-hidden="true"
@@ -155,7 +156,7 @@ export function LinkedInstances() {
               Try again
             </Button>
           </div>
-        ) : instances.length === 0 ? (
+        ) : apps.length === 0 ? (
           <div className="flex flex-wrap items-center gap-4 rounded-plate bg-deep px-6 py-6">
             <Plug
               aria-hidden="true"
@@ -163,19 +164,19 @@ export function LinkedInstances() {
               strokeWidth={1.5}
             />
             <p className="min-w-0 flex-1 basis-64 font-prose text-ui text-mute">
-              No applications linked. Start linking in your application, or
-              enter the code it gives you.
+              No connected apps. Start connecting in your app, or enter the code
+              it gives you.
             </p>
           </div>
         ) : (
           <ul className="m-0 grid list-none gap-px overflow-hidden rounded-plate bg-rule p-0">
-            {instances.map((instance) => (
-              <InstanceRow
+            {apps.map((app) => (
+              <ConnectedAppRow
+                app={app}
                 busy={Boolean(revoking)}
-                instance={instance}
-                key={instance.id}
-                onRevoke={() => void revoke(instance)}
-                revoking={revoking === instance.id}
+                key={app.id}
+                onRevoke={() => void revoke(app)}
+                revoking={revoking === app.id}
               />
             ))}
           </ul>

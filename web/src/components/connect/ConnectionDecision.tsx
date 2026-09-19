@@ -5,22 +5,25 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Trouble } from "@/components/ui/field";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
-import { type PendingLink, readableExpiry } from "@/lib/link-request";
-import { describeScope } from "@/lib/scopes";
+import {
+  type PendingConnection,
+  readableExpiry,
+} from "@/lib/connection-request";
+import { describePermission } from "@/lib/permissions";
 import { DeclaredValues } from "./DeclaredValues";
 
 export type Decision = "approve" | "deny";
 
-export function LinkDecision({
+export function ConnectionDecision({
+  connection,
   deciding,
-  link,
   onCancel,
   onDecide,
   trouble,
   userCode,
 }: {
+  connection: PendingConnection;
   deciding: Decision | null;
-  link: PendingLink;
   onCancel?: () => void;
   onDecide: (decision: Decision) => void;
   trouble: string;
@@ -37,23 +40,21 @@ export function LinkDecision({
             className="size-4 shrink-0"
             strokeWidth={1.7}
           />
-          Unverified application
+          Unverified app
         </p>
         <h2 className="mt-4 font-display text-[clamp(1.7rem,3vw,2.6rem)] leading-[1.05] font-medium tracking-[-0.04em] text-ink [overflow-wrap:anywhere]">
-          {link.applicationName}
+          {connection.appName}
         </h2>
         <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 font-ui text-ui">
-          <Fact label="Installation">
-            <span className="[overflow-wrap:anywhere]">
-              {link.instanceName}
-            </span>
+          <Fact label="Name">
+            <span className="[overflow-wrap:anywhere]">{connection.name}</span>
           </Fact>
-          {link.applicationVersion ? (
-            <Fact label="Version">{link.applicationVersion}</Fact>
+          {connection.appVersion ? (
+            <Fact label="Version">{connection.appVersion}</Fact>
           ) : null}
           <Fact label="Request expires">
-            <time dateTime={link.expiresAt}>
-              {readableExpiry(link.expiresAt)}
+            <time dateTime={connection.expiresAt}>
+              {readableExpiry(connection.expiresAt)}
             </time>
           </Fact>
         </dl>
@@ -72,23 +73,23 @@ export function LinkDecision({
             </strong>{" "}
             Confirm{" "}
             <b className="font-mono tracking-wider text-stop">{userCode}</b> is
-            exactly what the application shows. If it differs, decline.
+            exactly what the app shows. If it differs, decline.
           </p>
         </div>
       ) : null}
 
-      <section aria-labelledby="link-permissions">
+      <section aria-labelledby="connect-permissions">
         <h3
           className="font-ui text-ui font-medium text-ink"
-          id="link-permissions"
+          id="connect-permissions"
         >
           Requested permissions
         </h3>
         <ul className="m-0 mt-4 grid list-none gap-4 p-0">
-          {link.scopes.map((scope) => {
-            const copy = describeScope(scope);
+          {connection.permissions.map((permission) => {
+            const copy = describePermission(permission);
             return (
-              <li className="flex items-start gap-3.5" key={scope}>
+              <li className="flex items-start gap-3.5" key={permission}>
                 <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-accent-wash text-accent">
                   <Check
                     aria-hidden="true"
@@ -110,15 +111,18 @@ export function LinkDecision({
         </ul>
       </section>
 
-      <p className="font-prose text-ui text-mute" id="unverified-link-details">
-        These names and compatibility details were supplied by the application,
-        not verified by Illarin. Approve only if you started this request.
+      <p
+        className="font-prose text-ui text-mute"
+        id="unverified-connect-details"
+      >
+        The app supplied these names and capabilities; Illarin has not verified
+        them. Approve only if you started this request.
       </p>
 
       {trouble ? <Trouble>{trouble}</Trouble> : null}
 
       <div
-        aria-describedby="unverified-link-details"
+        aria-describedby="unverified-connect-details"
         className="flex flex-wrap items-center gap-3"
       >
         <Button
@@ -128,7 +132,7 @@ export function LinkDecision({
           size="large"
           variant="primary"
         >
-          {deciding === "approve" ? "Approving" : "Approve link"}
+          {deciding === "approve" ? "Approving" : "Approve"}
         </Button>
         <Button
           disabled={busy}
@@ -137,7 +141,7 @@ export function LinkDecision({
           size="large"
           variant="outline"
         >
-          {deciding === "deny" ? "Declining" : "Decline link"}
+          {deciding === "deny" ? "Declining" : "Decline"}
         </Button>
         {onCancel && !busy ? (
           <Button onClick={onCancel} variant="ghost">
@@ -148,7 +152,7 @@ export function LinkDecision({
 
       <MorphingDisclosure
         className="border-t border-rule pt-3"
-        summary="Application details"
+        summary="Capabilities"
       >
         <div className="pt-4 pb-2">
           <p className="font-ui text-meta text-mute">
@@ -156,14 +160,17 @@ export function LinkDecision({
           </p>
           <dl className="mt-4 grid gap-4 sm:grid-cols-3">
             <DeclaredValues
-              label="Accepted targets"
-              values={link.acceptedTargets}
+              label="Accepted formats"
+              values={connection.acceptedFormats}
             />
-            <DeclaredValues label="Capabilities" values={link.capabilities} />
+            <DeclaredValues
+              label="Capabilities"
+              values={connection.capabilities}
+            />
             <div>
               <dt className="font-ui text-meta text-mute">Protocol</dt>
               <dd className="mt-1 font-ui text-ui text-ink">
-                Version {link.protocolVersion}
+                Version {connection.protocolVersion}
               </dd>
             </div>
           </dl>

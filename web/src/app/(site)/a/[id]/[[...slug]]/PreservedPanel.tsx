@@ -9,7 +9,6 @@ import {
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { useDraftedChanges } from "@/lib/drafted-changes";
-import { describePreservedNamespace } from "@/lib/preserved";
 
 export function PreservedPanel({ workId }: { workId: string }) {
   const candidate = useDraftedChanges();
@@ -109,7 +108,7 @@ export function PreservedPanel({ workId }: { workId: string }) {
             >
               {namespaces.map((namespace) => (
                 <li key={namespace.name}>
-                  <span>{describePreservedNamespace(namespace.name)}</span>
+                  <span>{namespace.label}</span>
                   <button
                     className={
                       "flex size-11 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-stop"
@@ -121,9 +120,7 @@ export function PreservedPanel({ workId }: { workId: string }) {
                     }}
                   >
                     <Trash2 size={15} aria-hidden="true" />
-                    <span className="sr-only">
-                      Remove {describePreservedNamespace(namespace.name)}
-                    </span>
+                    <span className="sr-only">Remove {namespace.label}</span>
                   </button>
                 </li>
               ))}
@@ -176,7 +173,7 @@ function DeleteNamespaceDialog({
   onDelete: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const description = describePreservedNamespace(namespace.name);
+  const description = namespace.label;
 
   useEffect(() => dialog.current?.showModal(), []);
 

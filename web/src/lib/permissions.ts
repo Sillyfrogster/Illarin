@@ -1,13 +1,13 @@
-import type { Scope } from "@/lib/api/shapes";
-export type { Scope };
+import type { Permission } from "@/lib/api/shapes";
+export type { Permission };
 
-export type ScopeCopy = {
+export type PermissionCopy = {
   title: string;
   detail: string;
 };
 
-const SCOPES: Record<Scope, ScopeCopy> = {
-  "asset:receive": {
+const PERMISSIONS: Record<Permission, PermissionCopy> = {
+  "work:receive": {
     title: "Receive works you send it",
     detail:
       "You choose what goes across. It cannot browse or take anything on its own.",
@@ -19,10 +19,10 @@ const SCOPES: Record<Scope, ScopeCopy> = {
   },
 };
 
-export function describeScope(scope: Scope): ScopeCopy {
+export function describePermission(permission: Permission): PermissionCopy {
   return (
-    SCOPES[scope] ?? {
-      title: scope,
+    PERMISSIONS[permission] ?? {
+      title: permission,
       detail: "This version of Illarin does not recognise this permission.",
     }
   );

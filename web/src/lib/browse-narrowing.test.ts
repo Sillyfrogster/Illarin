@@ -3,7 +3,7 @@ import type { BrowsePage } from "./api/query";
 import { narrowingsInForce } from "./browse-narrowing";
 
 const overview = {
-  platforms: [
+  apps: [
     { value: "sillytavern", label: "SillyTavern", count: 4, selected: false },
     { value: "risu", label: "RisuAI", count: 2, selected: false },
   ],
@@ -36,14 +36,14 @@ describe("what browse is narrowed by", () => {
   });
 
   test("names an app by the label browse gave it", () => {
-    const [app] = narrowingsInForce({ platform: "risu" }, overview);
+    const [app] = narrowingsInForce({ app: "risu" }, overview);
 
     expect(app.label).toBe("RisuAI");
     expect(app.without).toEqual({});
   });
 
   test("falls back to the raw value when browse does not describe it", () => {
-    const [app] = narrowingsInForce({ platform: "an-app-not-listed" }, null);
+    const [app] = narrowingsInForce({ app: "an-app-not-listed" }, null);
 
     expect(app.label).toBe("an-app-not-listed");
   });
@@ -71,7 +71,7 @@ describe("what browse is narrowed by", () => {
     const all = narrowingsInForce(
       {
         type: "theme",
-        platform: "gentle",
+        app: "gentle",
         facet: ["tone=gentle"],
         q: "gentle",
       },

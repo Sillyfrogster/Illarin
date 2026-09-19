@@ -76,11 +76,11 @@ const CLAUSES: LegalClause[] = [
         <p>
           So that Illarin can do its job, you grant us a worldwide,
           non-exclusive, royalty-free licence to store your work, show it to the
-          people you publish it to, hand it to the applications you or your
-          readers connect, resize your images for display, and convert your work
-          into export formats for other applications. That licence covers
-          nothing else, and it ends when you delete the work, apart from copies
-          already in backups or ones the law requires us to keep.
+          people you publish it to, hand it to the apps you or your readers
+          connect, resize your images for display, and convert your work into
+          formats for other apps. That licence covers nothing else, and it ends
+          when you delete the work, apart from copies already in backups or ones
+          the law requires us to keep.
         </p>
         <p>
           Illarin keeps the file you uploaded exactly as you uploaded it.
@@ -172,15 +172,15 @@ const CLAUSES: LegalClause[] = [
     body: (
       <>
         <p>
-          You can link an application to your account so that it can fetch your
-          library. When you link one you choose what it may do, and Illarin
-          records the application&rsquo;s name, the permissions you granted, and
-          when it last used them. You can revoke a linked application at any
-          time, and revoking it immediately stops its access.
+          You can connect an app to your account so that it can fetch your
+          library. When you connect one you choose what it may do, and Illarin
+          records the app&rsquo;s name, the permissions you granted, and when it
+          last used them. You can revoke a connected app at any time, and
+          revoking it immediately stops its access.
         </p>
       </>
     ),
-    heading: "8. Applications you connect",
+    heading: "8. Apps you connect",
   },
   {
     body: (

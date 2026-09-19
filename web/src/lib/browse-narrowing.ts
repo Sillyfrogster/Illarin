@@ -19,7 +19,7 @@ const TYPE_PLURALS: Record<BrowseType, string> = {
 function settled(filters: BrowseFilters): BrowseFilters {
   const settled: BrowseFilters = {};
   if (filters.type) settled.type = filters.type;
-  if (filters.platform) settled.platform = filters.platform;
+  if (filters.app) settled.app = filters.app;
   if (filters.q) settled.q = filters.q;
   if (filters.facet?.length) settled.facet = filters.facet;
   return settled;
@@ -49,15 +49,13 @@ export function narrowingsInForce(
     });
   }
 
-  if (filters.platform) {
-    const app = overview?.platforms.find(
-      (one) => one.value === filters.platform,
-    );
+  if (filters.app) {
+    const app = overview?.apps.find((one) => one.value === filters.app);
     narrowings.push({
-      id: `platform:${filters.platform}`,
+      id: `app:${filters.app}`,
       group: "Works with",
-      label: app?.label ?? filters.platform,
-      without: settled({ ...filters, platform: undefined }),
+      label: app?.label ?? filters.app,
+      without: settled({ ...filters, app: undefined }),
     });
   }
 

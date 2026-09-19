@@ -1,8 +1,8 @@
 import { ArrowUpRight, KeyRound, Plug, Send } from "lucide-react";
 import Link from "next/link";
 import { AccountSettings } from "@/components/auth/AccountSettings";
+import { ConnectedApps } from "@/components/connect/ConnectedApps";
 import { Shell } from "@/components/layout/Shell";
-import { LinkedInstances } from "@/components/linking/LinkedInstances";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
 import { Button } from "@/components/ui/button";
 import { pageMetadata } from "@/lib/site-metadata";
@@ -18,7 +18,7 @@ const DISCORD_NOTICES: Record<string, string> = {
 
 export const metadata = pageMetadata(
   "Account settings",
-  "Manage your sign-in methods and linked applications.",
+  "Manage your sign-in methods and connected apps.",
 );
 
 export default async function SettingsPage({
@@ -38,7 +38,7 @@ export default async function SettingsPage({
           Account settings
         </h1>
         <p className="mt-3 font-prose text-ui text-mute">
-          Manage your sign-in methods and linked applications.
+          Manage your sign-in methods and connected apps.
         </p>
       </header>
 
@@ -58,10 +58,10 @@ export default async function SettingsPage({
             </a>
             <a
               className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
-              href="#linked-applications"
+              href="#connected-apps"
             >
               <Plug aria-hidden="true" className="size-4 text-accent" />
-              Linked applications
+              Connected apps
             </a>
             <a
               className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
@@ -87,8 +87,8 @@ export default async function SettingsPage({
               />
             </div>
           </section>
-          <div className="mt-12 border-t border-rule pt-9 [&_#linked-applications]:scroll-mt-[calc(var(--header-height)+3rem)]">
-            <LinkedInstances />
+          <div className="mt-12 border-t border-rule pt-9 [&_#connected-apps]:scroll-mt-[calc(var(--header-height)+3rem)]">
+            <ConnectedApps />
           </div>
           <section
             aria-labelledby="update-destinations"

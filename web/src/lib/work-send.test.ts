@@ -1,32 +1,32 @@
 import { expect, test } from "bun:test";
 import type {
-  DownloadTarget,
+  DownloadFormat,
   WorkBlock,
+  WorkConnectedApp,
   WorkElement,
   WorkImage,
-  WorkInstance,
 } from "@/lib/api/query";
 import {
   appLabel,
   canSendWork,
-  deliveryDestinations,
-  deliveryFailureLine,
+  connectedAppStanding,
   downloadAddress,
   downloadBytes,
   fileSize,
   formatChoices,
-  installsOnInstance,
-  instanceStanding,
+  installsInApp,
   sendActionLabel,
+  sendDestinations,
+  sendFailureLine,
   travellingGallery,
-} from "@/lib/work-delivery";
+} from "@/lib/work-send";
 
-function target(
+function offered(
   format: string,
   label: string,
   recommended: boolean,
-  roles: DownloadTarget["roles"] = [],
-): DownloadTarget {
+  roles: DownloadFormat["roles"] = [],
+): DownloadFormat {
   return { format, label, recommended, roles };
 }
 
@@ -34,7 +34,7 @@ function role(
   name: string,
   verdict: "carried" | "reduced" | "dropped",
   extra: { reason?: string; destination?: string; shownBy?: string[] } = {},
-): DownloadTarget["roles"][number] {
+): DownloadFormat["roles"][number] {
   return {
     role: name,
     label: name,
@@ -44,15 +44,15 @@ function role(
   };
 }
 
-function instance(over: Partial<WorkInstance> = {}): WorkInstance {
+function connectedApp(over: Partial<WorkConnectedApp> = {}): WorkConnectedApp {
   return {
-    instanceId: "i1",
-    applicationName: "Lumiverse",
-    instanceName: "Desk",
+    connectedAppId: "i1",
+    appName: "Lumiverse",
+    name: "Desk",
     lastSeenAt: null,
     canReceive: true,
     reportsLibrary: true,
-    delivery: null,
+    send: null,
     installedVersion: null,
     updateAvailable: false,
     ...over,
@@ -73,8 +73,8 @@ test("only a published work that staff have not withheld can be sent to an insta
 test("the recommended format leads and every other format follows it", () => {
   const choices = formatChoices({
     downloads: [
-      target("json", "JSON", false),
-      target("card", "Character Card V3", true),
+      offered("json", "JSON", false),
+      offered("card", "Character Card V3", true),
     ],
     holdsNothing: false,
   });
@@ -84,7 +84,7 @@ test("the recommended format leads and every other format follows it", () => {
 
 test("a format that carries everything says so rather than counting nothing", () => {
   const [choice] = formatChoices({
-    downloads: [target("card", "Card", true, [role("greetings", "carried")])],
+    downloads: [offered("card", "Card", true, [role("greetings", "carried")])],
     holdsNothing: false,
   });
   expect(choice.cost).toBe("Includes everything");
@@ -93,7 +93,7 @@ test("a format that carries everything says so rather than counting nothing", ()
 
 test("a work holding nothing does not claim a format includes everything", () => {
   const [choice] = formatChoices({
-    downloads: [target("card", "Card", true)],
+    downloads: [offered("card", "Card", true)],
     holdsNothing: true,
   });
   expect(choice.cost).toBe("No exportable content yet");
@@ -102,7 +102,7 @@ test("a work holding nothing does not claim a format includes everything", () =>
 test("a format names what it leaves behind and how much of it there was", () => {
   const [choice] = formatChoices({
     downloads: [
-      target("card", "Card", true, [
+      offered("card", "Card", true, [
         role("expressions", "dropped"),
         role("greetings", "reduced", { reason: "their names" }),
         role("gallery", "carried"),
@@ -120,7 +120,7 @@ test("a format names what it leaves behind and how much of it there was", () => 
 test("a carried role that lands somewhere unusual is a note, and not everything travels", () => {
   const [choice] = formatChoices({
     downloads: [
-      target("card", "Card", true, [
+      offered("card", "Card", true, [
         role("scenario", "carried", {
           destination: "It goes into the description instead.",
         }),
@@ -136,16 +136,16 @@ test("a carried role that lands somewhere unusual is a note, and not everything 
 
 test("one lost thing is counted in the singular", () => {
   const [choice] = formatChoices({
-    downloads: [target("card", "Card", true, [role("gallery", "dropped")])],
+    downloads: [offered("card", "Card", true, [role("gallery", "dropped")])],
     holdsNothing: false,
   });
   expect(choice.cost).toBe("1 content type has limited support");
 });
 
 test("a file is always a destination and every installation that can receive is another", () => {
-  const destinations = deliveryDestinations([
-    instance({ instanceId: "a", instanceName: "Desk" }),
-    instance({ instanceId: "b", instanceName: "Laptop", canReceive: false }),
+  const destinations = sendDestinations([
+    connectedApp({ connectedAppId: "a", name: "Desk" }),
+    connectedApp({ connectedAppId: "b", name: "Laptop", canReceive: false }),
   ]);
   expect(destinations.map((one) => one.id)).toEqual(["file", "a"]);
   expect(destinations[0].label).toBe("Download a file");
@@ -153,21 +153,25 @@ test("a file is always a destination and every installation that can receive is 
 });
 
 test("no installation leaves the file as the only destination", () => {
-  expect(deliveryDestinations([])).toHaveLength(1);
+  expect(sendDestinations([])).toHaveLength(1);
 });
 
 test("the send action says what sending would do this time", () => {
-  expect(sendActionLabel(instance())).toBe("Send");
-  expect(sendActionLabel(instance({ installedVersion: 2 }))).toBe("Send again");
+  expect(sendActionLabel(connectedApp())).toBe("Send");
+  expect(sendActionLabel(connectedApp({ installedVersion: 2 }))).toBe(
+    "Send again",
+  );
   expect(
-    sendActionLabel(instance({ installedVersion: 2, updateAvailable: true })),
+    sendActionLabel(
+      connectedApp({ installedVersion: 2, updateAvailable: true }),
+    ),
   ).toBe("Send the update");
   expect(
     sendActionLabel(
-      instance({
-        delivery: {
+      connectedApp({
+        send: {
           id: "d",
-          instanceId: "i1",
+          connectedAppId: "i1",
           workId: "a",
           state: "queued",
           queuedAt: "",
@@ -180,11 +184,11 @@ test("the send action says what sending would do this time", () => {
   ).toBe("Waiting to be collected");
 });
 
-test("a delivered delivery no longer blocks sending, and an extension is installed rather than sent", () => {
-  const delivered = instance({
-    delivery: {
+test("a delivered send no longer blocks sending, and an extension is installed rather than sent", () => {
+  const delivered = connectedApp({
+    send: {
       id: "d",
-      instanceId: "i1",
+      connectedAppId: "i1",
       workId: "a",
       state: "delivered",
       queuedAt: "",
@@ -195,45 +199,47 @@ test("a delivered delivery no longer blocks sending, and an extension is install
     installedVersion: 1,
   });
   expect(sendActionLabel(delivered)).toBe("Send again");
-  expect(sendActionLabel(instance(), true)).toBe("Install on Desk");
+  expect(sendActionLabel(connectedApp(), true)).toBe("Install on Desk");
   expect(sendActionLabel(delivered, true)).toBe("Install again on Desk");
   expect(
     sendActionLabel(
-      instance({ installedVersion: 1, updateAvailable: true }),
+      connectedApp({ installedVersion: 1, updateAvailable: true }),
       true,
     ),
   ).toBe("Update on Desk");
 });
 
-test("only an extension is installed on an instance", () => {
-  expect(installsOnInstance("extension")).toBe(true);
-  expect(installsOnInstance("character")).toBe(false);
+test("only an extension is installed in a connected app", () => {
+  expect(installsInApp("extension")).toBe(true);
+  expect(installsInApp("character")).toBe(false);
 });
 
 test("an installation that reports nothing does not pretend to know what it holds", () => {
-  expect(instanceStanding(instance({ reportsLibrary: false }))).toBe(
-    "This application does not report installed works. Installation status is unavailable.",
+  expect(connectedAppStanding(connectedApp({ reportsLibrary: false }))).toBe(
+    "This app does not report installed works. Installation status is unavailable.",
   );
-  expect(instanceStanding(instance())).toBe("Not installed here yet.");
-  expect(instanceStanding(instance({ installedVersion: 1 }))).toBe(
+  expect(connectedAppStanding(connectedApp())).toBe("Not installed here yet.");
+  expect(connectedAppStanding(connectedApp({ installedVersion: 1 }))).toBe(
     "Installed and up to date.",
   );
   expect(
-    instanceStanding(instance({ installedVersion: 1, updateAvailable: true })),
+    connectedAppStanding(
+      connectedApp({ installedVersion: 1, updateAvailable: true }),
+    ),
   ).toBe("Installed, and a newer version exists here.");
 });
 
-test("a delivery that failed says why in words a reader can act on", () => {
-  expect(deliveryFailureLine("withdrawn")).toBe(
+test("a send that failed says why in words a reader can act on", () => {
+  expect(sendFailureLine("withdrawn")).toBe(
     "This work was withdrawn before it could be collected.",
   );
-  expect(deliveryFailureLine("unsupported")).toBe(
-    "This application accepts no format this work can be written in.",
+  expect(sendFailureLine("unsupported")).toBe(
+    "This app accepts no format this work can be written in.",
   );
-  expect(deliveryFailureLine("abandoned")).toBe(
-    "The application kept taking this delivery without installing it.",
+  expect(sendFailureLine("abandoned")).toBe(
+    "The app kept collecting this send without installing it.",
   );
-  expect(deliveryFailureLine(null)).toBe("This delivery did not arrive.");
+  expect(sendFailureLine(null)).toBe("This send did not arrive.");
 });
 
 function galleryBlock(
@@ -353,8 +359,8 @@ test("a file size reads in the unit a person would say it in", () => {
 test("a format that lands content somewhere apps ignore does not claim everything travels", () => {
   const [elsewhere, everything] = formatChoices({
     downloads: [
-      target("charx", "CharX", false, [role("gallery", "carried")]),
-      target("chara_card_v3", "Character Card V3", true, [
+      offered("charx", "CharX", false, [role("gallery", "carried")]),
+      offered("chara_card_v3", "Character Card V3", true, [
         role("gallery", "carried", {
           destination: "In the file, but only some apps show them.",
         }),
@@ -370,10 +376,10 @@ test("a format that lands content somewhere apps ignore does not claim everythin
 test("a format that drops the gallery says so, so the chooser can stop offering it", () => {
   const [drops, carries] = formatChoices({
     downloads: [
-      target("chara_card_v2", "Character Card V2", true, [
+      offered("chara_card_v2", "Character Card V2", true, [
         role("gallery", "dropped"),
       ]),
-      target("charx", "CharX", false, [role("gallery", "carried")]),
+      offered("charx", "CharX", false, [role("gallery", "carried")]),
     ],
     holdsNothing: false,
   });
@@ -389,7 +395,7 @@ const inlineGallery = role("gallery", "carried", {
 
 test("an app that shows a destination is told the content reaches it", () => {
   const [choice] = formatChoices({
-    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    downloads: [offered("ccv3", "Character Card V3", true, [inlineGallery])],
     holdsNothing: false,
     app: "risu",
     apps: [{ id: "risu", label: "RisuAI", format: "ccv3" }],
@@ -401,7 +407,7 @@ test("an app that shows a destination is told the content reaches it", () => {
 
 test("an app that shows no destination is told the content is left out", () => {
   const [choice] = formatChoices({
-    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    downloads: [offered("ccv3", "Character Card V3", true, [inlineGallery])],
     holdsNothing: false,
     app: "sillytavern",
     apps: [{ id: "sillytavern", label: "SillyTavern", format: "ccv3" }],
@@ -413,7 +419,7 @@ test("an app that shows no destination is told the content is left out", () => {
 
 test("with no app chosen a destination stays a note rather than a loss", () => {
   const [choice] = formatChoices({
-    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    downloads: [offered("ccv3", "Character Card V3", true, [inlineGallery])],
     holdsNothing: false,
   });
   expect(choice.cost).toBe("1 content type unsupported by some apps");
@@ -422,7 +428,7 @@ test("with no app chosen a destination stays a note rather than a loss", () => {
 
 test("a destination names the apps that show it and the apps that do not", () => {
   const [choice] = formatChoices({
-    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    downloads: [offered("ccv3", "Character Card V3", true, [inlineGallery])],
     holdsNothing: false,
     apps: [
       { id: "sillytavern", label: "SillyTavern", format: "ccv3" },
@@ -437,7 +443,7 @@ test("a destination names the apps that show it and the apps that do not", () =>
 
 test("a destination no listed app shows says so without naming one", () => {
   const [choice] = formatChoices({
-    downloads: [target("ccv3", "Character Card V3", true, [inlineGallery])],
+    downloads: [offered("ccv3", "Character Card V3", true, [inlineGallery])],
     holdsNothing: false,
     apps: [{ id: "sillytavern", label: "SillyTavern", format: "ccv3" }],
   });
@@ -449,8 +455,8 @@ test("a destination no listed app shows says so without naming one", () => {
 test("the format an app is offered leads the list while that app is chosen", () => {
   const choices = formatChoices({
     downloads: [
-      target("ccv3", "Character Card V3", true, [inlineGallery]),
-      target("charx", "CharX", false, [role("gallery", "carried")]),
+      offered("ccv3", "Character Card V3", true, [inlineGallery]),
+      offered("charx", "CharX", false, [role("gallery", "carried")]),
     ],
     holdsNothing: false,
     app: "sillytavern",

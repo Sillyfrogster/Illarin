@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { type IngestOperation, readIngestOperation } from "@/lib/api/query";
+import type { BuildChoices } from "@/lib/api/shapes";
 import { useAuth } from "@/lib/auth";
 import { importStage } from "@/lib/import-stage";
 import { ImportFile } from "./ImportFile";
@@ -16,7 +17,7 @@ const POLL_MS = 600;
 const LOST =
   "The connection was interrupted. Your file is safe; check again to see where it got to.";
 
-export function UploadFlow() {
+export function UploadFlow({ choices }: { choices: BuildChoices | null }) {
   const { account } = useAuth();
   const heading = useRef<HTMLHeadingElement>(null);
   const [operation, setOperation] = useState<IngestOperation | null>(null);
@@ -127,7 +128,7 @@ export function UploadFlow() {
   return (
     <div className="mt-8 flex flex-col gap-9">
       <ImportFile onAccepted={setOperation} />
-      <StartFromNothing />
+      <StartFromNothing choices={choices} />
     </div>
   );
 }

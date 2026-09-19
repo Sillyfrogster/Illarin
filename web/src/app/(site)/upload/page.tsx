@@ -1,6 +1,7 @@
 import { Check, LockKeyhole, PencilLine, Upload } from "lucide-react";
 import Image from "next/image";
 import { Shell } from "@/components/layout/Shell";
+import { fetchBuildChoices } from "@/lib/api/query";
 import { pageMetadata } from "@/lib/site-metadata";
 import { UploadFlow } from "./UploadFlow";
 
@@ -9,7 +10,9 @@ export const metadata = pageMetadata(
   "Import a file you already have, or start a new character, lorebook, preset, theme or pack.",
 );
 
-export default function UploadPage() {
+export default async function UploadPage() {
+  const choices = await fetchBuildChoices().catch(() => null);
+
   return (
     <Shell className="max-w-[78rem] pt-12 pb-16 lg:pt-14">
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-16">
@@ -20,7 +23,7 @@ export default function UploadPage() {
           <p className="mt-3 max-w-[48ch] text-ui text-mute">
             Import a file you already have, or start a new draft in the editor.
           </p>
-          <UploadFlow />
+          <UploadFlow choices={choices} />
         </div>
         <aside className="grid min-w-0 gap-6 rounded-plate bg-inset p-5 sm:grid-cols-[12rem_1fr] sm:items-center lg:sticky lg:top-[calc(var(--header-height)+2.5rem)] lg:grid-cols-1">
           <Image

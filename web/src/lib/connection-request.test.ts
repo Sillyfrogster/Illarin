@@ -1,55 +1,55 @@
 import { expect, test } from "bun:test";
 import {
-  isLinkRedirect,
-  isPendingDeviceLink,
-  isPendingLink,
+  isConnectionRedirect,
+  isPendingCodeConnection,
+  isPendingConnection,
   isSafeLoopbackRedirect,
-} from "./link-request";
+} from "./connection-request";
 
 const pending = {
-  acceptedTargets: ["chub"],
-  applicationName: "Rookery",
-  applicationVersion: "2.1.0",
+  acceptedFormats: ["chub"],
+  appName: "Rookery",
+  appVersion: "2.1.0",
   capabilities: ["import"],
   expiresAt: "2026-09-10T12:00:00Z",
-  instanceName: "Rookery on the study desk",
+  name: "Rookery on the study desk",
   protocolVersion: 1,
-  scopes: ["asset:receive"],
+  permissions: ["work:receive"],
 };
 
-test("reads a pending link the API returned in full", () => {
-  expect(isPendingLink(pending)).toBe(true);
+test("reads a pending connection the API returned in full", () => {
+  expect(isPendingConnection(pending)).toBe(true);
 });
 
-test("refuses a link missing the name the reader decides about", () => {
-  const { applicationName, ...rest } = pending;
+test("refuses a connection missing the name the reader decides about", () => {
+  const { appName, ...rest } = pending;
 
-  expect(isPendingLink(rest)).toBe(false);
+  expect(isPendingConnection(rest)).toBe(false);
 });
 
-test("accepts a link that declares no version", () => {
-  expect(isPendingLink({ ...pending, applicationVersion: null })).toBe(true);
+test("accepts a connection that reports no app version", () => {
+  expect(isPendingConnection({ ...pending, appVersion: null })).toBe(true);
 });
 
-test("refuses a link whose scopes are not all names", () => {
-  expect(isPendingLink({ ...pending, scopes: ["asset:receive", 7] })).toBe(
-    false,
-  );
+test("refuses a connection whose permissions are not all names", () => {
+  expect(
+    isPendingConnection({ ...pending, permissions: ["work:receive", 7] }),
+  ).toBe(false);
 });
 
-test("a device link is a pending link carrying its approval token", () => {
-  expect(isPendingDeviceLink(pending)).toBe(false);
-  expect(isPendingDeviceLink({ ...pending, approvalToken: "token" })).toBe(
+test("a code connection is a pending connection carrying its approval token", () => {
+  expect(isPendingCodeConnection(pending)).toBe(false);
+  expect(isPendingCodeConnection({ ...pending, approvalToken: "token" })).toBe(
     true,
   );
 });
 
-test("reads the callback address an approved browser link returns", () => {
-  expect(isLinkRedirect({ redirectUrl: "http://127.0.0.1:8080/done" })).toBe(
-    true,
-  );
-  expect(isLinkRedirect({ redirectUrl: 12 })).toBe(false);
-  expect(isLinkRedirect(null)).toBe(false);
+test("reads the callback address an approved browser connection returns", () => {
+  expect(
+    isConnectionRedirect({ redirectUrl: "http://127.0.0.1:8080/done" }),
+  ).toBe(true);
+  expect(isConnectionRedirect({ redirectUrl: 12 })).toBe(false);
+  expect(isConnectionRedirect(null)).toBe(false);
 });
 
 test("opens a callback on the reader's own machine", () => {

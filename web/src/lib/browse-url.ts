@@ -21,20 +21,21 @@ export function readBrowseFilters(
     ? (requestedType as BrowseType)
     : undefined;
   const q = first(values.q) || undefined;
-  const platform = first(values.platform)?.trim() || undefined;
+  const app =
+    (first(values.app) ?? first(values.platform))?.trim() || undefined;
   const facets = Array.isArray(values.facet)
     ? values.facet
     : values.facet
       ? [values.facet]
       : undefined;
 
-  return { type, q, platform, facet: facets };
+  return { type, q, app, facet: facets };
 }
 
 export function buildBrowseHref(filters: BrowseFilters, basePath = "/browse") {
   const params = new URLSearchParams();
   if (filters.type) params.set("type", filters.type);
-  if (filters.platform) params.set("platform", filters.platform);
+  if (filters.app) params.set("app", filters.app);
   if (filters.q) params.set("q", filters.q);
   for (const facet of filters.facet ?? []) params.append("facet", facet);
   const query = params.toString();

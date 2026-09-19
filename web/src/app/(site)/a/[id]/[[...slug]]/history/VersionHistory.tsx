@@ -18,7 +18,6 @@ import {
   type RecordedVersion,
   type WorkDetail,
 } from "@/lib/api/query";
-import { protectedAppLabel } from "@/lib/protected-apps";
 import { PHONE_WIDTH, useMediaQuery } from "@/lib/use-media-query";
 import { workHref } from "@/lib/work-url";
 import { versionDate, versionSummary, versionTitle } from "@/lib/work-versions";
@@ -218,9 +217,9 @@ export function VersionHistory({
             ) : null}
             {shown && work.linkedInstallOnly && published ? (
               <p className="mt-4 max-w-[60ch] font-ui text-meta text-mute">
-                This {typeName} can only be installed through a linked app. File
-                downloads are unavailable for all versions. Allowed apps:{" "}
-                {work.allowedApps.map(protectedAppLabel).join(", ")}.
+                This {typeName} can only be installed through a connected app.
+                File downloads are unavailable for all versions. Allowed apps:{" "}
+                {work.allowedApps.map((app) => app.label).join(", ")}.
               </p>
             ) : null}
           </section>

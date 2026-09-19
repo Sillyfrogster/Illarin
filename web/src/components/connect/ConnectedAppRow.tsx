@@ -5,30 +5,30 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import { cn } from "@/lib/cn";
-import { readableDate } from "@/lib/dates";
 import {
   installedHere,
-  type ManagedInstance,
+  type ManagedConnectedApp,
   seenAt,
-} from "@/lib/instance-standing";
-import { describeScope } from "@/lib/scopes";
+} from "@/lib/connected-app-standing";
+import { readableDate } from "@/lib/dates";
+import { describePermission } from "@/lib/permissions";
 import { DeclaredValues } from "./DeclaredValues";
 
-export function InstanceRow({
+export function ConnectedAppRow({
+  app,
   busy,
-  instance,
   onRevoke,
   revoking,
 }: {
+  app: ManagedConnectedApp;
   busy: boolean;
-  instance: ManagedInstance;
   onRevoke: () => void;
   revoking: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
-  const cut = Boolean(instance.revokedAt);
-  const library = installedHere(instance);
-  const confirmationId = `revoke-${instance.id}`;
+  const cut = Boolean(app.revokedAt);
+  const library = installedHere(app);
+  const confirmationId = `revoke-${app.id}`;
 
   return (
     <li className={cn("bg-plane px-5 py-5", cut && "opacity-60")}>
@@ -48,15 +48,15 @@ export function InstanceRow({
 
         <div className="min-w-0 flex-1 basis-64">
           <h3 className="font-ui text-ui font-medium text-ink [overflow-wrap:anywhere]">
-            {instance.applicationName}
+            {app.appName}
           </h3>
           <p className="font-ui text-ui text-mute [overflow-wrap:anywhere]">
-            {instance.instanceName}
+            {app.name}
           </p>
           <p className="mt-2 font-ui text-meta text-mute">
-            {cut && instance.revokedAt
-              ? `Linked ${readableDate(instance.linkedAt)}, revoked ${readableDate(instance.revokedAt)}`
-              : `Linked ${readableDate(instance.linkedAt)} · ${seenAt(instance)}`}
+            {cut && app.revokedAt
+              ? `Connected ${readableDate(app.connectedAt)}, revoked ${readableDate(app.revokedAt)}`
+              : `Connected ${readableDate(app.connectedAt)} · ${seenAt(app)}`}
           </p>
           {library && !cut ? (
             <p className="font-ui text-meta text-mute">{library}</p>
@@ -65,12 +65,12 @@ export function InstanceRow({
             aria-label="Granted permissions"
             className="m-0 mt-3 flex list-none flex-wrap gap-1.5 p-0"
           >
-            {instance.scopes.map((scope) => {
-              const copy = describeScope(scope);
+            {app.permissions.map((permission) => {
+              const copy = describePermission(permission);
               return (
                 <li
                   className="rounded-control bg-deep px-2.5 py-1 font-ui text-meta text-mute"
-                  key={scope}
+                  key={permission}
                   title={copy.detail}
                 >
                   {copy.title}
@@ -91,7 +91,7 @@ export function InstanceRow({
                 className="basis-full font-ui text-meta text-mute sm:basis-auto"
                 id={confirmationId}
               >
-                This installation will lose access to your account.
+                This connected app will lose access to your account.
               </p>
             ) : null}
             <Button
@@ -121,23 +121,17 @@ export function InstanceRow({
       </div>
 
       {cut ? null : (
-        <MorphingDisclosure className="mt-3" summary="Installation details">
+        <MorphingDisclosure className="mt-3" summary="Capabilities">
           <dl className="grid gap-4 pt-3 pb-1 sm:grid-cols-3">
-            {instance.applicationVersion ? (
-              <DeclaredValues
-                label="Version"
-                values={[instance.applicationVersion]}
-              />
+            {app.appVersion ? (
+              <DeclaredValues label="Version" values={[app.appVersion]} />
             ) : null}
-            <DeclaredValues label="Targets" values={instance.acceptedTargets} />
-            <DeclaredValues
-              label="Capabilities"
-              values={instance.capabilities}
-            />
-            {instance.protocolVersion !== null ? (
+            <DeclaredValues label="Formats" values={app.acceptedFormats} />
+            <DeclaredValues label="Capabilities" values={app.capabilities} />
+            {app.protocolVersion !== null ? (
               <DeclaredValues
                 label="Protocol"
-                values={[`Version ${instance.protocolVersion}`]}
+                values={[`Version ${app.protocolVersion}`]}
               />
             ) : null}
             <div className="sm:col-span-3">
@@ -145,7 +139,7 @@ export function InstanceRow({
                 Refresh credential
               </dt>
               <dd className="mt-1 font-mono text-meta text-ink">
-                {instance.prefix}
+                {app.prefix}
               </dd>
             </div>
           </dl>

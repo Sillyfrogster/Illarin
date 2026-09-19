@@ -23,7 +23,7 @@ function work(over: Partial<WorkDetail> = {}): WorkDetail {
     allowedApps: [],
     eligibleApps: [],
     downloads: [],
-    appTargets: [],
+    appFormats: [],
     original: null,
     createdAt: "2026-08-13T00:00:00Z",
     blocks: [],
@@ -94,7 +94,7 @@ test("does not copy protected prompt text into page or social metadata", () => {
     work({
       type: "preset",
       linkedInstallOnly: true,
-      allowedApps: ["lumiverse"],
+      allowedApps: [{ id: "lumiverse", label: "Lumiverse" }],
       blocks: [
         {
           id: ID,

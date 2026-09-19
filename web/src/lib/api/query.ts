@@ -10,14 +10,15 @@ import type {
   AddableBlock,
   AddedPublicationDestination,
   AddMediaRequest,
-  AppTarget,
+  AppFormat,
   ArrangeWorkBlocksRequest,
   BrowseCursor,
   BrowseWork,
+  BuildChoices,
   ColorSetContent,
   DeletedWork,
   DeletedWorkList,
-  DownloadTarget,
+  DownloadFormat,
   ElementType,
   EntryTableContent,
   ExtensionDependency,
@@ -61,7 +62,7 @@ import type {
   PublicationGrant,
   PublicationWorkspace,
   PublicPost,
-  QueuedDelivery,
+  QueuedSend,
   ReadinessItem,
   RecordedVersion,
   RecordedVersionDownloads,
@@ -73,7 +74,6 @@ import type {
   SaveWorkBlockRequest,
   ScriptListContent,
   SettingGroupContent,
-  StartWorkRequest,
   StylesheetSetContent,
   TypedValue,
   VariableSchemaContent,
@@ -83,12 +83,12 @@ import type {
   VersionChangeGroup,
   VersionComparison,
   WorkBlock,
+  WorkConnectedApp,
+  WorkConnectedAppList,
   WorkDetail,
   WorkDetailsRequest,
   WorkElement,
   WorkImage,
-  WorkInstance,
-  WorkInstanceList,
   WorkList,
   WorkTag,
   WorkVersion,
@@ -98,15 +98,15 @@ import type {
 export type {
   AddableBlock,
   AddedPublicationDestination,
-  AppTarget,
+  AppFormat,
   ArrangeWorkBlocksRequest,
   WorkBlock,
   WorkDetail,
   WorkElement,
   WorkDetailsRequest,
   WorkImage,
-  WorkInstance,
-  WorkInstanceList,
+  WorkConnectedApp,
+  WorkConnectedAppList,
   WorkTag,
   WorkVersion,
   WorkVersionRequest,
@@ -115,7 +115,7 @@ export type {
   BrowseCursor,
   ColorSetContent,
   DeletedWork,
-  DownloadTarget,
+  DownloadFormat,
   ElementType,
   EntryTableContent,
   ExtensionDependency,
@@ -154,7 +154,7 @@ export type {
   PublicationEvent,
   PublicationGrant,
   PublicationWorkspace,
-  QueuedDelivery,
+  QueuedSend,
   ReadinessItem,
   RecordListContent,
   RecordedVersion,
@@ -191,7 +191,7 @@ export type NsfwPreference = NsfwPreferenceRequest["preference"];
 
 export type BrowseFilters = Pick<
   ListWorksParams,
-  "type" | "platform" | "q" | "facet"
+  "type" | "app" | "q" | "facet"
 >;
 
 export type WorkListParams = BrowseFilters &
@@ -295,11 +295,16 @@ export async function fetchWork(
   return data;
 }
 
-export type StartWorkApp = NonNullable<StartWorkRequest["app"]>;
+/** fetchBuildChoices asks which types can be built from nothing and which apps each asks for. */
+export async function fetchBuildChoices(): Promise<BuildChoices> {
+  const { data, error } = await api<BuildChoices>("GET", "/v1/build-choices");
+  if (error || !data) throw new Error("Could not load the types to build");
+  return data;
+}
 
 export async function startWork(
   type: string,
-  app?: StartWorkApp,
+  app?: string,
 ): Promise<WorkDetail> {
   const { data, error } = await api<WorkDetail>("POST", "/v1/works", {
     body: app ? { type, app } : { type },

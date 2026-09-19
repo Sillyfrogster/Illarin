@@ -120,13 +120,13 @@ function VersionChoices({
   }
   return (
     <WorkChooser
-      appTargets={offered.appTargets}
+      appFormats={offered.appFormats}
       workId={workId}
       blocks={offered.blocks}
       downloads={offered.downloads}
       holdsNothing={workHoldsNothing(offered.blocks)}
       images={offered.media}
-      instances={[]}
+      connectedApps={[]}
       isOwner={false}
       type={offered.type}
       typeLabel={typeName}

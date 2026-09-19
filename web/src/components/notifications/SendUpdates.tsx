@@ -6,7 +6,7 @@ import { api } from "@/lib/api/client";
 import type { Notification } from "@/lib/api/notifications";
 import { cn } from "@/lib/cn";
 
-type SendTarget = NonNullable<Notification["sendTargets"]>[number];
+type SendApp = NonNullable<Notification["sendTo"]>[number];
 type Progress = "ready" | "sending" | "waiting" | "failed";
 
 const CHIP =
@@ -19,25 +19,25 @@ const LOOK: Record<Progress, string> = {
   failed: "bg-stop-wash text-stop hover:bg-stop-wash/80",
 };
 
-/** The sends an update entry offers, one for each of the reader's instances that holds an older copy. */
+/** The sends an update entry offers, one for each of the reader's connected apps that holds an older copy. */
 export function SendUpdates({
   workId,
-  targets,
+  apps,
 }: {
   workId: string;
-  targets: SendTarget[];
+  apps: SendApp[];
 }) {
   const [progress, setProgress] = useState<Record<string, Progress>>({});
-  const stateOf = (target: SendTarget): Progress =>
-    progress[target.instanceId] ?? (target.waiting ? "waiting" : "ready");
-  const failed = targets.some((target) => stateOf(target) === "failed");
+  const stateOf = (app: SendApp): Progress =>
+    progress[app.connectedAppId] ?? (app.waiting ? "waiting" : "ready");
+  const failed = apps.some((app) => stateOf(app) === "failed");
 
-  async function send(target: SendTarget) {
-    setProgress((current) => ({ ...current, [target.instanceId]: "sending" }));
-    const landed = await queueDelivery(workId, target.instanceId);
+  async function send(app: SendApp) {
+    setProgress((current) => ({ ...current, [app.connectedAppId]: "sending" }));
+    const landed = await queueSend(workId, app.connectedAppId);
     setProgress((current) => ({
       ...current,
-      [target.instanceId]: landed ? "waiting" : "failed",
+      [app.connectedAppId]: landed ? "waiting" : "failed",
     }));
   }
 
@@ -45,20 +45,20 @@ export function SendUpdates({
     <div className="pt-2 pr-3 pb-3 pl-[3.875rem]">
       <p className="text-label font-medium text-ink/70">Send this update to</p>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
-        {targets.map((target) => {
-          const state = stateOf(target);
+        {apps.map((app) => {
+          const state = stateOf(app);
           return (
             <button
-              aria-label={sendLabel(target, state)}
+              aria-label={sendLabel(app, state)}
               className={cn(CHIP, LOOK[state])}
               disabled={state === "sending" || state === "waiting"}
-              key={target.instanceId}
-              onClick={() => void send(target)}
-              title={`${target.applicationName} — ${target.instanceName}`}
+              key={app.connectedAppId}
+              onClick={() => void send(app)}
+              title={`${app.appName} — ${app.name}`}
               type="button"
             >
               <Mark state={state} />
-              <span className="truncate">{target.instanceName}</span>
+              <span className="truncate">{app.name}</span>
             </button>
           );
         })}
@@ -86,22 +86,22 @@ function Mark({ state }: { state: Progress }) {
   );
 }
 
-function sendLabel(target: SendTarget, state: Progress): string {
+function sendLabel(app: SendApp, state: Progress): string {
   if (state === "waiting") {
-    return `${target.instanceName} is waiting to collect this update`;
+    return `${app.name} is waiting to collect this update`;
   }
-  return `Send the update to ${target.instanceName}`;
+  return `Send the update to ${app.name}`;
 }
 
-async function queueDelivery(
+async function queueSend(
   workId: string,
-  instanceId: string,
+  connectedAppId: string,
 ): Promise<boolean> {
   try {
     const { response } = await api<unknown>(
       "POST",
-      `/v1/works/${encodeURIComponent(workId)}/deliveries`,
-      { body: { instanceId } },
+      `/v1/works/${encodeURIComponent(workId)}/sends`,
+      { body: { connectedAppId } },
     );
     return response.ok;
   } catch {

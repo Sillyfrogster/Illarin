@@ -1,39 +1,43 @@
 import type {
-  LinkRedirect,
-  PendingDeviceLink,
-  PendingLink,
+  ConnectionRedirect,
+  PendingCodeConnection,
+  PendingConnection,
 } from "@/lib/api/shapes";
 import { isStringArray } from "./answer";
-export type { LinkRedirect, PendingDeviceLink, PendingLink };
+export type { ConnectionRedirect, PendingCodeConnection, PendingConnection };
 
-export function isPendingLink(value: unknown): value is PendingLink {
+export function isPendingConnection(
+  value: unknown,
+): value is PendingConnection {
   if (typeof value !== "object" || value === null) return false;
-  const link = value as Record<string, unknown>;
+  const connection = value as Record<string, unknown>;
   return (
-    typeof link.applicationName === "string" &&
-    typeof link.instanceName === "string" &&
-    (link.applicationVersion === undefined ||
-      link.applicationVersion === null ||
-      typeof link.applicationVersion === "string") &&
-    typeof link.protocolVersion === "number" &&
-    isStringArray(link.capabilities) &&
-    isStringArray(link.acceptedTargets) &&
-    isStringArray(link.scopes) &&
-    typeof link.expiresAt === "string"
+    typeof connection.appName === "string" &&
+    typeof connection.name === "string" &&
+    (connection.appVersion === undefined ||
+      connection.appVersion === null ||
+      typeof connection.appVersion === "string") &&
+    typeof connection.protocolVersion === "number" &&
+    isStringArray(connection.capabilities) &&
+    isStringArray(connection.acceptedFormats) &&
+    isStringArray(connection.permissions) &&
+    typeof connection.expiresAt === "string"
   );
 }
 
-export function isPendingDeviceLink(
+export function isPendingCodeConnection(
   value: unknown,
-): value is PendingDeviceLink {
+): value is PendingCodeConnection {
   return (
-    isPendingLink(value) &&
+    isPendingConnection(value) &&
     "approvalToken" in value &&
     typeof value.approvalToken === "string"
   );
 }
 
-export function isLinkRedirect(value: unknown): value is LinkRedirect {
+export function isConnectionRedirect(
+  value: unknown,
+): value is ConnectionRedirect {
   return (
     typeof value === "object" &&
     value !== null &&

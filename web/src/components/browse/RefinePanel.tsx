@@ -134,7 +134,7 @@ function RefineGroups({
   setPreference,
   preference,
 }: RefineChoices & { className?: string }) {
-  const apps = overview?.platforms ?? [];
+  const apps = overview?.apps ?? [];
   const facets = overview?.facets ?? [];
 
   function toggleFacet(key: string, value: string, selected: boolean) {
@@ -149,21 +149,21 @@ function RefineGroups({
       {apps.length ? (
         <Group legend="Works with">
           <Choice
-            checked={!filters.platform}
+            checked={!filters.app}
             label="Any app"
             name={`${id}-app`}
-            onChange={() => navigate({ ...filters, platform: undefined })}
+            onChange={() => navigate({ ...filters, app: undefined })}
             type="radio"
           />
           {apps.map((app) => (
             <Choice
-              checked={filters.platform === app.value}
+              checked={filters.app === app.value}
               count={app.count}
               disabled={app.count === 0}
               key={app.value}
               label={app.label}
               name={`${id}-app`}
-              onChange={() => navigate({ ...filters, platform: app.value })}
+              onChange={() => navigate({ ...filters, app: app.value })}
               type="radio"
             />
           ))}

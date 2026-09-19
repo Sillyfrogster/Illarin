@@ -1,14 +1,14 @@
 import type {
-  AppTarget,
-  DownloadTarget,
-  QueuedDelivery,
+  AppFormat,
+  DownloadFormat,
+  QueuedSend,
   WorkBlock,
+  WorkConnectedApp,
   WorkDetail,
   WorkImage,
-  WorkInstance,
 } from "@/lib/api/query";
 
-type RoleVerdict = DownloadTarget["roles"][number];
+type RoleVerdict = DownloadFormat["roles"][number];
 
 export type FormatLoss = {
   role: string;
@@ -27,25 +27,23 @@ export type FormatChoice = {
   losses: FormatLoss[];
 };
 
-export type DeliveryDestination = {
+export type SendDestination = {
   id: string;
   label: string;
 };
 
 export const DOWNLOAD_DESTINATION = "file";
 
-/** canSendWork says whether the API will send this work to an installation. */
+/** canSendWork says whether the API will send this work to a connected app. */
 export function canSendWork(
   work: Pick<WorkDetail, "lifecycle" | "withhold">,
 ): boolean {
   return work.lifecycle === "published" && !work.withhold;
 }
 
-/** isWaiting says whether a delivery is still on its way to the instance. */
-export function isWaiting(
-  delivery: QueuedDelivery | null | undefined,
-): boolean {
-  return delivery?.state === "queued" || delivery?.state === "released";
+/** isWaiting says whether a send is still on its way to the connected app. */
+export function isWaiting(send: QueuedSend | null | undefined): boolean {
+  return send?.state === "queued" || send?.state === "released";
 }
 
 /** The largest file Illarin will produce, matching the API's own ceiling. */
@@ -66,9 +64,8 @@ export type TravellingImage = {
 
 const FAILURES: Record<string, string> = {
   withdrawn: "This work was withdrawn before it could be collected.",
-  unsupported:
-    "This application accepts no format this work can be written in.",
-  abandoned: "The application kept taking this delivery without installing it.",
+  unsupported: "This app accepts no format this work can be written in.",
+  abandoned: "The app kept collecting this send without installing it.",
 };
 
 function costs(role: RoleVerdict): boolean {
@@ -80,7 +77,7 @@ const GALLERY_ROLE = "gallery";
 function asLoss(
   role: RoleVerdict,
   app: AppNaming,
-  apps: AppTarget[],
+  apps: AppFormat[],
 ): FormatLoss {
   return {
     role: role.role,
@@ -104,7 +101,7 @@ function reaches(role: RoleVerdict, app: string): boolean {
 function verdictLine(
   role: RoleVerdict,
   app: AppNaming,
-  apps: AppTarget[],
+  apps: AppFormat[],
 ): string {
   if (role.verdict === "dropped") return "Not included.";
   if (role.verdict === "reduced") {
@@ -121,7 +118,7 @@ function verdictLine(
 }
 
 /** whoShows names the listed apps a destination reaches and the ones it does not. */
-function whoShows(role: RoleVerdict, apps: AppTarget[]): string {
+function whoShows(role: RoleVerdict, apps: AppFormat[]): string {
   const shows = apps.filter((app) => (role.shownBy ?? []).includes(app.id));
   const blind = apps.filter((app) => !(role.shownBy ?? []).includes(app.id));
   if (blind.length === 0) return "";
@@ -133,21 +130,21 @@ function whoShows(role: RoleVerdict, apps: AppTarget[]): string {
   return `${nameList(shows)} ${verb} these; ${nameList(blind)} ${does} not.`;
 }
 
-function nameList(apps: AppTarget[]): string {
+function nameList(apps: AppFormat[]): string {
   const names = apps.map((app) => app.label);
   if (names.length < 2) return names.join("");
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
 function costLine(
-  target: DownloadTarget,
+  offered: DownloadFormat,
   holdsNothing: boolean,
   app: AppNaming,
 ): string {
   const lost = app.id
-    ? target.roles.filter((role) => !reaches(role, app.id)).length
-    : target.roles.filter(costs).length;
-  const elsewhere = app.id ? 0 : target.roles.filter(landsElsewhere).length;
+    ? offered.roles.filter((role) => !reaches(role, app.id)).length
+    : offered.roles.filter(costs).length;
+  const elsewhere = app.id ? 0 : offered.roles.filter(landsElsewhere).length;
   if (holdsNothing && lost === 0) return "No exportable content yet";
   if (lost > 0) {
     return lost === 1
@@ -165,7 +162,7 @@ function costLine(
 type AppNaming = { id: string; label: string };
 
 /** appLabel names an app the way the API labelled it. */
-export function appLabel(apps: AppTarget[], id: string): string {
+export function appLabel(apps: AppFormat[], id: string): string {
   return apps.find((app) => app.id === id)?.label ?? "";
 }
 
@@ -175,31 +172,31 @@ export function formatChoices({
   app = "",
   apps = [],
 }: {
-  downloads: DownloadTarget[];
+  downloads: DownloadFormat[];
   holdsNothing: boolean;
   app?: string;
-  apps?: AppTarget[];
+  apps?: AppFormat[];
 }): FormatChoice[] {
   const naming = { id: app, label: appLabel(apps, app) };
   const pick = app
     ? (apps.find((one) => one.id === app)?.format ?? "")
-    : downloads.find((target) => target.recommended)?.format;
+    : downloads.find((offered) => offered.recommended)?.format;
   const ordered = [
-    ...downloads.filter((target) => target.format === pick),
-    ...downloads.filter((target) => target.format !== pick),
+    ...downloads.filter((offered) => offered.format === pick),
+    ...downloads.filter((offered) => offered.format !== pick),
   ];
 
-  return ordered.map((target) => {
+  return ordered.map((offered) => {
     const noted = [
-      ...target.roles.filter(costs),
-      ...target.roles.filter((role) => !costs(role) && role.destination),
+      ...offered.roles.filter(costs),
+      ...offered.roles.filter((role) => !costs(role) && role.destination),
     ].map((role) => asLoss(role, naming, apps));
-    const gallery = target.roles.find((role) => role.role === GALLERY_ROLE);
+    const gallery = offered.roles.find((role) => role.role === GALLERY_ROLE);
     return {
-      format: target.format,
-      label: target.label,
-      recommended: target.format === pick,
-      cost: costLine(target, holdsNothing, naming),
+      format: offered.format,
+      label: offered.label,
+      recommended: offered.format === pick,
+      cost: costLine(offered, holdsNothing, naming),
       carriesGallery: gallery
         ? naming.id
           ? reaches(gallery, naming.id)
@@ -211,57 +208,53 @@ export function formatChoices({
   });
 }
 
-export function deliveryDestinations(
-  instances: WorkInstance[],
-): DeliveryDestination[] {
+export function sendDestinations(apps: WorkConnectedApp[]): SendDestination[] {
   return [
     { id: DOWNLOAD_DESTINATION, label: "Download a file" },
-    ...instances
-      .filter((instance) => instance.canReceive)
-      .map((instance) => ({
-        id: instance.instanceId,
-        label: `${instance.applicationName} — ${instance.instanceName}`,
+    ...apps
+      .filter((app) => app.canReceive)
+      .map((app) => ({
+        id: app.connectedAppId,
+        label: `${app.appName} — ${app.name}`,
       })),
   ];
 }
 
-/** installsOnInstance says whether an app installs this type rather than reading it as content. */
-export function installsOnInstance(type: string): boolean {
+/** installsInApp says whether an app installs this type rather than reading it as content. */
+export function installsInApp(type: string): boolean {
   return type === "extension";
 }
 
 export function sendActionLabel(
-  instance: WorkInstance,
+  app: WorkConnectedApp,
   installs = false,
 ): string {
-  if (isWaiting(instance.delivery)) return "Waiting to be collected";
+  if (isWaiting(app.send)) return "Waiting to be collected";
   if (installs) {
-    if (instance.updateAvailable) return `Update on ${instance.instanceName}`;
-    if (instance.installedVersion !== null) {
-      return `Install again on ${instance.instanceName}`;
-    }
-    return `Install on ${instance.instanceName}`;
+    if (app.updateAvailable) return `Update on ${app.name}`;
+    if (app.installedVersion !== null) return `Install again on ${app.name}`;
+    return `Install on ${app.name}`;
   }
-  if (instance.updateAvailable) return "Send the update";
-  if (instance.installedVersion !== null) return "Send again";
+  if (app.updateAvailable) return "Send the update";
+  if (app.installedVersion !== null) return "Send again";
   return "Send";
 }
 
-export function instanceStanding(instance: WorkInstance): string {
-  if (instance.updateAvailable) {
+export function connectedAppStanding(app: WorkConnectedApp): string {
+  if (app.updateAvailable) {
     return "Installed, and a newer version exists here.";
   }
-  if (instance.installedVersion !== null) {
+  if (app.installedVersion !== null) {
     return "Installed and up to date.";
   }
-  if (!instance.reportsLibrary) {
-    return "This application does not report installed works. Installation status is unavailable.";
+  if (!app.reportsLibrary) {
+    return "This app does not report installed works. Installation status is unavailable.";
   }
   return "Not installed here yet.";
 }
 
-export function deliveryFailureLine(reason: string | null | undefined): string {
-  return FAILURES[reason ?? ""] ?? "This delivery did not arrive.";
+export function sendFailureLine(reason: string | null | undefined): string {
+  return FAILURES[reason ?? ""] ?? "This send did not arrive.";
 }
 
 function imageItems(blocks: WorkBlock[], role: string) {

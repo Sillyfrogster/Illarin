@@ -15,15 +15,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { api } from "@/lib/api/client";
-import type { WorkInstance, WorkInstanceList } from "@/lib/api/query";
+import type { WorkConnectedApp, WorkConnectedAppList } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import { installTrack } from "@/lib/install-track";
 import { installedVersionsLine } from "@/lib/installed-app-versions";
-import {
-  formatChoices,
-  installsOnInstance,
-  isWaiting,
-} from "@/lib/work-delivery";
+import { formatChoices, installsInApp, isWaiting } from "@/lib/work-send";
 import { FollowOffer } from "./follow/FollowOffer";
 import { InstallProgress } from "./InstallProgress";
 import { WorkChooser, type WorkChooserProps } from "./WorkChooser";
@@ -46,42 +42,42 @@ export function GetWork({
     type,
     typeLabel,
     downloads,
-    appTargets,
+    appFormats,
     original,
     holdsNothing,
     linkedInstallOnly,
   } = props;
   const { account } = useAuth();
-  const [instances, setInstances] = useState<WorkInstance[]>([]);
+  const [connectedApps, setConnectedApps] = useState<WorkConnectedApp[]>([]);
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState(0);
   const [busy, setBusy] = useState(false);
   const [sentAway, setSentAway] = useState(false);
   const polls = useRef(0);
-  const installs = installsOnInstance(type);
+  const installs = installsInApp(type);
 
   const read = useCallback(async () => {
-    const { data } = await api<WorkInstanceList>(
+    const { data } = await api<WorkConnectedAppList>(
       "GET",
-      `/v1/works/${workId}/instances`,
+      `/v1/works/${workId}/connected-apps`,
       { cache: "no-store" },
     );
     if (!data) {
-      setInstances([]);
+      setConnectedApps([]);
       return;
     }
-    setInstances(data.items);
+    setConnectedApps(data.items);
   }, [workId]);
 
   useEffect(() => {
     if (!account || !sendable) {
-      setInstances([]);
+      setConnectedApps([]);
       return;
     }
     void read();
   }, [account, sendable, read]);
 
-  const waiting = instances.some((one) => isWaiting(one.delivery));
+  const waiting = connectedApps.some((one) => isWaiting(one.send));
   useEffect(() => {
     if (!waiting) {
       polls.current = 0;
@@ -98,10 +94,10 @@ export function GetWork({
     return () => clearInterval(timer);
   }, [waiting, read]);
 
-  async function dismiss(deliveryId: string) {
+  async function dismiss(sendId: string) {
     setBusy(true);
     try {
-      await api<void>("DELETE", `/v1/deliveries/${deliveryId}`);
+      await api<void>("DELETE", `/v1/sends/${sendId}`);
       await read();
     } finally {
       setBusy(false);
@@ -111,20 +107,20 @@ export function GetWork({
   const choices = formatChoices({
     downloads,
     holdsNothing,
-    app: appTargets[0]?.id ?? "",
-    apps: appTargets,
+    app: appFormats[0]?.id ?? "",
+    apps: appFormats,
   });
-  const receiving = instances.some((one) => one.canReceive);
+  const receiving = connectedApps.some((one) => one.canReceive);
   const chooses = linkedInstallOnly
     ? receiving
     : choices.length > 0 || Boolean(original);
   if (!chooses) return aside ? <div className="flex">{aside}</div> : null;
 
   const tracks = installs
-    ? instances.map(installTrack).filter((track) => track !== null)
+    ? connectedApps.map(installTrack).filter((track) => track !== null)
     : [];
   const versionsLine = installedVersionsLine({
-    appTargets,
+    appFormats,
     installedAppVersions,
   });
 
@@ -154,7 +150,7 @@ export function GetWork({
             <WorkChooser
               key={opened}
               {...props}
-              instances={instances}
+              connectedApps={connectedApps}
               onSent={
                 installs
                   ? () => {
@@ -180,10 +176,10 @@ export function GetWork({
           {tracks.map((track) => (
             <InstallProgress
               busy={busy}
-              key={track.instance.instanceId}
+              key={track.app.connectedAppId}
               onDismiss={() => {
-                if (track.instance.delivery) {
-                  void dismiss(track.instance.delivery.id);
+                if (track.app.send) {
+                  void dismiss(track.app.send.id);
                 }
               }}
               track={track}

@@ -1,5 +1,5 @@
-import type { QueuedDelivery, WorkInstance } from "@/lib/api/query";
-import { deliveryFailureLine } from "@/lib/work-delivery";
+import type { QueuedSend, WorkConnectedApp } from "@/lib/api/query";
+import { sendFailureLine } from "@/lib/work-send";
 
 export type InstallStep = {
   id: "queued" | "collected" | "installed";
@@ -7,9 +7,9 @@ export type InstallStep = {
   standing: "done" | "now" | "later";
 };
 
-/** InstallTrack is what an extension page shows for one instance the reader sent it to. */
+/** InstallTrack is what an extension page shows for one connected app the reader sent it to. */
 export type InstallTrack = {
-  instance: WorkInstance;
+  app: WorkConnectedApp;
   steps: InstallStep[];
   note: string;
   stopped: string | null;
@@ -29,22 +29,22 @@ function steps(done: number, now: number | null, last: string): InstallStep[] {
   }));
 }
 
-type Standing = Omit<InstallTrack, "instance">;
+type Standing = Omit<InstallTrack, "app">;
 
-/** installTrack reads what the page can say about one instance, or nothing when it has never been sent there. */
-export function installTrack(instance: WorkInstance): InstallTrack | null {
-  const standing = instance.delivery
-    ? deliveryStanding(instance, instance.delivery)
-    : libraryStanding(instance);
-  return standing ? { instance, ...standing } : null;
+/** installTrack reads what the page can say about one connected app, or nothing when it has never been sent there. */
+export function installTrack(app: WorkConnectedApp): InstallTrack | null {
+  const standing = app.send
+    ? sendStanding(app, app.send)
+    : libraryStanding(app);
+  return standing ? { app, ...standing } : null;
 }
 
-function libraryStanding(instance: WorkInstance): Standing | null {
-  if (instance.installedVersion === null) return null;
-  const here = instance.instanceName;
+function libraryStanding(app: WorkConnectedApp): Standing | null {
+  if (app.installedVersion === null) return null;
+  const here = app.name;
   return {
     steps: [],
-    note: instance.updateAvailable
+    note: app.updateAvailable
       ? `Installed on ${here}, and a newer version exists here.`
       : `Installed on ${here}.`,
     stopped: null,
@@ -52,14 +52,11 @@ function libraryStanding(instance: WorkInstance): Standing | null {
   };
 }
 
-function deliveryStanding(
-  instance: WorkInstance,
-  delivery: QueuedDelivery,
-): Standing {
-  const here = instance.instanceName;
-  const app = instance.applicationName;
+function sendStanding(app: WorkConnectedApp, send: QueuedSend): Standing {
+  const here = app.name;
+  const named = app.appName;
   const quiet = { stopped: null, live: false };
-  switch (delivery.state) {
+  switch (send.state) {
     case "queued":
       return {
         ...quiet,
@@ -77,14 +74,10 @@ function deliveryStanding(
     case "delivered":
       return {
         ...quiet,
-        steps: steps(
-          3,
-          null,
-          delivery.updatesInstall ? "Updated" : "Installed",
-        ),
-        note: delivery.updatesInstall
-          ? `Updated on ${here}. It stays on, and ${app} asks only about permissions the update adds.`
-          : `Installed on ${here}, switched off until you approve its permissions in ${app}.`,
+        steps: steps(3, null, send.updatesInstall ? "Updated" : "Installed"),
+        note: send.updatesInstall
+          ? `Updated on ${here}. It stays on, and ${named} asks only about permissions the update adds.`
+          : `Installed on ${here}, switched off until you approve its permissions in ${named}.`,
       };
     default:
       return {
@@ -92,9 +85,9 @@ function deliveryStanding(
         steps: steps(0, null, "Installed"),
         note: "",
         stopped:
-          delivery.reason === "unsupported"
+          send.reason === "unsupported"
             ? `${here} no longer says it installs extensions.`
-            : deliveryFailureLine(delivery.reason),
+            : sendFailureLine(send.reason),
       };
   }
 }

@@ -11,7 +11,7 @@ import {
   type PreservedNamespace,
 } from "@/lib/api/query";
 import type { ImportedWork } from "@/lib/import-stage";
-import { describePreservedNamespaces } from "@/lib/preserved";
+import { describePreservedLabels } from "@/lib/preserved";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
 
@@ -40,7 +40,7 @@ export function ImportReceipt({
 
   const carried =
     preserved && preserved.length > 0
-      ? describePreservedNamespaces(preserved.map(({ name }) => name))
+      ? describePreservedLabels(preserved.map(({ label }) => label))
       : null;
 
   return (

@@ -305,7 +305,7 @@ function FragmentFields({
       {!isMarker ? (
         <Switch
           checked={fragment.protected ?? false}
-          hint="Its text is sent only to an allowed linked application."
+          hint="Its text is sent only to an allowed connected app."
           label="Sealed prompt"
           onChange={(protectedPrompt) =>
             onChange({ protected: protectedPrompt })

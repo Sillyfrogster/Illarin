@@ -15,35 +15,35 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { type ApiMethod, api } from "@/lib/api/client";
 import type {
-  AppTarget,
-  DownloadTarget,
+  AppFormat,
+  DownloadFormat,
   OriginalUpload,
   RecordedVersion,
   WorkBlock,
+  WorkConnectedApp,
   WorkImage,
-  WorkInstance,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { shortMoment } from "@/lib/dates";
 import {
   appLabel,
+  connectedAppStanding,
   DOWNLOAD_DESTINATION,
-  deliveryDestinations,
-  deliveryFailureLine,
   downloadAddress,
   downloadBytes,
   type FormatChoice,
   type FormatLoss,
   fileSize,
   formatChoices,
-  installsOnInstance,
-  instanceStanding,
+  installsInApp,
   isWaiting,
   MAX_DOWNLOAD_BYTES,
   sendActionLabel,
+  sendDestinations,
+  sendFailureLine,
   type TravellingImage,
   travellingGallery,
-} from "@/lib/work-delivery";
+} from "@/lib/work-send";
 import { versionDate } from "@/lib/work-versions";
 import { FollowOffer } from "./follow/FollowOffer";
 
@@ -69,8 +69,8 @@ export type WorkChooserProps = {
   type: string;
   typeLabel: string;
   blocks: WorkBlock[];
-  downloads: DownloadTarget[];
-  appTargets: AppTarget[];
+  downloads: DownloadFormat[];
+  appFormats: AppFormat[];
   original: OriginalUpload | null;
   images: WorkImage[];
   holdsNothing: boolean;
@@ -84,29 +84,29 @@ export function WorkChooser({
   type,
   blocks,
   downloads,
-  appTargets,
+  appFormats,
   original,
   images,
   holdsNothing,
   isOwner,
   linkedInstallOnly,
-  instances,
+  connectedApps,
   refresh,
   onSent,
   version = null,
 }: WorkChooserProps & {
-  instances: WorkInstance[];
+  connectedApps: WorkConnectedApp[];
   refresh: () => Promise<void>;
   onSent?: () => void;
   version?: RecordedVersion | null;
 }) {
-  const installs = installsOnInstance(type);
+  const installs = installsInApp(type);
   const [format, setFormat] = useState("");
-  const [app, setApp] = useState(appTargets[0]?.id ?? "");
+  const [app, setApp] = useState(appFormats[0]?.id ?? "");
   const [openFormats, setOpenFormats] = useState(false);
   const [destination, setDestination] = useState(
     installs
-      ? (instances.find((one) => one.canReceive)?.instanceId ??
+      ? (connectedApps.find((one) => one.canReceive)?.connectedAppId ??
           DOWNLOAD_DESTINATION)
       : DOWNLOAD_DESTINATION,
   );
@@ -123,20 +123,20 @@ export function WorkChooser({
     downloads,
     holdsNothing,
     app,
-    apps: appTargets,
+    apps: appFormats,
   });
   const chosen =
     choices.find((choice) => choice.format === format) ?? choices[0];
   const goingToAnApp = Boolean(app);
-  const destinations = deliveryDestinations(instances).filter(
+  const destinations = sendDestinations(connectedApps).filter(
     (one) => one.id !== DOWNLOAD_DESTINATION || !linkedInstallOnly,
   );
   const goingTo =
     destinations.find((one) => one.id === destination) ?? destinations[0];
-  const instance = instances.find(
-    (one) => one.instanceId === goingTo?.id && one.canReceive,
+  const connectedApp = connectedApps.find(
+    (one) => one.connectedAppId === goingTo?.id && one.canReceive,
   );
-  const pending = isWaiting(instance?.delivery);
+  const pending = isWaiting(connectedApp?.send);
   const carriesGallery = chosen?.carriesGallery ?? false;
   const included =
     taken ?? gallery.filter((one) => one.chosen).map((one) => one.mediaId);
@@ -186,7 +186,7 @@ export function WorkChooser({
 
       {choices.length > 0 && !linkedInstallOnly ? (
         <>
-          {appTargets.length === 0 ? (
+          {appFormats.length === 0 ? (
             <fieldset className="min-w-0 border-0 p-0">
               <legend className="mb-2 text-meta font-medium text-ink">
                 Format
@@ -202,13 +202,13 @@ export function WorkChooser({
                 ))}
               </div>
             </fieldset>
-          ) : appTargets.length > 1 ? (
+          ) : appFormats.length > 1 ? (
             <fieldset className="min-w-0 border-0 p-0">
               <legend className="mb-2 text-meta font-medium text-ink">
                 Choose an app
               </legend>
               <div className="flex flex-wrap gap-1.5">
-                {appTargets.map((one) => (
+                {appFormats.map((one) => (
                   <AppChip
                     chosen={goingToAnApp && one.id === app}
                     key={one.id}
@@ -227,7 +227,7 @@ export function WorkChooser({
             <WhatTravels
               choice={chosen}
               images={images}
-              named={goingToAnApp ? appLabel(appTargets, app) : ""}
+              named={goingToAnApp ? appLabel(appFormats, app) : ""}
             />
           ) : null}
         </>
@@ -272,7 +272,9 @@ export function WorkChooser({
         </>
       ) : null}
 
-      {instance ? <InstanceStanding instance={instance} /> : null}
+      {connectedApp ? (
+        <ConnectedAppStanding connectedApp={connectedApp} />
+      ) : null}
 
       {toAFile && oversized ? (
         <p className="mt-4 flex items-start gap-2 text-meta text-stop">
@@ -297,7 +299,7 @@ export function WorkChooser({
               <Download aria-hidden="true" />
               {downloadLabel(
                 chosen,
-                goingToAnApp ? appLabel(appTargets, app) : "",
+                goingToAnApp ? appLabel(appFormats, app) : "",
               )}
             </>
           ) : (
@@ -315,20 +317,20 @@ export function WorkChooser({
               <Download aria-hidden="true" />
               {downloadLabel(
                 chosen,
-                goingToAnApp ? appLabel(appTargets, app) : "",
+                goingToAnApp ? appLabel(appFormats, app) : "",
               )}
             </a>
           )}
         </Button>
-      ) : instance ? (
+      ) : connectedApp ? (
         <div className="mt-4 flex flex-wrap gap-2">
           <Button
             className="flex-1"
             disabled={pending}
             loading={busy}
             onClick={async () => {
-              const sent = await act(`/v1/works/${workId}/deliveries`, "POST", {
-                instanceId: instance.instanceId,
+              const sent = await act(`/v1/works/${workId}/sends`, "POST", {
+                connectedAppId: connectedApp.connectedAppId,
               });
               if (!sent) return;
               setOffering(true);
@@ -341,14 +343,14 @@ export function WorkChooser({
             ) : (
               <Send aria-hidden="true" />
             )}
-            {sendActionLabel(instance, installs)}
+            {sendActionLabel(connectedApp, installs)}
           </Button>
-          {instance.delivery ? (
+          {connectedApp.send ? (
             <Button
               disabled={busy}
               onClick={() =>
-                instance.delivery &&
-                act(`/v1/deliveries/${instance.delivery.id}`, "DELETE")
+                connectedApp.send &&
+                act(`/v1/sends/${connectedApp.send.id}`, "DELETE")
               }
             >
               {pending ? "Cancel" : "Dismiss"}
@@ -365,7 +367,7 @@ export function WorkChooser({
 
       {offering ? <FollowOffer /> : null}
 
-      {choices.length > 1 && !linkedInstallOnly && appTargets.length > 0 ? (
+      {choices.length > 1 && !linkedInstallOnly && appFormats.length > 0 ? (
         <div className="mt-4 border-rule border-t pt-3">
           {openFormats ? (
             <fieldset className="min-w-0 border-0 p-0">
@@ -680,31 +682,35 @@ function Sample({
   );
 }
 
-function InstanceStanding({ instance }: { instance: WorkInstance }) {
-  const delivery = instance.delivery;
+function ConnectedAppStanding({
+  connectedApp,
+}: {
+  connectedApp: WorkConnectedApp;
+}) {
+  const send = connectedApp.send;
 
-  if (isWaiting(delivery)) {
+  if (isWaiting(send)) {
     return (
       <p className="mt-4 flex items-start gap-2 text-meta text-mute">
         <Clock aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-        Waiting for {instance.instanceName} to collect it.
+        Waiting for {connectedApp.name} to collect it.
       </p>
     );
   }
-  if (delivery?.state === "failed") {
+  if (send?.state === "failed") {
     return (
       <p className="mt-4 flex items-start gap-2 text-meta text-stop">
         <CircleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-        {deliveryFailureLine(delivery.reason)}
+        {sendFailureLine(send.reason)}
       </p>
     );
   }
   return (
     <p className="mt-4 text-meta text-mute">
-      {delivery?.state === "delivered" && delivery.settledAt
-        ? `Delivered ${shortMoment(delivery.settledAt)}. `
+      {send?.state === "delivered" && send.settledAt
+        ? `Delivered ${shortMoment(send.settledAt)}. `
         : ""}
-      {instanceStanding(instance)}
+      {connectedAppStanding(connectedApp)}
     </p>
   );
 }

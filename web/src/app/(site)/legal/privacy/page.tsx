@@ -39,11 +39,11 @@ const CLAUSES: LegalClause[] = [
           appears on your public profile.
         </p>
 
-        <h3>1.4 Applications you connect</h3>
+        <h3>1.4 Apps you connect</h3>
         <p>
-          For each application you link: the name and version it reported, the
-          permissions you granted it, when you linked it, and when it last used
-          its access. Its access tokens are stored only as hashes.
+          For each app you connect: the name and version it reported, the
+          permissions you granted it, when you connected it, and when it last
+          used its access. Its access tokens are stored only as hashes.
         </p>
 
         <h3>1.5 Server logs</h3>
@@ -79,9 +79,9 @@ const CLAUSES: LegalClause[] = [
             <strong>We do not record who downloads what.</strong> Illarin counts
             downloads for a creator&rsquo;s benefit. The record holds the work,
             the format, the time, and whether the download came from a signed-in
-            reader, the creator, a linked application, or nobody signed in at
-            all. It holds no account, no IP address, and nothing else that could
-            point back to a person.
+            reader, the creator, a connected app, or nobody signed in at all. It
+            holds no account, no IP address, and nothing else that could point
+            back to a person.
           </li>
           <li>
             <strong>There is no advertising on the site</strong>, no advertising
@@ -127,8 +127,8 @@ const CLAUSES: LegalClause[] = [
             downloads, and exports.
           </li>
           <li>
-            To hand your library to the applications you have linked, within
-            what you granted.
+            To hand your library to the apps you have connected, within what you
+            granted.
           </li>
           <li>
             To send you the emails the account needs, which are address
@@ -189,8 +189,8 @@ const CLAUSES: LegalClause[] = [
             <strong>Discord</strong>, if you choose to sign in or link with it.
           </li>
           <li>
-            <strong>Applications you link</strong>, which receive the work they
-            are allowed to fetch.
+            <strong>Apps you connect</strong>, which receive the work they are
+            allowed to fetch.
           </li>
           <li>
             <strong>Anyone</strong>, for work you publish and for your profile.
@@ -213,9 +213,9 @@ const CLAUSES: LegalClause[] = [
           until you delete it or it is removed. Deleted work sits in a 30 day
           recovery window while you can still restore it, and is destroyed after
           that. Sign-in sessions, email verification links, password reset
-          links, and application linking codes all expire on their own. Page
-          view records are deleted after 30 days. Server logs are kept for a
-          short rolling window.
+          links, and app connection codes all expire on their own. Page view
+          records are deleted after 30 days. Server logs are kept for a short
+          rolling window.
         </p>
       </>
     ),
@@ -226,8 +226,8 @@ const CLAUSES: LegalClause[] = [
       <>
         <p>
           You can see and change most of your data in your account settings,
-          including your email address, your password, your handle, your linked
-          applications, and your content preferences. Deleting a work or your
+          including your email address, your password, your handle, your
+          connected apps, and your content preferences. Deleting a work or your
           account is a normal control, not a request you have to file.
         </p>
         <p>
@@ -274,9 +274,9 @@ const CLAUSES: LegalClause[] = [
       <>
         <p>
           Passwords are hashed, never stored in readable form. Session tokens,
-          password reset links, email verification links, and application tokens
-          are stored as hashes too, so a copy of the database does not hand
-          someone your account. Traffic to Illarin is encrypted in transit.
+          password reset links, email verification links, and app tokens are
+          stored as hashes too, so a copy of the database does not hand someone
+          your account. Traffic to Illarin is encrypted in transit.
         </p>
         <p>
           None of that makes a system perfectly secure. Use a password you use

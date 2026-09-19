@@ -156,8 +156,8 @@ const CLAUSES: LegalClause[] = [
             No malware, phishing, or misleading links in uploads or profiles.
           </li>
           <li>
-            Don&rsquo;t use a linked application, or a token from one, to reach
-            work you would not be allowed to reach in a browser.
+            Don&rsquo;t use a connected app, or a token from one, to reach work
+            you would not be allowed to reach in a browser.
           </li>
         </ul>
       </>

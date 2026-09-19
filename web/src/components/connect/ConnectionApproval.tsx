@@ -18,13 +18,13 @@ import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import {
-  isLinkRedirect,
-  isPendingDeviceLink,
-  isPendingLink,
+  isConnectionRedirect,
+  isPendingCodeConnection,
+  isPendingConnection,
   isSafeLoopbackRedirect,
-  type PendingLink,
-} from "@/lib/link-request";
-import { type Decision, LinkDecision } from "./LinkDecision";
+  type PendingConnection,
+} from "@/lib/connection-request";
+import { ConnectionDecision, type Decision } from "./ConnectionDecision";
 
 type ReviewRequest =
   | { kind: "authorization"; requestCode: string }
@@ -34,7 +34,7 @@ type ReviewSource =
   | { kind: "authorization"; requestCode: string }
   | { kind: "device"; userCode: string; approvalToken: string };
 
-type Review = { source: ReviewSource; link: PendingLink };
+type Review = { source: ReviewSource; connection: PendingConnection };
 
 type Stage =
   | { kind: "entry" }
@@ -43,19 +43,19 @@ type Stage =
   | { kind: "confirm"; review: Review }
   | { kind: "deciding"; review: Review; decision: Decision }
   | { kind: "redirecting"; review: Review; decision: Decision }
-  | { kind: "approved"; link: PendingLink }
-  | { kind: "denied"; link: PendingLink };
+  | { kind: "approved"; connection: PendingConnection }
+  | { kind: "denied"; connection: PendingConnection };
 
 const UNREACHABLE =
   "We could not reach Illarin. Check your connection and try again.";
 
-export function LinkApproval() {
+export function ConnectionApproval() {
   const search = useSearchParams();
   const { account } = useAuth();
   const requestCode = search.get("request")?.trim() ?? "";
   const returnTo = requestCode
-    ? `/link?request=${encodeURIComponent(requestCode)}`
-    : "/link";
+    ? `/connect?request=${encodeURIComponent(requestCode)}`
+    : "/connect";
   const [manualForRequest, setManualForRequest] = useState("");
   const [stage, setStage] = useState<Stage>(() =>
     requestCode ? { kind: "loading" } : { kind: "entry" },
@@ -96,8 +96,8 @@ export function LinkApproval() {
 
     const isAuthorization = request.kind === "authorization";
     const endpoint = isAuthorization
-      ? `/v1/link/authorizations/${encodeURIComponent(request.requestCode)}`
-      : `/v1/link/requests/${encodeURIComponent(request.userCode)}`;
+      ? `/v1/connect/authorizations/${encodeURIComponent(request.requestCode)}`
+      : `/v1/connect/requests/${encodeURIComponent(request.userCode)}`;
 
     try {
       const { data, error, response } = await api<unknown>("GET", endpoint, {
@@ -109,8 +109,8 @@ export function LinkApproval() {
           refusalMessage(
             answer,
             isAuthorization
-              ? "That browser link request is no longer available."
-              : "That code does not match a pending link request.",
+              ? "That browser connection request is no longer available."
+              : "That code does not match a pending connection request.",
           ),
         );
         setStage({ kind: isAuthorization ? "request-error" : "entry" });
@@ -118,30 +118,34 @@ export function LinkApproval() {
       }
 
       if (isAuthorization) {
-        if (!isPendingLink(answer)) {
-          setTrouble("Illarin returned an incomplete link request. Try again.");
+        if (!isPendingConnection(answer)) {
+          setTrouble(
+            "Illarin returned an incomplete connection request. Try again.",
+          );
           setStage({ kind: "request-error" });
           return;
         }
         setStage({
           kind: "confirm",
           review: {
-            link: answer,
+            connection: answer,
             source: { kind: "authorization", requestCode: request.requestCode },
           },
         });
         return;
       }
 
-      if (!isPendingDeviceLink(answer)) {
-        setTrouble("Illarin returned an incomplete link request. Try again.");
+      if (!isPendingCodeConnection(answer)) {
+        setTrouble(
+          "Illarin returned an incomplete connection request. Try again.",
+        );
         setStage({ kind: "entry" });
         return;
       }
       setStage({
         kind: "confirm",
         review: {
-          link: answer,
+          connection: answer,
           source: {
             approvalToken: answer.approvalToken,
             kind: "device",
@@ -194,9 +198,9 @@ export function LinkApproval() {
                 </Link>
               </Button>
             }
-            body="Sign in to the account you want to link to this application."
+            body="Sign in to the account you want to connect this app to."
             requestPending={reviewingRequest}
-            title="Sign in to review this link"
+            title="Sign in to review this connection"
           />
         </Panel>
       </Frame>
@@ -217,7 +221,7 @@ export function LinkApproval() {
                 </Link>
               </Button>
             }
-            body="A verified address is needed before an application can be linked to your account."
+            body="A verified address is needed before an app can connect to your account."
             requestPending={reviewingRequest}
             title="Verify your email first"
           />
@@ -233,16 +237,16 @@ export function LinkApproval() {
           <Landing
             action={
               <Button asChild size="large" variant="primary">
-                <Link href="/settings">See linked applications</Link>
+                <Link href="/settings">See connected apps</Link>
               </Button>
             }
-            body={`Go back to ${stage.link.applicationName}. Linking is approved. The application can now finish connecting.`}
+            body={`Go back to ${stage.connection.appName}. The connection is approved, and the app can now finish connecting.`}
             mark={
               <Mark tone="accent">
                 <Check aria-hidden="true" className="size-6" strokeWidth={2} />
               </Mark>
             }
-            title={`${stage.link.instanceName} is linked`}
+            title={`${stage.connection.name} is connected`}
           />
         </Panel>
       </Frame>
@@ -259,7 +263,7 @@ export function LinkApproval() {
                 Enter another code
               </Button>
             }
-            body={`${stage.link.applicationName} was not linked. The application will see that this request was denied.`}
+            body={`${stage.connection.appName} was not connected. The app will see that this request was denied.`}
             mark={
               <Mark tone="stop">
                 <CircleX
@@ -269,7 +273,7 @@ export function LinkApproval() {
                 />
               </Mark>
             }
-            title="Link declined"
+            title="Connection declined"
           />
         </Panel>
       </Frame>
@@ -287,14 +291,14 @@ export function LinkApproval() {
       <Frame
         lede={
           isDevice
-            ? "Approve a private connection between your Illarin account and the installation that showed you this code."
-            : "Approve a private connection between your Illarin account and the application that opened this page."
+            ? "Approve a private connection between your Illarin account and the app that showed you this code."
+            : "Approve a private connection between your Illarin account and the app that opened this page."
         }
       >
         <Panel capture={capturePanel}>
-          <LinkDecision
+          <ConnectionDecision
+            connection={review.connection}
             deciding={stage.kind === "confirm" ? null : stage.decision}
-            link={review.link}
             onCancel={isDevice ? startOver : undefined}
             onDecide={(decision) => {
               void decide(review, decision, setStage, setTrouble);
@@ -315,7 +319,9 @@ export function LinkApproval() {
     return (
       <Frame lede="">
         <Panel busy capture={capturePanel}>
-          <p className="font-ui text-ui text-mute">Loading the link request…</p>
+          <p className="font-ui text-ui text-mute">
+            Loading the connection request…
+          </p>
         </Panel>
       </Frame>
     );
@@ -323,7 +329,7 @@ export function LinkApproval() {
 
   if (stage.kind === "request-error" && reviewingRequest) {
     return (
-      <Frame lede="The application could not reopen its request. You can enter a device code instead.">
+      <Frame lede="The app could not reopen its request. You can enter a device code instead.">
         <Panel capture={capturePanel}>
           <Mark tone="stop">
             <ShieldAlert
@@ -336,8 +342,8 @@ export function LinkApproval() {
             This request could not be opened
           </h2>
           <p className="mt-3 max-w-[52ch] font-prose text-prose text-mute">
-            It may have expired or already been used. Reopen the link from your
-            application, or enter a device code instead.
+            It may have expired or already been used. Start connecting again
+            from the app, or enter a device code instead.
           </p>
           {trouble ? (
             <div className="mt-5 max-w-[34rem]">
@@ -372,14 +378,14 @@ export function LinkApproval() {
   }
 
   return (
-    <Frame lede="Start linking in your application. If it gives you a code, enter it here.">
+    <Frame lede="Start connecting in your app. If it gives you a code, enter it here.">
       <form
         noValidate
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           event.preventDefault();
           const userCode = typed.trim();
           if (!userCode) {
-            setTrouble("Enter the code shown by your application.");
+            setTrouble("Enter the code your app is showing.");
             return;
           }
           void loadReview({ kind: "device", userCode });
@@ -390,19 +396,19 @@ export function LinkApproval() {
       >
         <label
           className="font-display text-section font-medium tracking-tight text-ink"
-          htmlFor="link-code"
+          htmlFor="connect-code"
         >
-          Type the code your application is showing
+          Type the code your app is showing
         </label>
         <input
           aria-describedby={
-            trouble ? "link-entry-trouble" : "link-entry-reason"
+            trouble ? "connect-entry-trouble" : "connect-entry-reason"
           }
           autoCapitalize="characters"
           autoComplete="off"
           className="mt-5 block min-h-[4.5rem] w-full max-w-[26rem] rounded-plate border-0 bg-deep px-6 text-center font-mono text-[clamp(1.6rem,4.5vw,2.5rem)] tracking-[0.22em] text-ink uppercase outline-offset-2 placeholder:text-mute/45"
           enterKeyHint="go"
-          id="link-code"
+          id="connect-code"
           maxLength={12}
           name="code"
           onChange={(event) => setTyped(event.target.value.toUpperCase())}
@@ -412,7 +418,7 @@ export function LinkApproval() {
           value={typed}
         />
         {trouble ? (
-          <div className="mt-4" id="link-entry-trouble">
+          <div className="mt-4" id="connect-entry-trouble">
             <Trouble>{trouble}</Trouble>
           </div>
         ) : null}
@@ -422,9 +428,9 @@ export function LinkApproval() {
           </Button>
           <p
             className="min-w-0 max-w-[34ch] flex-1 font-prose text-meta text-mute"
-            id="link-entry-reason"
+            id="connect-entry-reason"
           >
-            Next, review the application's identity and requested permissions.
+            Next, review the app's name and the permissions it asks for.
           </p>
         </div>
       </form>
@@ -437,7 +443,7 @@ function Frame({ children, lede }: { children: ReactNode; lede: string }) {
     <>
       <header>
         <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
-          Link an application
+          Connect an app
         </h1>
         {lede ? (
           <p className="mt-4 max-w-[58ch] font-prose text-lede text-mute">
@@ -558,8 +564,8 @@ async function decide(
   const isAuthorization = source.kind === "authorization";
   const action = decision === "approve" ? "approve" : "deny";
   const endpoint = isAuthorization
-    ? `/v1/link/authorizations/${encodeURIComponent(source.requestCode)}/${action}`
-    : `/v1/link/requests/${encodeURIComponent(source.userCode)}/${action}`;
+    ? `/v1/connect/authorizations/${encodeURIComponent(source.requestCode)}/${action}`
+    : `/v1/connect/requests/${encodeURIComponent(source.userCode)}/${action}`;
   const body = isAuthorization
     ? undefined
     : { approvalToken: source.approvalToken };
@@ -574,8 +580,8 @@ async function decide(
         refusalMessage(
           answer,
           decision === "approve"
-            ? "This link request could not be approved."
-            : "This link request could not be declined.",
+            ? "This connection request could not be approved."
+            : "This connection request could not be declined.",
         ),
       );
       setStage({ kind: "confirm", review });
@@ -584,7 +590,7 @@ async function decide(
 
     if (isAuthorization) {
       if (
-        !isLinkRedirect(answer) ||
+        !isConnectionRedirect(answer) ||
         !isSafeLoopbackRedirect(answer.redirectUrl)
       ) {
         setTrouble(
@@ -599,16 +605,16 @@ async function decide(
     }
 
     if (decision === "deny") {
-      setStage({ kind: "denied", link: review.link });
+      setStage({ connection: review.connection, kind: "denied" });
       return;
     }
 
-    if (!isPendingLink(answer)) {
+    if (!isPendingConnection(answer)) {
       setTrouble("Illarin returned an incomplete approval. Try again.");
       setStage({ kind: "confirm", review });
       return;
     }
-    setStage({ kind: "approved", link: answer });
+    setStage({ connection: answer, kind: "approved" });
   } catch {
     setTrouble(UNREACHABLE);
     setStage({ kind: "confirm", review });

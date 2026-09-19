@@ -1,26 +1,28 @@
 import { expect, test } from "bun:test";
-import type { QueuedDelivery, WorkInstance } from "@/lib/api/query";
+import type { QueuedSend, WorkConnectedApp } from "@/lib/api/query";
 import { installTrack } from "@/lib/install-track";
 
-function instance(overrides: Partial<WorkInstance> = {}): WorkInstance {
+function connectedApp(
+  overrides: Partial<WorkConnectedApp> = {},
+): WorkConnectedApp {
   return {
-    instanceId: "i1",
-    applicationName: "Lumiverse",
-    instanceName: "desk",
+    connectedAppId: "i1",
+    appName: "Lumiverse",
+    name: "desk",
     lastSeenAt: null,
     canReceive: true,
     reportsLibrary: true,
-    delivery: null,
+    send: null,
     installedVersion: null,
     updateAvailable: false,
     ...overrides,
   };
 }
 
-function delivery(overrides: Partial<QueuedDelivery> = {}): QueuedDelivery {
+function send(overrides: Partial<QueuedSend> = {}): QueuedSend {
   return {
     id: "d1",
-    instanceId: "i1",
+    connectedAppId: "i1",
     workId: "a1",
     state: "queued",
     queuedAt: "2026-09-13T10:00:00Z",
@@ -31,12 +33,12 @@ function delivery(overrides: Partial<QueuedDelivery> = {}): QueuedDelivery {
   };
 }
 
-test("an instance with nothing sent and nothing installed has no track", () => {
-  expect(installTrack(instance())).toBeNull();
+test("a connected app with nothing sent and nothing installed has no track", () => {
+  expect(installTrack(connectedApp())).toBeNull();
 });
 
-test("a queued delivery starts the track and keeps it live", () => {
-  const track = installTrack(instance({ delivery: delivery() }));
+test("a queued send starts the track and keeps it live", () => {
+  const track = installTrack(connectedApp({ send: send() }));
   expect(track?.steps.map((step) => step.standing)).toEqual([
     "now",
     "later",
@@ -46,9 +48,9 @@ test("a queued delivery starts the track and keeps it live", () => {
   expect(track?.live).toBe(true);
 });
 
-test("a released delivery has been picked up", () => {
+test("a released send has been picked up", () => {
   const track = installTrack(
-    instance({ delivery: delivery({ state: "released" }) }),
+    connectedApp({ send: send({ state: "released" }) }),
   );
   expect(track?.steps.map((step) => step.standing)).toEqual([
     "done",
@@ -61,8 +63,8 @@ test("a released delivery has been picked up", () => {
 
 test("an acknowledged first install waits for approval", () => {
   const track = installTrack(
-    instance({
-      delivery: delivery({
+    connectedApp({
+      send: send({
         state: "delivered",
         settledAt: "2026-09-13T10:01:00Z",
       }),
@@ -83,8 +85,8 @@ test("an acknowledged first install waits for approval", () => {
 
 test("an update keeps the extension on and says so", () => {
   const track = installTrack(
-    instance({
-      delivery: delivery({
+    connectedApp({
+      send: send({
         state: "delivered",
         settledAt: "2026-09-13T10:01:00Z",
         updatesInstall: true,
@@ -98,10 +100,10 @@ test("an update keeps the extension on and says so", () => {
   );
 });
 
-test("a stopped delivery shows its reason instead of progress", () => {
+test("a stopped send shows its reason instead of progress", () => {
   const track = installTrack(
-    instance({
-      delivery: delivery({
+    connectedApp({
+      send: send({
         state: "failed",
         reason: "unsupported",
         settledAt: "2026-09-13T10:01:00Z",
@@ -117,8 +119,8 @@ test("a stopped delivery shows its reason instead of progress", () => {
   expect(track?.live).toBe(false);
   expect(
     installTrack(
-      instance({
-        delivery: delivery({
+      connectedApp({
+        send: send({
           state: "failed",
           reason: "withdrawn",
           settledAt: "2026-09-13T10:01:00Z",
@@ -128,12 +130,12 @@ test("a stopped delivery shows its reason instead of progress", () => {
   ).toBe("This work was withdrawn before it could be collected.");
 });
 
-test("an install the library reports without a delivery on record is a standing line, not a track", () => {
-  const track = installTrack(instance({ installedVersion: 1 }));
+test("an install the library reports without a send on record is a standing line, not a track", () => {
+  const track = installTrack(connectedApp({ installedVersion: 1 }));
   expect(track?.steps).toEqual([]);
   expect(track?.note).toBe("Installed on desk.");
   expect(
-    installTrack(instance({ installedVersion: 1, updateAvailable: true }))
+    installTrack(connectedApp({ installedVersion: 1, updateAvailable: true }))
       ?.note,
   ).toBe("Installed on desk, and a newer version exists here.");
 });

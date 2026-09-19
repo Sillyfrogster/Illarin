@@ -3,7 +3,7 @@ import { installedVersionsLine } from "@/lib/installed-app-versions";
 
 function spindlePage(installedAppVersions: string[]) {
   return {
-    appTargets: [
+    appFormats: [
       { id: "lumiverse", label: "Lumiverse", format: "extension_spindle" },
     ],
     installedAppVersions,
@@ -48,6 +48,6 @@ test("an extension no group of installations reports a version for shows no line
 
 test("a page offering no app to name the versions after shows no line", () => {
   expect(
-    installedVersionsLine({ appTargets: [], installedAppVersions: ["1.2.0"] }),
+    installedVersionsLine({ appFormats: [], installedAppVersions: ["1.2.0"] }),
   ).toBeNull();
 });

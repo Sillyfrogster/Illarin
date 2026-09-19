@@ -1,26 +1,7 @@
-const PRESERVED_LABELS: Record<string, string> = {
-  card: "unread character-card details",
-  character_book: "extra lorebook details",
-  chub: "Chub metadata",
-  tavern_helper: "TavernHelper scripts",
-  risuai: "RisuAI details",
-  lumiverse_modules: "Lumiverse modules",
-  landing_perspective_layers: "perspective layers",
-  regex_scripts: "regex scripts",
-};
-
-export function describePreservedNamespace(namespace: string): string {
-  return PRESERVED_LABELS[namespace] ?? "other format-specific details";
-}
-
-export function describePreservedNamespaces(namespaces: readonly string[]) {
-  const labels = [
-    ...new Set(
-      namespaces.map((namespace) => describePreservedNamespace(namespace)),
-    ),
-  ];
-
-  if (labels.length === 1) return labels[0];
-  if (labels.length === 2) return labels.join(" and ");
-  return `${labels.slice(0, -1).join(", ")}, and ${labels.at(-1)}`;
+/** describePreservedLabels joins the labels the API gave each namespace into one phrase, naming each once. */
+export function describePreservedLabels(labels: readonly string[]) {
+  const unique = [...new Set(labels)];
+  if (unique.length === 1) return unique[0];
+  if (unique.length === 2) return unique.join(" and ");
+  return `${unique.slice(0, -1).join(", ")}, and ${unique.at(-1)}`;
 }

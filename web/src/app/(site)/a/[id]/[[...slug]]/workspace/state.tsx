@@ -19,15 +19,12 @@ import {
   type WorkDetailsRequest,
   type WorkElement,
 } from "@/lib/api/query";
+import type { AppName } from "@/lib/api/shapes";
 import {
   DRAFTED_CHANGES_STALE,
   useDraftedChanges,
 } from "@/lib/drafted-changes";
-import {
-  type AllowedApp,
-  hasSealedPrompts,
-  NO_ALLOWED_APP,
-} from "../SealedPolicy";
+import { hasSealedPrompts, NO_ALLOWED_APP } from "../SealedPolicy";
 import { unsealedPrompts } from "../UnsealConfirmation";
 import { type Arrangement, useArrangement } from "./arrangement";
 import { seatElements } from "./composition";
@@ -69,8 +66,8 @@ type Workspace = {
   addableBlocks: AddableBlock[];
   arrangement: Arrangement;
   details: Details;
-  allowedApps: AllowedApp[];
-  eligibleApps: AllowedApp[];
+  allowedApps: AppName[];
+  eligibleApps: AppName[];
   cursor: string | null;
   chosenItems: Record<string, string>;
   dirty: boolean;
@@ -89,7 +86,7 @@ type Workspace = {
   editBlockList: (change: (blocks: WorkBlock[]) => WorkBlock[]) => void;
   writeElement: (blockId: string, element: WorkElement) => void;
   writeDetails: (details: Details) => void;
-  setAllowedApps: (apps: AllowedApp[]) => void;
+  setAllowedApps: (apps: AppName[]) => void;
   openPane: (pane: Pane) => void;
   closePane: () => void;
   say: (message: string) => void;
@@ -124,8 +121,8 @@ export function WorkspaceProvider({
   isDraft: boolean;
   blocks: WorkBlock[];
   details: Details;
-  allowedApps: AllowedApp[];
-  eligibleApps: AllowedApp[];
+  allowedApps: AppName[];
+  eligibleApps: AppName[];
   unpublishedChanges: boolean;
   children: ReactNode;
 }) {
@@ -137,7 +134,7 @@ export function WorkspaceProvider({
   const [saved, setSaved] = useState(blocks);
   const [draftDetails, setDraftDetails] = useState(details);
   const [savedDetails, setSavedDetails] = useState(details);
-  const [apps, setApps] = useState<AllowedApp[]>(allowedApps);
+  const [apps, setApps] = useState<AppName[]>(allowedApps);
   const [cursor, setCursor] = useState<string | null>(null);
   const [chosenItems, setChosenItems] = useState<Record<string, string>>({});
   const [pane, setPane] = useState<Pane | null>(null);
@@ -245,7 +242,7 @@ export function WorkspaceProvider({
               blockSaveRequest(block, {
                 exposeProtected: expose || exposeConfirmed.current || undefined,
                 allowedApps: sealed
-                  ? apps
+                  ? apps.map((app) => app.id)
                   : allowedApps.length > 0
                     ? []
                     : undefined,

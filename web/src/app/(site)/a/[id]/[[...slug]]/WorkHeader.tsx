@@ -7,10 +7,9 @@ import { Field, TextArea } from "@/components/ui/field";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
 import type { WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { protectedAppLabel } from "@/lib/protected-apps";
 import { formattingWasRemoved } from "@/lib/rich-text";
-import { canSendWork } from "@/lib/work-delivery";
 import { workDisplayName } from "@/lib/work-name";
+import { canSendWork } from "@/lib/work-send";
 import { FollowControl } from "./follow/FollowControl";
 import { WorkFollowProvider } from "./follow/state";
 import { GetWork } from "./GetWork";
@@ -71,7 +70,7 @@ export function WorkHeader({
     workId: work.id,
     blocks: work.blocks,
     downloads: work.downloads,
-    appTargets: work.appTargets,
+    appFormats: work.appFormats,
     holdsNothing,
     images: work.media,
     isOwner: work.isOwner,
@@ -316,9 +315,9 @@ export function WorkHeader({
 
             {work.linkedInstallOnly ? (
               <p className="mt-4 max-w-[42ch] text-meta text-mute">
-                This {typeLabel.toLowerCase()} installs only through a linked
+                This {typeLabel.toLowerCase()} installs only through a connected
                 app. Allowed apps:{" "}
-                {work.allowedApps.map(protectedAppLabel).join(", ")}.
+                {work.allowedApps.map((app) => app.label).join(", ")}.
               </p>
             ) : null}
 

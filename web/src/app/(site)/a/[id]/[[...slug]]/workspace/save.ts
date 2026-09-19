@@ -4,7 +4,6 @@ import type {
   WorkElement,
 } from "@/lib/api/query";
 import { writesInPlace as writtenInPlace } from "@/lib/page-arrangement";
-import type { AllowedApp } from "../SealedPolicy";
 
 export function writesInPlace(element: WorkElement): boolean {
   return writtenInPlace(element.type);
@@ -17,7 +16,7 @@ export function blockSaveRequest(
     layout?: WorkBlock["layout"];
     width?: WorkBlock["width"];
     elements?: WorkElement[];
-    allowedApps?: AllowedApp[];
+    allowedApps?: string[];
     exposeProtected?: boolean;
   } = {},
 ): SaveWorkBlockRequest {

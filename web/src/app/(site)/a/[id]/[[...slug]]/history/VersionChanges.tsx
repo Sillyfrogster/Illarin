@@ -41,8 +41,8 @@ export function VersionChanges({
     <div className="mt-4 max-w-[70ch]">
       {compared.promptsWithheld ? (
         <p className="mb-4 max-w-[60ch] text-meta text-mute">
-          This {typeName} has sealed prompts for linked applications. Their
-          wording is not shown here.
+          This {typeName} has sealed prompts for connected apps. Their wording
+          is not shown here.
         </p>
       ) : null}
 
