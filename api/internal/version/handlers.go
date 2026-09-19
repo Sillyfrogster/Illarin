@@ -24,7 +24,7 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPost, "/v1/works/:id/versions/:number/restore", d.JSON, h.RestoreWorkVersion)
 	routes.Handle(http.MethodPatch, "/v1/works/:id/versions/:number/notes", d.JSON, h.CorrectWorkVersionNotes)
 	routes.Handle(http.MethodPost, "/v1/works/:id/versions/:number/withdraw", d.JSON, h.WithdrawWorkVersion)
-	routes.Handle(http.MethodGet, "/v1/works/:id/versions/protection", d.JSON, h.ListProtectionMismatches)
-	routes.Handle(http.MethodPut, "/v1/works/:id/versions/:number/protection", d.JSON, h.ResolvePromptCorrespondence)
+	routes.Handle(http.MethodGet, "/v1/works/:id/versions/private-prompts", d.JSON, h.ListPrivatePromptMismatches)
+	routes.Handle(http.MethodPut, "/v1/works/:id/versions/:number/private-prompts", d.JSON, h.ResolvePromptCorrespondence)
 	registerAliases(routes, h)
 }

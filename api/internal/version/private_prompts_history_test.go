@@ -23,7 +23,7 @@ type versionComparisonBody struct {
 	} `json:"groups"`
 }
 
-type protectionMismatchBody struct {
+type privatePromptMismatchBody struct {
 	Items []struct {
 		Version   apitest.RecordedVersionBody `json:"version"`
 		Unmatched []struct {
@@ -47,18 +47,18 @@ func compareVersions(t *testing.T, router *gin.Engine, workID, query string, ses
 	return apitest.Send(t, router, request)
 }
 
-func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
+func TestRecordedPromptsAreReadUnderTheCurrentPrivatePrompts(t *testing.T) {
 	t.Parallel()
 	setupRouter, router, session, _ := harness.NewVerifiedRoutersWithService(t, 1<<20, api.DefaultDeadlines())
-	publicID, sealedID := uuid.New(), uuid.New()
+	publicID, privateID := uuid.New(), uuid.New()
 	const firstSecret = "Never hand these words to a reader."
 	const secondSecret = "Nor these ones either."
-	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID,
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, privateID,
 		"Answer plainly.", firstSecret)
 
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID,
+	core.Elements[0].Content = apitest.PrivatePresetPrompts(publicID, privateID,
 		"Answer plainly and briefly.", secondSecret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
@@ -122,29 +122,29 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 
 	other := apitest.SignUp(t, setupRouter, "onlooker@example.com", "onlooker.reader")
 	crossOwner := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+started.ID+"/versions/protection", nil), other))
+		http.MethodGet, "/v1/works/"+started.ID+"/versions/private-prompts", nil), other))
 	if crossOwner.Code != http.StatusNotFound {
-		t.Fatalf("another account read the sealed prompts: %d %s", crossOwner.Code, crossOwner.Body.String())
+		t.Fatalf("another account read the private prompts: %d %s", crossOwner.Code, crossOwner.Body.String())
 	}
 
 	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
-		string(core.Elements[0].Content), `"protected":true`, `"protected":false`))
+		string(core.Elements[0].Content), `"private":true`, `"private":false`))
 	core.AllowedApps = &[]string{}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusConflict {
-		t.Fatalf("unseal without confirming = %d, want 409: %s", got.Code, got.Body.String())
+		t.Fatalf("make public without confirming = %d, want 409: %s", got.Code, got.Body.String())
 	}
 	confirmed := true
-	core.ExposeProtected = &confirmed
+	core.MakePromptsPublic = &confirmed
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("unseal the prompt: %d %s", got.Code, got.Body.String())
+		t.Fatalf("make the prompt public: %d %s", got.Code, got.Body.String())
 	}
 
 	reader = compareVersions(t, router, started.ID, "", nil)
 	for _, secret := range []string{firstSecret, secondSecret} {
 		if !strings.Contains(reader.Body.String(), secret) {
-			t.Fatalf("history stayed sealed after the owner made %q public", secret)
+			t.Fatalf("history stayed private after the owner made %q public", secret)
 		}
 	}
 }
@@ -152,14 +152,14 @@ func TestRecordedPromptsAreReadUnderTheCurrentProtection(t *testing.T) {
 func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.T) {
 	t.Parallel()
 	router, session := harness.NewVerifiedRouter(t)
-	publicID, sealedID := uuid.New(), uuid.New()
+	publicID, privateID := uuid.New(), uuid.New()
 	const secret = "The reader must never receive these words."
 	const houseRule = "Answer plainly."
-	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, houseRule, secret)
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, privateID, houseRule, secret)
 
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID, houseRule+" And briefly.", secret)
+	core.Elements[0].Content = apitest.PrivatePresetPrompts(publicID, privateID, houseRule+" And briefly.", secret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("edit the house rule: %d %s", got.Code, got.Body.String())
@@ -169,11 +169,11 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 		t.Fatalf("publish the update: %d %s", got.Code, got.Body.String())
 	}
 
-	reimportedPublic, reimportedSealed := uuid.New(), uuid.New()
+	reimportedPublic, reimportedPrivate := uuid.New(), uuid.New()
 	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = apitest.SealedPresetPrompts(
-		reimportedPublic, reimportedSealed, houseRule+" And briefly.", secret)
+	core.Elements[0].Content = apitest.PrivatePresetPrompts(
+		reimportedPublic, reimportedPrivate, houseRule+" And briefly.", secret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
 		t.Fatalf("reimport the prompts under new ids: %d %s", got.Code, got.Body.String())
@@ -202,17 +202,17 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 	}
 
 	mismatches := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/works/"+started.ID+"/versions/protection", nil), session))
+		http.MethodGet, "/v1/works/"+started.ID+"/versions/private-prompts", nil), session))
 	if mismatches.Code != http.StatusOK {
 		t.Fatalf("read the mismatches: %d %s", mismatches.Code, mismatches.Body.String())
 	}
-	listed := apitest.DecodeResponse[protectionMismatchBody](t, mismatches)
+	listed := apitest.DecodeResponse[privatePromptMismatchBody](t, mismatches)
 	if len(listed.Items) != 2 {
 		t.Fatalf("mismatched versions = %+v", listed.Items)
 	}
 	settling := listed.Items[0]
 	if settling.Version.Number != 2 || len(settling.Unmatched) != 1 ||
-		settling.Unmatched[0].ID != reimportedSealed.String() {
+		settling.Unmatched[0].ID != reimportedPrivate.String() {
 		t.Fatalf("version 2 mismatch = %+v", settling)
 	}
 	if len(settling.Recorded) != 2 {
@@ -220,12 +220,12 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 	}
 
 	stranger := resolveCorrespondence(t, router, session, started.ID, 2,
-		`{"matches":[{"current":"`+reimportedSealed.String()+`","recorded":"`+uuid.NewString()+`"}]}`)
+		`{"matches":[{"current":"`+reimportedPrivate.String()+`","recorded":"`+uuid.NewString()+`"}]}`)
 	if stranger.Code != http.StatusBadRequest {
 		t.Fatalf("a match onto a prompt the version never held = %d, want 400", stranger.Code)
 	}
 	settled := resolveCorrespondence(t, router, session, started.ID, 2,
-		`{"matches":[{"current":"`+reimportedSealed.String()+`","recorded":"`+sealedID.String()+`"}]}`)
+		`{"matches":[{"current":"`+reimportedPrivate.String()+`","recorded":"`+privateID.String()+`"}]}`)
 	if settled.Code != http.StatusNoContent {
 		t.Fatalf("settle version 2: %d %s", settled.Code, settled.Body.String())
 	}
@@ -235,22 +235,22 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 		t.Fatal("the settled version still hid its ordinary prompt")
 	}
 	if strings.Contains(page.Body.String(), secret) {
-		t.Fatal("settling the correspondence made the sealed prompt public")
+		t.Fatal("settling the correspondence made the private prompt public")
 	}
 
 	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
-		string(core.Elements[0].Content), `"protected":true`, `"protected":false`))
+		string(core.Elements[0].Content), `"private":true`, `"private":false`))
 	core.AllowedApps = &[]string{}
 	confirmed := true
-	core.ExposeProtected = &confirmed
+	core.MakePromptsPublic = &confirmed
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("unseal the settled prompt: %d %s", got.Code, got.Body.String())
+		t.Fatalf("make the settled prompt public: %d %s", got.Code, got.Body.String())
 	}
 	page = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if !strings.Contains(page.Body.String(), secret) {
-		t.Fatal("the settled version stayed sealed after the owner made its prompt public")
+		t.Fatal("the settled version stayed private after the owner made its prompt public")
 	}
 }
 
@@ -264,7 +264,7 @@ func resolveCorrespondence(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	request := httptest.NewRequest(http.MethodPut,
-		"/v1/works/"+workID+"/versions/"+strconv.Itoa(number)+"/protection", strings.NewReader(body))
+		"/v1/works/"+workID+"/versions/"+strconv.Itoa(number)+"/private-prompts", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	return apitest.Send(t, router, apitest.Authorized(request, session))
 }

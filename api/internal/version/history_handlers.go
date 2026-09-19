@@ -185,33 +185,33 @@ func (h *Handlers) CompareWorkVersions(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) ListProtectionMismatches(c *gin.Context) {
+func (h *Handlers) ListPrivatePromptMismatches(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := api.SignedIn(c, "reading a work's sealed prompts")
+	owner, ok := api.SignedIn(c, "reading a work's private prompts")
 	if !ok {
 		return
 	}
-	mismatches, err := h.versions.ProtectionMismatches(c.Request.Context(), owner.ID, id)
+	mismatches, err := h.versions.PrivatePromptMismatches(c.Request.Context(), owner.ID, id)
 	if errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "No such work.")
 		return
 	}
 	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the sealed prompts.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the private prompts.")
 		return
 	}
-	items := make([]ProtectionMismatch, 0, len(mismatches))
+	items := make([]PrivatePromptMismatch, 0, len(mismatches))
 	for _, mismatch := range mismatches {
-		items = append(items, ProtectionMismatch{
+		items = append(items, PrivatePromptMismatch{
 			Version:   page.ToRecordedVersion(mismatch.Version),
 			Unmatched: toAPINamedPrompts(mismatch.Unmatched),
 			Recorded:  toAPINamedPrompts(mismatch.Recorded),
 		})
 	}
-	c.JSON(http.StatusOK, ProtectionMismatchList{Items: items})
+	c.JSON(http.StatusOK, PrivatePromptMismatchList{Items: items})
 }
 
 func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context) {
@@ -223,13 +223,13 @@ func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context) {
 	if !ok {
 		return
 	}
-	owner, ok := api.Verified(c, "settling a work's sealed prompts")
+	owner, ok := api.Verified(c, "settling a work's private prompts")
 	if !ok {
 		return
 	}
 	var request PromptCorrespondenceRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
-		api.Refuse(c, http.StatusBadRequest, "Send a match for each sealed prompt, naming the recorded prompt it stands for.")
+		api.Refuse(c, http.StatusBadRequest, "Send a match for each private prompt, naming the recorded prompt it stands for.")
 		return
 	}
 	answers := make([]PromptCorrespondence, 0, len(request.Matches))
@@ -249,7 +249,7 @@ func (h *Handlers) ResolvePromptCorrespondence(c *gin.Context) {
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not settle the sealed prompts.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not settle the private prompts.")
 	default:
 		c.Status(http.StatusNoContent)
 	}

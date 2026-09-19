@@ -33,7 +33,7 @@ type StartedWork struct {
 	AddableBlocks     []AddableBlock   `json:"addableBlocks"`
 	Downloads         []DownloadFormat `json:"downloads"`
 	AppFormats        []AppFormat      `json:"appFormats"`
-	LinkedInstallOnly bool             `json:"linkedInstallOnly"`
+	HasPrivatePrompts bool             `json:"hasPrivatePrompts"`
 	AllowedApps       []AppName        `json:"allowedApps"`
 	EligibleApps      []AppName        `json:"eligibleApps"`
 	Original          *OriginalUpload  `json:"original"`
@@ -147,12 +147,12 @@ func BlockNamed(t *testing.T, blocks []StartedBlock, definition string) StartedB
 }
 
 type SaveBlockBody struct {
-	Title           *string            `json:"title"`
-	Layout          string             `json:"layout"`
-	Width           string             `json:"width"`
-	Elements        []SaveBlockElement `json:"elements"`
-	AllowedApps     *[]string          `json:"allowedApps,omitempty"`
-	ExposeProtected *bool              `json:"exposeProtected,omitempty"`
+	Title             *string            `json:"title"`
+	Layout            string             `json:"layout"`
+	Width             string             `json:"width"`
+	Elements          []SaveBlockElement `json:"elements"`
+	AllowedApps       *[]string          `json:"allowedApps,omitempty"`
+	MakePromptsPublic *bool              `json:"makePromptsPublic,omitempty"`
 }
 
 type SaveBlockElement struct {

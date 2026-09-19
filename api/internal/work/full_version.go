@@ -49,7 +49,7 @@ func (v FullVersion) HoldPrompts(
 	workID uuid.UUID,
 	asOwner bool,
 ) (bool, error) {
-	if err := private.RestoreRecordedPrompts(v.ProtectedPayloads, v.Blocks); err != nil {
+	if err := private.RestoreRecordedPrompts(v.PrivatePrompts, v.Blocks); err != nil {
 		return false, err
 	}
 	if asOwner {
@@ -60,13 +60,13 @@ func (v FullVersion) HoldPrompts(
 
 type FullVersion struct {
 	Version
-	Type              string
-	Origin            string
-	OriginalFileID    *uuid.UUID
-	Metadata          VersionMetadata
-	Blocks            []block.Block
-	Preserved         []VersionPreserved
-	ProtectedPayloads []byte
+	Type           string
+	Origin         string
+	OriginalFileID *uuid.UUID
+	Metadata       VersionMetadata
+	Blocks         []block.Block
+	Preserved      []VersionPreserved
+	PrivatePrompts []byte
 }
 
 type VersionMetadata struct {
@@ -103,12 +103,12 @@ func ReadVersion(ctx context.Context, tx pgx.Tx, workID uuid.UUID, number int) (
 	err := tx.QueryRow(ctx, `
 		select id, number, recorded_at, initial_recorded, version_label, summary, notes,
 		       notes_edited_at, withdrawn_at, coalesce(withdrawal_explanation, ''),
-		       original_file_id, payload, protected_payloads
+		       original_file_id, payload, private_prompts
 		  from public.work_versions where work_id = $1 and number = $2
 	`, workID, number).Scan(&recorded.ID, &recorded.Number, &recorded.RecordedAt,
 		&recorded.Initial, &recorded.VersionLabel, &recorded.Summary, &recorded.Notes,
 		&recorded.NotesEditedAt, &recorded.WithdrawnAt, &recorded.WithdrawalExplanation,
-		&sourceRevision, &stored, &recorded.ProtectedPayloads)
+		&sourceRevision, &stored, &recorded.PrivatePrompts)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return FullVersion{}, ErrNotFound
 	}

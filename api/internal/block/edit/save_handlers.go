@@ -49,10 +49,10 @@ func (h *Handlers) SaveWorkBlock(c *gin.Context) {
 	}
 	var exposure private.ExposureRefusal
 	if errors.As(err, &exposure) {
-		c.JSON(http.StatusConflict, SealedExposureRefusal{
+		c.JSON(http.StatusConflict, PromptsMadePublicRefusal{
 			Error: "Saving this makes " + joinNames(exposure.Prompts) +
 				" readable by anyone, and puts ordinary downloads back on the work.",
-			Code:    SealedExposureRefusalCodeSealedExposure,
+			Code:    PromptsMadePublicRefusalCodePromptsMadePublic,
 			Prompts: exposure.Prompts,
 		})
 		return
@@ -106,12 +106,12 @@ func blockUpdate(request SaveWorkBlockRequest) (BlockUpdate, error) {
 		}
 	}
 	return BlockUpdate{
-		Title:           request.Title,
-		Layout:          block.Layout(request.Layout),
-		Width:           block.Width(request.Width),
-		Elements:        elements,
-		AllowedApps:     request.AllowedApps,
-		ExposeProtected: request.ExposeProtected != nil && *request.ExposeProtected,
+		Title:             request.Title,
+		Layout:            block.Layout(request.Layout),
+		Width:             block.Width(request.Width),
+		Elements:          elements,
+		AllowedApps:       request.AllowedApps,
+		MakePromptsPublic: request.MakePromptsPublic != nil && *request.MakePromptsPublic,
 	}, nil
 }
 

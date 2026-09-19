@@ -121,17 +121,17 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 	}
 }
 
-func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
+func TestRestorationKeepsTheCurrentPrivatePromptsAndAllowedApps(t *testing.T) {
 	t.Parallel()
 	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
-	publicID, sealedID := uuid.New(), uuid.New()
-	started := apitest.PublishTwoPromptPreset(t, r, session, publicID, sealedID,
-		"First public prompt.", "First protected prompt.")
+	publicID, privateID := uuid.New(), uuid.New()
+	started := apitest.PublishTwoPromptPreset(t, r, session, publicID, privateID,
+		"First public prompt.", "First private prompt.")
 	working := apitest.FetchStartedWork(t, r, session, started.ID)
 	coreBlock := apitest.BlockNamed(t, working.Blocks, "preset_core")
 	core := apitest.EditableBlock(coreBlock)
-	core.Elements[0].Content = apitest.SealedPresetPrompts(uuid.New(), uuid.New(),
-		"Second public prompt.", "Second protected prompt.")
+	core.Elements[0].Content = apitest.PrivatePresetPrompts(uuid.New(), uuid.New(),
+		"Second public prompt.", "Second private prompt.")
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core); got.Code != http.StatusOK {
 		t.Fatalf("save second prompts = %d: %s", got.Code, got.Body.String())
@@ -142,7 +142,7 @@ func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 	restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
 		"/v1/works/"+started.ID+"/versions/1/restore", nil), session)
 	if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
-		t.Fatalf("restore protected version = %d: %s", got.Code, got.Body.String())
+		t.Fatalf("restore privatePrompts version = %d: %s", got.Code, got.Body.String())
 	}
 	restored := apitest.FetchStartedWork(t, r, session, started.ID)
 	encoded, err := json.Marshal(restored)
@@ -150,7 +150,7 @@ func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(encoded)
-	for _, want := range []string{"First public prompt.", "First protected prompt.", `"allowedApps":[{"id":"lumiverse","label":"Lumiverse"}]`, `"linkedInstallOnly":true`} {
+	for _, want := range []string{"First public prompt.", "First private prompt.", `"allowedApps":[{"id":"lumiverse","label":"Lumiverse"}]`, `"hasPrivatePrompts":true`} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("restored drafted changes omitted %q: %s", want, text)
 		}
@@ -160,8 +160,8 @@ func TestRestorationKeepsCurrentPromptProtectionAndAllowedApps(t *testing.T) {
 	}
 	public := apitest.FetchWork(t, r, nil, started.ID)
 	publicJSON, _ := json.Marshal(public)
-	if strings.Contains(string(publicJSON), "First public prompt.") || strings.Contains(string(publicJSON), "First protected prompt.") || strings.Contains(string(publicJSON), "Second protected prompt.") {
-		t.Fatal("restoration exposed a protected prompt")
+	if strings.Contains(string(publicJSON), "First public prompt.") || strings.Contains(string(publicJSON), "First private prompt.") || strings.Contains(string(publicJSON), "Second private prompt.") {
+		t.Fatal("restoration exposed a private prompt")
 	}
 }
 
@@ -174,11 +174,11 @@ func TestRestoredOldContentMustPassCurrentPublicationValidation(t *testing.T) {
 		t.Fatalf("publish status = %d: %s", got.Code, got.Body.String())
 	}
 
-	var payload, protected []byte
+	var payload, privatePrompts []byte
 	if err := pool.QueryRow(t.Context(), `
-		select payload, protected_payloads
+		select payload, private_prompts
 		  from work_versions where work_id = $1 and number = 1
-	`, started.ID).Scan(&payload, &protected); err != nil {
+	`, started.ID).Scan(&payload, &privatePrompts); err != nil {
 		t.Fatal(err)
 	}
 	var recorded map[string]any
@@ -200,9 +200,9 @@ func TestRestoredOldContentMustPassCurrentPublicationValidation(t *testing.T) {
 	}
 	if _, err := pool.Exec(t.Context(), `
 		insert into work_versions
-			(work_id, number, payload, protected_payloads, summary)
+			(work_id, number, payload, private_prompts, summary)
 		values ($1, 2, $2, $3, 'Recorded under an older rule')
-	`, started.ID, invalid, protected); err != nil {
+	`, started.ID, invalid, privatePrompts); err != nil {
 		t.Fatal(err)
 	}
 

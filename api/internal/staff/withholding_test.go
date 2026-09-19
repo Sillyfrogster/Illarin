@@ -250,7 +250,7 @@ func TestWithheldWorkRefusesCreatorMutations(t *testing.T) {
 	}
 }
 
-func TestWithheldWorkRefusesEveryProtectedPromptMutation(t *testing.T) {
+func TestWithheldWorkRefusesEveryPrivatePromptMutation(t *testing.T) {
 	t.Parallel()
 	_, router, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := apitest.StartPreset(t, router, session, "lumiverse")
@@ -258,12 +258,12 @@ func TestWithheldWorkRefusesEveryProtectedPromptMutation(t *testing.T) {
 	core := apitest.EditableBlock(coreBlock)
 	const privateText = "This prompt stays frozen."
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
-		{"name":"Frozen","role":"system","text":"` + privateText + `","protected":true,"enabled":true}
+		{"name":"Frozen","role":"system","text":"` + privateText + `","private":true,"enabled":true}
 	]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
-		t.Fatalf("save sealed prompt: %d %s", response.Code, response.Body.String())
+		t.Fatalf("save private prompt: %d %s", response.Code, response.Body.String())
 	}
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
@@ -282,15 +282,15 @@ func TestWithheldWorkRefusesEveryProtectedPromptMutation(t *testing.T) {
 	))
 	stateChange := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	stateChange.Elements[0].Content = json.RawMessage(strings.Replace(
-		string(core.Elements[0].Content), `,"protected":true`, "", 1,
+		string(core.Elements[0].Content), `,"private":true`, "", 1,
 	))
 	stateChange.AllowedApps = &[]string{}
 	policyChange := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	policyChange.AllowedApps = &[]string{}
 	mutations := map[string]apitest.SaveBlockBody{
-		"protected text":   textChange,
-		"protection state": stateChange,
-		"allowed apps":     policyChange,
+		"private text": textChange,
+		"privacy":      stateChange,
+		"allowed apps": policyChange,
 	}
 
 	for name, mutation := range mutations {
@@ -304,14 +304,14 @@ func TestWithheldWorkRefusesEveryProtectedPromptMutation(t *testing.T) {
 
 	var storedText string
 	if err := pool.QueryRow(t.Context(), `
-		select payload ->> 'text' from protected_content where work_id = $1
+		select payload ->> 'text' from private_prompts where work_id = $1
 	`, started.ID).Scan(&storedText); err != nil {
-		t.Fatalf("read protected prompt after refused saves: %v", err)
+		t.Fatalf("read private prompt after refused saves: %v", err)
 	}
 	if storedText != privateText {
-		t.Fatalf("protected prompt after refused saves = %q, want %q", storedText, privateText)
+		t.Fatalf("private prompt after refused saves = %q, want %q", storedText, privateText)
 	}
-	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
 		t.Fatalf("after refused saves: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
 	}
 }

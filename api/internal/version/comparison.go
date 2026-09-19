@@ -382,7 +382,7 @@ func elementItems(element block.Element, names map[uuid.UUID]string) []versionIt
 			listItems(names, held.Fragments, func(fragment block.PromptFragment) versionItem {
 				return versionItem{
 					key: itemKey(fragment.ID), name: fragment.Name,
-					note: sealingNote(fragment), text: fragment.Text,
+					note: privacyNote(fragment), text: fragment.Text,
 				}
 			})...)
 	case block.VariableSchema:
@@ -439,10 +439,10 @@ func elementItems(element block.Element, names map[uuid.UUID]string) []versionIt
 	}
 }
 
-// sealingNote says when a prompt's wording is kept back for linked apps.
-func sealingNote(fragment block.PromptFragment) string {
-	if fragment.Protected {
-		return "sealed for linked apps"
+// privacyNote says when a prompt's wording is kept for allowed apps.
+func privacyNote(fragment block.PromptFragment) string {
+	if fragment.Private {
+		return "private, for allowed apps"
 	}
 	return ""
 }
@@ -569,7 +569,7 @@ func editedItem(was, now versionItem) Change {
 	if was.note != now.note {
 		edited.Note = now.note
 		if edited.Note == "" {
-			edited.Note = "no longer sealed"
+			edited.Note = "no longer private"
 		}
 	}
 	if was.name != now.name {

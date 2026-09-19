@@ -11,7 +11,7 @@ var (
 	workDetailAliases = map[string]string{
 		"type": "kind", "visibility": "discovery", "follow": "watch",
 		"draftedChangesVersion": "workingCopyVersion", "latestVersion": "latestUpdate",
-		"appFormats": "appTargets",
+		"appFormats": "appTargets", "hasPrivatePrompts": "linkedInstallOnly", "preservedPrompts": "sealedBlocks",
 	}
 	workListAliases          = map[string]string{"nsfwPreference": "visibility", "apps": "platforms"}
 	browseWorkAliases        = map[string]string{"type": "kind"}

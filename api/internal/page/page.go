@@ -45,8 +45,8 @@ type Detail struct {
 	Preview               *string
 	LatestVersion         *work.Version
 	Readiness             []work.ReadinessItem
-	SealedBlocks          int
-	LinkedInstallOnly     bool
+	PreservedPrompts      int
+	HasPrivatePrompts     bool
 	AllowedApps           []string
 	EligibleApps          []string
 	InstallCapabilities   []string
@@ -187,23 +187,23 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 			found.Readiness = work.PublishedShortfall(found.Type, found.Name, found.IsNSFW, found.Blocks)
 		}
 		if viewerID != nil {
-			sealed, err := private.SealedBlockCount(ctx, tx, *viewerID, id)
+			preserved, err := private.PreservedPromptCount(ctx, tx, *viewerID, id)
 			if err != nil {
 				return Detail{}, err
 			}
-			found.SealedBlocks = sealed
+			found.PreservedPrompts = preserved
 		}
 	}
 	found.AllowedApps, err = private.Apps(ctx, tx, id)
 	if err != nil {
 		return Detail{}, err
 	}
-	found.LinkedInstallOnly = len(found.AllowedApps) > 0 || private.HasPromptFragments(found.Blocks)
+	found.HasPrivatePrompts = len(found.AllowedApps) > 0 || private.HasPromptFragments(found.Blocks)
 	offered := format.OfferedIDs(found.Downloads)
 	found.EligibleApps = private.EligibleApps(s.reg, offered)
 	found.InstallCapabilities = format.InstallCapabilities(found.Type, offered)
 	found.AppFormats = format.AppFormats(found.Downloads, s.reg)
-	if found.LinkedInstallOnly {
+	if found.HasPrivatePrompts {
 		found.Downloads = []format.Offered{}
 		found.AppFormats = []format.AppFormat{}
 	}

@@ -376,6 +376,21 @@ type PostWithdrawal struct {
 	WithdrawnAt pgtype.Timestamptz
 }
 
+type PrivatePrompt struct {
+	WorkID      pgtype.UUID
+	OwnerType   string
+	OwnerID     pgtype.UUID
+	PayloadType string
+	Payload     []byte
+	SourceKey   pgtype.Text
+	Digest      []byte
+}
+
+type PrivatePromptApp struct {
+	WorkID pgtype.UUID
+	App    string
+}
+
 type ProfileMedium struct {
 	ID        pgtype.UUID
 	UserID    pgtype.UUID
@@ -399,21 +414,6 @@ type ProfileRestrictionAudit struct {
 	Action     string
 	Reason     string
 	RecordedAt pgtype.Timestamptz
-}
-
-type ProtectedContent struct {
-	WorkID      pgtype.UUID
-	OwnerType   string
-	OwnerID     pgtype.UUID
-	PayloadType string
-	Payload     []byte
-	SourceKey   pgtype.Text
-	Digest      []byte
-}
-
-type ProtectedDeliveryApp struct {
-	WorkID pgtype.UUID
-	App    string
 }
 
 type PublicProfile struct {
@@ -751,7 +751,7 @@ type WorkPreservedDatum struct {
 	Payload   []byte
 }
 
-type WorkPublicProtectedContent struct {
+type WorkPublicPrivatePrompt struct {
 	WorkID      pgtype.UUID
 	OwnerType   string
 	OwnerID     pgtype.UUID
@@ -930,7 +930,7 @@ type WorkVersion struct {
 	VersionLabel          string
 	OriginalFileID        pgtype.UUID
 	Payload               []byte
-	ProtectedPayloads     []byte
+	PrivatePrompts        []byte
 	Summary               string
 	Notes                 string
 	NotesEditedAt         pgtype.Timestamptz

@@ -26,14 +26,14 @@ type PromptCorrespondenceRequest struct {
 	} `json:"matches"`
 }
 
-type ProtectionMismatch struct {
+type PrivatePromptMismatch struct {
 	Recorded  []NamedPrompt        `json:"recorded"`
 	Unmatched []NamedPrompt        `json:"unmatched"`
 	Version   page.RecordedVersion `json:"version"`
 }
 
-type ProtectionMismatchList struct {
-	Items []ProtectionMismatch `json:"items"`
+type PrivatePromptMismatchList struct {
+	Items []PrivatePromptMismatch `json:"items"`
 }
 
 type RecordedVersionList struct {

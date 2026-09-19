@@ -249,13 +249,13 @@ func TestReadingLumiverseScriptsBundledOnlyUnderExtensions(t *testing.T) {
 	}
 }
 
-func TestWritingARestoredPromptHasNoProtectedContentProtocol(t *testing.T) {
+func TestWritingARestoredPromptLeavesNoPrivatePromptMarker(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, lumiversePreset)
 	list := promptList(t, parsed.Elements)
-	const restored = "Delivered only to the linked application."
+	const restored = "Sent only to an allowed app."
 	list.Fragments[0].Text = restored
-	list.Fragments[0].Protected = true
+	list.Fragments[0].Private = true
 	for index := range parsed.Elements {
 		if parsed.Elements[index].Role == block.RolePromptFragments {
 			parsed.Elements[index].Content = list
@@ -267,17 +267,17 @@ func TestWritingARestoredPromptHasNoProtectedContentProtocol(t *testing.T) {
 	if !strings.Contains(string(written.Body), restored) {
 		t.Fatal("the writer did not receive the restored prompt text")
 	}
-	if strings.Contains(string(written.Body), `"protected"`) {
-		t.Fatal("the artifact contained Illarin's protected-content marker")
+	if strings.Contains(string(written.Body), `"private"`) {
+		t.Fatal("the artifact contained Illarin's private prompt marker")
 	}
 }
 
-func TestReadingAKeyedSealedPromptSeparatesItsText(t *testing.T) {
+func TestReadingAKeyedPrivatePromptSeparatesItsText(t *testing.T) {
 	t.Parallel()
 	const privateText = "Private publisher prompt\nwith exact whitespace. "
 	parsed := parse(t, `{
 		"schemaVersion": 1,
-		"name": "Sealed preset",
+		"name": "Private prompt preset",
 		"blocks": [
 			{
 				"id": "public",
@@ -302,20 +302,20 @@ func TestReadingAKeyedSealedPromptSeparatesItsText(t *testing.T) {
 	if len(list.Fragments) != 2 {
 		t.Fatalf("read %d fragments, want 2", len(list.Fragments))
 	}
-	public, sealed := list.Fragments[0], list.Fragments[1]
-	if public.Protected || public.Text != "Visible text." {
+	public, privateFragment := list.Fragments[0], list.Fragments[1]
+	if public.Private || public.Text != "Visible text." {
 		t.Errorf("public fragment = %+v", public)
 	}
-	if !sealed.Protected || sealed.Text != "" {
-		t.Errorf("sealed stub = %+v, want a protected fragment with no public text", sealed)
+	if !privateFragment.Private || privateFragment.Text != "" {
+		t.Errorf("private stub = %+v, want a private fragment with no public text", privateFragment)
 	}
-	if len(parsed.Protected) != 1 {
-		t.Fatalf("protected prompts = %d, want 1", len(parsed.Protected))
+	if len(parsed.PrivatePrompts) != 1 {
+		t.Fatalf("private prompts = %d, want 1", len(parsed.PrivatePrompts))
 	}
-	private := parsed.Protected[0]
-	if private.FragmentID != sealed.ID || private.SourceKey != "dialogue.frame" ||
+	private := parsed.PrivatePrompts[0]
+	if private.FragmentID != privateFragment.ID || private.SourceKey != "dialogue.frame" ||
 		private.Text != privateText || private.ReuseExisting {
-		t.Errorf("protected prompt = %+v", private)
+		t.Errorf("private prompt = %+v", private)
 	}
 
 	list.Fragments[1].Text = private.Text
@@ -359,20 +359,20 @@ func TestReadingAKeyedPlaceholderMarksItForReuse(t *testing.T) {
 	}`)
 
 	fragment := promptList(t, parsed.Elements).Fragments[0]
-	if !fragment.Protected || fragment.Text != "" {
+	if !fragment.Private || fragment.Text != "" {
 		t.Errorf("placeholder stub = %+v", fragment)
 	}
-	if len(parsed.Protected) != 1 {
-		t.Fatalf("protected prompts = %d, want 1", len(parsed.Protected))
+	if len(parsed.PrivatePrompts) != 1 {
+		t.Fatalf("private prompts = %d, want 1", len(parsed.PrivatePrompts))
 	}
-	private := parsed.Protected[0]
+	private := parsed.PrivatePrompts[0]
 	if private.FragmentID != fragment.ID || private.SourceKey != "dialogue.frame" ||
 		private.Text != "" || !private.ReuseExisting {
-		t.Errorf("protected prompt = %+v", private)
+		t.Errorf("private prompt = %+v", private)
 	}
 }
 
-func TestMalformedKeyedSealingMetadataIsRefused(t *testing.T) {
+func TestMalformedKeyedPrivatePromptMetadataIsRefused(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name   string
@@ -390,7 +390,7 @@ func TestMalformedKeyedSealingMetadataIsRefused(t *testing.T) {
 			blocks: `[{"id":"one","content":"Private","enabled":true,"sealed":true}]`,
 		},
 		{
-			name:   "key without sealing",
+			name:   "key without the private flag",
 			blocks: `[{"id":"one","content":"Private","enabled":true,"sealedKey":"orphan"}]`,
 		},
 		{
@@ -417,8 +417,8 @@ func TestMalformedKeyedSealingMetadataIsRefused(t *testing.T) {
 				reason != format.FailureMalformedInput {
 				t.Fatalf("parse error = %v, want a malformed input refusal", err)
 			}
-			if !strings.Contains(err.Error(), "sealed") {
-				t.Errorf("parse error = %v, want useful sealing detail", err)
+			if !strings.Contains(err.Error(), "private prompt") {
+				t.Errorf("parse error = %v, want useful private prompt detail", err)
 			}
 		})
 	}

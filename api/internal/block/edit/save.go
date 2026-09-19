@@ -16,12 +16,12 @@ import (
 )
 
 type BlockUpdate struct {
-	Title           *string
-	Layout          block.Layout
-	Width           block.Width
-	Elements        []block.Element
-	AllowedApps     *[]string
-	ExposeProtected bool
+	Title             *string
+	Layout            block.Layout
+	Width             block.Width
+	Elements          []block.Element
+	AllowedApps       *[]string
+	MakePromptsPublic bool
 }
 
 func (s *Service) SaveBlock(
@@ -85,11 +85,11 @@ func (s *Service) writeBlock(
 	if err := block.ValidateBuilderConstraints(workType, before, blocks); err != nil {
 		return nil, 0, invalid(err)
 	}
-	if err := s.validateProtectedApps(ctx, tx, workID, workType, blocks, update.AllowedApps); err != nil {
+	if err := s.validatePrivatePromptApps(ctx, tx, workID, workType, blocks, update.AllowedApps); err != nil {
 		return nil, 0, invalid(err)
 	}
-	if !update.ExposeProtected {
-		exposed, err := private.UnsealedFragments(ctx, tx, workID, blocks)
+	if !update.MakePromptsPublic {
+		exposed, err := private.PromptsMadePublic(ctx, tx, workID, blocks)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -122,7 +122,7 @@ func (s *Service) writeBlock(
 	return blocks, index, s.writeSummary(ctx, tx, workID)
 }
 
-func (s *Service) validateProtectedApps(
+func (s *Service) validatePrivatePromptApps(
 	ctx context.Context,
 	q db.DBTX,
 	workID uuid.UUID,
@@ -135,7 +135,7 @@ func (s *Service) validateProtectedApps(
 	}
 	var origin string
 	if err := q.QueryRow(ctx, `select coalesce(origin_format, '') from works where id = $1`, workID).Scan(&origin); err != nil {
-		return fmt.Errorf("read the work origin for protected delivery: %w", err)
+		return fmt.Errorf("read the work origin for private prompts: %w", err)
 	}
 	elements := make([]block.Element, 0)
 	for _, holder := range blocks {

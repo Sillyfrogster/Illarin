@@ -21,17 +21,17 @@ type Media struct {
 }
 
 type Parsed struct {
-	Type      string
-	Format    string
-	Tags      []string
-	IsNSFW    *bool
-	Media     []Media
-	CreatedAt *time.Time
-	Header    Header
-	Elements  []block.Element
-	Remainder []Remainder
-	Protected []ProtectedPrompt
-	Readme    *Readme
+	Type           string
+	Format         string
+	Tags           []string
+	IsNSFW         *bool
+	Media          []Media
+	CreatedAt      *time.Time
+	Header         Header
+	Elements       []block.Element
+	Remainder      []Remainder
+	PrivatePrompts []PrivatePrompt
+	Readme         *Readme
 }
 
 // Readme is the README a repository shows, with the archive folder the repository sits in and the README's own folder inside it.
@@ -40,7 +40,7 @@ type Readme struct {
 	Root, Folder string
 }
 
-type ProtectedPrompt struct {
+type PrivatePrompt struct {
 	FragmentID    uuid.UUID
 	SourceKey     string
 	Text          string

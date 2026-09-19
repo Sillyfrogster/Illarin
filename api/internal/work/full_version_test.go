@@ -254,15 +254,15 @@ func TestAVersionRetainsExactContentAndCannotBeRewritten(t *testing.T) {
 	opaque := `{ "z": 1, "a":2, "z": 3 }`
 	versionExec(t, pool, `insert into work_preserved_data (id, work_id, owner_type, owner_id, namespace, payload)
 		values ($1, $2, 'asset', $2, 'test.opaque', $3::json)`, uuid.New(), id, opaque)
-	versionExec(t, pool, `with policy as (insert into protected_delivery_apps (work_id, app) values ($1, 'lumiverse'))
-		insert into protected_content (work_id, owner_type, owner_id, payload_type, payload, source_key, digest)
+	versionExec(t, pool, `with policy as (insert into private_prompt_apps (work_id, app) values ($1, 'lumiverse'))
+		insert into private_prompts (work_id, owner_type, owner_id, payload_type, payload, source_key, digest)
 		values ($1, 'prompt_fragment', $2, 'prompt_fragment_text', '{"text":"Private original"}', 'original-key', $3)`, id, promptID, make([]byte, 32))
 	versionExec(t, pool, `select record_initial_work_version($1, true)`, id)
 	versionExec(t, pool, `update works set name = 'Edited', blurb = 'Edited', tags = '{}' where id = $1`, id)
 	versionExec(t, pool, `delete from work_blocks where work_id = $1`, id)
 	versionExec(t, pool, `delete from work_preserved_data where work_id = $1`, id)
-	versionExec(t, pool, `with policy as (delete from protected_delivery_apps where work_id = $1)
-		delete from protected_content where work_id = $1`, id)
+	versionExec(t, pool, `with policy as (delete from private_prompt_apps where work_id = $1)
+		delete from private_prompts where work_id = $1`, id)
 	var retained bool
 	err := pool.QueryRow(context.Background(), `select
 		payload->>'name' = 'Recorded preset' and payload->>'blurb' = 'Original blurb'
@@ -273,15 +273,15 @@ func TestAVersionRetainsExactContentAndCannotBeRewritten(t *testing.T) {
 		and payload#>>'{blocks,0,width}' = 'half' and payload#>>'{blocks,0,layout}' = 'single'
 		and payload#>>'{blocks,0,elements,0,content,text}' = 'Handwritten history'
 		and payload#>>'{preserved_data,0,payload}' = $2
-		and protected_payloads#>>'{0,payload,text}' = 'Private original'
-		and protected_payloads#>>'{0,source_key}' = 'original-key'
+		and private_prompts#>>'{0,payload,text}' = 'Private original'
+		and private_prompts#>>'{0,source_key}' = 'original-key'
 		from work_versions where work_id = $1`, id, opaque).Scan(&retained)
 	if err != nil || !retained {
 		t.Fatalf("exact content retained = %v, error = %v", retained, err)
 	}
 	for _, sql := range []string{
 		`update work_versions set payload = '{}' where work_id = $1`,
-		`update work_versions set protected_payloads = '[]' where work_id = $1`,
+		`update work_versions set private_prompts = '[]' where work_id = $1`,
 		`update work_versions set number = 2 where work_id = $1`,
 		`delete from work_versions where work_id = $1`,
 	} {

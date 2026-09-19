@@ -78,7 +78,7 @@ type Preview struct {
 	Conflicts       []string
 	Unrepresentable []string
 	MissingWording  []string
-	Seals           int
+	PrivatePrompts  int
 }
 
 func uuidFromPgtype(p pgtype.UUID) uuid.UUID {

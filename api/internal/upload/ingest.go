@@ -87,22 +87,22 @@ type originalFileTarget struct {
 }
 
 type preparedIngest struct {
-	Type          string
-	Format        string
-	Name          string
-	Blurb         string
-	Tags          []string
-	IsNSFW        bool
-	Visibility    work.Visibility
-	Blocks        []block.Block
-	SuppliedRoles []block.Role
-	Header        format.Header
-	Remainder     []format.Remainder
-	Protected     []format.ProtectedPrompt
-	Media         []work.PreparedMedia
-	Vault         []WaitingPicture
-	CreatedAt     *time.Time
-	MediaType     string
+	Type           string
+	Format         string
+	Name           string
+	Blurb          string
+	Tags           []string
+	IsNSFW         bool
+	Visibility     work.Visibility
+	Blocks         []block.Block
+	SuppliedRoles  []block.Role
+	Header         format.Header
+	Remainder      []format.Remainder
+	PrivatePrompts []format.PrivatePrompt
+	Media          []work.PreparedMedia
+	Vault          []WaitingPicture
+	CreatedAt      *time.Time
+	MediaType      string
 }
 
 type preparedImport struct {
@@ -437,11 +437,11 @@ func prepareIngest(job ingestJob, parsed format.Parsed) (preparedIngest, error) 
 	return preparedIngest{
 		Type: workType, Format: parsed.Format,
 		Name: name, Blurb: blurb, Tags: tags, IsNSFW: isNSFW,
-		Visibility: job.Visibility,
-		Header:     parsed.Header,
-		Remainder:  parsed.Remainder,
-		Protected:  parsed.Protected,
-		CreatedAt:  parsed.CreatedAt,
+		Visibility:     job.Visibility,
+		Header:         parsed.Header,
+		Remainder:      parsed.Remainder,
+		PrivatePrompts: parsed.PrivatePrompts,
+		CreatedAt:      parsed.CreatedAt,
 	}, nil
 }
 
@@ -560,8 +560,8 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 	return nil
 }
 
-// importProtectedPrompts seals the file's private prompts for the apps that keep them private in its format
-func (s *Service) importProtectedPrompts(
+// importPrivatePrompts stores the file's private prompts for the apps that keep them private in its format
+func (s *Service) importPrivatePrompts(
 	ctx context.Context,
 	tx pgx.Tx,
 	workID uuid.UUID,
@@ -569,14 +569,14 @@ func (s *Service) importProtectedPrompts(
 	carried map[uuid.UUID]string,
 	prepared preparedIngest,
 ) error {
-	if len(prepared.Protected) == 0 {
+	if len(prepared.PrivatePrompts) == 0 {
 		return nil
 	}
 	apps := private.EligibleApps(s.reg, []string{prepared.Format})
 	if err := private.ImportPromptFragments(
-		ctx, tx, workID, blocks, carried, prepared.Protected, apps,
+		ctx, tx, workID, blocks, carried, prepared.PrivatePrompts, apps,
 	); err != nil {
-		return fmt.Errorf("import protected prompts: %w", err)
+		return fmt.Errorf("import private prompts: %w", err)
 	}
 	return nil
 }
@@ -596,7 +596,7 @@ func (s *Service) writeIngestResultWithDecisions(
 	job ingestJob,
 	prepared preparedIngest,
 	decisions map[string]string,
-	exposeProtected bool,
+	makePromptsPublic bool,
 ) (uuid.UUID, error) {
 	blocks := prepared.Blocks
 	if job.Target != nil {
@@ -613,12 +613,12 @@ func (s *Service) writeIngestResultWithDecisions(
 			return uuid.Nil, err
 		}
 		blocks = mergeReplacementBlocks(existing, blocks, prepared.SuppliedRoles, decisions)
-		if !exposeProtected {
+		if !makePromptsPublic {
 			identities, err := stableItemNames(ctx, tx, job.Target.WorkID, prepared.Remainder)
 			if err != nil {
 				return uuid.Nil, err
 			}
-			exposed, err := private.UnsealedReplacement(ctx, tx, job.Target.WorkID, blocks, identities, prepared.Protected)
+			exposed, err := private.ReplacementMakesPublic(ctx, tx, job.Target.WorkID, blocks, identities, prepared.PrivatePrompts)
 			if err != nil {
 				return uuid.Nil, err
 			}
@@ -651,7 +651,7 @@ func (s *Service) writeIngestResultWithDecisions(
 	if err := replacePreservedData(ctx, tx, workID, prepared.Remainder); err != nil {
 		return uuid.Nil, err
 	}
-	if err := s.importProtectedPrompts(ctx, tx, workID, blocks, nil, prepared); err != nil {
+	if err := s.importPrivatePrompts(ctx, tx, workID, blocks, nil, prepared); err != nil {
 		return uuid.Nil, err
 	}
 	if err := writeOriginalFile(ctx, tx, workID, 1, job, prepared); err != nil {
@@ -688,14 +688,14 @@ func (s *Service) replaceContent(
 	if err := replacePreservedData(ctx, tx, job.Target.WorkID, remainder); err != nil {
 		return err
 	}
-	if len(prepared.Protected) > 0 {
-		if err := s.importProtectedPrompts(ctx, tx, job.Target.WorkID, blocks, carried, prepared); err != nil {
+	if len(prepared.PrivatePrompts) > 0 {
+		if err := s.importPrivatePrompts(ctx, tx, job.Target.WorkID, blocks, carried, prepared); err != nil {
 			return err
 		}
 	} else if err := private.SyncPromptFragments(
 		ctx, tx, job.Target.WorkID, blocks, nil,
 	); err != nil {
-		return fmt.Errorf("reconcile protected prompts: %w", err)
+		return fmt.Errorf("reconcile private prompts: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
 		update works

@@ -16,7 +16,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestASealedPromptLeavesOnlyThroughAnAllowedConnectedApp(t *testing.T) {
+func TestAPrivatePromptLeavesOnlyThroughAnAllowedConnectedApp(t *testing.T) {
 	t.Parallel()
 	router, session, pool := harness.NewConnectRouter(t)
 	credentials := apitest.ConnectApp(t, router, session, "Lumiverse", "desk", []string{apitest.ReceivePermission})
@@ -25,11 +25,11 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedConnectedApp(t *testing.T) {
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const privateText = "Install this complete prompt."
-	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` + privateText + `","protected":true,"enabled":true}]}`)
+	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` + privateText + `","private":true,"enabled":true}]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("save private prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if got := apitest.SaveDetails(t, router, session, started.ID, `{"name":"Linked preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
@@ -41,7 +41,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedConnectedApp(t *testing.T) {
 	apitest.DeclareFormats(t, router, unsupported.AccessToken, []string{"portable-card-v1"})
 	for _, state := range apitest.WorkConnectedApps(t, router, session, started.ID).Items {
 		if state.ConnectedAppID == unsupported.ConnectedApp.ID && state.CanReceive {
-			t.Fatal("a connected app without an allowed format was offered sealed content")
+			t.Fatal("a connected app without an allowed format was offered private prompts")
 		}
 	}
 	if got := apitest.SendToApp(t, router, session, started.ID, unsupported.ConnectedApp.ID); got.Code != http.StatusConflict {
@@ -63,7 +63,7 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedConnectedApp(t *testing.T) {
 		t.Fatalf("write send export: %v", err)
 	}
 	if !strings.Contains(string(linkedExport.Body), privateText) {
-		t.Fatal("the send export did not restore the protected prompt")
+		t.Fatal("the send export did not restore the private prompt")
 	}
 
 	queued := apitest.SendToApp(t, router, session, started.ID, credentials.ConnectedApp.ID)
@@ -81,12 +81,12 @@ func TestASealedPromptLeavesOnlyThroughAnAllowedConnectedApp(t *testing.T) {
 	if artifact.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("artifact cache policy = %q", artifact.Header().Get("Cache-Control"))
 	}
-	if !strings.Contains(artifact.Body.String(), privateText) || strings.Contains(artifact.Body.String(), `"protected"`) {
+	if !strings.Contains(artifact.Body.String(), privateText) || strings.Contains(artifact.Body.String(), `"private"`) {
 		t.Fatalf("send did not contain one ordinary complete preset: %s", artifact.Body.String())
 	}
 }
 
-func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T) {
+func TestPublicPresetResponsesCarryPrivatePromptShapeWithoutItsText(t *testing.T) {
 	t.Parallel()
 	router, session, _ := harness.NewConnectRouter(t)
 	started := apitest.StartPreset(t, router, session, "lumiverse")
@@ -97,13 +97,13 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 		"groups":[{"id":"` + groupID + `","name":"Reasoning"}],
 		"fragments":[
 			{"name":"Visible shape","role":"user","placement":"pre_history","text":"Public prompt.","enabled":true,"groupId":"` + groupID + `"},
-			{"name":"Private shape","role":"assistant","placement":"post_history","text":"` + privateText + `","protected":true,"enabled":false,"groupId":"` + groupID + `"}
+			{"name":"Private shape","role":"assistant","placement":"post_history","text":"` + privateText + `","private":true,"enabled":false,"groupId":"` + groupID + `"}
 		]
 	}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("save private prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if got := apitest.SaveDetails(t, router, session, started.ID, `{"name":"Reader-safe preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
@@ -118,12 +118,12 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 	}
 	publicBody := reader.Body.String()
 	if strings.Contains(publicBody, privateText) {
-		t.Fatal("the complete reader response contains protected text")
+		t.Fatal("the complete reader response contains private text")
 	}
 	for _, visible := range []string{
-		`"linkedInstallOnly":true`, `"allowedApps":[{"id":"lumiverse","label":"Lumiverse"}]`,
+		`"hasPrivatePrompts":true`, `"allowedApps":[{"id":"lumiverse","label":"Lumiverse"}]`,
 		`"name":"Private shape"`, `"role":"assistant"`,
-		`"placement":"post_history"`, `"protected":true`,
+		`"placement":"post_history"`, `"private":true`,
 		`"enabled":false`, `"groupId":"` + groupID + `"`, `"text":""`,
 		`"facts":["2 fragments","1 switched on"]`, `"downloads":[]`,
 	} {
@@ -153,27 +153,27 @@ func TestPublicPresetResponsesCarrySealedShapeWithoutProtectedText(t *testing.T)
 		t.Fatalf("decode search response: %v", err)
 	}
 	if len(results.Items) != 0 || strings.Contains(search.Body.String(), privateText) {
-		t.Fatalf("protected text matched or appeared in search: %s", search.Body.String())
+		t.Fatalf("private text matched or appeared in search: %s", search.Body.String())
 	}
 }
 
-func TestProtectedWorksRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *testing.T) {
+func TestWorksWithPrivatePromptsRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *testing.T) {
 	t.Parallel()
 	router, session, pool := harness.NewConnectRouter(t)
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	if len(started.Downloads) == 0 {
-		t.Fatal("the ordinary preset has no generated format to protect")
+		t.Fatal("the ordinary preset has no generated format to keep private")
 	}
 
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const privateText = "ordinary-export-canary-86fd7431"
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{
-		"name":"Private instructions","role":"system","text":"` + privateText + `","protected":true,"enabled":true
+		"name":"Private instructions","role":"system","text":"` + privateText + `","private":true,"enabled":true
 	}]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 	if got := apitest.SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("save private prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if got := apitest.SaveDetails(t, router, session, started.ID, `{"name":"No ordinary exports","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
@@ -213,14 +213,14 @@ func TestProtectedWorksRefuseEveryOrdinaryExportWithoutRecordingAHandoff(t *test
 	}
 }
 
-func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) {
+func TestAnOriginalUploadWithPrivatePromptsIsRecoveryAccessForItsOwnerAlone(t *testing.T) {
 	t.Parallel()
 	router, ownerSession, works, pool := harness.NewVerifiedIngestRouterWithPool(
 		t, apitest.LumiverseRegistry(t),
 	)
-	metadata := apitest.ExampleMetadata("Protected original")
-	metadata["filename"] = "protected-original.json"
-	finished := apitest.UploadAndFinish(t, router, ownerSession, works, metadata, []byte(apitest.KeyedSealedPreset))
+	metadata := apitest.ExampleMetadata("Private original")
+	metadata["filename"] = "private-original.json"
+	finished := apitest.UploadAndFinish(t, router, ownerSession, works, metadata, []byte(apitest.KeyedPrivatePreset))
 	workID := apitest.WorkIDFromIngest(t, finished)
 	readerSession := apitest.SignUp(t, router, "original-reader@example.com", "original.reader")
 
@@ -252,26 +252,26 @@ func TestAProtectedOriginalUploadIsRecoveryAccessForItsOwnerAlone(t *testing.T) 
 		select count(*), coalesce(max(authorization_class), '')
 		  from download_events where work_id = $1
 	`, workID).Scan(&events, &class); err != nil {
-		t.Fatalf("read protected source events: %v", err)
+		t.Fatalf("read private prompt source events: %v", err)
 	}
 	if events != 1 || class != "owner" {
-		t.Fatalf("protected source events = %d with class %q, want one owner recovery", events, class)
+		t.Fatalf("private prompt source events = %d with class %q, want one owner recovery", events, class)
 	}
 }
 
-func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testing.T) {
+func TestAReplacementUploadRemovesPrivatePromptsWithoutAnOwningPrompt(t *testing.T) {
 	t.Parallel()
 	_, router, session, works, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := apitest.StartPreset(t, router, session, "lumiverse")
 	coreBlock := apitest.BlockNamed(t, started.Blocks, "preset_core")
 	core := apitest.EditableBlock(coreBlock)
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
-		{"name":"Old sealed prompt","role":"system","text":"Private text with an old owner.","protected":true,"enabled":true}
+		{"name":"Old private prompt","role":"system","text":"Private text with an old owner.","private":true,"enabled":true}
 	]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
-		t.Fatalf("save sealed prompt: %d %s", response.Code, response.Body.String())
+		t.Fatalf("save private prompt: %d %s", response.Code, response.Body.String())
 	}
 
 	replacement := []byte(`{
@@ -295,12 +295,12 @@ func TestAReplacementUploadRemovesProtectedContentWithoutAnOwningPrompt(t *testi
 	if updated.ID != started.ID {
 		t.Fatalf("replacement work = %s, want %s", updated.ID, started.ID)
 	}
-	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after replacement: %d payloads and %d policy rows, want none", payloads, policies)
 	}
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
-	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
-		t.Fatalf("replacement kept protected send policy: linked install only %t, apps %v",
-			owner.LinkedInstallOnly, owner.AllowedApps)
+	if owner.HasPrivatePrompts || len(owner.AllowedApps) != 0 {
+		t.Fatalf("replacement kept allowed apps: has private prompts %t, apps %v",
+			owner.HasPrivatePrompts, owner.AllowedApps)
 	}
 }

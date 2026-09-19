@@ -8,12 +8,12 @@ import (
 )
 
 type SaveWorkBlockRequest struct {
-	AllowedApps     *[]string                  `json:"allowedApps,omitempty"`
-	Elements        []SaveWorkElement          `json:"elements"`
-	ExposeProtected *bool                      `json:"exposeProtected,omitempty"`
-	Layout          SaveWorkBlockRequestLayout `json:"layout"`
-	Title           *string                    `json:"title" tstype:"string | null,required"`
-	Width           SaveWorkBlockRequestWidth  `json:"width"`
+	AllowedApps       *[]string                  `json:"allowedApps,omitempty"`
+	Elements          []SaveWorkElement          `json:"elements"`
+	MakePromptsPublic *bool                      `json:"makePromptsPublic,omitempty"`
+	Layout            SaveWorkBlockRequestLayout `json:"layout"`
+	Title             *string                    `json:"title" tstype:"string | null,required"`
+	Width             SaveWorkBlockRequestWidth  `json:"width"`
 }
 
 type SaveWorkBlockRequestLayout string
@@ -53,14 +53,14 @@ const (
 	SaveWorkElementDisplayVerbatim SaveWorkElementDisplay = "verbatim"
 )
 
-type SealedExposureRefusal struct {
-	Code    SealedExposureRefusalCode `json:"code" tstype:"'sealed_exposure',required"`
-	Error   string                    `json:"error"`
-	Prompts []string                  `json:"prompts"`
+type PromptsMadePublicRefusal struct {
+	Code    PromptsMadePublicRefusalCode `json:"code" tstype:"'prompts_made_public',required"`
+	Error   string                       `json:"error"`
+	Prompts []string                     `json:"prompts"`
 }
 
-type SealedExposureRefusalCode string
+type PromptsMadePublicRefusalCode string
 
 const (
-	SealedExposureRefusalCodeSealedExposure SealedExposureRefusalCode = "sealed_exposure"
+	PromptsMadePublicRefusalCodePromptsMadePublic PromptsMadePublicRefusalCode = "prompts_made_public"
 )

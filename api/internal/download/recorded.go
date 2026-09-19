@@ -31,12 +31,12 @@ func (s *Service) OpenRecordedExport(
 	}
 	defer tx.Rollback(ctx)
 
-	subject, sealed, err := s.recordedExportSubject(ctx, tx, workID, viewerID, number)
+	subject, hasPrivatePrompts, err := s.recordedExportSubject(ctx, tx, workID, viewerID, number)
 	if err != nil {
 		return Export{}, err
 	}
-	if sealed {
-		return Export{}, ErrLinkedInstallOnly
+	if hasPrivatePrompts {
+		return Export{}, ErrPrivatePrompts
 	}
 	subject.gallery = gallery
 	module, known := s.reg.ByID(formatID)
@@ -58,14 +58,14 @@ func (s *Service) OpenRecordedExport(
 type RecordedDownloads struct {
 	Version           work.Version
 	Type              string
-	LinkedInstallOnly bool
+	HasPrivatePrompts bool
 	Downloads         []format.Offered
 	AppFormats        []format.AppFormat
 	Blocks            []block.Block
 	Media             []work.DetailImage
 }
 
-// RecordedDownloads reads a historical version's download choices under current protection.
+// RecordedDownloads reads a historical version's download choices under the current private prompts.
 func (s *Service) RecordedDownloads(
 	ctx context.Context,
 	workID uuid.UUID,
@@ -79,15 +79,15 @@ func (s *Service) RecordedDownloads(
 	}
 	defer tx.Rollback(ctx)
 
-	subject, sealed, err := s.recordedExportSubject(ctx, tx, workID, viewerID, number)
+	subject, hasPrivatePrompts, err := s.recordedExportSubject(ctx, tx, workID, viewerID, number)
 	if err != nil {
 		return RecordedDownloads{}, err
 	}
 	offered := RecordedDownloads{
-		Version: subject.recorded.Version, Type: subject.workType, LinkedInstallOnly: sealed,
+		Version: subject.recorded.Version, Type: subject.workType, HasPrivatePrompts: hasPrivatePrompts,
 		Downloads: []format.Offered{}, AppFormats: []format.AppFormat{}, Blocks: []block.Block{},
 	}
-	if !sealed {
+	if !hasPrivatePrompts {
 		offered.Downloads = s.reg.OfferedFormats(subject.capability())
 		offered.AppFormats = format.AppFormats(offered.Downloads, s.reg)
 		offered.Blocks = subject.blocks
@@ -149,7 +149,7 @@ func (s *Service) recordedPictures(
 	return pictures, rows.Err()
 }
 
-// recordedExportSubject loads a historical version under current access and protection.
+// recordedExportSubject loads a historical version under current access and private prompts.
 func (s *Service) recordedExportSubject(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -179,7 +179,7 @@ func (s *Service) recordedExportSubject(
 	if recorded.WithdrawnAt != nil && (viewerID == nil || ownerID == nil || *viewerID != *ownerID) {
 		return exportSubject{}, false, work.ErrNotFound
 	}
-	if err := private.RestoreRecordedPrompts(recorded.ProtectedPayloads, recorded.Blocks); err != nil {
+	if err := private.RestoreRecordedPrompts(recorded.PrivatePrompts, recorded.Blocks); err != nil {
 		return exportSubject{}, false, err
 	}
 	if _, err := private.ApplyRecordedPolicy(ctx, tx, workID, &recorded.ID, recorded.Blocks); err != nil {
@@ -189,7 +189,7 @@ func (s *Service) recordedExportSubject(
 	if err != nil {
 		return exportSubject{}, false, err
 	}
-	sealed := len(apps) > 0 || private.HasPromptFragments(recorded.Blocks)
+	hasPrivatePrompts := len(apps) > 0 || private.HasPromptFragments(recorded.Blocks)
 	subject.workID = workID
 	subject.workType = recorded.Type
 	subject.name = recorded.Metadata.Name
@@ -206,7 +206,7 @@ func (s *Service) recordedExportSubject(
 	subject.ownerID = ownerID
 	subject.originalFileID = recorded.OriginalFileID
 	subject.recorded = &recorded
-	return subject, sealed, nil
+	return subject, hasPrivatePrompts, nil
 }
 
 func recordedRemainder(v work.FullVersion) []format.Remainder {

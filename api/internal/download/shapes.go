@@ -15,7 +15,7 @@ type RecordedVersionDownloads struct {
 	Blocks            []block.WorkBlock            `json:"blocks"`
 	Downloads         []page.DownloadFormat        `json:"downloads"`
 	Type              RecordedVersionDownloadsType `json:"type"`
-	LinkedInstallOnly bool                         `json:"linkedInstallOnly"`
+	HasPrivatePrompts bool                         `json:"hasPrivatePrompts"`
 	Media             []page.WorkImage             `json:"media"`
 	Version           page.RecordedVersion         `json:"version"`
 }

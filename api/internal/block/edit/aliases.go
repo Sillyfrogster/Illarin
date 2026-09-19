@@ -15,3 +15,11 @@ func registerAliases(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPut, "/v1/assets/:id/blocks/:blockId", d.JSON, h.SaveWorkBlock)
 	routes.Handle(http.MethodPost, "/v1/assets/:id/blocks/:blockId/move-and-remove", d.JSON, h.MoveWorkBlockContent)
 }
+
+// The field name a block save took before the rename, kept for sixty days
+var saveWorkBlockAliases = map[string]string{"makePromptsPublic": "exposeProtected"}
+
+func (r *SaveWorkBlockRequest) UnmarshalJSON(data []byte) error {
+	type plain SaveWorkBlockRequest
+	return api.UnmarshalAliased(data, (*plain)(r), saveWorkBlockAliases)
+}

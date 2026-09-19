@@ -33,11 +33,11 @@ type seededBlock struct {
 	Definition string `json:"definition"`
 	Title      string `json:"title"`
 	Elements   []struct {
-		Type    string          `json:"type"`
-		Role    string          `json:"role"`
-		Pinned  bool            `json:"pinned"`
-		Locked  bool            `json:"locked"`
-		Content json.RawMessage `json:"content"`
+		Type     string          `json:"type"`
+		Role     string          `json:"role"`
+		Pinned   bool            `json:"pinned"`
+		FromFile bool            `json:"fromFile"`
+		Content  json.RawMessage `json:"content"`
 	} `json:"elements"`
 }
 
@@ -58,8 +58,8 @@ func TestAReadmeSeedsTheNewPageWithBlocksTheCreatorOwns(t *testing.T) {
 	}
 	for _, holder := range page.Blocks {
 		for _, element := range holder.Elements {
-			if seeded := holder.Definition == "custom_block"; seeded == (element.Pinned || element.Locked) {
-				t.Errorf("%s %s element is pinned %t and locked %t", holder.Title, element.Type, element.Pinned, element.Locked)
+			if seeded := holder.Definition == "custom_block"; seeded == (element.Pinned || element.FromFile) {
+				t.Errorf("%s %s element is pinned %t and from the file %t", holder.Title, element.Type, element.Pinned, element.FromFile)
 			}
 		}
 	}

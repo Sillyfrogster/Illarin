@@ -40,7 +40,7 @@ func TestSpindleDeclaresAWriterThatKeepsTheUpload(t *testing.T) {
 	}
 }
 
-func TestSpindleReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T) {
+func TestSpindleReadsTheManifestIntoTheHeaderAndElementsFromTheFile(t *testing.T) {
 	t.Parallel()
 	parsed := parseSpindle(t, spindleZip(t, map[string]string{
 		"spindle.json":     sampleManifest,

@@ -14,7 +14,9 @@ func registerAliases(routes api.Routes, h *Handlers) {
 }
 
 // The field names a version's downloads answered to before the renames, kept for sixty days
-var recordedDownloadsAliases = map[string]string{"type": "kind", "appFormats": "appTargets"}
+var recordedDownloadsAliases = map[string]string{
+	"type": "kind", "appFormats": "appTargets", "hasPrivatePrompts": "linkedInstallOnly",
+}
 
 // oldFormatHeader is the header a download named its format in before the rename, sent for sixty days
 const oldFormatHeader = "X-Illarin-Export-Target"

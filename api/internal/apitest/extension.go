@@ -24,10 +24,10 @@ type ExtensionPage struct {
 		ID         string `json:"id"`
 		Definition string `json:"definition"`
 		Elements   []struct {
-			Role    string          `json:"role"`
-			Pinned  bool            `json:"pinned"`
-			Locked  bool            `json:"locked"`
-			Content json.RawMessage `json:"content"`
+			Role     string          `json:"role"`
+			Pinned   bool            `json:"pinned"`
+			FromFile bool            `json:"fromFile"`
+			Content  json.RawMessage `json:"content"`
 		} `json:"elements"`
 	} `json:"blocks"`
 }

@@ -51,15 +51,15 @@ func toAPIElements(workType string, holder Block) ([]WorkElement, error) {
 			facts = []string{}
 		}
 		served := WorkElement{
-			Id:      element.ID,
-			Type:    ElementType(element.Type),
-			Slot:    string(element.Slot),
-			Label:   element.Label(),
-			Pinned:  holder.Pinned(element.Role, workType),
-			Locked:  holder.Locked(element.Role, workType),
-			IsEmpty: element.Content == nil || element.Content.Empty(),
-			Facts:   facts,
-			Content: content,
+			Id:       element.ID,
+			Type:     ElementType(element.Type),
+			Slot:     string(element.Slot),
+			Label:    element.Label(),
+			Pinned:   holder.Pinned(element.Role, workType),
+			FromFile: holder.FromFile(element.Role, workType),
+			IsEmpty:  element.Content == nil || element.Content.Empty(),
+			Facts:    facts,
+			Content:  content,
 		}
 		if element.Role != "" {
 			role := string(element.Role)

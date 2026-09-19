@@ -83,7 +83,7 @@ func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
 	}
 }
 
-func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
+func TestPrivatePromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	t.Parallel()
 	_, router, session, works, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := apitest.StartPreset(t, router, session, "lumiverse")
@@ -91,12 +91,12 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	core := apitest.EditableBlock(coreBlock)
 	const privateText = "Recover this exact private prompt."
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
-		{"name":"Recoverable","role":"system","text":"` + privateText + `","protected":true,"enabled":true}
+		{"name":"Recoverable","role":"system","text":"` + privateText + `","private":true,"enabled":true}
 	]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 	if response := apitest.SaveBlock(t, router, session, started.ID, coreBlock.ID, core); response.Code != http.StatusOK {
-		t.Fatalf("save sealed prompt: %d %s", response.Code, response.Body.String())
+		t.Fatalf("save private prompt: %d %s", response.Code, response.Body.String())
 	}
 
 	deleteWork := func() {
@@ -109,7 +109,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 		}
 	}
 	deleteWork()
-	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
 		t.Fatalf("during recovery: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
 	}
 
@@ -121,8 +121,8 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	}
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) ||
-		!owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0].ID != "lumiverse" {
-		t.Fatalf("restored protected work lost its prompt or policy: %+v", owner)
+		!owner.HasPrivatePrompts || len(owner.AllowedApps) != 1 || owner.AllowedApps[0].ID != "lumiverse" {
+		t.Fatalf("restored work with private prompts lost its prompt or policy: %+v", owner)
 	}
 
 	deleteWork()
@@ -134,7 +134,7 @@ func TestProtectedPromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	if _, err := sweeper(works).Sweep(t.Context()); err != nil {
 		t.Fatalf("sweep expired work: %v", err)
 	}
-	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after recovery expired: %d payloads and %d policy rows, want none", payloads, policies)
 	}
 }

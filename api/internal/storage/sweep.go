@@ -26,7 +26,7 @@ func (s *Sweeper) Sweep(ctx context.Context) (SweepResult, error) {
 	if err := s.deleteExpiredVersions(ctx); err != nil {
 		return SweepResult{}, err
 	}
-	if err := s.deleteExpiredProtectedContent(ctx, now); err != nil {
+	if err := s.deleteExpiredPrivatePrompts(ctx, now); err != nil {
 		return SweepResult{}, err
 	}
 	if _, err := s.store.RecordOrphans(ctx); err != nil {
@@ -99,48 +99,48 @@ func (s *Sweeper) deleteExpiredVersions(ctx context.Context) error {
 	return tx.Commit(ctx)
 }
 
-func (s *Sweeper) deleteExpiredProtectedContent(ctx context.Context, now time.Time) error {
+func (s *Sweeper) deleteExpiredPrivatePrompts(ctx context.Context, now time.Time) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin protected content cleanup: %w", err)
+		return fmt.Errorf("begin private prompt cleanup: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	rows, err := tx.Query(ctx, `
 		select id from works
 		 where deleted_at is not null and recoverable_until <= $1
-		   and (exists (select 1 from protected_content where work_id = works.id)
-		        or exists (select 1 from protected_delivery_apps where work_id = works.id))
+		   and (exists (select 1 from private_prompts where work_id = works.id)
+		        or exists (select 1 from private_prompt_apps where work_id = works.id))
 		 for update
 	`, now)
 	if err != nil {
-		return fmt.Errorf("lock expired works for protected content cleanup: %w", err)
+		return fmt.Errorf("lock expired works for private prompt cleanup: %w", err)
 	}
 	var expired []uuid.UUID
 	for rows.Next() {
 		var id uuid.UUID
 		if err := rows.Scan(&id); err != nil {
 			rows.Close()
-			return fmt.Errorf("read expired work for protected content cleanup: %w", err)
+			return fmt.Errorf("read expired work for private prompt cleanup: %w", err)
 		}
 		expired = append(expired, id)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return fmt.Errorf("list expired works for protected content cleanup: %w", err)
+		return fmt.Errorf("list expired works for private prompt cleanup: %w", err)
 	}
 	rows.Close()
 	if len(expired) == 0 {
 		return tx.Commit(ctx)
 	}
-	if _, err := tx.Exec(ctx, `delete from protected_content where work_id = any($1)`, expired); err != nil {
-		return fmt.Errorf("remove expired protected content: %w", err)
+	if _, err := tx.Exec(ctx, `delete from private_prompts where work_id = any($1)`, expired); err != nil {
+		return fmt.Errorf("remove expired private prompts: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `delete from protected_delivery_apps where work_id = any($1)`, expired); err != nil {
-		return fmt.Errorf("remove expired protected delivery policy: %w", err)
+	if _, err := tx.Exec(ctx, `delete from private_prompt_apps where work_id = any($1)`, expired); err != nil {
+		return fmt.Errorf("remove expired allowed apps: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit protected content cleanup: %w", err)
+		return fmt.Errorf("commit private prompt cleanup: %w", err)
 	}
 	return nil
 }

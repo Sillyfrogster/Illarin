@@ -61,7 +61,7 @@ func (d Definition) fill(tagged []Element, placed []bool) ([]Element, error) {
 			return nil, err
 		}
 		if found < 0 {
-			if !defined.Pinned || defined.Locked {
+			if !defined.Pinned || defined.FromFile {
 				continue
 			}
 			content, err := defined.Type.Empty()
@@ -111,7 +111,7 @@ func (d Definition) take(defined DefinedElement, tagged []Element, placed []bool
 // readFromUpload says whether every element of the block comes only from an uploaded file.
 func (d Definition) readFromUpload() bool {
 	return len(d.Elements) > 0 && !slices.ContainsFunc(d.Elements, func(defined DefinedElement) bool {
-		return !defined.Locked
+		return !defined.FromFile
 	})
 }
 
@@ -124,12 +124,12 @@ func (b Block) Pinned(role Role, workType string) bool {
 	return ok && defined.Pinned
 }
 
-// Locked says whether the element is read from an upload and never edited on Illarin.
-func (b Block) Locked(role Role, workType string) bool {
+// FromFile says whether the element is read from an upload and never edited on Illarin.
+func (b Block) FromFile(role Role, workType string) bool {
 	definition, ok := b.Definition.Definition(workType)
 	if !ok {
 		return false
 	}
 	defined, ok := definition.element(role)
-	return ok && defined.Locked
+	return ok && defined.FromFile
 }

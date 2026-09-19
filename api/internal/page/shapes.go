@@ -74,13 +74,13 @@ type WorkDetail struct {
 	Type                  WorkDetailType           `json:"type"`
 	LatestVersion         *RecordedVersion         `json:"latestVersion,omitempty"`
 	Lifecycle             WorkDetailLifecycle      `json:"lifecycle"`
-	LinkedInstallOnly     bool                     `json:"linkedInstallOnly"`
+	HasPrivatePrompts     bool                     `json:"hasPrivatePrompts"`
 	Media                 []WorkImage              `json:"media"`
 	Name                  string                   `json:"name"`
 	Original              *OriginalUpload          `json:"original" tstype:"OriginalUpload | null,required"`
 	Preview               *string                  `json:"preview" tstype:"string | null,required"`
 	Readiness             *[]ReadinessItem         `json:"readiness,omitempty"`
-	SealedBlocks          *int                     `json:"sealedBlocks,omitempty"`
+	PreservedPrompts      *int                     `json:"preservedPrompts,omitempty"`
 	Tags                  []WorkTag                `json:"tags"`
 	UnpublishedChanges    *bool                    `json:"unpublishedChanges,omitempty"`
 	NSFWPreference        WorkDetailNSFWPreference `json:"nsfwPreference"`

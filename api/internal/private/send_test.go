@@ -30,7 +30,7 @@ func settledSend(t *testing.T, pool *pgxpool.Pool, workID string) (string, strin
 	return state, reason
 }
 
-func TestSealingAPromptStopsAQueuedSendTheAppCanNoLongerReceive(t *testing.T) {
+func TestMakingAPromptPrivateStopsAQueuedSendTheAppCanNoLongerReceive(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
@@ -46,9 +46,9 @@ func TestSealingAPromptStopsAQueuedSendTheAppCanNoLongerReceive(t *testing.T) {
 
 	page := apitest.FetchStartedWork(t, router, session, workID)
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
-	sealed := apitest.SealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
-	if got := apitest.SaveBlock(t, router, session, workID, core.ID, sealed); got.Code != http.StatusOK {
-		t.Fatalf("seal the prompt status = %d, want 200: %s", got.Code, got.Body.String())
+	madePrivate := apitest.MakeEveryFragmentPrivate(t, apitest.EditableBlock(core), []string{"lumiverse"})
+	if got := apitest.SaveBlock(t, router, session, workID, core.ID, madePrivate); got.Code != http.StatusOK {
+		t.Fatalf("make the prompt private status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
 	rec := apitest.Collect(t, router, credentials.AccessToken, nil)
@@ -65,7 +65,7 @@ func TestSealingAPromptStopsAQueuedSendTheAppCanNoLongerReceive(t *testing.T) {
 	}
 }
 
-func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testing.T) {
+func TestAFileAddressSignedBeforeAPromptWentPrivateHandsOverNoBytesAfterwards(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
@@ -80,15 +80,15 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 
 	page := apitest.FetchStartedWork(t, router, session, workID)
 	core := apitest.BlockNamed(t, page.Blocks, "preset_core")
-	sealed := apitest.SealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
-	if got := apitest.SaveBlock(t, router, session, workID, core.ID, sealed); got.Code != http.StatusOK {
-		t.Fatalf("seal the prompt status = %d, want 200: %s", got.Code, got.Body.String())
+	madePrivate := apitest.MakeEveryFragmentPrivate(t, apitest.EditableBlock(core), []string{"lumiverse"})
+	if got := apitest.SaveBlock(t, router, session, workID, core.ID, madePrivate); got.Code != http.StatusOK {
+		t.Fatalf("make the prompt private status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
 	fetched := apitest.FetchSigned(t, router, work.Files[0].URL)
 
 	if fetched.Code != http.StatusNotFound {
-		t.Fatalf("fetch after sealing = %d, want 404: %s", fetched.Code, fetched.Body.String())
+		t.Fatalf("fetch after making them private = %d, want 404: %s", fetched.Code, fetched.Body.String())
 	}
 	if fetched.Header().Get("X-Accel-Redirect") != "" {
 		t.Fatalf("a refused artifact still pointed at %q", fetched.Header().Get("X-Accel-Redirect"))
@@ -101,7 +101,7 @@ func TestAnArtifactAddressSignedBeforeSealingHandsOverNoBytesAfterwards(t *testi
 func TestAConnectedAppsAppNameGrantsNoPrivatePrompts(t *testing.T) {
 	t.Parallel()
 	router, session, _ := harness.NewConnectRouter(t)
-	workID := apitest.PublishSealedPreset(t, router, session, "Named app preset", "Sealed for allowed apps only.")
+	workID := apitest.PublishPrivatePromptPreset(t, router, session, "Named app preset", "Private for allowed apps only.")
 	borrowedName := apitest.ConnectApp(t, router, session, "Lumiverse", "desk", []string{apitest.ReceivePermission})
 	apitest.DeclareFormats(t, router, borrowedName.AccessToken, []string{"invented_by_the_client"})
 	otherName := apitest.ConnectApp(t, router, session, "Some Other App", "tablet", []string{apitest.ReceivePermission})
@@ -113,10 +113,10 @@ func TestAConnectedAppsAppNameGrantsNoPrivatePrompts(t *testing.T) {
 	}
 
 	if offered[borrowedName.ConnectedApp.ID] {
-		t.Fatal("a connected app calling itself Lumiverse was offered a sealed preset")
+		t.Fatal("a connected app calling itself Lumiverse was offered a private prompt preset")
 	}
 	if !offered[otherName.ConnectedApp.ID] {
-		t.Fatal("a connected app accepting the allowed format was not offered a sealed preset")
+		t.Fatal("a connected app accepting the allowed format was not offered a private prompt preset")
 	}
 	if got := apitest.SendToApp(t, router, session, workID, borrowedName.ConnectedApp.ID); got.Code != http.StatusConflict {
 		t.Fatalf("queue by borrowed name = %d, want 409: %s", got.Code, got.Body.String())
@@ -130,13 +130,13 @@ func TestAConnectedAppsAppNameGrantsNoPrivatePrompts(t *testing.T) {
 	}
 }
 
-func TestAnyReadersAllowedConnectedAppReceivesTheCompleteProtectedPreset(t *testing.T) {
+func TestAnyReadersAllowedConnectedAppReceivesTheCompletePrivatePromptPreset(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
-	metadata := apitest.ExampleMetadata("Keyed sealed preset")
+	metadata := apitest.ExampleMetadata("Keyed private prompt preset")
 	metadata["filename"] = "keyed.json"
 	workID := apitest.WorkIDFromIngest(
-		t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedSealedPreset)),
+		t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedPrivatePreset)),
 	)
 	reader := apitest.AddVerifiedUser(t, router, pool, "reader@example.com", "reader.creator")
 	credentials := apitest.ConnectApp(t, router, reader, "Lumiverse", "reader desk", []string{apitest.ReceivePermission})

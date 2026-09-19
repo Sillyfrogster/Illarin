@@ -46,20 +46,20 @@ const (
 )
 
 const (
-	lvBlockID            = "id"
-	lvBlockName          = "name"
-	lvBlockRole          = "role"
-	lvBlockText          = "content"
-	lvBlockMarker        = "marker"
-	lvBlockEnabled       = "enabled"
-	lvBlockPosition      = "position"
-	lvBlockDepth         = "depth"
-	lvBlockGroup         = "group"
-	lvBlockVars          = "variables"
-	lvBlockSealed        = "sealed"
-	lvBlockSealKey       = "sealedKey"
-	lvBlockSealKeyLegacy = "sealed_key"
-	lvHeadingMarker      = "category"
+	lvBlockID          = "id"
+	lvBlockName        = "name"
+	lvBlockRole        = "role"
+	lvBlockText        = "content"
+	lvBlockMarker      = "marker"
+	lvBlockEnabled     = "enabled"
+	lvBlockPosition    = "position"
+	lvBlockDepth       = "depth"
+	lvBlockGroup       = "group"
+	lvBlockVars        = "variables"
+	lvPrivateFlag      = "sealed"
+	lvPrivateKey       = "sealedKey"
+	lvPrivateKeyLegacy = "sealed_key"
+	lvHeadingMarker    = "category"
 )
 
 const (
@@ -274,7 +274,7 @@ func (m LumiverseModule) Parse(
 			source, read.leftovers,
 			scriptLeftovers(scripts, lumiverseScriptNamespace, scriptFields),
 		),
-		Protected: read.protected,
+		PrivatePrompts: read.privatePrompts,
 	}, nil
 }
 

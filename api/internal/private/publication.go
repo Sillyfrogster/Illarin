@@ -17,7 +17,7 @@ type Querier interface {
 }
 
 func ApplyPublishedPolicy(ctx context.Context, q Querier, workID uuid.UUID, blocks []block.Block) error {
-	if err := restorePromptFragments(ctx, q, workID, blocks, "work_public.protected_content"); err != nil {
+	if err := restorePromptFragments(ctx, q, workID, blocks, "work_public.private_prompts"); err != nil {
 		return err
 	}
 	_, err := ApplyRecordedPolicy(ctx, q, workID, nil, blocks)
@@ -31,19 +31,19 @@ func ApplyRecordedPolicy(
 	versionID *uuid.UUID,
 	blocks []block.Block,
 ) (bool, error) {
-	uncertain, err := markCurrentProtection(ctx, q, workID, versionID, blocks)
+	uncertain, err := markCurrentPrivacy(ctx, q, workID, versionID, blocks)
 	if err != nil {
 		return false, err
 	}
 	forEachFragment(blocks, func(fragment *block.PromptFragment) {
-		if fragment.Protected {
+		if fragment.Private {
 			fragment.Text = ""
 		}
 	})
 	return uncertain, nil
 }
 
-func markCurrentProtection(
+func markCurrentPrivacy(
 	ctx context.Context,
 	q Querier,
 	workID uuid.UUID,
@@ -64,7 +64,7 @@ func markCurrentProtection(
 	})
 	uncertain := false
 	for id, prompt := range current {
-		if prompt.sealed && !recorded[id] && !settled[id] {
+		if prompt.isPrivate && !recorded[id] && !settled[id] {
 			uncertain = true
 		}
 	}
@@ -73,7 +73,7 @@ func markCurrentProtection(
 		if stands, answered := standsFor[fragment.ID]; answered {
 			prompt, matched = current[stands], true
 		}
-		fragment.Protected = uncertain || prompt.sealed || (!matched && fragment.Protected)
+		fragment.Private = uncertain || prompt.isPrivate || (!matched && fragment.Private)
 	})
 	return uncertain, nil
 }
@@ -85,7 +85,7 @@ func RestoreRecordedPrompts(payloads []byte, blocks []block.Block) error {
 		Payload   json.RawMessage `json:"payload"`
 	}
 	if err := json.Unmarshal(payloads, &recorded); err != nil {
-		return fmt.Errorf("read recorded protected prompts: %w", err)
+		return fmt.Errorf("read recorded private prompts: %w", err)
 	}
 	texts := map[uuid.UUID]string{}
 	for _, item := range recorded {
@@ -96,7 +96,7 @@ func RestoreRecordedPrompts(payloads []byte, blocks []block.Block) error {
 			Text string `json:"text"`
 		}
 		if err := json.Unmarshal(item.Payload, &held); err != nil {
-			return fmt.Errorf("decode a recorded protected prompt: %w", err)
+			return fmt.Errorf("decode a recorded private prompt: %w", err)
 		}
 		texts[item.OwnerID] = held.Text
 	}
@@ -108,7 +108,7 @@ func RestoreRecordedPrompts(payloads []byte, blocks []block.Block) error {
 	return nil
 }
 
-// PrepareRestoration applies today's prompt protection to historical content without changing allowed apps.
+// PrepareRestoration applies today's private prompts to historical content without changing allowed apps.
 func PrepareRestoration(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -120,51 +120,51 @@ func PrepareRestoration(
 	if err := RestoreRecordedPrompts(payloads, blocks); err != nil {
 		return err
 	}
-	if _, err := markCurrentProtection(ctx, tx, workID, &versionID, blocks); err != nil {
+	if _, err := markCurrentPrivacy(ctx, tx, workID, &versionID, blocks); err != nil {
 		return err
 	}
-	sealed := map[uuid.UUID]promptValue{}
+	privateValues := map[uuid.UUID]promptValue{}
 	forEachFragment(blocks, func(fragment *block.PromptFragment) {
-		if fragment.Protected {
-			sealed[fragment.ID] = promptValue{text: fragment.Text}
+		if fragment.Private {
+			privateValues[fragment.ID] = promptValue{text: fragment.Text}
 			fragment.Text = ""
 		}
 	})
-	if len(sealed) == 0 {
-		_, err := tx.Exec(ctx, `delete from protected_content where work_id = $1`, workID)
+	if len(privateValues) == 0 {
+		_, err := tx.Exec(ctx, `delete from private_prompts where work_id = $1`, workID)
 		return err
 	}
-	return replacePromptPayloads(ctx, tx, workID, sealed)
+	return replacePromptPayloads(ctx, tx, workID, privateValues)
 }
 
-func UnsealedFragments(
+func PromptsMadePublic(
 	ctx context.Context,
 	q Querier,
 	workID uuid.UUID,
 	blocks []block.Block,
 ) ([]string, error) {
 	rows, err := q.Query(ctx, `
-		select owner_id from protected_content
+		select owner_id from private_prompts
 		 where work_id = $1 and owner_type = $2 and payload_type = $3
 	`, workID, promptOwnerType, promptPayload)
 	if err != nil {
-		return nil, fmt.Errorf("read sealed prompts: %w", err)
+		return nil, fmt.Errorf("read private prompts: %w", err)
 	}
 	defer rows.Close()
-	sealed := map[uuid.UUID]bool{}
+	isPrivate := map[uuid.UUID]bool{}
 	for rows.Next() {
 		var id uuid.UUID
 		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("read a sealed prompt: %w", err)
+			return nil, fmt.Errorf("read a private prompt: %w", err)
 		}
-		sealed[id] = true
+		isPrivate[id] = true
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read sealed prompts: %w", err)
+		return nil, fmt.Errorf("read private prompts: %w", err)
 	}
 	exposed := []string{}
 	forEachFragment(blocks, func(fragment *block.PromptFragment) {
-		if sealed[fragment.ID] && !fragment.Protected {
+		if isPrivate[fragment.ID] && !fragment.Private {
 			exposed = append(exposed, PromptName(*fragment))
 		}
 	})
@@ -178,24 +178,24 @@ func PromptName(fragment block.PromptFragment) string {
 	return "Untitled prompt"
 }
 
-// UnsealedReplacement finds protection a replacement does not preserve.
-func UnsealedReplacement(
+// ReplacementMakesPublic names the private prompts a replacement would make public.
+func ReplacementMakesPublic(
 	ctx context.Context,
 	q Querier,
 	workID uuid.UUID,
 	blocks []block.Block,
 	identities map[uuid.UUID]string,
-	imports []format.ProtectedPrompt,
+	imports []format.PrivatePrompt,
 ) ([]string, error) {
 	current, err := currentPrompts(ctx, q, workID)
 	if err != nil {
 		return nil, err
 	}
-	sealed := map[uuid.UUID]bool{}
+	isPrivate := map[uuid.UUID]bool{}
 	byIdentity := map[string]uuid.UUID{}
 	duplicate := map[string]bool{}
 	forEachFragment(blocks, func(fragment *block.PromptFragment) {
-		sealed[fragment.ID] = fragment.Protected
+		isPrivate[fragment.ID] = fragment.Private
 		if identity := identities[fragment.ID]; identity != "" {
 			if _, found := byIdentity[identity]; found {
 				duplicate[identity] = true
@@ -214,16 +214,16 @@ func UnsealedReplacement(
 	}
 	keys := map[string]bool{}
 	for _, imported := range imports {
-		if sealed[imported.FragmentID] && imported.SourceKey != "" {
+		if isPrivate[imported.FragmentID] && imported.SourceKey != "" {
 			keys[imported.SourceKey] = true
 		}
 	}
 	rows, err := q.Query(ctx, `
-		select owner_id, coalesce(source_key, '') from protected_content
+		select owner_id, coalesce(source_key, '') from private_prompts
 		 where work_id = $1 and owner_type = $2 and payload_type = $3
 	`, workID, promptOwnerType, promptPayload)
 	if err != nil {
-		return nil, fmt.Errorf("read replacement protection: %w", err)
+		return nil, fmt.Errorf("read the replacement's private prompts: %w", err)
 	}
 	defer rows.Close()
 	exposed := []string{}
@@ -234,8 +234,8 @@ func UnsealedReplacement(
 			return nil, err
 		}
 		identity := identities[id]
-		matched := identity != "" && !duplicate[identity] && sealed[byIdentity[identity]]
-		if sealed[id] || matched || keys[key] {
+		matched := identity != "" && !duplicate[identity] && isPrivate[byIdentity[identity]]
+		if isPrivate[id] || matched || keys[key] {
 			continue
 		}
 		name := current[id].name
@@ -248,30 +248,30 @@ func UnsealedReplacement(
 	return exposed, rows.Err()
 }
 
-func SealedPrompts(ctx context.Context, q Querier, workID uuid.UUID) (map[uuid.UUID]string, error) {
+func PrivatePromptNames(ctx context.Context, q Querier, workID uuid.UUID) (map[uuid.UUID]string, error) {
 	current, err := currentPrompts(ctx, q, workID)
 	if err != nil {
 		return nil, err
 	}
-	sealed := map[uuid.UUID]string{}
+	isPrivate := map[uuid.UUID]string{}
 	for id, prompt := range current {
-		if prompt.sealed {
-			sealed[id] = prompt.name
+		if prompt.isPrivate {
+			isPrivate[id] = prompt.name
 		}
 	}
-	return sealed, nil
+	return isPrivate, nil
 }
 
 type promptState struct {
-	sealed bool
-	name   string
+	isPrivate bool
+	name      string
 }
 
 func currentPrompts(ctx context.Context, q Querier, workID uuid.UUID) (map[uuid.UUID]promptState, error) {
 	rows, err := q.Query(ctx,
 		`select elements from public.work_blocks where work_id = $1`, workID)
 	if err != nil {
-		return nil, fmt.Errorf("read current prompt protection: %w", err)
+		return nil, fmt.Errorf("read current private prompts: %w", err)
 	}
 	defer rows.Close()
 	current := map[uuid.UUID]promptState{}
@@ -291,7 +291,7 @@ func currentPrompts(ctx context.Context, q Querier, workID uuid.UUID) (map[uuid.
 			}
 			for _, fragment := range list.Fragments {
 				current[fragment.ID] = promptState{
-					sealed: fragment.Protected, name: PromptName(fragment),
+					isPrivate: fragment.Private, name: PromptName(fragment),
 				}
 			}
 		}
@@ -345,4 +345,12 @@ func forEachFragment(blocks []block.Block, visit func(*block.PromptFragment)) {
 			element.Content = list
 		}
 	}
+}
+
+type ExposureRefusal struct {
+	Prompts []string
+}
+
+func (refusal ExposureRefusal) Error() string {
+	return "making a private prompt public needs an explicit confirmation"
 }

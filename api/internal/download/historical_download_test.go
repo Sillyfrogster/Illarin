@@ -248,19 +248,19 @@ func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 	}
 }
 
-func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
+func TestAHistoricalDownloadHoldsTheCurrentPrivatePrompts(t *testing.T) {
 	t.Parallel()
 	router, session := harness.NewVerifiedRouter(t)
-	publicID, sealedID := uuid.New(), uuid.New()
+	publicID, privateID := uuid.New(), uuid.New()
 	const firstSecret = "The first private instruction."
 	const secondSecret = "The second private instruction."
-	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", firstSecret)
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, privateID, "Answer plainly.", firstSecret)
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
+	core.Elements[0].Content = apitest.PrivatePresetPrompts(publicID, privateID, "Answer plainly.", secondSecret)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("edit the sealed prompt: %d %s", got.Code, got.Body.String())
+		t.Fatalf("edit the private prompt: %d %s", got.Code, got.Body.String())
 	}
 	if got := apitest.PublishWorkVersion(t, router, session, started.ID,
 		`{"summary":"Reworded the private instruction"}`); got.Code != http.StatusOK {
@@ -274,21 +274,21 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 		for _, query := range []string{"?version=1", "?version=2"} {
 			refused := downloadVersion(t, router, reader.session, started.ID, "preset_lumiverse", query)
 			if refused.Code != http.StatusNotFound {
-				t.Fatalf("%s wrote a sealed preset %q: %d", reader.name, query, refused.Code)
+				t.Fatalf("%s wrote a private prompt preset %q: %d", reader.name, query, refused.Code)
 			}
 		}
 	}
 
 	owner = apitest.FetchStartedWork(t, router, session, started.ID)
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	core.Elements[0].Content = apitest.SealedPresetPrompts(publicID, sealedID, "Answer plainly.", secondSecret)
+	core.Elements[0].Content = apitest.PrivatePresetPrompts(publicID, privateID, "Answer plainly.", secondSecret)
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(
-		string(core.Elements[0].Content), `"protected":true`, `"protected":false`))
+		string(core.Elements[0].Content), `"private":true`, `"private":false`))
 	core.AllowedApps = &[]string{}
 	confirmed := true
-	core.ExposeProtected = &confirmed
+	core.MakePromptsPublic = &confirmed
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("unseal the prompt: %d %s", got.Code, got.Body.String())
+		t.Fatalf("make the prompt public: %d %s", got.Code, got.Body.String())
 	}
 
 	first := downloadVersion(t, router, nil, started.ID, "preset_lumiverse", "?version=1")
@@ -307,19 +307,19 @@ func TestAHistoricalDownloadHoldsTheCurrentProtection(t *testing.T) {
 	}
 }
 
-func TestAVersionThatRecordedASealedPromptStaysUnwritableAfterItsRemoval(t *testing.T) {
+func TestAVersionThatRecordedAPrivatePromptStaysUnwritableAfterItsRemoval(t *testing.T) {
 	t.Parallel()
 	router, session := harness.NewVerifiedRouter(t)
-	publicID, sealedID := uuid.New(), uuid.New()
-	const secret = "Words that were sealed when version 1 was recorded."
-	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", secret)
+	publicID, privateID := uuid.New(), uuid.New()
+	const secret = "Words that were private when version 1 was recorded."
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, privateID, "Answer plainly.", secret)
 	owner := apitest.FetchStartedWork(t, router, session, started.ID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[` +
 		`{"id":"` + publicID.String() + `","name":"House rule","role":"system","text":"Answer plainly.","enabled":true}]}`)
 	core.AllowedApps = &[]string{}
 	if got := apitest.SaveBlock(t, router, session, started.ID, owner.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("remove the sealed prompt: %d %s", got.Code, got.Body.String())
+		t.Fatalf("remove the private prompt: %d %s", got.Code, got.Body.String())
 	}
 	if got := apitest.PublishWorkVersion(t, router, session, started.ID,
 		`{"summary":"Removed the private instruction"}`); got.Code != http.StatusOK {
@@ -332,10 +332,10 @@ func TestAVersionThatRecordedASealedPromptStaysUnwritableAfterItsRemoval(t *test
 	}
 	older := downloadVersion(t, router, nil, started.ID, "preset_lumiverse", "?version=1")
 	if older.Code != http.StatusNotFound {
-		t.Fatalf("version 1 was written with a prompt that was sealed when it was recorded: %d", older.Code)
+		t.Fatalf("version 1 was written with a prompt that was private when it was recorded: %d", older.Code)
 	}
 	if strings.Contains(older.Body.String(), secret) {
-		t.Fatal("the refusal carried the sealed text")
+		t.Fatal("the refusal carried the private text")
 	}
 }
 
@@ -526,7 +526,7 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 type recordedDownloadsBody struct {
 	Version           apitest.RecordedVersionBody `json:"version"`
 	Type              string                      `json:"type"`
-	LinkedInstallOnly bool                        `json:"linkedInstallOnly"`
+	HasPrivatePrompts bool                        `json:"hasPrivatePrompts"`
 	Downloads         []apitest.DownloadFormat    `json:"downloads"`
 	AppFormats        []apitest.AppFormat         `json:"appFormats"`
 	Blocks            []apitest.StartedBlock      `json:"blocks"`
@@ -591,7 +591,7 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 			t.Fatalf("version %d downloads: %d %s", number, answer.Code, answer.Body.String())
 		}
 		offered := apitest.DecodeResponse[recordedDownloadsBody](t, answer)
-		if offered.Version.Number != number || offered.Type != "lorebook" || offered.LinkedInstallOnly {
+		if offered.Version.Number != number || offered.Type != "lorebook" || offered.HasPrivatePrompts {
 			t.Errorf("version %d = %+v", number, offered)
 		}
 		if got := offeredFormats(offered.Downloads); !slices.Equal(got, want) {
@@ -603,24 +603,24 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 	}
 }
 
-func TestASealedVersionOffersNoFileAndSaysWhy(t *testing.T) {
+func TestAVersionWithPrivatePromptsOffersNoFileAndSaysWhy(t *testing.T) {
 	t.Parallel()
 	setupRouter, router, session, _ := harness.NewVerifiedRoutersWithService(t, 1<<20, api.DefaultDeadlines())
-	publicID, sealedID := uuid.New(), uuid.New()
+	publicID, privateID := uuid.New(), uuid.New()
 	const secret = "Not for a file."
-	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, sealedID, "Answer plainly.", secret)
+	started := apitest.PublishTwoPromptPreset(t, router, session, publicID, privateID, "Answer plainly.", secret)
 
 	for _, reader := range []*http.Cookie{nil, session} {
 		answer := readVersionDownloads(t, router, reader, started.ID, 1)
 		if answer.Code != http.StatusOK {
-			t.Fatalf("sealed version downloads: %d %s", answer.Code, answer.Body.String())
+			t.Fatalf("version with private prompts downloads: %d %s", answer.Code, answer.Body.String())
 		}
 		offered := apitest.DecodeResponse[recordedDownloadsBody](t, answer)
-		if !offered.LinkedInstallOnly || len(offered.Downloads) != 0 || len(offered.AppFormats) != 0 {
-			t.Fatalf("a sealed version offered a file: %+v", offered)
+		if !offered.HasPrivatePrompts || len(offered.Downloads) != 0 || len(offered.AppFormats) != 0 {
+			t.Fatalf("a version with private prompts offered a file: %+v", offered)
 		}
 		if strings.Contains(answer.Body.String(), secret) {
-			t.Fatal("the sealed text reached the download choices")
+			t.Fatal("the private text reached the download choices")
 		}
 	}
 

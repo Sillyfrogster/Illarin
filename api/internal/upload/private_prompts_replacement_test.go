@@ -13,17 +13,17 @@ import (
 	"github.com/google/uuid"
 )
 
-type sealingModule struct {
+type privatePromptModule struct {
 	claimsFirstPayload
 	parsed *format.Parsed
 }
 
-func (sealingModule) ID() string { return "preset_lumiverse" }
+func (privatePromptModule) ID() string { return "preset_lumiverse" }
 
-func (sealingModule) Declaration() format.Declaration {
+func (privatePromptModule) Declaration() format.Declaration {
 	declaration := testReaderDeclaration("preset_lumiverse", "preset")
 	declaration.KeepsPrivatePrompts = true
-	declaration.Label = "Sealing format"
+	declaration.Label = "Private prompt format"
 	declaration.Direction.Write = true
 	declaration.Header = []format.HeaderField{format.HeaderName}
 	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
@@ -33,28 +33,28 @@ func (sealingModule) Declaration() format.Declaration {
 			Write: format.RoleSupport{Grade: format.SupportFull},
 		},
 	}
-	declaration.Preservation = format.PreservationDeclaration{Body: "sealing", Container: []string{sealingNamespace}}
+	declaration.Preservation = format.PreservationDeclaration{Body: "private_prompts", Container: []string{privatePromptNamespace}}
 	return declaration
 }
 
-func (module sealingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (module privatePromptModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
 	return *module.parsed, nil
 }
 
-func (sealingModule) Write(context.Context, format.ExportWork) (format.MainFile, error) {
+func (privatePromptModule) Write(context.Context, format.ExportWork) (format.MainFile, error) {
 	return format.MainFile{MediaType: "text/plain", Extension: ".txt"}, nil
 }
 
-const sealingNamespace = "sealing_block"
+const privatePromptNamespace = "private_prompt_block"
 
-func sealingRemainder(fragmentID uuid.UUID, sourceID string) format.Remainder {
+func privatePromptRemainder(fragmentID uuid.UUID, sourceID string) format.Remainder {
 	payload, err := json.Marshal(map[string]string{"id": sourceID})
 	if err != nil {
 		panic(err)
 	}
 	return format.Remainder{
 		Owner: format.OwnerItem, OwnerID: fragmentID,
-		Namespace: sealingNamespace, Payload: payload,
+		Namespace: privatePromptNamespace, Payload: payload,
 	}
 }
 
@@ -65,26 +65,26 @@ func promptListParsed(fragment block.PromptFragment, sourceID string) format.Par
 			Type: block.TypePromptList, Role: block.RolePromptFragments,
 			Content: block.PromptList{Fragments: []block.PromptFragment{fragment}},
 		}},
-		Remainder: []format.Remainder{sealingRemainder(fragment.ID, sourceID)},
+		Remainder: []format.Remainder{privatePromptRemainder(fragment.ID, sourceID)},
 	}
 }
 
-func TestASealedPlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
+func TestAPrivatePlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 	t.Parallel()
 	held := block.NewItemID()
 	parsed := promptListParsed(block.PromptFragment{
 		ID: held, Name: "Setup", Text: "The wording only this asset holds", Enabled: true,
 	}, "setup")
-	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, sealingModule{parsed: &parsed}))
-	owner := originalFileOwner(t, svc, "sealing.owner")
+	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, privatePromptModule{parsed: &parsed}))
+	owner := originalFileOwner(t, svc, "private.owner")
 	created := ingestOne(t, svc, owner, "loom.json", []byte(`{"payload":true}`))
 	publishImported(t, svc, owner, created)
 
 	arriving := block.NewItemID()
 	replacement := promptListParsed(block.PromptFragment{
-		ID: arriving, Name: "Setup", Protected: true, Enabled: true,
+		ID: arriving, Name: "Setup", Private: true, Enabled: true,
 	}, "setup")
-	replacement.Protected = []format.ProtectedPrompt{{
+	replacement.PrivatePrompts = []format.PrivatePrompt{{
 		FragmentID: arriving, SourceKey: "setup", ReuseExisting: true,
 	}}
 	parsed = replacement
@@ -93,8 +93,8 @@ func TestASealedPlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 	if operation.Status != IngestPreview {
 		t.Fatalf("staged = %+v", operation)
 	}
-	if operation.Preview.Seals != 1 {
-		t.Fatalf("seals = %d, want 1", operation.Preview.Seals)
+	if operation.Preview.PrivatePrompts != 1 {
+		t.Fatalf("private prompts = %d, want 1", operation.Preview.PrivatePrompts)
 	}
 	if _, err := svc.AcceptReplacement(context.Background(), owner, created.ID, operation.ID,
 		currentCandidate(t, svc, created.ID), nil, false); err != nil {
@@ -106,29 +106,29 @@ func TestASealedPlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 		t.Fatal(err)
 	}
 	fragment := onlyFragment(t, working.Blocks)
-	if !fragment.Protected {
-		t.Fatalf("fragment = %+v, want a sealed fragment", fragment)
+	if !fragment.Private {
+		t.Fatalf("fragment = %+v, want a private fragment", fragment)
 	}
 	if fragment.Text != "The wording only this asset holds" {
-		t.Fatalf("sealed wording = %q, want the wording the work already held", fragment.Text)
+		t.Fatalf("private wording = %q, want the wording the work already held", fragment.Text)
 	}
 }
 
-func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T) {
+func TestAPrivatePlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T) {
 	t.Parallel()
 	parsed := promptListParsed(block.PromptFragment{
 		ID: block.NewItemID(), Name: "Setup", Text: "Present", Enabled: true,
 	}, "setup")
-	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, sealingModule{parsed: &parsed}))
+	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, privatePromptModule{parsed: &parsed}))
 	owner := originalFileOwner(t, svc, "unfillable.owner")
 	created := ingestOne(t, svc, owner, "loom.json", []byte(`{"payload":true}`))
 	publishImported(t, svc, owner, created)
 
 	arriving := block.NewItemID()
 	replacement := promptListParsed(block.PromptFragment{
-		ID: arriving, Name: "Late addition", Protected: true, Enabled: true,
+		ID: arriving, Name: "Late addition", Private: true, Enabled: true,
 	}, "late")
-	replacement.Protected = []format.ProtectedPrompt{{
+	replacement.PrivatePrompts = []format.PrivatePrompt{{
 		FragmentID: arriving, SourceKey: "late", ReuseExisting: true,
 	}}
 	parsed = replacement
@@ -150,8 +150,8 @@ func TestASealedPlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.T
 		t.Fatal(err)
 	}
 	fragment := onlyFragment(t, working.Blocks)
-	if !fragment.Protected || fragment.Text != "" {
-		t.Fatalf("fragment = %+v, want a sealed prompt awaiting its wording", fragment)
+	if !fragment.Private || fragment.Text != "" {
+		t.Fatalf("fragment = %+v, want a private prompt awaiting its wording", fragment)
 	}
 }
 

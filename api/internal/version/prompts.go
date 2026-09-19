@@ -32,7 +32,7 @@ type PromptCorrespondence struct {
 	Recorded *uuid.UUID
 }
 
-func (s *Service) ProtectionMismatches(
+func (s *Service) PrivatePromptMismatches(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	workID uuid.UUID,
@@ -45,7 +45,7 @@ func (s *Service) ProtectionMismatches(
 	if err := ownedWork(ctx, tx, ownerID, workID); err != nil {
 		return nil, err
 	}
-	sealed, err := private.SealedPrompts(ctx, tx, workID)
+	privateNow, err := private.PrivatePromptNames(ctx, tx, workID)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (s *Service) ProtectionMismatches(
 			held[prompt.ID] = true
 		}
 		unmatched := make([]Prompt, 0)
-		for id, name := range sealed {
+		for id, name := range privateNow {
 			if !held[id] && !settled[id] {
 				unmatched = append(unmatched, Prompt{ID: id, Name: name})
 			}
@@ -102,7 +102,7 @@ func (s *Service) ResolvePromptCorrespondence(
 	if err := ownedWork(ctx, tx, ownerID, workID); err != nil {
 		return err
 	}
-	sealed, err := private.SealedPrompts(ctx, tx, workID)
+	privateNow, err := private.PrivatePromptNames(ctx, tx, workID)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (s *Service) ResolvePromptCorrespondence(
 		held[prompt.ID] = true
 	}
 	for _, answer := range answers {
-		if _, current := sealed[answer.Current]; !current {
+		if _, current := privateNow[answer.Current]; !current {
 			return ErrUnknownPrompt
 		}
 		if answer.Recorded != nil && !held[*answer.Recorded] {

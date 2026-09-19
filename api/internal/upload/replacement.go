@@ -94,14 +94,14 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, workID uuid
 	if err != nil {
 		return Preview{}, err
 	}
-	unfillable, err := private.UnfillablePrompts(ctx, tx, workID, carried, prepared.Protected)
+	unfillable, err := private.UnfillablePrompts(ctx, tx, workID, carried, prepared.PrivatePrompts)
 	if err != nil {
 		return Preview{}, err
 	}
 	missingWording := promptNames(incoming, unfillable)
-	keepMissingPromptsEmpty(prepared.Protected, unfillable)
+	keepMissingPromptsEmpty(prepared.PrivatePrompts, unfillable)
 	arriving := mergeReplacementBlocks(working, prepared.Blocks, prepared.SuppliedRoles, nil)
-	fillSealedPrompts(arriving, carried, prepared.Protected)
+	fillPrivatePrompts(arriving, carried, prepared.PrivatePrompts)
 
 	currentRemainder, err := readRemainder(ctx, tx, "work_preserved_data", workID)
 	if err != nil {
@@ -157,7 +157,7 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, workID uuid
 	return Preview{
 		Format: prepared.Format, Groups: groups, Conflicts: conflicts,
 		Unrepresentable: unsupported, MissingWording: missingWording,
-		Seals: len(prepared.Protected),
+		PrivatePrompts: len(prepared.PrivatePrompts),
 	}, nil
 }
 
@@ -184,7 +184,7 @@ func promptNames(incoming []block.Block, fragments []uuid.UUID) []string {
 	return names
 }
 
-func keepMissingPromptsEmpty(imports []format.ProtectedPrompt, fragments []uuid.UUID) {
+func keepMissingPromptsEmpty(imports []format.PrivatePrompt, fragments []uuid.UUID) {
 	missing := make(map[uuid.UUID]bool, len(fragments))
 	for _, id := range fragments {
 		missing[id] = true
@@ -197,7 +197,7 @@ func keepMissingPromptsEmpty(imports []format.ProtectedPrompt, fragments []uuid.
 	}
 }
 
-func fillSealedPrompts(blocks []block.Block, carried map[uuid.UUID]string, imports []format.ProtectedPrompt) {
+func fillPrivatePrompts(blocks []block.Block, carried map[uuid.UUID]string, imports []format.PrivatePrompt) {
 	if len(imports) == 0 {
 		return
 	}
@@ -218,7 +218,7 @@ func fillSealedPrompts(blocks []block.Block, carried map[uuid.UUID]string, impor
 			}
 			fragments := slices.Clone(list.Fragments)
 			for itemIndex := range fragments {
-				if held, sealed := text[fragments[itemIndex].ID]; sealed {
+				if held, isPrivate := text[fragments[itemIndex].ID]; isPrivate {
 					fragments[itemIndex].Text = held
 				}
 			}
@@ -592,7 +592,7 @@ func readRemainder(ctx context.Context, tx pgx.Tx, table string, workID uuid.UUI
 	return current, nil
 }
 
-func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operationID uuid.UUID, candidate *work.Candidate, decisions map[string]string, exposeProtected bool) (Operation, error) {
+func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operationID uuid.UUID, candidate *work.Candidate, decisions map[string]string, makePromptsPublic bool) (Operation, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Operation{}, err
@@ -628,7 +628,7 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operat
 		ID: operationID, OwnerID: ownerID, BlobID: uuidFromPgtype(blobID), Filename: filename,
 		Target: &originalFileTarget{WorkID: workID, Type: prepared.Type, Version: candidate.Version},
 	}
-	if _, err := s.writeIngestResultWithDecisions(ctx, tx, job, prepared, decisions, exposeProtected); err != nil {
+	if _, err := s.writeIngestResultWithDecisions(ctx, tx, job, prepared, decisions, makePromptsPublic); err != nil {
 		return Operation{}, err
 	}
 	if _, err := tx.Exec(ctx, `

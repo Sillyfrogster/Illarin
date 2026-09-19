@@ -360,11 +360,11 @@ func ValidateBuilderConstraints(workType string, before []Block, after []Block) 
 			)
 		}
 	}
-	return validateLockedContent(workType, before, after)
+	return validateFromFileContent(workType, before, after)
 }
 
-// validateLockedContent keeps every locked element exactly as its upload wrote it.
-func validateLockedContent(workType string, before []Block, after []Block) error {
+// validateFromFileContent keeps every element from the file exactly as its upload wrote it.
+func validateFromFileContent(workType string, before []Block, after []Block) error {
 	written := make(map[uuid.UUID]Element)
 	for _, holder := range before {
 		for _, element := range holder.Elements {
@@ -373,7 +373,7 @@ func validateLockedContent(workType string, before []Block, after []Block) error
 	}
 	for _, holder := range after {
 		for _, element := range holder.Elements {
-			if !holder.Locked(element.Role, workType) {
+			if !holder.FromFile(element.Role, workType) {
 				continue
 			}
 			original, held := written[element.ID]

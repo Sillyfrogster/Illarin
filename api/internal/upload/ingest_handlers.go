@@ -176,15 +176,15 @@ func (h *Handlers) AcceptWorkOriginalFile(c *gin.Context) {
 		decisions[role] = string(decision)
 	}
 	candidate := &work.Candidate{Version: version}
-	operation, err := h.uploads.AcceptReplacement(c.Request.Context(), owner.ID, id, operationID, candidate, decisions, body.ExposeProtected != nil && *body.ExposeProtected)
+	operation, err := h.uploads.AcceptReplacement(c.Request.Context(), owner.ID, id, operationID, candidate, decisions, body.MakePromptsPublic != nil && *body.MakePromptsPublic)
 	if page.CandidateResult(c, candidate, err) {
 		return
 	}
 	var exposure private.ExposureRefusal
 	if errors.As(err, &exposure) {
-		c.JSON(http.StatusConflict, edit.SealedExposureRefusal{
-			Error:   "This replacement removes prompt protection. Confirm that text in this work and its recorded versions may become public immediately.",
-			Code:    edit.SealedExposureRefusalCodeSealedExposure,
+		c.JSON(http.StatusConflict, edit.PromptsMadePublicRefusal{
+			Error:   "This replacement makes private prompts public. Confirm that text in this work and its recorded versions may become public immediately.",
+			Code:    edit.PromptsMadePublicRefusalCodePromptsMadePublic,
 			Prompts: exposure.Prompts,
 		})
 		return
@@ -273,7 +273,7 @@ func toAPIIngest(operation Operation) gin.H {
 			"conflicts":       nonNilStrings(operation.Preview.Conflicts),
 			"unrepresentable": nonNilStrings(operation.Preview.Unrepresentable),
 			"missingWording":  nonNilStrings(operation.Preview.MissingWording),
-			"seals":           operation.Preview.Seals,
+			"privatePrompts":  operation.Preview.PrivatePrompts,
 		}
 	}
 	return aliasIngestKeys(response)

@@ -31,8 +31,8 @@ func TestASpindleExtensionIsListedDownloadedAndSentAsTheUploadedArchive(t *testi
 	}
 	for _, holder := range page.Blocks {
 		for _, element := range holder.Elements {
-			if !element.Pinned || !element.Locked {
-				t.Errorf("%s is pinned %t and locked %t, want both", element.Role, element.Pinned, element.Locked)
+			if !element.Pinned || !element.FromFile {
+				t.Errorf("%s is pinned %t and from the file %t, want both", element.Role, element.Pinned, element.FromFile)
 			}
 		}
 	}
@@ -43,7 +43,7 @@ func TestASpindleExtensionIsListedDownloadedAndSentAsTheUploadedArchive(t *testi
 	edited.Elements[0].Content = json.RawMessage(`{"fields":[{"name":"Version","value":"9.9.9"}]}`)
 	refused := apitest.SaveBlock(t, r, session, workID, source.ID, edited)
 	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), "archive") {
-		t.Fatalf("edit a locked element = %d %s, want a refusal naming the archive", refused.Code, refused.Body.String())
+		t.Fatalf("edit an element from the file = %d %s, want a refusal naming the archive", refused.Code, refused.Body.String())
 	}
 
 	if saved := apitest.SaveDetails(t, r, session, workID,
@@ -116,8 +116,8 @@ func TestASillyTavernExtensionListsItsDependenciesAndIsDownloadedAsTheUploadedAr
 	for _, holder := range page.Blocks {
 		definitions = append(definitions, holder.Definition)
 		for _, element := range holder.Elements {
-			if !element.Locked {
-				t.Errorf("%s is not locked", element.Role)
+			if !element.FromFile {
+				t.Errorf("%s is not from the file", element.Role)
 			}
 		}
 	}
@@ -173,7 +173,7 @@ func TestARepositoryDownloadIsListedAndDownloadedUnchanged(t *testing.T) {
 	assertSameBytes(t, "download", download.Body.Bytes(), upload)
 }
 
-func TestAReplacementArchiveRefreshesTheLockedElementsAndTheVersionNumber(t *testing.T) {
+func TestAReplacementArchiveRefreshesTheElementsFromTheFileAndTheVersionNumber(t *testing.T) {
 	t.Parallel()
 	r, session, works, pool := harness.NewExtensionRouter(t)
 	first := apitest.ExtensionZip(t, map[string]string{"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "one"})
@@ -213,7 +213,7 @@ func TestAReplacementArchiveRefreshesTheLockedElementsAndTheVersionNumber(t *tes
 		}
 	}
 	if !strings.Contains(contents, `"tools"`) || !strings.Contains(contents, "1.1.0") {
-		t.Errorf("locked elements after the replacement = %s, want the new permission and version", contents)
+		t.Errorf("elements from the file after the replacement = %s, want the new permission and version", contents)
 	}
 	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+workID+"/"+extension.SpindleID, nil))
 	assertSameBytes(t, "download after the replacement", download.Body.Bytes(), second)
@@ -245,7 +245,7 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 		t.Fatalf("publish = %d: %s", published.Code, published.Body.String())
 	}
 	if listed := additionsOnPage(t, r, workID); listed != "Tools tidy_reply; UI surfaces Drawer tab: Quiet Toolbox" {
-		t.Fatalf("what it adds = %q, want the tool and the drawer tab, locked", listed)
+		t.Fatalf("what it adds = %q, want the tool and the drawer tab, from the file", listed)
 	}
 
 	second := apitest.ExtensionZip(t, map[string]string{
@@ -269,7 +269,7 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 	}
 }
 
-// additionsOnPage reads the public page's locked list of what the extension adds, as group and name pairs.
+// additionsOnPage reads what the extension adds from the public page, as group and name pairs.
 func additionsOnPage(t *testing.T, r http.Handler, workID string) string {
 	t.Helper()
 	page := apitest.ReadExtensionPage(t, r, nil, workID)
@@ -278,8 +278,8 @@ func additionsOnPage(t *testing.T, r http.Handler, workID string) string {
 			continue
 		}
 		element := holder.Elements[0]
-		if element.Role != "extension_additions" || !element.Locked || !element.Pinned {
-			t.Fatalf("what it adds is %+v, want it pinned and locked", element)
+		if element.Role != "extension_additions" || !element.FromFile || !element.Pinned {
+			t.Fatalf("what it adds is %+v, want it pinned and from the file", element)
 		}
 		var list struct {
 			Fields []struct{ Name, Value string } `json:"fields"`

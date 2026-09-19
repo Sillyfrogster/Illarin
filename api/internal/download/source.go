@@ -50,7 +50,7 @@ func (s *Service) Source(
 		return Source{}, err
 	}
 	if (len(apps) > 0 || private.HasPromptFragments(blocks)) && (viewerID == nil || location.OwnerID == nil || *viewerID != *location.OwnerID) {
-		return Source{}, ErrLinkedInstallOnly
+		return Source{}, ErrPrivatePrompts
 	}
 	redirect, err := s.store.InternalRedirect(ctx, location.BlobID)
 	if err != nil {

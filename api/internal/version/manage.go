@@ -40,7 +40,7 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, workID uuid.UUID,
 	if recorded.Type != workType {
 		return work.ErrNotFound
 	}
-	if err := private.PrepareRestoration(ctx, tx, workID, recorded.ID, recorded.ProtectedPayloads, recorded.Blocks); err != nil {
+	if err := private.PrepareRestoration(ctx, tx, workID, recorded.ID, recorded.PrivatePrompts, recorded.Blocks); err != nil {
 		return err
 	}
 

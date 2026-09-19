@@ -53,3 +53,36 @@ func TestAnUploadStillTakesTheOldNameForItsVisibility(t *testing.T) {
 		t.Fatalf("upload answered %s, want an unlisted work under its old names", finished.Body.String())
 	}
 }
+
+func TestAnElementFromTheFileStillSaysLocked(t *testing.T) {
+	t.Parallel()
+	r, session, works, _ := harness.NewExtensionRouter(t)
+	upload := apitest.ExtensionZip(t, map[string]string{
+		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}",
+	})
+	workID := apitest.UploadExtension(t, r, session, works, upload)
+
+	answer := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil), session))
+	var page struct {
+		Blocks []struct {
+			Elements []map[string]any `json:"elements"`
+		} `json:"blocks"`
+	}
+	if err := json.Unmarshal(answer.Body.Bytes(), &page); err != nil {
+		t.Fatalf("decode the extension: %v", err)
+	}
+	fromFile := 0
+	for _, holder := range page.Blocks {
+		for _, element := range holder.Elements {
+			if element["locked"] != element["fromFile"] {
+				t.Fatalf("locked = %v, fromFile = %v", element["locked"], element["fromFile"])
+			}
+			if element["fromFile"] == true {
+				fromFile++
+			}
+		}
+	}
+	if fromFile == 0 {
+		t.Fatal("no element on the extension's page came from the file")
+	}
+}

@@ -93,11 +93,11 @@ func (d Definition) starts() []start {
 }
 
 type DefinedElement struct {
-	Role    Role
-	Type    Type
-	Options Options
-	Pinned  bool
-	Locked  bool
+	Role     Role
+	Type     Type
+	Options  Options
+	Pinned   bool
+	FromFile bool
 }
 
 var character = []Definition{
@@ -300,8 +300,8 @@ var extension = []Definition{
 		Required: true,
 		Hideable: true,
 		Elements: []DefinedElement{
-			{Role: RoleExtensionGrantedPermissions, Type: TypeTextSet, Options: Options{Display: DisplayRich}, Pinned: true, Locked: true},
-			{Role: RoleExtensionApprovedPermissions, Type: TypeTextSet, Options: Options{Display: DisplayRich}, Pinned: true, Locked: true},
+			{Role: RoleExtensionGrantedPermissions, Type: TypeTextSet, Options: Options{Display: DisplayRich}, Pinned: true, FromFile: true},
+			{Role: RoleExtensionApprovedPermissions, Type: TypeTextSet, Options: Options{Display: DisplayRich}, Pinned: true, FromFile: true},
 		},
 		Layouts: []Layout{Duo, Stack2},
 		Width:   Full,
@@ -312,7 +312,7 @@ var extension = []Definition{
 		Required: true,
 		Hideable: true,
 		Elements: []DefinedElement{
-			{Role: RoleExtensionAdditions, Type: TypeFieldList, Pinned: true, Locked: true},
+			{Role: RoleExtensionAdditions, Type: TypeFieldList, Pinned: true, FromFile: true},
 		},
 		Layouts: []Layout{Single},
 		Width:   TwoThirds,
@@ -323,7 +323,7 @@ var extension = []Definition{
 		Required: true,
 		Hideable: true,
 		Elements: []DefinedElement{
-			{Role: RoleExtensionDependencies, Type: TypeTextSet, Options: Options{Display: DisplayVerbatim}, Pinned: true, Locked: true},
+			{Role: RoleExtensionDependencies, Type: TypeTextSet, Options: Options{Display: DisplayVerbatim}, Pinned: true, FromFile: true},
 		},
 		Layouts: []Layout{Single},
 		Width:   Third,
@@ -334,8 +334,8 @@ var extension = []Definition{
 		Required: true,
 		Hideable: true,
 		Elements: []DefinedElement{
-			{Role: RoleExtensionDetails, Type: TypeFieldList, Pinned: true, Locked: true},
-			{Role: RoleExtensionLinks, Type: TypeLinkList, Pinned: true, Locked: true},
+			{Role: RoleExtensionDetails, Type: TypeFieldList, Pinned: true, FromFile: true},
+			{Role: RoleExtensionLinks, Type: TypeLinkList, Pinned: true, FromFile: true},
 		},
 		Layouts: []Layout{Stack2, Duo},
 		Width:   Third,

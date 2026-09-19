@@ -110,7 +110,7 @@ func chosenGallery(images *string) (*GallerySelection, bool) {
 func Refuse(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrFormatNotOffered),
-		errors.Is(err, ErrLinkedInstallOnly):
+		errors.Is(err, ErrPrivatePrompts):
 		api.Refuse(c, http.StatusNotFound, "no such download")
 	case errors.Is(err, ErrExportTooLarge):
 		api.Refuse(c, http.StatusRequestEntityTooLarge, oversizedDownload)
@@ -206,7 +206,7 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 	c.JSON(http.StatusOK, RecordedVersionDownloads{
 		Version:           page.ToRecordedVersion(offered.Version),
 		Type:              RecordedVersionDownloadsType(offered.Type),
-		LinkedInstallOnly: offered.LinkedInstallOnly,
+		HasPrivatePrompts: offered.HasPrivatePrompts,
 		Downloads:         page.ToDownloads(offered.Downloads),
 		AppFormats:        page.ToAppFormats(offered.AppFormats),
 		Blocks:            blocks,

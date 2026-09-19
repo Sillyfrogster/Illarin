@@ -23,7 +23,7 @@ type PromptFragment struct {
 	GroupID   *uuid.UUID      `json:"groupId,omitempty"`
 	Role      PromptRole      `json:"role"`
 	Text      string          `json:"text"`
-	Protected bool            `json:"protected,omitempty"`
+	Private   bool            `json:"private,omitempty"`
 	Marker    string          `json:"marker,omitempty"`
 	Enabled   bool            `json:"enabled"`
 	Placement PromptPlacement `json:"placement,omitempty"`
@@ -277,14 +277,14 @@ func decodePromptList(raw json.RawMessage) (Content, error) {
 			GroupID   *uuid.UUID      `json:"groupId,omitempty"`
 			Role      PromptRole      `json:"role"`
 			Text      *string         `json:"text"`
-			Protected bool            `json:"protected,omitempty"`
+			Private   bool            `json:"private,omitempty"`
 			Marker    string          `json:"marker,omitempty"`
 			Enabled   *bool           `json:"enabled"`
 			Placement PromptPlacement `json:"placement,omitempty"`
 			Depth     *int            `json:"depth,omitempty"`
 		} `json:"fragments"`
 	}
-	if err := decodeContentJSON(raw, &incoming); err != nil {
+	if err := decodeContentJSON(aliasPromptFragments(raw), &incoming); err != nil {
 		return nil, err
 	}
 	if incoming.Groups == nil || incoming.Fragments == nil {
@@ -332,7 +332,7 @@ func decodePromptList(raw json.RawMessage) (Content, error) {
 			GroupID:   item.GroupID,
 			Role:      item.Role,
 			Text:      *item.Text,
-			Protected: item.Protected,
+			Private:   item.Private,
 			Marker:    item.Marker,
 			Enabled:   *item.Enabled,
 			Placement: item.Placement,

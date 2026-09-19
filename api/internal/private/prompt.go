@@ -19,7 +19,7 @@ const (
 	promptPayload   = "prompt_fragment_text"
 )
 
-var ErrPolicyRequired = errors.New("choose at least one allowed app before sealing a prompt")
+var ErrPolicyRequired = errors.New("choose at least one allowed app before making a prompt private")
 
 func ImportPromptFragments(
 	ctx context.Context,
@@ -27,7 +27,7 @@ func ImportPromptFragments(
 	workID uuid.UUID,
 	blocks []block.Block,
 	carried map[uuid.UUID]string,
-	imports []format.ProtectedPrompt,
+	imports []format.PrivatePrompt,
 	initialApps []string,
 ) error {
 	owners := make(map[uuid.UUID]bool, len(imports))
@@ -38,7 +38,7 @@ func ImportPromptFragments(
 				continue
 			}
 			for _, fragment := range list.Fragments {
-				if fragment.Protected && fragment.Text == "" {
+				if fragment.Private && fragment.Text == "" {
 					owners[fragment.ID] = true
 				}
 			}
@@ -46,7 +46,7 @@ func ImportPromptFragments(
 	}
 	if len(owners) != len(imports) {
 		return format.MalformedInput(errors.New(
-			"sealed prompt metadata does not match the imported prompt fragments",
+			"private prompt metadata does not match the imported prompt fragments",
 		))
 	}
 
@@ -64,9 +64,9 @@ func ImportPromptFragments(
 		}
 		for _, app := range apps {
 			if _, err := tx.Exec(ctx, `
-				insert into protected_delivery_apps (work_id, app) values ($1, $2)
+				insert into private_prompt_apps (work_id, app) values ($1, $2)
 			`, workID, app); err != nil {
-				return fmt.Errorf("save imported protected delivery policy: %w", err)
+				return fmt.Errorf("save imported allowed apps: %w", err)
 			}
 		}
 	}
@@ -75,7 +75,7 @@ func ImportPromptFragments(
 	for _, imported := range imports {
 		if !owners[imported.FragmentID] {
 			return format.MalformedInput(errors.New(
-				"sealed prompt metadata does not identify an imported prompt fragment",
+				"private prompt metadata does not identify an imported prompt fragment",
 			))
 		}
 		text := imported.Text
@@ -93,13 +93,13 @@ func ImportPromptFragments(
 	return replacePromptPayloads(ctx, tx, workID, values)
 }
 
-// UnfillablePrompts names the sealed fragments this work holds no wording for.
+// UnfillablePrompts names the private fragments this work holds no wording for.
 func UnfillablePrompts(
 	ctx context.Context,
 	tx pgx.Tx,
 	workID uuid.UUID,
 	carried map[uuid.UUID]string,
-	imports []format.ProtectedPrompt,
+	imports []format.PrivatePrompt,
 ) ([]uuid.UUID, error) {
 	missing := make([]uuid.UUID, 0)
 	for _, imported := range imports {
@@ -116,31 +116,31 @@ func UnfillablePrompts(
 	return missing, nil
 }
 
-// heldPromptText finds the text a placeholder stands in for, sealed or still public.
+// heldPromptText finds the text a placeholder stands in for, private or still public.
 func heldPromptText(
 	ctx context.Context,
 	tx pgx.Tx,
 	workID uuid.UUID,
 	carried map[uuid.UUID]string,
-	imported format.ProtectedPrompt,
+	imported format.PrivatePrompt,
 ) (string, error) {
 	if imported.SourceKey == "" {
 		return "", format.MalformedInput(errors.New(
-			"a reusable sealed prompt needs a source key",
+			"a reusable private prompt needs a source key",
 		))
 	}
-	sealed, held, err := promptTextBySourceKey(ctx, tx, workID, imported.SourceKey)
+	text, held, err := promptTextBySourceKey(ctx, tx, workID, imported.SourceKey)
 	if err != nil {
 		return "", err
 	}
 	if held {
-		return sealed, nil
+		return text, nil
 	}
 	if public, found := carried[imported.FragmentID]; found {
 		return public, nil
 	}
 	return "", format.MalformedInput(fmt.Errorf(
-		"this file leaves out the text of sealed prompt %q, and nothing here holds it",
+		"this file leaves out the text of private prompt %q, and nothing here holds it",
 		imported.SourceKey,
 	))
 }
@@ -153,34 +153,34 @@ func promptTextBySourceKey(
 ) (string, bool, error) {
 	rows, err := tx.Query(ctx, `
 		select payload
-		  from protected_content
+		  from private_prompts
 		 where work_id = $1 and owner_type = $2 and payload_type = $3 and source_key = $4
 		 for update
 	`, workID, promptOwnerType, promptPayload, sourceKey)
 	if err != nil {
-		return "", false, fmt.Errorf("read existing sealed prompt: %w", err)
+		return "", false, fmt.Errorf("read existing private prompt: %w", err)
 	}
 	defer rows.Close()
 	var texts []string
 	for rows.Next() {
 		var payload []byte
 		if err := rows.Scan(&payload); err != nil {
-			return "", false, fmt.Errorf("read existing sealed prompt: %w", err)
+			return "", false, fmt.Errorf("read existing private prompt: %w", err)
 		}
 		var item struct {
 			Text string `json:"text"`
 		}
 		if err := json.Unmarshal(payload, &item); err != nil {
-			return "", false, fmt.Errorf("decode existing sealed prompt: %w", err)
+			return "", false, fmt.Errorf("decode existing private prompt: %w", err)
 		}
 		texts = append(texts, item.Text)
 	}
 	if err := rows.Err(); err != nil {
-		return "", false, fmt.Errorf("read existing sealed prompt: %w", err)
+		return "", false, fmt.Errorf("read existing private prompt: %w", err)
 	}
 	if len(texts) > 1 {
 		return "", false, format.MalformedInput(fmt.Errorf(
-			"sealed prompt key %q stands for more than one saved value", sourceKey,
+			"private prompt key %q stands for more than one saved value", sourceKey,
 		))
 	}
 	if len(texts) == 0 {
@@ -217,7 +217,7 @@ func HasPromptFragments(blocks []block.Block) bool {
 				continue
 			}
 			for _, fragment := range list.Fragments {
-				if fragment.Protected {
+				if fragment.Private {
 					return true
 				}
 			}
@@ -233,7 +233,7 @@ func SyncPromptFragments(
 	blocks []block.Block,
 	allowedApps *[]string,
 ) error {
-	sealed := make(map[uuid.UUID]promptValue)
+	privateValues := make(map[uuid.UUID]promptValue)
 	for blockIndex := range blocks {
 		for elementIndex := range blocks[blockIndex].Elements {
 			element := &blocks[blockIndex].Elements[elementIndex]
@@ -243,25 +243,25 @@ func SyncPromptFragments(
 			}
 			for itemIndex := range list.Fragments {
 				fragment := &list.Fragments[itemIndex]
-				if !fragment.Protected {
+				if !fragment.Private {
 					continue
 				}
 				if fragment.Marker != "" {
-					return fmt.Errorf("a prompt marker cannot be sealed")
+					return fmt.Errorf("a prompt marker cannot be private")
 				}
-				sealed[fragment.ID] = promptValue{text: fragment.Text}
+				privateValues[fragment.ID] = promptValue{text: fragment.Text}
 				fragment.Text = ""
 			}
 			element.Content = list
 		}
 	}
 
-	if len(sealed) == 0 {
-		if _, err := tx.Exec(ctx, `delete from protected_content where work_id = $1`, workID); err != nil {
-			return fmt.Errorf("remove protected prompts: %w", err)
+	if len(privateValues) == 0 {
+		if _, err := tx.Exec(ctx, `delete from private_prompts where work_id = $1`, workID); err != nil {
+			return fmt.Errorf("remove private prompts: %w", err)
 		}
-		if _, err := tx.Exec(ctx, `delete from protected_delivery_apps where work_id = $1`, workID); err != nil {
-			return fmt.Errorf("remove protected delivery policy: %w", err)
+		if _, err := tx.Exec(ctx, `delete from private_prompt_apps where work_id = $1`, workID); err != nil {
+			return fmt.Errorf("remove allowed apps: %w", err)
 		}
 		return nil
 	}
@@ -274,17 +274,17 @@ func SyncPromptFragments(
 		return ErrPolicyRequired
 	}
 	if allowedApps != nil {
-		if _, err := tx.Exec(ctx, `delete from protected_delivery_apps where work_id = $1`, workID); err != nil {
-			return fmt.Errorf("replace protected delivery policy: %w", err)
+		if _, err := tx.Exec(ctx, `delete from private_prompt_apps where work_id = $1`, workID); err != nil {
+			return fmt.Errorf("replace allowed apps: %w", err)
 		}
 		for _, app := range apps {
-			if _, err := tx.Exec(ctx, `insert into protected_delivery_apps (work_id, app) values ($1, $2)`, workID, app); err != nil {
-				return fmt.Errorf("save protected delivery policy: %w", err)
+			if _, err := tx.Exec(ctx, `insert into private_prompt_apps (work_id, app) values ($1, $2)`, workID, app); err != nil {
+				return fmt.Errorf("save allowed apps: %w", err)
 			}
 		}
 	}
 
-	return replacePromptPayloads(ctx, tx, workID, sealed)
+	return replacePromptPayloads(ctx, tx, workID, privateValues)
 }
 
 type promptValue struct {
@@ -302,7 +302,7 @@ func replacePromptPayloads(
 	for id, value := range values {
 		payload, err := json.Marshal(map[string]string{"text": value.text})
 		if err != nil {
-			return fmt.Errorf("encode protected prompt: %w", err)
+			return fmt.Errorf("encode private prompt: %w", err)
 		}
 		digest := sha256.Sum256([]byte(value.text))
 		var sourceKey any
@@ -310,24 +310,24 @@ func replacePromptPayloads(
 			sourceKey = value.sourceKey
 		}
 		if _, err := tx.Exec(ctx, `
-			insert into protected_content (
+			insert into private_prompts (
 				work_id, owner_type, owner_id, payload_type, payload, source_key, digest
 			) values ($1, $2, $3, $4, $5, $6, $7)
 			on conflict (work_id, owner_type, owner_id) do update
 			set payload = excluded.payload,
 				payload_type = excluded.payload_type,
-				source_key = case when $8 then excluded.source_key else protected_content.source_key end,
+				source_key = case when $8 then excluded.source_key else private_prompts.source_key end,
 				digest = excluded.digest
 		`, workID, promptOwnerType, id, promptPayload, payload, sourceKey, digest[:],
 			value.replaceSourceKey); err != nil {
-			return fmt.Errorf("save protected prompt: %w", err)
+			return fmt.Errorf("save private prompt: %w", err)
 		}
 	}
 	if _, err := tx.Exec(ctx, `
-		delete from protected_content
+		delete from private_prompts
 		 where work_id = $1 and owner_type = $2 and not (owner_id = any($3::uuid[]))
 	`, workID, promptOwnerType, promptIDs(values)); err != nil {
-		return fmt.Errorf("remove unsealed prompts: %w", err)
+		return fmt.Errorf("remove prompts made public: %w", err)
 	}
 	return nil
 }
@@ -345,9 +345,9 @@ func policy(ctx context.Context, tx pgx.Tx, workID uuid.UUID, supplied *[]string
 		}
 		return apps, nil
 	}
-	rows, err := tx.Query(ctx, `select app from protected_delivery_apps where work_id = $1 order by app`, workID)
+	rows, err := tx.Query(ctx, `select app from private_prompt_apps where work_id = $1 order by app`, workID)
 	if err != nil {
-		return nil, fmt.Errorf("read protected delivery policy: %w", err)
+		return nil, fmt.Errorf("read allowed apps: %w", err)
 	}
 	defer rows.Close()
 	var apps []string
@@ -364,7 +364,7 @@ func policy(ctx context.Context, tx pgx.Tx, workID uuid.UUID, supplied *[]string
 func RestorePromptFragments(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, workID uuid.UUID, blocks []block.Block) error {
-	return restorePromptFragments(ctx, q, workID, blocks, "protected_content")
+	return restorePromptFragments(ctx, q, workID, blocks, "private_prompts")
 }
 
 func restorePromptFragments(ctx context.Context, q interface {
@@ -375,7 +375,7 @@ func restorePromptFragments(ctx context.Context, q interface {
 		 where work_id = $1 and owner_type = $2 and payload_type = $3
 	`, workID, promptOwnerType, promptPayload)
 	if err != nil {
-		return fmt.Errorf("read protected prompts: %w", err)
+		return fmt.Errorf("read private prompts: %w", err)
 	}
 	defer rows.Close()
 	texts := map[uuid.UUID]string{}
@@ -383,18 +383,18 @@ func restorePromptFragments(ctx context.Context, q interface {
 		var id uuid.UUID
 		var payload []byte
 		if err := rows.Scan(&id, &payload); err != nil {
-			return fmt.Errorf("read protected prompt: %w", err)
+			return fmt.Errorf("read private prompt: %w", err)
 		}
 		var item struct {
 			Text string `json:"text"`
 		}
 		if err := json.Unmarshal(payload, &item); err != nil {
-			return fmt.Errorf("decode protected prompt: %w", err)
+			return fmt.Errorf("decode private prompt: %w", err)
 		}
 		texts[id] = item.Text
 	}
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("read protected prompts: %w", err)
+		return fmt.Errorf("read private prompts: %w", err)
 	}
 	for blockIndex := range blocks {
 		for elementIndex := range blocks[blockIndex].Elements {
@@ -405,12 +405,12 @@ func restorePromptFragments(ctx context.Context, q interface {
 			}
 			for itemIndex := range list.Fragments {
 				fragment := &list.Fragments[itemIndex]
-				if !fragment.Protected {
+				if !fragment.Private {
 					continue
 				}
 				text, found := texts[fragment.ID]
 				if !found {
-					return fmt.Errorf("protected prompt %s has no payload", fragment.ID)
+					return fmt.Errorf("private prompt %s has no payload", fragment.ID)
 				}
 				fragment.Text = text
 			}
@@ -423,9 +423,9 @@ func restorePromptFragments(ctx context.Context, q interface {
 func Apps(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, workID uuid.UUID) ([]string, error) {
-	rows, err := q.Query(ctx, `select app from protected_delivery_apps where work_id = $1 order by app`, workID)
+	rows, err := q.Query(ctx, `select app from private_prompt_apps where work_id = $1 order by app`, workID)
 	if err != nil {
-		return nil, fmt.Errorf("read protected delivery policy: %w", err)
+		return nil, fmt.Errorf("read allowed apps: %w", err)
 	}
 	defer rows.Close()
 	apps := []string{}

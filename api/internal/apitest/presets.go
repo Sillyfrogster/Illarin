@@ -55,8 +55,8 @@ func LumiverseRegistry(t *testing.T) *format.Registry {
 	return registry
 }
 
-// PublishSealedPreset publishes a Lumiverse preset whose one prompt is sealed
-func PublishSealedPreset(
+// PublishPrivatePromptPreset publishes a Lumiverse preset whose one prompt is private
+func PublishPrivatePromptPreset(
 	t *testing.T,
 	router *gin.Engine,
 	session *http.Cookie,
@@ -68,10 +68,10 @@ func PublishSealedPreset(
 	core := EditableBlock(BlockNamed(t, started.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(
 		`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` +
-			privateText + `","protected":true,"enabled":true}]}`)
+			privateText + `","private":true,"enabled":true}]}`)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("save private prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	if got := SaveDetails(
 		t, router, session, started.ID, `{"name":"`+name+`","blurb":"","isNsfw":false}`,
@@ -84,33 +84,33 @@ func PublishSealedPreset(
 	return started.ID
 }
 
-// SealedPresetPrompts is a prompt list with one public and one sealed prompt
-func SealedPresetPrompts(publicID, sealedID uuid.UUID, publicText, sealedText string) json.RawMessage {
+// PrivatePresetPrompts is a prompt list with one public and one private prompt
+func PrivatePresetPrompts(publicID, privateID uuid.UUID, publicText, privateText string) json.RawMessage {
 	return json.RawMessage(`{"groups":[],"fragments":[` +
 		`{"id":"` + publicID.String() + `","name":"House rule","role":"system","text":"` +
 		publicText + `","enabled":true},` +
-		`{"id":"` + sealedID.String() + `","name":"Private instructions","role":"system","text":"` +
-		sealedText + `","protected":true,"enabled":true}]}`)
+		`{"id":"` + privateID.String() + `","name":"Private instructions","role":"system","text":"` +
+		privateText + `","private":true,"enabled":true}]}`)
 }
 
-// PublishTwoPromptPreset publishes a Lumiverse preset with one public and one sealed prompt
+// PublishTwoPromptPreset publishes a Lumiverse preset with one public and one private prompt
 func PublishTwoPromptPreset(
 	t *testing.T,
 	router *gin.Engine,
 	session *http.Cookie,
-	publicID, sealedID uuid.UUID,
-	publicText, sealedText string,
+	publicID, privateID uuid.UUID,
+	publicText, privateText string,
 ) StartedWork {
 	t.Helper()
 	started := StartPreset(t, router, session, "lumiverse")
 	core := EditableBlock(BlockNamed(t, started.Blocks, "preset_core"))
-	core.Elements[0].Content = SealedPresetPrompts(publicID, sealedID, publicText, sealedText)
+	core.Elements[0].Content = PrivatePresetPrompts(publicID, privateID, publicText, privateText)
 	core.AllowedApps = &[]string{"lumiverse"}
 	if got := SaveBlock(t, router, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save the sealed prompts: %d %s", got.Code, got.Body.String())
+		t.Fatalf("save the private prompts: %d %s", got.Code, got.Body.String())
 	}
 	if got := SaveDetails(t, router, session, started.ID,
-		`{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+		`{"name":"Private prompt preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save the details: %d %s", got.Code, got.Body.String())
 	}
 	if got := PublishWork(t, router, session, started.ID); got.Code != http.StatusOK {
@@ -120,7 +120,7 @@ func PublishTwoPromptPreset(
 }
 
 // AcceptReplacementPreview accepts the staged replacement at location, removing whatever the file cannot hold
-func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, workID, location string, exposeProtected ...bool) {
+func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie, workID, location string, makePromptsPublic ...bool) {
 	t.Helper()
 	preview := Send(t, r, Authorized(httptest.NewRequest(http.MethodGet, location, nil), session))
 	if preview.Code != http.StatusOK {
@@ -143,8 +143,8 @@ func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie,
 		decisions[role] = "remove"
 	}
 	body, err := json.Marshal(map[string]any{
-		"unrepresentable": decisions,
-		"exposeProtected": len(exposeProtected) > 0 && exposeProtected[0],
+		"unrepresentable":   decisions,
+		"makePromptsPublic": len(makePromptsPublic) > 0 && makePromptsPublic[0],
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -158,24 +158,24 @@ func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie,
 	}
 }
 
-// SealEveryFragment marks every prompt in a prompt list private to the given apps
-func SealEveryFragment(t *testing.T, body SaveBlockBody, apps []string) SaveBlockBody {
+// MakeEveryFragmentPrivate marks every prompt in a prompt list private to the given apps
+func MakeEveryFragmentPrivate(t *testing.T, body SaveBlockBody, apps []string) SaveBlockBody {
 	t.Helper()
 	var list struct {
 		Groups    []json.RawMessage            `json:"groups"`
 		Fragments []map[string]json.RawMessage `json:"fragments"`
 	}
 	if err := json.Unmarshal(body.Elements[0].Content, &list); err != nil {
-		t.Fatalf("read the prompt list to seal: %v", err)
+		t.Fatalf("read the prompt list to make private: %v", err)
 	}
 	for index := range list.Fragments {
-		list.Fragments[index]["protected"] = json.RawMessage("true")
+		list.Fragments[index]["private"] = json.RawMessage("true")
 	}
-	sealed, err := json.Marshal(list)
+	encoded, err := json.Marshal(list)
 	if err != nil {
-		t.Fatalf("write the sealed prompt list: %v", err)
+		t.Fatalf("write the private prompt list: %v", err)
 	}
-	body.Elements[0].Content = sealed
+	body.Elements[0].Content = encoded
 	body.AllowedApps = &apps
 	return body
 }
@@ -192,10 +192,10 @@ func (NeverClaimsModule) Parse(context.Context, format.Inspection, format.Claim)
 	return format.Parsed{}, errors.New("unreachable")
 }
 
-// KeyedSealedPreset is a Lumiverse preset whose one prompt is sealed by its key
-const KeyedSealedPreset = `{
+// KeyedPrivatePreset is a Lumiverse preset whose one prompt is private by its key
+const KeyedPrivatePreset = `{
 	"schemaVersion": 1,
-	"name": "Keyed sealed preset",
+	"name": "Keyed private prompt preset",
 	"blocks": [
 		{"id":"public","name":"Public","role":"system","content":"Visible prompt.","enabled":true},
 		{"id":"private","name":"Private","role":"system","content":"Exact private prompt.","enabled":true,"sealed":true,"sealedKey":"dialogue.frame"}

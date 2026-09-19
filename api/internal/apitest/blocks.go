@@ -90,16 +90,16 @@ func FetchStartedWork(
 	return saved
 }
 
-func ProtectedCounts(t *testing.T, pool *pgxpool.Pool, workID string) (int, int) {
+func PrivatePromptCounts(t *testing.T, pool *pgxpool.Pool, workID string) (int, int) {
 	t.Helper()
 	var payloads, policies int
 	err := pool.QueryRow(context.Background(), `
 		SELECT
-			(SELECT count(*) FROM protected_content WHERE work_id = $1),
-			(SELECT count(*) FROM protected_delivery_apps WHERE work_id = $1)
+			(SELECT count(*) FROM private_prompts WHERE work_id = $1),
+			(SELECT count(*) FROM private_prompt_apps WHERE work_id = $1)
 	`, workID).Scan(&payloads, &policies)
 	if err != nil {
-		t.Fatalf("count protected rows: %v", err)
+		t.Fatalf("count private prompt rows: %v", err)
 	}
 	return payloads, policies
 }

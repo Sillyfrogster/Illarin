@@ -13,28 +13,28 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
+func TestAPrivatePromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartPreset(t, r, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	const privateText = "The reader must never receive these words."
-	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` + privateText + `","protected":true,"enabled":true}]}`)
+	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` + privateText + `","private":true,"enabled":true}]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("save private prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	owner := apitest.FetchStartedWork(t, r, session, started.ID)
 	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) {
-		t.Fatal("the owner did not receive the restored sealed prompt")
+		t.Fatal("the owner did not receive the restored private prompt")
 	}
-	if got := apitest.SaveDetails(t, r, session, started.ID, `{"name":"Sealed preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := apitest.SaveDetails(t, r, session, started.ID, `{"name":"Private prompt preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
-		t.Fatalf("publish sealed preset status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("publish private prompt preset status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
 	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
@@ -42,19 +42,19 @@ func TestASealedPromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
 		t.Fatalf("reader status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
 	if strings.Contains(reader.Body.String(), privateText) {
-		t.Fatal("a reader response contained the sealed prompt")
+		t.Fatal("a reader response contained the private prompt")
 	}
 
 	missingPolicy := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
-	missingPolicy.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"role":"system","text":"new private text","protected":true,"enabled":true}]}`)
+	missingPolicy.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"role":"system","text":"new private text","private":true,"enabled":true}]}`)
 	missingPolicy.AllowedApps = &[]string{}
 	refused := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, missingPolicy)
 	if refused.Code != http.StatusBadRequest {
-		t.Fatalf("seal without allowed app status = %d, want 400: %s", refused.Code, refused.Body.String())
+		t.Fatalf("make private without an allowed app status = %d, want 400: %s", refused.Code, refused.Body.String())
 	}
 }
 
-func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
+func TestSeveralPrivatePromptsCanReturnToPublicContent(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	started := apitest.StartPreset(t, r, session, "lumiverse")
@@ -67,31 +67,31 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 		"groups":[{"id":"` + groupID + `","name":"Private guidance"}],
 		"fragments":[
 			{"name":"Visible","role":"system","text":"` + publicText + `","enabled":true},
-			{"name":"First sealed","role":"user","placement":"pre_history","text":"` + firstSecret + `","protected":true,"enabled":false,"groupId":"` + groupID + `"},
-			{"name":"Second sealed","role":"assistant","placement":"post_history","text":"` + secondSecret + `","protected":true,"enabled":true,"groupId":"` + groupID + `"}
+			{"name":"First private","role":"user","placement":"pre_history","text":"` + firstSecret + `","private":true,"enabled":false,"groupId":"` + groupID + `"},
+			{"name":"Second private","role":"assistant","placement":"post_history","text":"` + secondSecret + `","private":true,"enabled":true,"groupId":"` + groupID + `"}
 		]
 	}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save several sealed prompts status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("save several private prompts status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
 	owner := apitest.FetchStartedWork(t, r, session, started.ID)
-	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != (apitest.AppName{ID: "lumiverse", Label: "Lumiverse"}) {
-		t.Fatalf("sealed prompt policy = linked install only %t, allowed apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
+	if !owner.HasPrivatePrompts || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != (apitest.AppName{ID: "lumiverse", Label: "Lumiverse"}) {
+		t.Fatalf("private prompt policy = has private prompts %t, allowed apps %v", owner.HasPrivatePrompts, owner.AllowedApps)
 	}
 	ownerContent := string(owner.Blocks[0].Elements[0].Content)
-	for _, want := range []string{publicText, firstSecret, secondSecret, "First sealed", "pre_history", "Private guidance"} {
+	for _, want := range []string{publicText, firstSecret, secondSecret, "First private", "pre_history", "Private guidance"} {
 		if !strings.Contains(ownerContent, want) {
 			t.Errorf("owner response does not contain %q: %s", want, ownerContent)
 		}
 	}
-	if got := apitest.SaveDetails(t, r, session, started.ID, `{"name":"Several sealed prompts","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+	if got := apitest.SaveDetails(t, r, session, started.ID, `{"name":"Several private prompts","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
-		t.Fatalf("publish sealed preset status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("publish private prompt preset status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 
 	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
@@ -108,29 +108,29 @@ func TestSeveralSealedPromptsCanReturnToPublicContent(t *testing.T) {
 	}
 
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	content := strings.ReplaceAll(string(core.Elements[0].Content), `"protected":true`, `"protected":false`)
+	content := strings.ReplaceAll(string(core.Elements[0].Content), `"private":true`, `"private":false`)
 	core.Elements[0].Content = json.RawMessage(content)
 	core.AllowedApps = &[]string{}
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusConflict {
-		t.Fatalf("unseal without confirming status = %d, want 409: %s", got.Code, got.Body.String())
+		t.Fatalf("make public without confirming status = %d, want 409: %s", got.Code, got.Body.String())
 	}
 	confirmed := true
-	core.ExposeProtected = &confirmed
+	core.MakePromptsPublic = &confirmed
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("unseal final prompts status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("make the final prompts public status = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	owner = apitest.FetchStartedWork(t, r, session, started.ID)
-	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
-		t.Fatalf("unsealed prompt policy = linked install only %t, allowed apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
+	if owner.HasPrivatePrompts || len(owner.AllowedApps) != 0 {
+		t.Fatalf("prompt made public policy = has private prompts %t, allowed apps %v", owner.HasPrivatePrompts, owner.AllowedApps)
 	}
 
 	reader = apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
 	if reader.Code != http.StatusOK {
-		t.Fatalf("reader after unsealing status = %d, want 200: %s", reader.Code, reader.Body.String())
+		t.Fatalf("reader after making it public status = %d, want 200: %s", reader.Code, reader.Body.String())
 	}
 	for _, want := range []string{publicText, firstSecret, secondSecret} {
 		if !strings.Contains(reader.Body.String(), want) {
-			t.Errorf("reader response after unsealing does not contain %q", want)
+			t.Errorf("reader response after making it public does not contain %q", want)
 		}
 	}
 }
@@ -585,51 +585,51 @@ func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.
 	}
 }
 
-func TestRemovingSealedPromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
+func TestRemovingPrivatePromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
 	t.Parallel()
 	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := apitest.StartPreset(t, r, session, "lumiverse")
 	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
 		{"name":"Visible","role":"system","text":"Readers keep this one.","enabled":true},
-		{"name":"First sealed","role":"system","text":"Only allowed applications receive this first instruction.","protected":true,"enabled":true},
-		{"name":"Second sealed","role":"system","text":"Only allowed applications receive this second instruction.","protected":true,"enabled":true}
+		{"name":"First private","role":"system","text":"Only allowed applications receive this first instruction.","private":true,"enabled":true},
+		{"name":"Second private","role":"system","text":"Only allowed applications receive this second instruction.","private":true,"enabled":true}
 	]}`)
 	apps := []string{"lumiverse"}
 	core.AllowedApps = &apps
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
-		t.Fatalf("seal two prompts status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("make two prompts private status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 2 || policies != 1 {
-		t.Fatalf("after sealing: %d payloads and %d policy rows, want 2 and 1", payloads, policies)
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 2 || policies != 1 {
+		t.Fatalf("after making them private: %d payloads and %d policy rows, want 2 and 1", payloads, policies)
 	}
 
 	owner := apitest.FetchStartedWork(t, r, session, started.ID)
 	shorter := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	shorter.Elements[0].Content = withoutFragment(t, owner, "First sealed")
+	shorter.Elements[0].Content = withoutFragment(t, owner, "First private")
 	shorter.AllowedApps = &apps
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, shorter); got.Code != http.StatusOK {
-		t.Fatalf("remove one sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("remove one private prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
 		t.Fatalf("after one removal: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
 	}
 
 	owner = apitest.FetchStartedWork(t, r, session, started.ID)
 	shortest := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
-	shortest.Elements[0].Content = withoutFragment(t, owner, "Second sealed")
+	shortest.Elements[0].Content = withoutFragment(t, owner, "Second private")
 	shortest.AllowedApps = &[]string{}
 	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, shortest); got.Code != http.StatusOK {
-		t.Fatalf("remove the final sealed prompt status = %d, want 200: %s", got.Code, got.Body.String())
+		t.Fatalf("remove the final private prompt status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if payloads, policies := apitest.ProtectedCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after the final removal: %d payloads and %d policy rows, want none", payloads, policies)
 	}
 
 	owner = apitest.FetchStartedWork(t, r, session, started.ID)
-	if owner.LinkedInstallOnly || len(owner.AllowedApps) != 0 {
-		t.Fatalf("after the final removal: linked install only %t, allowed apps %v",
-			owner.LinkedInstallOnly, owner.AllowedApps)
+	if owner.HasPrivatePrompts || len(owner.AllowedApps) != 0 {
+		t.Fatalf("after the final removal: has private prompts %t, allowed apps %v",
+			owner.HasPrivatePrompts, owner.AllowedApps)
 	}
 }
 

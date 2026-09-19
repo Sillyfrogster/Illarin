@@ -61,7 +61,7 @@ type WorkElement struct {
 	IsEmpty  bool                 `json:"isEmpty"`
 	ItemSize *WorkElementItemSize `json:"itemSize,omitempty"`
 	Label    string               `json:"label"`
-	Locked   bool                 `json:"locked"`
+	FromFile bool                 `json:"fromFile"`
 	Pinned   bool                 `json:"pinned"`
 	Role     *string              `json:"role,omitempty"`
 	Slot     string               `json:"slot"`
@@ -123,7 +123,7 @@ type PromptListContent struct {
 		Marker    *string                              `json:"marker,omitempty"`
 		Name      *string                              `json:"name,omitempty"`
 		Placement *PromptListContentFragmentsPlacement `json:"placement,omitempty"`
-		Protected *bool                                `json:"protected,omitempty"`
+		Private   *bool                                `json:"private,omitempty"`
 		Role      *PromptListContentFragmentsRole      `json:"role,omitempty"`
 		Text      string                               `json:"text"`
 	} `json:"fragments"`

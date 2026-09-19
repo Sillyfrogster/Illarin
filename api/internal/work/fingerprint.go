@@ -86,7 +86,7 @@ func (s *Service) contentFingerprint(
 		if prompts, ok := element.Content.(block.PromptList); ok {
 			prompts.Fragments = append([]block.PromptFragment(nil), prompts.Fragments...)
 			for index := range prompts.Fragments {
-				prompts.Fragments[index].Protected = false
+				prompts.Fragments[index].Private = false
 			}
 			element.Content = prompts
 		}

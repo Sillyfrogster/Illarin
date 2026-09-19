@@ -92,29 +92,29 @@ func TestDraftedChangesMediaIsPrivateOnAPublishedWork(t *testing.T) {
 	}
 }
 
-func TestPrivateProtectedTextDoesNotReachASend(t *testing.T) {
+func TestPrivatePromptTextDoesNotReachASend(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
-	id := apitest.PublishSealedPreset(t, router, session, "Recorded preset", "Recorded secret")
+	id := apitest.PublishPrivatePromptPreset(t, router, session, "Recorded preset", "Recorded secret")
 	owner := apitest.FetchStartedWork(t, router, session, id)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	core.Elements[0].Content = json.RawMessage(strings.ReplaceAll(string(core.Elements[0].Content), "Recorded secret", "Unpublished secret"))
 	if got := apitest.SaveBlock(t, router, session, id, apitest.BlockNamed(t, owner.Blocks, "preset_core").ID, core); got.Code != http.StatusOK {
-		t.Fatalf("save private protected text: %d %s", got.Code, got.Body.String())
+		t.Fatalf("save private private text: %d %s", got.Code, got.Body.String())
 	}
 	exported, err := download.NewService(pool, works).OpenExportForSend(t.Context(), uuid.MustParse(id), "preset_lumiverse")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(exported.Body), "Unpublished secret") || !strings.Contains(string(exported.Body), "Recorded secret") {
-		t.Fatal("linked send did not use the recorded protected payload")
+		t.Fatal("linked send did not use the recorded private prompt")
 	}
 	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Replacement","role":"system","text":"New private prompt","enabled":true}]}`)
 	if got := apitest.SaveBlock(t, router, session, id, apitest.BlockNamed(t, owner.Blocks, "preset_core").ID, core); got.Code != http.StatusOK {
-		t.Fatalf("replace protected drafted-changes prompt: %d %s", got.Code, got.Body.String())
+		t.Fatalf("replace the private drafted-changes prompt: %d %s", got.Code, got.Body.String())
 	}
 	for _, target := range []string{"preset_lumiverse", "preset_sillytavern"} {
-		if _, err := download.NewService(pool, works).OpenExportForSend(t.Context(), uuid.MustParse(id), target); !errors.Is(err, download.ErrLinkedInstallOnly) {
+		if _, err := download.NewService(pool, works).OpenExportForSend(t.Context(), uuid.MustParse(id), target); !errors.Is(err, download.ErrPrivatePrompts) {
 			t.Fatalf("send without a policy for %s: %v", target, err)
 		}
 	}

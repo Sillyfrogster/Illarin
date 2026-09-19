@@ -20,7 +20,7 @@ import (
 
 var ErrFormatNotOffered = errors.New("that download is not offered for this work")
 
-var ErrLinkedInstallOnly = errors.New("this work is linked-install-only")
+var ErrPrivatePrompts = errors.New("this work has private prompts, so only a send carries it")
 
 var ErrExportTooLarge = errors.New("that choice of images makes a file too large to produce")
 
@@ -87,7 +87,7 @@ func (s *Service) OpenExport(
 		return Export{}, err
 	}
 	if len(apps) > 0 || private.HasPromptFragments(subject.blocks) {
-		return Export{}, ErrLinkedInstallOnly
+		return Export{}, ErrPrivatePrompts
 	}
 	offered := s.reg.OfferedFormats(subject.capability())
 	if !offersFormat(offered, formatID) {
@@ -162,7 +162,7 @@ func (s *Service) OpenExportForSend(
 			return Export{}, err
 		}
 		if private.HasPromptFragments(subject.blocks) {
-			return Export{}, ErrLinkedInstallOnly
+			return Export{}, ErrPrivatePrompts
 		}
 	}
 	if err := private.RestorePromptFragments(ctx, tx, workID, subject.blocks); err != nil {

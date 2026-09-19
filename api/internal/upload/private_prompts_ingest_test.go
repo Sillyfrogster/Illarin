@@ -13,9 +13,9 @@ import (
 
 type promptListResponse struct {
 	Fragments []struct {
-		Name      string `json:"name"`
-		Text      string `json:"text"`
-		Protected bool   `json:"protected"`
+		Name    string `json:"name"`
+		Text    string `json:"text"`
+		Private bool   `json:"private"`
 	} `json:"fragments"`
 }
 
@@ -32,21 +32,21 @@ func promptListFromPage(t *testing.T, page apitest.StartedWork) promptListRespon
 	return list
 }
 
-func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.T) {
+func TestAKeyedPrivateUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.T) {
 	t.Parallel()
 	router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
-	metadata := apitest.ExampleMetadata("Keyed sealed preset")
+	metadata := apitest.ExampleMetadata("Keyed private prompt preset")
 	metadata["filename"] = "keyed.json"
-	finished := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedSealedPreset))
+	finished := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedPrivatePreset))
 	workID := apitest.WorkIDFromIngest(t, finished)
 
 	owner := apitest.FetchStartedWork(t, router, session, workID)
-	if !owner.LinkedInstallOnly || len(owner.AllowedApps) != 1 || owner.AllowedApps[0].ID != "lumiverse" {
-		t.Fatalf("owner policy = linked install only %t, apps %v", owner.LinkedInstallOnly, owner.AllowedApps)
+	if !owner.HasPrivatePrompts || len(owner.AllowedApps) != 1 || owner.AllowedApps[0].ID != "lumiverse" {
+		t.Fatalf("owner policy = has private prompts %t, apps %v", owner.HasPrivatePrompts, owner.AllowedApps)
 	}
 	ownerPrompts := promptListFromPage(t, owner).Fragments
 	if len(ownerPrompts) != 2 || ownerPrompts[1].Text != "Exact private prompt." ||
-		!ownerPrompts[1].Protected {
+		!ownerPrompts[1].Private {
 		t.Fatalf("owner prompts = %+v", ownerPrompts)
 	}
 
@@ -55,14 +55,14 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 		t.Fatalf("reader page = %d: %s", readerResponse.Code, readerResponse.Body.String())
 	}
 	if strings.Contains(readerResponse.Body.String(), "Exact private prompt.") {
-		t.Fatal("the reader response contains the protected text")
+		t.Fatal("the reader response contains the private text")
 	}
 	var reader apitest.StartedWork
 	if err := json.Unmarshal(readerResponse.Body.Bytes(), &reader); err != nil {
 		t.Fatalf("decode reader page: %v", err)
 	}
 	readerPrompts := promptListFromPage(t, reader).Fragments
-	if len(readerPrompts) != 2 || readerPrompts[1].Text != "" || !readerPrompts[1].Protected {
+	if len(readerPrompts) != 2 || readerPrompts[1].Text != "" || !readerPrompts[1].Private {
 		t.Fatalf("reader prompts = %+v", readerPrompts)
 	}
 }
@@ -70,14 +70,14 @@ func TestAKeyedSealedUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.
 func TestAKeyedPlaceholderOriginalFileKeepsTheExistingPrivateText(t *testing.T) {
 	t.Parallel()
 	router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
-	metadata := apitest.ExampleMetadata("Keyed sealed preset")
+	metadata := apitest.ExampleMetadata("Keyed private prompt preset")
 	metadata["filename"] = "keyed.json"
-	created := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedSealedPreset))
+	created := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedPrivatePreset))
 	workID := apitest.WorkIDFromIngest(t, created)
 
 	placeholder := []byte(`{
 		"schemaVersion": 1,
-		"name": "Keyed sealed preset revision",
+		"name": "Keyed private prompt preset revision",
 		"blocks": [{
 			"id":"private-revision",
 			"name":"Private renamed",
@@ -103,39 +103,39 @@ func TestAKeyedPlaceholderOriginalFileKeepsTheExistingPrivateText(t *testing.T) 
 	owner := apitest.FetchStartedWork(t, router, session, workID)
 	prompts := promptListFromPage(t, owner).Fragments
 	if len(prompts) != 1 || prompts[0].Name != "Private renamed" ||
-		prompts[0].Text != "Exact private prompt." || !prompts[0].Protected {
+		prompts[0].Text != "Exact private prompt." || !prompts[0].Private {
 		t.Fatalf("owner prompts after placeholder revision = %+v", prompts)
 	}
 }
 
-func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T) {
+func TestReplacementNeedsConfirmationBeforeMakingPrivatePromptsPublic(t *testing.T) {
 	t.Parallel()
-	for _, sealedAfterPublication := range []bool{false, true} {
-		name := "sealed on upload"
-		if sealedAfterPublication {
-			name = "sealed after publication"
+	for _, madePrivateAfterPublication := range []bool{false, true} {
+		name := "private on upload"
+		if madePrivateAfterPublication {
+			name = "private after publication"
 		}
 		t.Run(name, func(t *testing.T) {
 			router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
-			ordinary := strings.ReplaceAll(apitest.KeyedSealedPreset, `,"sealed":true,"sealedKey":"dialogue.frame"`, "")
-			initial := apitest.KeyedSealedPreset
-			if sealedAfterPublication {
+			ordinary := strings.ReplaceAll(apitest.KeyedPrivatePreset, `,"sealed":true,"sealedKey":"dialogue.frame"`, "")
+			initial := apitest.KeyedPrivatePreset
+			if madePrivateAfterPublication {
 				initial = ordinary
 			}
-			metadata := apitest.ExampleMetadata("Replacement protection")
+			metadata := apitest.ExampleMetadata("Replacement privacy")
 			metadata["filename"] = "keyed.json"
 			created := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(initial))
 			workID := apitest.WorkIDFromIngest(t, created)
-			if sealedAfterPublication {
+			if madePrivateAfterPublication {
 				page := apitest.FetchStartedWork(t, router, session, workID)
 				core := apitest.BlockNamed(t, page.Blocks, "preset_core")
-				body := apitest.SealEveryFragment(t, apitest.EditableBlock(core), []string{"lumiverse"})
+				body := apitest.MakeEveryFragmentPrivate(t, apitest.EditableBlock(core), []string{"lumiverse"})
 				if response := apitest.SaveBlock(t, router, session, workID, core.ID, body); response.Code != http.StatusOK {
-					t.Fatalf("seal published text: %d %s", response.Code, response.Body.String())
+					t.Fatalf("make published text private: %d %s", response.Code, response.Body.String())
 				}
 			}
 			before := apitest.FetchStartedWork(t, router, session, workID)
-			replacement := strings.ReplaceAll(ordinary, "Keyed sealed preset", "Replacement preset")
+			replacement := strings.ReplaceAll(ordinary, "Keyed private prompt preset", "Replacement preset")
 			staged := apitest.Send(t, router, apitest.Authorized(apitest.OriginalFileRequest(t, workID, "replacement.json", []byte(replacement)), session))
 			if staged.Code != http.StatusAccepted {
 				t.Fatalf("stage replacement: %d %s", staged.Code, staged.Body.String())
@@ -148,27 +148,27 @@ func TestReplacementNeedsConfirmationBeforeRemovingPromptProtection(t *testing.T
 			request := apitest.AuthorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{}}`, session)
 			apitest.WithReviewedVersion(t, router, request)
 			refused := apitest.Send(t, router, request)
-			if refused.Code != http.StatusConflict || !strings.Contains(refused.Body.String(), `"code":"sealed_exposure"`) || !strings.Contains(refused.Body.String(), "Private") {
+			if refused.Code != http.StatusConflict || !strings.Contains(refused.Body.String(), `"code":"prompts_made_public"`) || !strings.Contains(refused.Body.String(), "Private") {
 				t.Fatalf("unconfirmed replacement: %d %s", refused.Code, refused.Body.String())
 			}
 			after := apitest.FetchStartedWork(t, router, session, workID)
-			if !after.LinkedInstallOnly || !reflect.DeepEqual(after.Blocks, before.Blocks) {
-				t.Fatal("refused replacement changed the drafted changes or its protection")
+			if !after.HasPrivatePrompts || !reflect.DeepEqual(after.Blocks, before.Blocks) {
+				t.Fatal("refused replacement changed the drafted changes or its private prompts")
 			}
 			reader := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 			if reader.Code != http.StatusOK || strings.Contains(reader.Body.String(), "Exact private prompt.") {
 				t.Fatalf("reader after refusal: %d %s", reader.Code, reader.Body.String())
 			}
-			confirmation := apitest.AuthorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{},"exposeProtected":true}`, session)
+			confirmation := apitest.AuthorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{},"makePromptsPublic":true}`, session)
 			confirmation.Header.Set("X-Drafted-Changes-Version", request.Header.Get("X-Drafted-Changes-Version"))
 			confirmed := apitest.Send(t, router, confirmation)
 			if confirmed.Code != http.StatusOK {
 				t.Fatalf("confirmed replacement: %d %s", confirmed.Code, confirmed.Body.String())
 			}
-			if apitest.FetchStartedWork(t, router, session, workID).LinkedInstallOnly {
-				t.Fatal("confirmed replacement kept the old protection")
+			if apitest.FetchStartedWork(t, router, session, workID).HasPrivatePrompts {
+				t.Fatal("confirmed replacement kept the old private prompts")
 			}
-			if sealedAfterPublication {
+			if madePrivateAfterPublication {
 				reader = apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 				if !strings.Contains(reader.Body.String(), "Exact private prompt.") {
 					t.Fatal("confirmed removal did not restore access to previously public text")
@@ -283,10 +283,10 @@ func TestAnOrdinaryLumiversePresetStillIngestsAsPublicContent(t *testing.T) {
 		t.Fatalf("decode reader page: %v", err)
 	}
 	prompts := promptListFromPage(t, reader).Fragments
-	if reader.LinkedInstallOnly || len(reader.AllowedApps) != 0 ||
-		len(prompts) != 1 || prompts[0].Protected || prompts[0].Text != "Ordinary public prompt." {
-		t.Fatalf("ordinary preset = linked install only %t, apps %v, prompts %+v",
-			reader.LinkedInstallOnly, reader.AllowedApps, prompts)
+	if reader.HasPrivatePrompts || len(reader.AllowedApps) != 0 ||
+		len(prompts) != 1 || prompts[0].Private || prompts[0].Text != "Ordinary public prompt." {
+		t.Fatalf("ordinary preset = has private prompts %t, apps %v, prompts %+v",
+			reader.HasPrivatePrompts, reader.AllowedApps, prompts)
 	}
 	if len(reader.Downloads) != 1 || reader.Downloads[0].Format != "preset_lumiverse" {
 		t.Fatalf("ordinary downloads = %+v, want the Lumiverse target", reader.Downloads)

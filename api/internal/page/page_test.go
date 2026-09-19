@@ -129,7 +129,7 @@ func TestWorkPageShowsNoTotals(t *testing.T) {
 		"lifecycle": true, "isOwner": true, "downloads": true, "original": true,
 		"appTargets": true, "appFormats": true,
 		"blocks": true, "media": true, "preview": true, "nsfwPreference": true,
-		"linkedInstallOnly": true, "allowedApps": true, "eligibleApps": true,
+		"hasPrivatePrompts": true, "linkedInstallOnly": true, "allowedApps": true, "eligibleApps": true,
 		"latestVersion": true, "extensionDependencies": true, "installedAppVersions": true,
 		"kind": true, "discovery": true, "latestUpdate": true,
 	}

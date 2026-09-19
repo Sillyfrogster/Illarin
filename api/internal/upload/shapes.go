@@ -66,8 +66,8 @@ const (
 )
 
 type ReplacementAcceptance struct {
-	ExposeProtected *bool                                           `json:"exposeProtected,omitempty"`
-	Unrepresentable map[string]ReplacementAcceptanceUnrepresentable `json:"unrepresentable"`
+	MakePromptsPublic *bool                                           `json:"makePromptsPublic,omitempty"`
+	Unrepresentable   map[string]ReplacementAcceptanceUnrepresentable `json:"unrepresentable"`
 }
 
 type ReplacementAcceptanceUnrepresentable string
@@ -82,7 +82,7 @@ type ReplacementPreview struct {
 	Format          string                       `json:"format"`
 	Groups          []version.VersionChangeGroup `json:"groups"`
 	MissingWording  []string                     `json:"missingWording"`
-	Seals           int                          `json:"seals"`
+	PrivatePrompts  int                          `json:"privatePrompts"`
 	Unrepresentable []string                     `json:"unrepresentable"`
 }
 

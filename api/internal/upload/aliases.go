@@ -29,6 +29,7 @@ var (
 	uploadedWorkAliases = map[string]string{"type": "kind", "visibility": "discovery"}
 	createWorkAliases   = map[string]string{"visibility": "discovery"}
 	startWorkAliases    = map[string]string{"type": "kind"}
+	acceptanceAliases   = map[string]string{"makePromptsPublic": "exposeProtected"}
 )
 
 func (w Work) MarshalJSON() ([]byte, error) {
@@ -39,6 +40,9 @@ func (w Work) MarshalJSON() ([]byte, error) {
 // aliasIngestKeys repeats an upload's answer under the key it had before the rename
 func aliasIngestKeys(response gin.H) gin.H {
 	response["asset"] = response["work"]
+	if preview, ok := response["preview"].(gin.H); ok {
+		preview["seals"] = preview["privatePrompts"]
+	}
 	return response
 }
 
@@ -50,4 +54,9 @@ func (r *CreateWorkRequest) UnmarshalJSON(data []byte) error {
 func (r *StartWorkRequest) UnmarshalJSON(data []byte) error {
 	type plain StartWorkRequest
 	return api.UnmarshalAliased(data, (*plain)(r), startWorkAliases)
+}
+
+func (r *ReplacementAcceptance) UnmarshalJSON(data []byte) error {
+	type plain ReplacementAcceptance
+	return api.UnmarshalAliased(data, (*plain)(r), acceptanceAliases)
 }

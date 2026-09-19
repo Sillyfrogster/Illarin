@@ -36,7 +36,7 @@ func TestSillyTavernDeclaresAWriterThatKeepsTheUpload(t *testing.T) {
 	}
 }
 
-func TestSillyTavernReadsTheManifestIntoTheHeaderAndLockedElements(t *testing.T) {
+func TestSillyTavernReadsTheManifestIntoTheHeaderAndElementsFromTheFile(t *testing.T) {
 	t.Parallel()
 	parsed := parseTavern(t, spindleZip(t, map[string]string{
 		"manifest.json": tavernManifest, "dist/index.js": "export {}",
