@@ -17,6 +17,7 @@ export type AccountDestination = Destination & {
     | "settings"
     | "posts"
     | "blog-admin"
+    | "staff"
     | "verify"
     | "sign-in"
     | "sign-up";
@@ -63,6 +64,9 @@ export function accountDestinations(
             href: "/admin/blog",
           },
         ]
+      : []),
+    ...(account.role === "admin" || account.role === "moderator"
+      ? [{ id: "staff" as const, label: "Staff", href: "/staff" }]
       : []),
     ...(account.emailVerified
       ? []

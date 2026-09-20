@@ -21,8 +21,15 @@ test("account navigation names each task and keeps icons when labels change", ()
     ["Account settings", "/settings"],
     ["Your posts", "/posts"],
     ["Blog administration", "/admin/blog"],
+    ["Staff", "/staff"],
   ]);
-  const icons = ["circle-user-round", "settings", "notebook-pen", "signature"];
+  const icons = [
+    "circle-user-round",
+    "settings",
+    "notebook-pen",
+    "signature",
+    "shield-check",
+  ];
   for (const [index, destination] of destinations.entries()) {
     const renamed = { ...destination, label: "A different label" };
     const markup = renderToStaticMarkup(<DestinationIcon id={renamed.id} />);
@@ -54,6 +61,11 @@ test("sign-in and verification destinations keep their labels and icons", () => 
     "Account settings",
     "Verify email",
   ]);
+  expect(
+    accountDestinations({ ...account, role: "moderator" }, false).map(
+      ({ label }) => label,
+    ),
+  ).toEqual(["Your work", "Account settings", "Staff"]);
   expect(
     renderToStaticMarkup(<DestinationIcon id={destinations[2].id} />),
   ).toContain("lucide-mail");

@@ -5,6 +5,7 @@ import {
   Mail,
   NotebookPen,
   Settings,
+  ShieldCheck,
   Signature,
   UserPlus,
 } from "lucide-react";
@@ -15,6 +16,7 @@ const icons: Record<AccountDestination["id"], LucideIcon> = {
   settings: Settings,
   posts: NotebookPen,
   "blog-admin": Signature,
+  staff: ShieldCheck,
   verify: Mail,
   "sign-in": LogIn,
   "sign-up": UserPlus,

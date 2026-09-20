@@ -85,9 +85,12 @@
   --animate-pop-out: pop-out 110ms ease-in;
   --animate-slide-in: slide-in 220ms var(--ease-wipe);
   --animate-slide-out: slide-out 160ms ease-in;
+  --animate-slide-left-in: slide-left-in 220ms var(--ease-wipe);
+  --animate-slide-left-out: slide-left-out 160ms ease-in;
   --animate-plate-in: plate-in 260ms var(--ease-wipe);
   --animate-plate-out: plate-out 140ms ease-in;
   --animate-sweep: sweep 1.4s var(--ease-wipe) infinite;
+  --animate-cell-in: cell-in 420ms var(--ease-wipe) both;
 
   --shadow-cover: 0 20px 45px -20px rgb(0 0 0 / 0.5);
   --shadow-popover: 0 16px 60px -12px rgb(0 0 0 / 0.35);
@@ -128,10 +131,26 @@
       transform: translateY(-100%);
     }
   }
+  @keyframes slide-left-in {
+    from {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes slide-left-out {
+    to {
+      transform: translateX(-100%);
+    }
+  }
   @keyframes plate-in {
     from {
       opacity: 0;
       transform: scale(0.96) translateY(12px);
+    }
+  }
+  @keyframes cell-in {
+    from {
+      opacity: 0;
+      transform: scaleY(0.3);
     }
   }
   @keyframes plate-out {
