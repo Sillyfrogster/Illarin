@@ -29,6 +29,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
+	"github.com/Sillyfrogster/Illarin/api/internal/staff"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/summary"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
@@ -159,7 +160,13 @@ func run() error {
 	apps := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	sends := connect.NewSends(pool, svc, apps, connect.DefaultSettings())
 	notifications := notify.NewService(pool)
-	background.Add(8)
+	background.Add(9)
+	go func() {
+		defer background.Done()
+		staff.NewService(pool).RunRollup(runtimeContext, func(err error) {
+			log.Printf("daily totals: %v", err)
+		})
+	}()
 	go func() {
 		defer background.Done()
 		notifications.RunFanOut(runtimeContext, func(err error) {

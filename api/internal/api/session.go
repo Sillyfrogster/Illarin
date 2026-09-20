@@ -101,3 +101,16 @@ func Admin(c *gin.Context, action string) (Account, bool) {
 	}
 	return current, true
 }
+
+// Staff answers 403 unless the signed-in account is a verified moderator or admin
+func Staff(c *gin.Context, action string) (Account, bool) {
+	current, ok := Verified(c, action)
+	if !ok {
+		return Account{}, false
+	}
+	if current.Role != RoleAdmin && current.Role != RoleModerator {
+		Refuse(c, http.StatusForbidden, "Only staff can "+action+".")
+		return Account{}, false
+	}
+	return current, true
+}

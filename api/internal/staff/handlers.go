@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,20 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPut, "/v1/profiles/:handle/restricted", d.JSON, h.RestrictProfile)
 	routes.Handle(http.MethodDelete, "/v1/works/:id/takedown", d.JSON, h.LiftTakedown)
 	routes.Handle(http.MethodPut, "/v1/works/:id/takedown", d.JSON, h.TakeDownWork)
+	routes.Handle(http.MethodGet, "/v1/staff/report", d.JSON, h.GetReport)
 	registerAliases(routes, h)
+}
+
+func (h *Handlers) GetReport(c *gin.Context) {
+	if _, ok := api.Staff(c, "read the report"); !ok {
+		return
+	}
+	report, err := h.staff.Report(c.Request.Context(), time.Now())
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the report.")
+		return
+	}
+	c.JSON(http.StatusOK, report)
 }
 
 func (h *Handlers) GetRestrictedProfile(c *gin.Context) {
