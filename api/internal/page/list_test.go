@@ -29,7 +29,7 @@ func post(
 
 func TestCreateThenListRoundTrip(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 
 	rec := post(t, r, session, works, "Mystery")
 	if rec.Code != http.StatusOK {
@@ -56,7 +56,7 @@ func TestCreateThenListRoundTrip(t *testing.T) {
 
 func TestListPagesFromWhereTheLastPageEnded(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	for _, name := range []string{"first", "second", "third"} {
 		if rec := post(t, r, session, works, name); rec.Code != http.StatusOK {
 			t.Fatalf("POST %s status = %d. body: %s", name, rec.Code, rec.Body.String())

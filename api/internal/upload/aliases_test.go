@@ -33,7 +33,7 @@ func TestStartingAWorkStillTakesTheOldNameForItsType(t *testing.T) {
 
 func TestAnUploadStillTakesTheOldNameForItsVisibility(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("A quiet draft")
 	metadata["filename"] = "quiet-draft.lumitheme"
 	delete(metadata, "visibility")

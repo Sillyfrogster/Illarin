@@ -32,10 +32,10 @@ func settledSend(t *testing.T, pool *pgxpool.Pool, workID string) (string, strin
 
 func TestMakingAPromptPrivateStopsAQueuedSendTheAppCanNoLongerReceive(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
-	workID := apitest.WorkIDFromIngest(
+	workID := apitest.WorkIDFromUpload(
 		t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(ordinaryPreset)),
 	)
 	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
@@ -67,10 +67,10 @@ func TestMakingAPromptPrivateStopsAQueuedSendTheAppCanNoLongerReceive(t *testing
 
 func TestAFileAddressSignedBeforeAPromptWentPrivateHandsOverNoBytesAfterwards(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
-	workID := apitest.WorkIDFromIngest(
+	workID := apitest.WorkIDFromUpload(
 		t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(ordinaryPreset)),
 	)
 	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
@@ -132,10 +132,10 @@ func TestAConnectedAppsAppNameGrantsNoPrivatePrompts(t *testing.T) {
 
 func TestAnyReadersAllowedConnectedAppReceivesTheCompletePrivatePromptPreset(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, apitest.Registry(t))
 	metadata := apitest.ExampleMetadata("Keyed private prompt preset")
 	metadata["filename"] = "keyed.json"
-	workID := apitest.WorkIDFromIngest(
+	workID := apitest.WorkIDFromUpload(
 		t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedPrivatePreset)),
 	)
 	reader := apitest.AddVerifiedUser(t, router, pool, "reader@example.com", "reader.creator")

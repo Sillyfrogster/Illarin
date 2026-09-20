@@ -18,7 +18,7 @@ type Service struct {
 	pool     *pgxpool.Pool
 	reg      *format.Registry
 	store    storage.Store
-	settings work.IngestSettings
+	settings work.UploadSettings
 	works    *work.Service
 	now      func() time.Time
 }
@@ -26,7 +26,7 @@ type Service struct {
 func NewService(pool *pgxpool.Pool, works *work.Service) *Service {
 	return &Service{
 		pool: pool, reg: works.Registry(), store: works.Store(),
-		settings: works.IngestSettings(), works: works, now: works.Now,
+		settings: works.UploadSettings(), works: works, now: works.Now,
 	}
 }
 

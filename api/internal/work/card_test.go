@@ -39,7 +39,7 @@ func TestACardKeepsItsExactBytesWhileItsPictureIsExtracted(t *testing.T) {
 			"extensions":{"depth_prompt":{"depth":4},"third_party":{"kept":true}}
 		}
 	}`)
-	created := apitest.IngestOne(t, svc, ownerID, "ana.png", card)
+	created := apitest.UploadOne(t, svc, ownerID, "ana.png", card)
 	apitest.PublishImported(t, svc, ownerID, created)
 	if created.Type != "character" || created.Format != character.V2 {
 		t.Fatalf("work = type %q format %q", created.Type, created.Format)

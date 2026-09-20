@@ -149,7 +149,7 @@ func AcceptReplacementPreview(t *testing.T, r *gin.Engine, session *http.Cookie,
 	if err != nil {
 		t.Fatal(err)
 	}
-	operationID := strings.TrimPrefix(location, "/v1/ingests/")
+	operationID := strings.TrimPrefix(location, "/v1/uploads/")
 	request := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/original-file/"+operationID+"/accept", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	accepted := Send(t, r, Authorized(request, session))

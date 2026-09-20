@@ -98,8 +98,8 @@ func run() error {
 	background.Add(2)
 	go func() {
 		defer background.Done()
-		uploads.RunIngestWorkers(runtimeContext, cfg.IngestWorkers, func(err error) {
-			log.Printf("ingest worker: %v", err)
+		uploads.RunUploadWorkers(runtimeContext, cfg.UploadWorkers, func(err error) {
+			log.Printf("upload worker: %v", err)
 		})
 	}()
 	go func() {

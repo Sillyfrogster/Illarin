@@ -34,11 +34,11 @@ func promptListFromPage(t *testing.T, page apitest.StartedWork) promptListRespon
 
 func TestAKeyedPrivateUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing.T) {
 	t.Parallel()
-	router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+	router, session, works, _ := harness.NewVerifiedUploadRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Keyed private prompt preset")
 	metadata["filename"] = "keyed.json"
 	finished := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedPrivatePreset))
-	workID := apitest.WorkIDFromIngest(t, finished)
+	workID := apitest.WorkIDFromUpload(t, finished)
 
 	owner := apitest.FetchStartedWork(t, router, session, workID)
 	if !owner.HasPrivatePrompts || len(owner.AllowedApps) != 1 || owner.AllowedApps[0].ID != "lumiverse" {
@@ -69,11 +69,11 @@ func TestAKeyedPrivateUploadStoresAnOwnerPromptAndARedactedReaderStub(t *testing
 
 func TestAKeyedPlaceholderOriginalFileKeepsTheExistingPrivateText(t *testing.T) {
 	t.Parallel()
-	router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+	router, session, works, _ := harness.NewVerifiedUploadRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Keyed private prompt preset")
 	metadata["filename"] = "keyed.json"
 	created := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(apitest.KeyedPrivatePreset))
-	workID := apitest.WorkIDFromIngest(t, created)
+	workID := apitest.WorkIDFromUpload(t, created)
 
 	placeholder := []byte(`{
 		"schemaVersion": 1,
@@ -94,11 +94,11 @@ func TestAKeyedPlaceholderOriginalFileKeepsTheExistingPrivateText(t *testing.T) 
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("revision upload = %d: %s", accepted.Code, accepted.Body.String())
 	}
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil || !processed {
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(t.Context()); err != nil || !processed {
 		t.Fatalf("process revision = %t, %v; want true, nil", processed, err)
 	}
 	apitest.AcceptReplacementPreview(t, router, session, workID, accepted.Header().Get("Location"))
-	apitest.PollIngestWork(t, router, session, accepted.Header().Get("Location"))
+	apitest.PollUploadWork(t, router, session, accepted.Header().Get("Location"))
 
 	owner := apitest.FetchStartedWork(t, router, session, workID)
 	prompts := promptListFromPage(t, owner).Fragments
@@ -116,7 +116,7 @@ func TestReplacementNeedsConfirmationBeforeMakingPrivatePromptsPublic(t *testing
 			name = "private after publication"
 		}
 		t.Run(name, func(t *testing.T) {
-			router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+			router, session, works, _ := harness.NewVerifiedUploadRouterWithPool(t, apitest.LumiverseRegistry(t))
 			ordinary := strings.ReplaceAll(apitest.KeyedPrivatePreset, `,"sealed":true,"sealedKey":"dialogue.frame"`, "")
 			initial := apitest.KeyedPrivatePreset
 			if madePrivateAfterPublication {
@@ -125,7 +125,7 @@ func TestReplacementNeedsConfirmationBeforeMakingPrivatePromptsPublic(t *testing
 			metadata := apitest.ExampleMetadata("Replacement privacy")
 			metadata["filename"] = "keyed.json"
 			created := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(initial))
-			workID := apitest.WorkIDFromIngest(t, created)
+			workID := apitest.WorkIDFromUpload(t, created)
 			if madePrivateAfterPublication {
 				page := apitest.FetchStartedWork(t, router, session, workID)
 				core := apitest.BlockNamed(t, page.Blocks, "preset_core")
@@ -140,10 +140,10 @@ func TestReplacementNeedsConfirmationBeforeMakingPrivatePromptsPublic(t *testing
 			if staged.Code != http.StatusAccepted {
 				t.Fatalf("stage replacement: %d %s", staged.Code, staged.Body.String())
 			}
-			if processed, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil || !processed {
+			if processed, err := apitest.Uploads(works).ProcessNextUpload(t.Context()); err != nil || !processed {
 				t.Fatalf("process replacement: %t %v", processed, err)
 			}
-			operationID := strings.TrimPrefix(staged.Header().Get("Location"), "/v1/ingests/")
+			operationID := strings.TrimPrefix(staged.Header().Get("Location"), "/v1/uploads/")
 			path := "/v1/works/" + workID + "/original-file/" + operationID + "/accept"
 			request := apitest.AuthorizedJSONRequest(t, http.MethodPost, path, `{"unrepresentable":{}}`, session)
 			apitest.WithReviewedVersion(t, router, request)
@@ -219,7 +219,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+			router, session, works, _ := harness.NewVerifiedUploadRouterWithPool(t, apitest.LumiverseRegistry(t))
 			metadata := apitest.ExampleMetadata("Refused preset")
 			metadata["filename"] = "refused.json"
 			accepted := apitest.Send(t, router, apitest.Authorized(
@@ -228,8 +228,8 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 			if accepted.Code != http.StatusAccepted {
 				t.Fatalf("upload = %d: %s", accepted.Code, accepted.Body.String())
 			}
-			if processed, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil || !processed {
-				t.Fatalf("process ingest = %t, %v; want true, nil", processed, err)
+			if processed, err := apitest.Uploads(works).ProcessNextUpload(t.Context()); err != nil || !processed {
+				t.Fatalf("process upload = %t, %v; want true, nil", processed, err)
 			}
 			poll := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(
 				http.MethodGet, accepted.Header().Get("Location"), nil,
@@ -242,7 +242,7 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 				} `json:"failure"`
 			}
 			if err := json.Unmarshal(poll.Body.Bytes(), &operation); err != nil {
-				t.Fatalf("decode failed ingest: %v", err)
+				t.Fatalf("decode failed upload: %v", err)
 			}
 			if operation.Status != "failed" || operation.Work != nil || operation.Failure == nil ||
 				operation.Failure.Reason != test.wantReason {
@@ -252,9 +252,9 @@ func TestANewKeyedPlaceholderAndDuplicateKeysAreMalformedInputs(t *testing.T) {
 	}
 }
 
-func TestAnOrdinaryLumiversePresetStillIngestsAsPublicContent(t *testing.T) {
+func TestAnOrdinaryLumiversePresetStillUploadsAsPublicContent(t *testing.T) {
 	t.Parallel()
-	router, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+	router, session, works, _ := harness.NewVerifiedUploadRouterWithPool(t, apitest.LumiverseRegistry(t))
 	metadata := apitest.ExampleMetadata("Ordinary preset")
 	metadata["filename"] = "ordinary.json"
 	finished := apitest.UploadAndFinish(t, router, session, works, metadata, []byte(`{
@@ -272,7 +272,7 @@ func TestAnOrdinaryLumiversePresetStillIngestsAsPublicContent(t *testing.T) {
 			}
 		]
 	}`))
-	workID := apitest.WorkIDFromIngest(t, finished)
+	workID := apitest.WorkIDFromUpload(t, finished)
 
 	readerResponse := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 	if readerResponse.Code != http.StatusOK {

@@ -215,13 +215,13 @@ func TestWorksWithPrivatePromptsRefuseEveryOrdinaryExportWithoutRecordingAHandof
 
 func TestAnOriginalUploadWithPrivatePromptsIsRecoveryAccessForItsOwnerAlone(t *testing.T) {
 	t.Parallel()
-	router, ownerSession, works, pool := harness.NewVerifiedIngestRouterWithPool(
+	router, ownerSession, works, pool := harness.NewVerifiedUploadRouterWithPool(
 		t, apitest.LumiverseRegistry(t),
 	)
 	metadata := apitest.ExampleMetadata("Private original")
 	metadata["filename"] = "private-original.json"
 	finished := apitest.UploadAndFinish(t, router, ownerSession, works, metadata, []byte(apitest.KeyedPrivatePreset))
-	workID := apitest.WorkIDFromIngest(t, finished)
+	workID := apitest.WorkIDFromUpload(t, finished)
 	readerSession := apitest.SignUp(t, router, "original-reader@example.com", "original.reader")
 
 	for name, request := range map[string]*http.Request{
@@ -287,11 +287,11 @@ func TestAReplacementUploadRemovesPrivatePromptsWithoutAnOwningPrompt(t *testing
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("replacement upload status = %d, want 202: %s", accepted.Code, accepted.Body.String())
 	}
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil || !processed {
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(t.Context()); err != nil || !processed {
 		t.Fatalf("process replacement = %t, %v; want true, nil", processed, err)
 	}
 	apitest.AcceptReplacementPreview(t, router, session, started.ID, accepted.Header().Get("Location"), true)
-	updated := apitest.PollIngestWork(t, router, session, accepted.Header().Get("Location"))
+	updated := apitest.PollUploadWork(t, router, session, accepted.Header().Get("Location"))
 	if updated.ID != started.ID {
 		t.Fatalf("replacement work = %s, want %s", updated.ID, started.ID)
 	}

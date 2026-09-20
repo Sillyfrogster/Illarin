@@ -14,14 +14,14 @@ import (
 
 func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
 	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, []byte("first bytes")), session))
-	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
-		t.Fatalf("process ingest: %v", err)
+	if _, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil {
+		t.Fatalf("process upload: %v", err)
 	}
-	created := apitest.PollIngestWork(t, r, session, upload.Header().Get("Location"))
+	created := apitest.PollUploadWork(t, r, session, upload.Header().Get("Location"))
 	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/works/"+created.ID+"/publish", nil), session))
 	if published.Code != http.StatusOK {
@@ -40,7 +40,7 @@ func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	if uploaded.Code != http.StatusAccepted {
 		t.Fatalf("upload a replacement = %d, want 202: %s", uploaded.Code, uploaded.Body.String())
 	}
-	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
 
@@ -62,7 +62,7 @@ func TestAReplacementWaitingForReviewIsFoundFromTheWorkItTargets(t *testing.T) {
 	if operation.Status != "preview" || operation.Preview == nil {
 		t.Fatalf("the waiting replacement = %+v", operation)
 	}
-	if "/v1/ingests/"+operation.ID != uploaded.Header().Get("Location") {
+	if "/v1/uploads/"+operation.ID != uploaded.Header().Get("Location") {
 		t.Fatalf("found operation %s, want the uploaded %s",
 			operation.ID, uploaded.Header().Get("Location"))
 	}

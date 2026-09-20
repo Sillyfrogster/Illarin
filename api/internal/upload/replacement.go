@@ -23,11 +23,11 @@ import (
 var ErrReplacementDecision = errors.New("a replacement decision is required")
 
 type stagedReplacement struct {
-	Prepared preparedIngest
+	Prepared preparedUpload
 	Preview  Preview
 }
 
-func (s *Service) stageReplacement(ctx context.Context, job ingestJob, prepared preparedIngest) error {
+func (s *Service) stageReplacement(ctx context.Context, job uploadJob, prepared preparedUpload) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin replacement preview: %w", err)
@@ -60,7 +60,7 @@ func (s *Service) stageReplacement(ctx context.Context, job ingestJob, prepared 
 		return fmt.Errorf("store replacement preview: %w", err)
 	}
 	if result.RowsAffected() == 0 {
-		return errIngestLeaseLost
+		return errUploadLeaseLost
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit replacement preview: %w", err)
@@ -68,7 +68,7 @@ func (s *Service) stageReplacement(ctx context.Context, job ingestJob, prepared 
 	return nil
 }
 
-func replacementBlobIDs(job ingestJob, prepared preparedIngest) []uuid.UUID {
+func replacementBlobIDs(job uploadJob, prepared preparedUpload) []uuid.UUID {
 	ids := make([]uuid.UUID, 1, len(prepared.Media)+1)
 	ids[0] = job.BlobID
 	for _, media := range prepared.Media {
@@ -77,7 +77,7 @@ func replacementBlobIDs(job ingestJob, prepared preparedIngest) []uuid.UUID {
 	return ids
 }
 
-func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, workID uuid.UUID, prepared preparedIngest) (Preview, error) {
+func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, workID uuid.UUID, prepared preparedUpload) (Preview, error) {
 	working, err := block.Read(ctx, tx, workID)
 	if err != nil {
 		return Preview{}, err
@@ -613,8 +613,8 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operat
 	if err != nil {
 		return Operation{}, fmt.Errorf("read replacement preview: %w", err)
 	}
-	if status != IngestPreview || !targetID.Valid || uuidFromPgtype(targetID) != workID || !blobID.Valid {
-		return Operation{}, ErrIngestNotFound
+	if status != UploadPreview || !targetID.Valid || uuidFromPgtype(targetID) != workID || !blobID.Valid {
+		return Operation{}, ErrUploadNotFound
 	}
 	var staged stagedReplacement
 	if err := json.Unmarshal(stored, &staged); err != nil {
@@ -624,11 +624,11 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operat
 	if err := replacementDecisions(staged.Preview.Unrepresentable, decisions); err != nil {
 		return Operation{}, err
 	}
-	job := ingestJob{
+	job := uploadJob{
 		ID: operationID, OwnerID: ownerID, BlobID: uuidFromPgtype(blobID), Filename: filename,
 		Target: &originalFileTarget{WorkID: workID, Type: prepared.Type, Version: candidate.Version},
 	}
-	if _, err := s.writeIngestResultWithDecisions(ctx, tx, job, prepared, decisions, makePromptsPublic); err != nil {
+	if _, err := s.writeUploadResultWithDecisions(ctx, tx, job, prepared, decisions, makePromptsPublic); err != nil {
 		return Operation{}, err
 	}
 	if _, err := tx.Exec(ctx, `
@@ -642,7 +642,7 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operat
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
 		return Operation{}, err
 	}
-	accepted, err := s.GetIngest(ctx, ownerID, operationID)
+	accepted, err := s.GetUpload(ctx, ownerID, operationID)
 	if err != nil {
 		return Operation{}, err
 	}
@@ -658,12 +658,12 @@ func (s *Service) ReviewedReplacement(ctx context.Context, ownerID, workID uuid.
 		 order by created_at desc limit 1
 	`, workID, ownerID).Scan(&operationID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Operation{}, ErrIngestNotFound
+		return Operation{}, ErrUploadNotFound
 	}
 	if err != nil {
 		return Operation{}, fmt.Errorf("read the replacement waiting on this work: %w", err)
 	}
-	return s.GetIngest(ctx, ownerID, operationID)
+	return s.GetUpload(ctx, ownerID, operationID)
 }
 
 func (s *Service) CancelReplacement(ctx context.Context, ownerID, workID, operationID uuid.UUID) error {
@@ -676,7 +676,7 @@ func (s *Service) CancelReplacement(ctx context.Context, ownerID, workID, operat
 		return fmt.Errorf("cancel replacement preview: %w", err)
 	}
 	if result.RowsAffected() == 0 {
-		return ErrIngestNotFound
+		return ErrUploadNotFound
 	}
 	return nil
 }

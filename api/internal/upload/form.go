@@ -33,13 +33,13 @@ func readMetadata(parts *multipart.Reader) (CreateWorkRequest, error) {
 	return metadata, nil
 }
 
-func ingestInput(
+func uploadInput(
 	metadata CreateWorkRequest,
 	filename string,
 	file io.Reader,
 	ownerID uuid.UUID,
-) IngestInput {
-	in := IngestInput{
+) UploadInput {
+	in := UploadInput{
 		OwnerID:  ownerID,
 		Filename: filename,
 		File:     file,

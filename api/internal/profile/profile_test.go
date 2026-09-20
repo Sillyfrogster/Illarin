@@ -171,7 +171,7 @@ func TestAProfileRefusesFieldsThatAreTooLongOrNotHTTPS(t *testing.T) {
 
 func TestAvatarBytesTravelTheSharedMediaPathAndAreNotCatalogMedia(t *testing.T) {
 	t.Parallel()
-	r, session, _, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	r, session, _, pool := harness.NewVerifiedUploadRouterWithPool(t, apitest.Registry(t))
 
 	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.AvatarUploadRequest(t, apitest.PNG(t, 400, 400)), session))
 	if uploaded.Code != http.StatusOK {
@@ -207,7 +207,7 @@ func TestAvatarBytesTravelTheSharedMediaPathAndAreNotCatalogMedia(t *testing.T) 
 
 func TestReplacingAnAvatarRetiresTheOneItReplaced(t *testing.T) {
 	t.Parallel()
-	r, session, _, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	r, session, _, pool := harness.NewVerifiedUploadRouterWithPool(t, apitest.Registry(t))
 
 	first := apitest.Send(t, r, apitest.Authorized(apitest.AvatarUploadRequest(t, apitest.PNG(t, 200, 200)), session))
 	if first.Code != http.StatusOK {
@@ -245,7 +245,7 @@ func TestReplacingAnAvatarRetiresTheOneItReplaced(t *testing.T) {
 
 func TestRemovingAnAvatarLeavesTheProfileWithoutOne(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	r, session, _, _ := harness.NewVerifiedUploadRouterWithPool(t, apitest.Registry(t))
 
 	apitest.Send(t, r, apitest.Authorized(apitest.AvatarUploadRequest(t, apitest.PNG(t, 200, 200)), session))
 	removed := apitest.Send(t, r, apitest.Authorized(

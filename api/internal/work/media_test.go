@@ -329,7 +329,7 @@ func TestCreatorCannotAddMediaToSomebodyElsesWork(t *testing.T) {
 	}
 }
 
-func TestIngestStoresExtractedMediaOnTheWork(t *testing.T) {
+func TestUploadStoresExtractedMediaOnTheWork(t *testing.T) {
 	t.Parallel()
 	archive := archiveWithImage(t, testPNG(t, 90, 45, color.White))
 	registry := apitest.RegistryWith(t, apitest.RecognizedModule{Parsed: format.Parsed{
@@ -342,22 +342,22 @@ func TestIngestStoresExtractedMediaOnTheWork(t *testing.T) {
 		`insert into users (id, username) values ($1, 'media.extractor')`, ownerID); err != nil {
 		t.Fatalf("insert owner: %v", err)
 	}
-	operation, err := apitest.Uploads(svc).AcceptIngest(context.Background(), upload.IngestInput{
+	operation, err := apitest.Uploads(svc).AcceptUpload(context.Background(), upload.UploadInput{
 		OwnerID: ownerID, Filename: "card.charx", File: bytes.NewReader(archive),
 	})
 	if err != nil {
-		t.Fatalf("AcceptIngest: %v", err)
+		t.Fatalf("AcceptUpload: %v", err)
 	}
-	processed, err := apitest.Uploads(svc).ProcessNextIngest(context.Background())
+	processed, err := apitest.Uploads(svc).ProcessNextUpload(context.Background())
 	if err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v; want true, nil", processed, err)
+		t.Fatalf("ProcessNextUpload = %v, %v; want true, nil", processed, err)
 	}
-	operation, err = apitest.Uploads(svc).GetIngest(context.Background(), ownerID, operation.ID)
+	operation, err = apitest.Uploads(svc).GetUpload(context.Background(), ownerID, operation.ID)
 	if err != nil {
-		t.Fatalf("GetIngest: %v", err)
+		t.Fatalf("GetUpload: %v", err)
 	}
 	if operation.Work == nil {
-		t.Fatal("ingest did not create a work")
+		t.Fatal("upload did not create a work")
 	}
 
 	var workID uuid.UUID
@@ -390,7 +390,7 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 		renderStarted: make(chan struct{}),
 		releaseRender: make(chan struct{}),
 	}
-	settings := work.DefaultIngestSettings()
+	settings := work.DefaultUploadSettings()
 	settings.MediaWorkers = 1
 	svc := work.NewServiceWithMediaProcessor(
 		pool, apitest.RegistryWith(t, apitest.OpaqueModule{}), store, settings, processor,

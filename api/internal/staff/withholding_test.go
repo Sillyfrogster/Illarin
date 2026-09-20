@@ -18,7 +18,7 @@ import (
 
 func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
 
 	request := func() *http.Request {
@@ -89,7 +89,7 @@ func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing
 
 func TestOwnerCanViewAndDownloadAWithheldWorkWithItsDecision(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
 	mediaID := addWithholdingTestMedia(t, router, session, workID)
 
@@ -147,7 +147,7 @@ func TestOwnerCanViewAndDownloadAWithheldWorkWithItsDecision(t *testing.T) {
 
 func TestUnavailableWorksAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	withheldID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
 	deletedID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
 	withheldMediaID := addWithholdingTestMedia(t, router, session, withheldID)
@@ -214,7 +214,7 @@ func TestUnavailableWorksAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 
 func TestWithheldWorkRefusesCreatorMutations(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
 	if _, err := pool.Exec(context.Background(), `
 		update works work

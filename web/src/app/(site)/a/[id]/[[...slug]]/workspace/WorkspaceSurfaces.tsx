@@ -27,13 +27,13 @@ import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
 import { VisibilityControl } from "../VisibilityControl";
 import { WithholdControl } from "../WithholdControl";
 import { AddBlock } from "./AddBlock";
+import { FoundImagesPanel } from "./FoundImagesPanel";
+import { useFoundImages } from "./found-images";
 import { type Destination, destinationsIn, JumpPalette } from "./JumpPalette";
 import { PublishRail } from "./PublishRail";
 import { RemoveBlock } from "./RemoveBlock";
 import { firstCursor } from "./save";
 import { useWorkspace } from "./state";
-import { VaultPanel } from "./VaultPanel";
-import { useVault } from "./vault";
 import { WorkspaceDock } from "./WorkspaceDock";
 
 export type WorkspaceSurfacesProps = {
@@ -54,7 +54,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const { account } = useAuth();
   const reduced = useReducedMotion();
   const [jumping, setJumping] = useState(false);
-  const vault = useVault(workspace.workId, workspace.isOwner);
+  const foundImages = useFoundImages(workspace.workId, workspace.isOwner);
   const canWithhold = Boolean(
     account?.role === "admin" && !workspace.isDraft && !props.withheld,
   );
@@ -145,7 +145,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           detail={detail(props, workspace.isDraft, workspace.saveState)}
           onJump={() => setJumping(true)}
           publishLabel={workspace.isDraft ? "Publish" : "Review version"}
-          waiting={vault.pictures.length}
+          waiting={foundImages.pictures.length}
         />
       ) : null}
 
@@ -235,17 +235,17 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           </WorkspaceRail>
         ) : null}
 
-        {pane?.kind === "vault" ? (
+        {pane?.kind === "found-images" ? (
           <WorkspaceRail
-            description="The README showed these pictures. Place each one into the block its section became, or let it go."
-            key="vault"
+            description="These came with your upload. Place each one in a block, or remove it."
+            key="found-images"
             onClose={workspace.closePane}
-            title="Pictures from the README"
+            title="Found images"
           >
-            <VaultPanel
-              onRelease={vault.release}
-              onReload={vault.reload}
-              pictures={vault.pictures}
+            <FoundImagesPanel
+              onRelease={foundImages.release}
+              onReload={foundImages.reload}
+              pictures={foundImages.pictures}
             />
           </WorkspaceRail>
         ) : null}

@@ -1,9 +1,9 @@
-import type { IngestOperation, ReplacementDecision } from "@/lib/api/query";
+import type { ReplacementDecision, UploadOperation } from "@/lib/api/query";
 
 const UNSETTLED = ["pending", "processing", "preview"];
 
 export function updateStanding(
-  waiting: IngestOperation | null,
+  waiting: UploadOperation | null,
   changed: boolean,
 ): string {
   if (waiting?.status === "preview") {
@@ -19,7 +19,7 @@ export function updateStanding(
 }
 
 export function reviewBlockedReason(
-  waiting: IngestOperation | null,
+  waiting: UploadOperation | null,
   changed: boolean,
 ): string {
   if (waiting) {
@@ -32,7 +32,7 @@ export function reviewBlockedReason(
 }
 
 export function replacementAction(
-  operation: IngestOperation | null,
+  operation: UploadOperation | null,
   busy: boolean,
 ): string {
   if (operation?.status === "preview") {
@@ -44,7 +44,7 @@ export function replacementAction(
 }
 
 export function replacementReady(
-  operation: IngestOperation | null,
+  operation: UploadOperation | null,
   file: File | null,
   decisions: ReplacementDecision,
 ): boolean {
@@ -64,7 +64,7 @@ export function previewConflicts(preview: {
 }
 
 export function unsettledReplacement(
-  operation: IngestOperation,
-): IngestOperation | null {
+  operation: UploadOperation,
+): UploadOperation | null {
   return UNSETTLED.includes(operation.status) ? operation : null;
 }

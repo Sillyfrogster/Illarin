@@ -10,7 +10,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
-import type { IngestOperation } from "@/lib/api/query";
+import type { UploadOperation } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { fileWeight } from "@/lib/file-weight";
 
@@ -23,7 +23,7 @@ const UNCONFIRMED =
 export function ImportFile({
   onAccepted,
 }: {
-  onAccepted: (operation: IngestOperation) => void;
+  onAccepted: (operation: UploadOperation) => void;
 }) {
   const field = useId();
   const confirmField = useId();
@@ -65,7 +65,7 @@ export function ImportFile({
     setPending(true);
     setMessage("");
     try {
-      const { data, error } = await api<IngestOperation>("POST", "/v1/works", {
+      const { data, error } = await api<UploadOperation>("POST", "/v1/works", {
         body,
       });
       if (!data) {

@@ -14,31 +14,31 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *Handlers) ListVaultPictures(c *gin.Context) {
+func (h *Handlers) ListFoundImages(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	owner, ok := api.SignedIn(c, "reading the vault")
+	owner, ok := api.SignedIn(c, "reading found images")
 	if !ok {
 		return
 	}
-	pictures, err := h.uploads.ListVault(c.Request.Context(), owner.ID, id)
+	pictures, err := h.uploads.ListFoundImages(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such work.")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the vault.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not read found images.")
 	default:
-		listed := VaultPictureList{Pictures: make([]VaultPicture, 0, len(pictures))}
+		listed := FoundImageList{Pictures: make([]FoundImage, 0, len(pictures))}
 		for _, picture := range pictures {
-			listed.Pictures = append(listed.Pictures, toAPIVaultPicture(picture))
+			listed.Pictures = append(listed.Pictures, toAPIFoundImage(picture))
 		}
 		c.JSON(http.StatusOK, listed)
 	}
 }
 
-func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
+func (h *Handlers) PlaceFoundImage(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -55,7 +55,7 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var request PlaceVaultPictureRequest
+	var request PlaceFoundImageRequest
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil || (len(body) > 0 && api.DecodeOneJSON(bytes.NewReader(body), &request) != nil) {
 		api.Refuse(c, http.StatusBadRequest, "Send the id of the uploaded picture, or nothing.")
@@ -67,15 +67,15 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 		mediaID = &media
 	}
 	candidate := &work.Candidate{Version: version}
-	saved, err := h.uploads.PlaceVaultPicture(
+	saved, err := h.uploads.PlaceFoundImage(
 		c.Request.Context(), owner.ID, id, pictureID, mediaID, candidate)
 	if page.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
-	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrVaultPictureNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such picture is waiting in the vault.")
-	case errors.Is(err, ErrVaultPictureNeedsMedia), errors.Is(err, work.ErrInvalidBlock), errors.Is(err, work.ErrMediaNotFound):
+	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrFoundImageNotFound):
+		api.Refuse(c, http.StatusNotFound, "No such picture is waiting in found images.")
+	case errors.Is(err, ErrFoundImageNeedsCopy), errors.Is(err, work.ErrInvalidBlock), errors.Is(err, work.ErrMediaNotFound):
 		api.Refuse(c, http.StatusBadRequest, err.Error())
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not place the picture.")
@@ -89,7 +89,7 @@ func (h *Handlers) PlaceVaultPicture(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
+func (h *Handlers) DiscardFoundImage(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -107,13 +107,13 @@ func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
 		return
 	}
 	candidate := &work.Candidate{Version: version}
-	err := h.uploads.DiscardVaultPicture(c.Request.Context(), owner.ID, id, pictureID, candidate)
+	err := h.uploads.DiscardFoundImage(c.Request.Context(), owner.ID, id, pictureID, candidate)
 	if page.CandidateResult(c, candidate, err) {
 		return
 	}
 	switch {
-	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrVaultPictureNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such picture is waiting in the vault.")
+	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrFoundImageNotFound):
+		api.Refuse(c, http.StatusNotFound, "No such picture is waiting in found images.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not discard the picture.")
 	default:
@@ -121,8 +121,8 @@ func (h *Handlers) DiscardVaultPicture(c *gin.Context) {
 	}
 }
 
-func toAPIVaultPicture(picture WaitingPicture) VaultPicture {
-	listed := VaultPicture{
+func toAPIFoundImage(picture WaitingPicture) FoundImage {
+	listed := FoundImage{
 		Id: picture.ID, Address: picture.Address, Name: picture.Name, Section: picture.Section,
 	}
 	if picture.BlockID != nil {

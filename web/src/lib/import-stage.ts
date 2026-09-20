@@ -1,6 +1,6 @@
-import type { IngestOperation } from "./api/query";
+import type { UploadOperation } from "./api/query";
 
-export type ImportedWork = NonNullable<IngestOperation["work"]>;
+export type ImportedWork = NonNullable<UploadOperation["work"]>;
 
 export type ImportStage =
   | { at: "choosing" }
@@ -12,7 +12,7 @@ export type ImportStage =
 const STILL_READING = "Reading your file";
 
 export function importStage(
-  operation: IngestOperation | null,
+  operation: UploadOperation | null,
   message: string,
 ): ImportStage {
   if (!operation) return { at: "choosing" };

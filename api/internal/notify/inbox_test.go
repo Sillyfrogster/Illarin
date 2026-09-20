@@ -412,7 +412,7 @@ func (s inboxStack) upload(t *testing.T, name string) string {
 	t.Helper()
 	metadata := apitest.ExampleMetadata(name)
 	metadata["filename"] = "archive.lumitheme"
-	return apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, s.router, s.creator, s.works, metadata, []byte(name)))
+	return apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, s.router, s.creator, s.works, metadata, []byte(name)))
 }
 
 func (s inboxStack) withhold(t *testing.T, workID, reason string) {

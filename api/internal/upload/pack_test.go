@@ -86,7 +86,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, works, _ := harness.NewVerifiedIngestRouterWithPool(t, registry)
+	r, session, works, _ := harness.NewVerifiedUploadRouterWithPool(t, registry)
 	metadata := apitest.ExampleMetadata("Archive companions")
 	metadata["filename"] = "companions.json"
 	metadata["_keepDraft"] = true
@@ -100,7 +100,7 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 			"authorName":"A creator","version":3,"futureItem":{"kept":true}
 		}],"loomItems":[]
 	}`)
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, source))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, source))
 	page := apitest.FetchStartedWork(t, r, session, workID)
 	if page.Type != "pack" || page.Lifecycle != "draft" || len(page.Blocks) != 1 ||
 		len(page.Media) != 0 {

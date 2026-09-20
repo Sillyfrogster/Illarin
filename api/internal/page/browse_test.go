@@ -51,7 +51,7 @@ func (browseModule) Parse(_ context.Context, file format.Inspection, _ format.Ma
 
 func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Velvet Night")
 	metadata["filename"] = "velvet-night.lumitheme"
 	metadata["blurb"] = "A quiet midnight theme."
@@ -59,9 +59,9 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	metadata["isNsfw"] = true
 	finished := apitest.UploadAndFinish(t, router, session, works, metadata, []byte("theme"))
 	if finished.Code != http.StatusOK {
-		t.Fatalf("finish ingest status = %d, want 200: %s", finished.Code, finished.Body.String())
+		t.Fatalf("finish upload status = %d, want 200: %s", finished.Code, finished.Body.String())
 	}
-	workID := apitest.WorkIDFromIngest(t, finished)
+	workID := apitest.WorkIDFromUpload(t, finished)
 	gallery := apitest.Send(t, router, apitest.Authorized(apitest.MediaUploadRequest(
 		t, workID, "gallery", apitest.PNG(t, 400, 300),
 	), session))
@@ -109,7 +109,7 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 
 func TestBrowseSearchUsesCatalogWordsAndItsTwoQualifiers(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	entries := []struct {
 		name        string
 		blurb       string
@@ -238,7 +238,7 @@ func TestFacetsAreTypeScopedAndFilterOnElementContent(t *testing.T) {
 	if err := registry.Register(browseModule{}); err != nil {
 		t.Fatalf("register browse module: %v", err)
 	}
-	router, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	router, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	metadata := apitest.ExampleMetadata("Aster")
 	metadata["filename"] = "aster.json"
 	apitest.UploadAndFinish(t, router, session, works, metadata, []byte(`{"card":true,"lorebook":"Ash"}`))
@@ -277,7 +277,7 @@ func TestFacetsAreTypeScopedAndFilterOnElementContent(t *testing.T) {
 
 func TestArrangingThePageChangesNoFilterResult(t *testing.T) {
 	t.Parallel()
-	r, session, works, _ := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, _ := harness.NewCharacterUploadRouterWithPool(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	apitest.GivePictures(t, r, session, workID, "gallery", "gallery")
 	apitest.PublishCharacter(t, r, session, workID)
@@ -357,7 +357,7 @@ func TestContentInsideACustomBlockAnswersNoFacet(t *testing.T) {
 
 func TestAnEmptyBlockNeverAnswersAsCarried(t *testing.T) {
 	t.Parallel()
-	r, session, works, _ := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, _ := harness.NewCharacterUploadRouterWithPool(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	apitest.AddedBlock(t, apitest.AddBlock(t, r, session, workID, "expressions", "image_set"))
 	apitest.PublishCharacter(t, r, session, workID)
@@ -380,7 +380,7 @@ func TestTheAppControlNamesAppsAndMatchesThroughOfferedFormats(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	router, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	router, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
 	apitest.UploadAndFinish(t, router, session, works, metadata, []byte(`{
@@ -425,7 +425,7 @@ func facetComputedAt(t *testing.T, pool *pgxpool.Pool, workID string) time.Time 
 
 func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 	t.Parallel()
-	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, pool := harness.NewCharacterUploadRouterWithPool(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	apitest.GiveExpressions(t, r, session, workID)
 	apitest.PublishCharacter(t, r, session, workID)
@@ -482,13 +482,13 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 
 func TestSignedInBrowseUsesTheReadersSavedContentPreference(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Veiled Garden")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "veiled-garden.lumitheme"
 	metadata["isNsfw"] = true
 	created := apitest.UploadAndFinish(t, router, session, works, metadata, []byte("garden"))
-	workID := apitest.WorkIDFromIngest(t, created)
+	workID := apitest.WorkIDFromUpload(t, created)
 	added := apitest.Send(t, router, apitest.Authorized(apitest.MediaUploadRequest(
 		t, workID, "avatar", apitest.PNG(t, 80, 120),
 	), session))

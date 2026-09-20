@@ -4,11 +4,11 @@ import (
 	"github.com/google/uuid"
 )
 
-type PlaceVaultPictureRequest struct {
+type PlaceFoundImageRequest struct {
 	MediaId *uuid.UUID `json:"mediaId,omitempty"`
 }
 
-type VaultPicture struct {
+type FoundImage struct {
 	Address string     `json:"address"`
 	BlockId *uuid.UUID `json:"blockId,omitempty"`
 	Id      uuid.UUID  `json:"id"`
@@ -22,6 +22,6 @@ type VaultPicture struct {
 	Section string `json:"section"`
 }
 
-type VaultPictureList struct {
-	Pictures []VaultPicture `json:"pictures"`
+type FoundImageList struct {
+	Pictures []FoundImage `json:"pictures"`
 }

@@ -54,7 +54,7 @@ func rasterSources(t *testing.T) map[string][]byte {
 
 func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 
 	original := []byte{0x00, 0xff, 0xfe, 0x10, 0x80}
 
@@ -71,7 +71,7 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 		t.Fatalf("decode: %v", err)
 	}
 	if created.Work == nil {
-		t.Fatal("completed ingest has no work")
+		t.Fatal("completed upload has no work")
 	}
 
 	rec = httptest.NewRecorder()
@@ -90,7 +90,7 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 
 func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	before := time.Now()
@@ -139,7 +139,7 @@ func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 
 func TestExportFromAnWorkMadeInIllarinRecordsTheHandoff(t *testing.T) {
 	t.Parallel()
-	router, session, _, pool := harness.NewCharacterIngestRouterWithPool(t)
+	router, session, _, pool := harness.NewCharacterUploadRouterWithPool(t)
 	started := apitest.StartCharacter(t, router, session)
 	apitest.WriteCharacterFloor(t, router, session, started)
 	if published := apitest.PublishWork(t, router, session, started.ID); published.Code != http.StatusOK {
@@ -187,10 +187,10 @@ func (s *blockingRedirectStore) InternalRedirect(ctx context.Context, id uuid.UU
 func TestDownloadSnapshotsVisibilityAtHandoff(t *testing.T) {
 	t.Parallel()
 	var blocker *blockingRedirectStore
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithStore(
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithStore(
 		t,
 		format.NewRegistry(),
-		work.DefaultIngestSettings(),
+		work.DefaultUploadSettings(),
 		func(store storage.Store) storage.Store {
 			blocker = &blockingRedirectStore{
 				Store: store, reached: make(chan struct{}, 1), release: make(chan struct{}),
@@ -234,7 +234,7 @@ func TestDownloadSnapshotsVisibilityAtHandoff(t *testing.T) {
 
 func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	download := apitest.Send(t, router, httptest.NewRequest(
@@ -266,7 +266,7 @@ func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 
 func TestAFormatTheWorkIsNotOfferedInIs404(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	response := apitest.Send(t, router, httptest.NewRequest(
@@ -279,7 +279,7 @@ func TestAFormatTheWorkIsNotOfferedInIs404(t *testing.T) {
 
 func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
 	t.Parallel()
-	router, ownerSession, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, ownerSession, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, ownerSession, works, work.VisibilityListed)
 	readerSession := apitest.SignUp(t, router, "reader@example.com", "signed.reader")
 
@@ -319,7 +319,7 @@ func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
 
 func TestDownloadSnapshotsUnlistedAndOwnerWithheldWorks(t *testing.T) {
 	t.Parallel()
-	router, ownerSession, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, ownerSession, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	unlistedID := apitest.UploadVisibilityTestWork(
 		t, router, ownerSession, works, work.VisibilityUnlisted,
 	)
@@ -394,7 +394,7 @@ func TestDownloadUnknownWorkIs404(t *testing.T) {
 
 func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	source := []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Before","first_mes":"Hello",
@@ -402,7 +402,7 @@ func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 	}`)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, source))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, source))
 
 	page := apitest.FetchStartedWork(t, r, session, workID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
@@ -456,7 +456,7 @@ func TestPrivateBlockEditsKeepThePublishedDownloadAndUpload(t *testing.T) {
 
 func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 
 	payload := []byte(`<script>alert(1)</script>`)
 
@@ -473,7 +473,7 @@ func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {
 		t.Fatalf("decode: %v", err)
 	}
 	if created.Work == nil {
-		t.Fatal("completed ingest has no work")
+		t.Fatal("completed upload has no work")
 	}
 
 	rec = httptest.NewRecorder()
@@ -497,7 +497,7 @@ func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
 	t.Parallel()
 	for wantType, source := range rasterSources(t) {
 		t.Run(wantType, func(t *testing.T) {
-			r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+			r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 			metadata := apitest.ExampleMetadata("Raster")
 			metadata["filename"] = "misleading.lumitheme"
 			created := apitest.UploadAndFinish(t, r, session, works, metadata, source)
@@ -511,7 +511,7 @@ func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
 				t.Fatalf("decode: %v", err)
 			}
 			if operation.Work == nil {
-				t.Fatal("completed ingest has no work")
+				t.Fatal("completed upload has no work")
 			}
 
 			download := apitest.Send(t, r, httptest.NewRequest(
@@ -536,7 +536,7 @@ func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *tes
 	if err := registry.Register(apitest.NeverMatchesModule{}); err != nil {
 		t.Fatalf("register non-matching module: %v", err)
 	}
-	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	r, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	body := &bytes.Buffer{}
 	form := multipart.NewWriter(body)
 	apitest.WriteMetadataPart(t, form, apitest.ExampleMetadata("Matched image"))
@@ -559,8 +559,8 @@ func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *tes
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("upload status = %d, want 202", accepted.Code)
 	}
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(request.Context()); err != nil || !processed {
-		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(request.Context()); err != nil || !processed {
+		t.Fatalf("process upload = %v, %v; want true, nil", processed, err)
 	}
 
 	removedCompletion := apitest.Send(t, r, apitest.AuthorizedJSONRequest(

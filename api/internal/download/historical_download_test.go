@@ -127,7 +127,7 @@ func publishTwoCoveredVersions(
 
 func TestAnOlderVersionDownloadsWhatItRecordedAndTheNewestWhatReadersHave(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, _, _ := harness.NewCharacterUploadRouterWithPool(t)
 	started, firstCover, secondCover := publishTwoCoveredVersions(t, r, session)
 
 	older := downloadVersion(t, r, nil, started.ID, "charx", "?version=1")
@@ -161,7 +161,7 @@ func TestAnOlderVersionDownloadsWhatItRecordedAndTheNewestWhatReadersHave(t *tes
 
 func TestAnOlderVersionsPicturesOutliveTheirReplacement(t *testing.T) {
 	t.Parallel()
-	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, pool := harness.NewCharacterUploadRouterWithPool(t)
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
 	for range 2 {
@@ -185,7 +185,7 @@ func TestAnOlderVersionsPicturesOutliveTheirReplacement(t *testing.T) {
 
 func TestAHistoricalDownloadNeverCarriesUnpublishedWork(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, _, _ := harness.NewCharacterUploadRouterWithPool(t)
 	started, firstCover, secondCover := publishTwoCoveredVersions(t, r, session)
 	describeBlock(t, r, session, started, "She is thinking about the north shelf.")
 	apitest.UploadedImageID(t, r, session, started.ID, "avatar", apitest.PNG(t, 48, 48))
@@ -219,7 +219,7 @@ func TestAHistoricalDownloadNeverCarriesUnpublishedWork(t *testing.T) {
 
 func TestAnOlderVersionKeepsThePreservedDataItRecorded(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 	apitest.PublishCharacter(t, r, session, workID)
 	removed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
@@ -353,16 +353,16 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, works, pool := harness.NewVerifiedIngestRouterWithSettings(t, registry, work.DefaultIngestSettings())
+	r, session, works, pool := harness.NewVerifiedUploadRouterWithSettings(t, registry, work.DefaultUploadSettings())
 	metadata := apitest.ExampleMetadata("Zenless lore")
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte(aSillyTavernBook)))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte(aSillyTavernBook)))
 	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.OriginalFileRequest(t, workID, "lore.json", []byte(aLumiverseBook)), session))
 	if uploaded.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement: %d %s", uploaded.Code, uploaded.Body.String())
 	}
-	if _, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextUpload(t.Context()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
 	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))
@@ -424,9 +424,9 @@ func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testi
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	settings := work.DefaultIngestSettings()
+	settings := work.DefaultUploadSettings()
 	settings.AccountStorageCapBytes = int64(len(firstCover) + len(secondCover) + len(third) - 1)
-	r, session, _, _ := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
+	r, session, _, _ := harness.NewVerifiedUploadRouterWithSettings(t, registry, settings)
 
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
@@ -460,7 +460,7 @@ func TestAFullAccountRefusesNewPicturesRatherThanForgettingRecordedOnes(t *testi
 
 func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 	t.Parallel()
-	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, pool := harness.NewCharacterUploadRouterWithPool(t)
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
 	deleted := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/works/"+started.ID, nil), session))
@@ -570,13 +570,13 @@ func TestAVersionSaysWhichFilesItCanBeWrittenAsToday(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	r, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	metadata := apitest.ExampleMetadata("Zenless lore")
 	metadata["filename"] = "world-info.json"
 	metadata["isNsfw"] = false
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte(aSillyTavernBook)))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte(aSillyTavernBook)))
 	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.OriginalFileRequest(t, workID, "lore.json", []byte(aLumiverseBook)), session))
-	if _, err := apitest.Uploads(works).ProcessNextIngest(t.Context()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextUpload(t.Context()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
 	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))
@@ -636,7 +636,7 @@ func TestAVersionWithPrivatePromptsOffersNoFileAndSaysWhy(t *testing.T) {
 
 func TestAVersionListsThePicturesItRecorded(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, _, _ := harness.NewCharacterUploadRouterWithPool(t)
 	started, _, _ := publishTwoCoveredVersions(t, r, session)
 
 	answer := readVersionDownloads(t, r, nil, started.ID, 1)

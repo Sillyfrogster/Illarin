@@ -19,12 +19,12 @@ import (
 
 func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	t.Parallel()
-	r, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	r, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Theme with screenshots")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "theme.lumitheme"
 	created := apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme"))
-	workID := apitest.WorkIDFromIngest(t, created)
+	workID := apitest.WorkIDFromUpload(t, created)
 
 	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, workID, "gallery", apitest.PNG(t, 1200, 600),
@@ -136,8 +136,8 @@ func TestMediaRouteRefusesArbitraryVariantsAndVersions(t *testing.T) {
 func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
-	r, session, works, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
-		t, format.NewRegistry(), work.DefaultIngestSettings(),
+	r, session, works, pool := harness.NewVerifiedUploadRouterWithStoreFactory(
+		t, format.NewRegistry(), work.DefaultUploadSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			return storage.NewStore(pool, root)
 		},
@@ -147,7 +147,7 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	created := apitest.UploadAndFinish(
 		t, r, session, works, metadata, []byte("theme"),
 	)
-	workID := apitest.WorkIDFromIngest(t, created)
+	workID := apitest.WorkIDFromUpload(t, created)
 	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, workID, "gallery", apitest.PNG(t, 120, 60),
 	), session))
@@ -195,8 +195,8 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	if err != nil {
 		t.Fatalf("open limited store: %v", err)
 	}
-	limitedWorks := work.NewServiceWithIngestSettings(
-		pool, format.NewRegistry(), limited, work.DefaultIngestSettings(),
+	limitedWorks := work.NewServiceWithUploadSettings(
+		pool, format.NewRegistry(), limited, work.DefaultUploadSettings(),
 	)
 	handlers := apitest.NewServicesOver(pool, limited, limitedWorks, &apitest.VerificationOutbox{}, nil)
 	limitedRouter := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
@@ -217,8 +217,8 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	var blobs storage.Store
-	r, session, works, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
-		t, format.NewRegistry(), work.DefaultIngestSettings(),
+	r, session, works, pool := harness.NewVerifiedUploadRouterWithStoreFactory(
+		t, format.NewRegistry(), work.DefaultUploadSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			var err error
 			blobs, err = storage.NewStore(pool, root)
@@ -229,12 +229,12 @@ func TestCreatorMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 	created := apitest.UploadAndFinish(
 		t, r, session, works, apitest.ExampleMetadata("Theme at its cap"), source,
 	)
-	workID := apitest.WorkIDFromIngest(t, created)
+	workID := apitest.WorkIDFromUpload(t, created)
 	mediaBytes := apitest.PNG(t, 120, 60)
 
-	settings := work.DefaultIngestSettings()
+	settings := work.DefaultUploadSettings()
 	settings.AccountStorageCapBytes = int64(len(source) + len(mediaBytes) - 1)
-	limitedWorks := work.NewServiceWithIngestSettings(
+	limitedWorks := work.NewServiceWithUploadSettings(
 		pool, format.NewRegistry(), blobs, settings,
 	)
 	handlers := apitest.NewServicesOver(pool, blobs, limitedWorks, &apitest.VerificationOutbox{}, nil)

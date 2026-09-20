@@ -36,7 +36,7 @@ func losses(choice apitest.DownloadFormat) []apitest.RoleVerdict {
 
 func TestTheLossReportIsCheckedAgainstTheWorkAndNotTheFormat(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 
 	plain := apitest.DownloadMenu(t, r, session, workID)
@@ -64,7 +64,7 @@ func TestTheLossReportIsCheckedAgainstTheWorkAndNotTheFormat(t *testing.T) {
 
 func TestTheRecommendationIsTheFormatWhoseImagesReachEveryApp(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	apitest.GiveExpressions(t, r, session, workID)
 	apitest.GivePictures(t, r, session, workID, "gallery", "gallery")
@@ -106,7 +106,7 @@ func roleVerdictNamed(t *testing.T, choice apitest.DownloadFormat, role string) 
 
 func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	apitest.PublishCharacter(t, r, session, workID)
 
@@ -128,7 +128,7 @@ func TestEachDownloadIsNamedAfterItsFormat(t *testing.T) {
 
 func TestTheDownloadMenuReadsTheSameForItsOwnerAndAStranger(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	apitest.PublishCharacter(t, r, session, workID)
 
@@ -141,7 +141,7 @@ func TestTheDownloadMenuReadsTheSameForItsOwnerAndAStranger(t *testing.T) {
 
 func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 
 	uploaded := apitest.FetchStartedWork(t, r, session, workID)
@@ -169,7 +169,7 @@ func TestTheOriginalUploadStandsApartAndOnlyWhereThereIsOne(t *testing.T) {
 
 func TestTheSummaryIsWrittenWithTheChangeAndPublishingComputesNothing(t *testing.T) {
 	t.Parallel()
-	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, pool := harness.NewCharacterUploadRouterWithPool(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 
 	before := apitest.SummaryComputedAt(t, pool, workID)
@@ -187,7 +187,7 @@ func TestTheSummaryIsWrittenWithTheChangeAndPublishingComputesNothing(t *testing
 
 func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 	t.Parallel()
-	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, pool := harness.NewCharacterUploadRouterWithPool(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	apitest.GiveExpressions(t, r, session, workID)
 	apitest.PublishCharacter(t, r, session, workID)
@@ -221,7 +221,7 @@ func TestHidingABlockLeavesTheDownloadAlone(t *testing.T) {
 
 func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	apitest.GivePictures(t, r, session, workID, "gallery", "gallery")
 
@@ -238,7 +238,7 @@ func TestEachAppIsOfferedTheFormatItsImagesReach(t *testing.T) {
 
 func TestAnAppIsNamedBesideTheDestinationItShows(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	apitest.GivePictures(t, r, session, workID, "gallery", "gallery")
 

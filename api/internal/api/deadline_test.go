@@ -91,7 +91,7 @@ func TestADownloadIsNotHeldToTheListingDeadline(t *testing.T) {
 	}
 
 	if created.Work == nil {
-		t.Fatal("completed ingest has no work")
+		t.Fatal("completed upload has no work")
 	}
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/download/"+created.Work.ID, nil))

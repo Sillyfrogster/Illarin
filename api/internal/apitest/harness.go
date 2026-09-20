@@ -277,40 +277,40 @@ func (h Harness) NewVerifiedRoutersWithPool(
 	return setupRouter, h.RegisterRouter(t, services, deadlines), session, services.Works, pool
 }
 
-func (h Harness) NewVerifiedIngestRouter(
+func (h Harness) NewVerifiedUploadRouter(
 	t *testing.T,
 	registry *format.Registry,
 ) (*gin.Engine, *http.Cookie, *work.Service) {
 	t.Helper()
-	router, session, works, _ := h.NewVerifiedIngestRouterWithSettings(t, registry, work.DefaultIngestSettings())
+	router, session, works, _ := h.NewVerifiedUploadRouterWithSettings(t, registry, work.DefaultUploadSettings())
 	return router, session, works
 }
 
-func (h Harness) NewVerifiedIngestRouterWithPool(
+func (h Harness) NewVerifiedUploadRouterWithPool(
 	t *testing.T,
 	registry *format.Registry,
 ) (*gin.Engine, *http.Cookie, *work.Service, *pgxpool.Pool) {
 	t.Helper()
-	return h.NewVerifiedIngestRouterWithSettings(t, registry, work.DefaultIngestSettings())
+	return h.NewVerifiedUploadRouterWithSettings(t, registry, work.DefaultUploadSettings())
 }
 
-func (h Harness) NewVerifiedIngestRouterWithSettings(
+func (h Harness) NewVerifiedUploadRouterWithSettings(
 	t *testing.T,
 	registry *format.Registry,
-	settings work.IngestSettings,
+	settings work.UploadSettings,
 ) (*gin.Engine, *http.Cookie, *work.Service, *pgxpool.Pool) {
 	t.Helper()
-	return h.NewVerifiedIngestRouterWithStore(t, registry, settings, nil)
+	return h.NewVerifiedUploadRouterWithStore(t, registry, settings, nil)
 }
 
-func (h Harness) NewVerifiedIngestRouterWithStore(
+func (h Harness) NewVerifiedUploadRouterWithStore(
 	t *testing.T,
 	registry *format.Registry,
-	settings work.IngestSettings,
+	settings work.UploadSettings,
 	decorate func(storage.Store) storage.Store,
 ) (*gin.Engine, *http.Cookie, *work.Service, *pgxpool.Pool) {
 	t.Helper()
-	return h.NewVerifiedIngestRouterWithStoreFactory(t, registry, settings,
+	return h.NewVerifiedUploadRouterWithStoreFactory(t, registry, settings,
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			blobs, err := storage.NewStore(pool, t.TempDir())
 			if err == nil && decorate != nil {
@@ -321,10 +321,10 @@ func (h Harness) NewVerifiedIngestRouterWithStore(
 	)
 }
 
-func (h Harness) NewVerifiedIngestRouterWithStoreFactory(
+func (h Harness) NewVerifiedUploadRouterWithStoreFactory(
 	t *testing.T,
 	registry *format.Registry,
-	settings work.IngestSettings,
+	settings work.UploadSettings,
 	storeFactory func(*pgxpool.Pool) (storage.Store, error),
 ) (*gin.Engine, *http.Cookie, *work.Service, *pgxpool.Pool) {
 	t.Helper()
@@ -338,7 +338,7 @@ func (h Harness) NewVerifiedIngestRouterWithStoreFactory(
 			t.Fatalf("register test format: %v", err)
 		}
 	}
-	works := work.NewServiceWithIngestSettings(pool, registry, blobs, settings)
+	works := work.NewServiceWithUploadSettings(pool, registry, blobs, settings)
 	outbox := &VerificationOutbox{}
 	services := NewServicesOver(pool, blobs, works, outbox, nil)
 	setup := h.RegisterRouter(t, services, api.DefaultDeadlines())
@@ -364,5 +364,5 @@ func (h Harness) NewExtensionRouter(t *testing.T) (*gin.Engine, *http.Cookie, *w
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	return h.NewVerifiedIngestRouterWithPool(t, registry)
+	return h.NewVerifiedUploadRouterWithPool(t, registry)
 }

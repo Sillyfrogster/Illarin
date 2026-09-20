@@ -24,25 +24,25 @@ type WaitingPicture struct {
 	ThumbURL string
 }
 
-var ErrVaultPictureNotFound = errors.New("no such picture is waiting in the vault")
+var ErrFoundImageNotFound = errors.New("no such picture is waiting in found images")
 
-// ErrVaultPictureNeedsMedia means a picture from another site needs an uploaded copy before it can be placed
-var ErrVaultPictureNeedsMedia = errors.New("upload your own copy of this picture before placing it")
+// ErrFoundImageNeedsCopy means a picture from another site needs an uploaded copy before it can be placed
+var ErrFoundImageNeedsCopy = errors.New("upload your own copy of this picture before placing it")
 
-func insertVaultPictures(ctx context.Context, tx pgx.Tx, workID uuid.UUID, pictures []WaitingPicture) error {
+func insertFoundImages(ctx context.Context, tx pgx.Tx, workID uuid.UUID, pictures []WaitingPicture) error {
 	for position, picture := range pictures {
 		if _, err := tx.Exec(ctx, `
 			insert into work_found_images (id, work_id, media_id, address, name, block_id, section, position)
 			values ($1, $2, $3, $4, $5, $6, $7, $8)
 		`, picture.ID, workID, picture.MediaID, picture.Address, picture.Name, picture.BlockID, picture.Section, position); err != nil {
-			return fmt.Errorf("record a vault picture: %w", err)
+			return fmt.Errorf("record a found image: %w", err)
 		}
 	}
 	return nil
 }
 
-// ListVault lists the waiting pictures in the order the README showed them
-func (s *Service) ListVault(ctx context.Context, ownerID, workID uuid.UUID) ([]WaitingPicture, error) {
+// ListFoundImages lists the waiting pictures in the order the README showed them
+func (s *Service) ListFoundImages(ctx context.Context, ownerID, workID uuid.UUID) ([]WaitingPicture, error) {
 	var found uuid.UUID
 	err := s.pool.QueryRow(ctx, `
 		select id from works where id = $1 and owner_id = $2 and deleted_at is null
@@ -62,7 +62,7 @@ func (s *Service) ListVault(ctx context.Context, ownerID, workID uuid.UUID) ([]W
 		 order by picture.position, picture.created_at
 	`, workID)
 	if err != nil {
-		return nil, fmt.Errorf("list the vault: %w", err)
+		return nil, fmt.Errorf("list found images: %w", err)
 	}
 	defer rows.Close()
 	pictures := []WaitingPicture{}
@@ -72,7 +72,7 @@ func (s *Service) ListVault(ctx context.Context, ownerID, workID uuid.UUID) ([]W
 			&picture.ID, &picture.MediaID, &picture.Address, &picture.Name, &picture.BlockID, &picture.Section,
 			&picture.Width, &picture.Height,
 		); err != nil {
-			return nil, fmt.Errorf("read a vault picture: %w", err)
+			return nil, fmt.Errorf("read a found image: %w", err)
 		}
 		if picture.MediaID != nil {
 			picture.ThumbURL = s.works.ImageAddress(*picture.MediaID, "grid", false, true)
@@ -82,8 +82,8 @@ func (s *Service) ListVault(ctx context.Context, ownerID, workID uuid.UUID) ([]W
 	return pictures, rows.Err()
 }
 
-// PlaceVaultPicture puts a waiting picture into the block its section became
-func (s *Service) PlaceVaultPicture(
+// PlaceFoundImage puts a waiting picture into the block its section became
+func (s *Service) PlaceFoundImage(
 	ctx context.Context, ownerID, workID, pictureID uuid.UUID, mediaID *uuid.UUID, candidate *work.Candidate,
 ) (work.SavedBlocks, error) {
 	tx, err := s.pool.Begin(ctx)
@@ -96,13 +96,13 @@ func (s *Service) PlaceVaultPicture(
 	if err != nil {
 		return work.SavedBlocks{}, err
 	}
-	picture, err := lockVaultPicture(ctx, tx, workID, pictureID)
+	picture, err := lockFoundImage(ctx, tx, workID, pictureID)
 	if err != nil {
 		return work.SavedBlocks{}, err
 	}
 	if picture.MediaID == nil {
 		if mediaID == nil {
-			return work.SavedBlocks{}, ErrVaultPictureNeedsMedia
+			return work.SavedBlocks{}, ErrFoundImageNeedsCopy
 		}
 		if err := checkGalleryMedia(ctx, tx, workID, *mediaID); err != nil {
 			return work.SavedBlocks{}, err
@@ -148,7 +148,7 @@ func (s *Service) placeInPage(
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx, `delete from work_found_images where id = $1`, picture.ID); err != nil {
-		return nil, fmt.Errorf("take the picture out of the vault: %w", err)
+		return nil, fmt.Errorf("take the picture out of found images: %w", err)
 	}
 	if err := s.writeSummary(ctx, tx, workID); err != nil {
 		return nil, err
@@ -156,8 +156,8 @@ func (s *Service) placeInPage(
 	return after, nil
 }
 
-// DiscardVaultPicture lets a waiting picture go along with the copy the archive gave it
-func (s *Service) DiscardVaultPicture(
+// DiscardFoundImage lets a waiting picture go along with the copy the archive gave it
+func (s *Service) DiscardFoundImage(
 	ctx context.Context, ownerID, workID, pictureID uuid.UUID, candidate *work.Candidate,
 ) error {
 	tx, err := s.pool.Begin(ctx)
@@ -169,12 +169,12 @@ func (s *Service) DiscardVaultPicture(
 	if _, err := candidate.Lock(ctx, tx, ownerID, workID); err != nil {
 		return err
 	}
-	picture, err := lockVaultPicture(ctx, tx, workID, pictureID)
+	picture, err := lockFoundImage(ctx, tx, workID, pictureID)
 	if err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `delete from work_found_images where id = $1`, pictureID); err != nil {
-		return fmt.Errorf("take the picture out of the vault: %w", err)
+		return fmt.Errorf("take the picture out of found images: %w", err)
 	}
 	if picture.MediaID != nil {
 		if _, err := tx.Exec(ctx, `
@@ -188,7 +188,7 @@ func (s *Service) DiscardVaultPicture(
 	return candidate.Commit(ctx, tx, workID)
 }
 
-func lockVaultPicture(ctx context.Context, tx pgx.Tx, workID, pictureID uuid.UUID) (WaitingPicture, error) {
+func lockFoundImage(ctx context.Context, tx pgx.Tx, workID, pictureID uuid.UUID) (WaitingPicture, error) {
 	picture := WaitingPicture{ID: pictureID}
 	err := tx.QueryRow(ctx, `
 		select media_id, address, name, block_id, section
@@ -197,10 +197,10 @@ func lockVaultPicture(ctx context.Context, tx pgx.Tx, workID, pictureID uuid.UUI
 		 for update
 	`, pictureID, workID).Scan(&picture.MediaID, &picture.Address, &picture.Name, &picture.BlockID, &picture.Section)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return WaitingPicture{}, ErrVaultPictureNotFound
+		return WaitingPicture{}, ErrFoundImageNotFound
 	}
 	if err != nil {
-		return WaitingPicture{}, fmt.Errorf("find the vault picture: %w", err)
+		return WaitingPicture{}, fmt.Errorf("find the found image: %w", err)
 	}
 	return picture, nil
 }

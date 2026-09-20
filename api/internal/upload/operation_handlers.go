@@ -54,8 +54,8 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner api.Account) {
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
 
-	operation, err := h.uploads.AcceptIngest(
-		c.Request.Context(), ingestInput(metadata, file.FileName(), limitedFile, owner.ID),
+	operation, err := h.uploads.AcceptUpload(
+		c.Request.Context(), uploadInput(metadata, file.FileName(), limitedFile, owner.ID),
 	)
 	if errors.Is(err, storage.ErrTombstoned) {
 		api.Refuse(c, http.StatusUnprocessableEntity, "This file cannot be accepted.")
@@ -66,9 +66,9 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner api.Account) {
 		return
 	}
 
-	location := "/v1/ingests/" + operation.ID.String()
+	location := "/v1/uploads/" + operation.ID.String()
 	c.Header("Location", location)
-	c.JSON(http.StatusAccepted, toAPIIngest(operation))
+	c.JSON(http.StatusAccepted, toAPIUpload(operation))
 }
 
 func (h *Handlers) AddWorkOriginalFile(c *gin.Context) {
@@ -123,9 +123,9 @@ func (h *Handlers) AddWorkOriginalFile(c *gin.Context) {
 		return
 	}
 
-	location := "/v1/ingests/" + operation.ID.String()
+	location := "/v1/uploads/" + operation.ID.String()
 	c.Header("Location", location)
-	c.JSON(http.StatusAccepted, toAPIIngest(operation))
+	c.JSON(http.StatusAccepted, toAPIUpload(operation))
 }
 
 func (h *Handlers) GetWorkReplacement(c *gin.Context) {
@@ -138,7 +138,7 @@ func (h *Handlers) GetWorkReplacement(c *gin.Context) {
 		return
 	}
 	operation, err := h.uploads.ReviewedReplacement(c.Request.Context(), owner.ID, id)
-	if errors.Is(err, ErrIngestNotFound) {
+	if errors.Is(err, ErrUploadNotFound) {
 		c.JSON(http.StatusOK, nil)
 		return
 	}
@@ -146,7 +146,7 @@ func (h *Handlers) GetWorkReplacement(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not load the replacement file. Try again.")
 		return
 	}
-	c.JSON(http.StatusOK, toAPIIngest(operation))
+	c.JSON(http.StatusOK, toAPIUpload(operation))
 }
 
 func (h *Handlers) AcceptWorkOriginalFile(c *gin.Context) {
@@ -189,7 +189,7 @@ func (h *Handlers) AcceptWorkOriginalFile(c *gin.Context) {
 		})
 		return
 	}
-	if errors.Is(err, ErrIngestNotFound) || errors.Is(err, work.ErrNotFound) {
+	if errors.Is(err, ErrUploadNotFound) || errors.Is(err, work.ErrNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no reviewed replacement")
 		return
 	}
@@ -205,7 +205,7 @@ func (h *Handlers) AcceptWorkOriginalFile(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not apply the replacement file. Try again.")
 		return
 	}
-	c.JSON(http.StatusOK, toAPIIngest(operation))
+	c.JSON(http.StatusOK, toAPIUpload(operation))
 }
 
 func (h *Handlers) CancelWorkOriginalFile(c *gin.Context) {
@@ -222,7 +222,7 @@ func (h *Handlers) CancelWorkOriginalFile(c *gin.Context) {
 		return
 	}
 	err := h.uploads.CancelReplacement(c.Request.Context(), owner.ID, id, operationID)
-	if errors.Is(err, ErrIngestNotFound) {
+	if errors.Is(err, ErrUploadNotFound) {
 		api.Refuse(c, http.StatusNotFound, "no reviewed replacement")
 		return
 	}
@@ -233,7 +233,7 @@ func (h *Handlers) CancelWorkOriginalFile(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) GetIngest(c *gin.Context) {
+func (h *Handlers) GetUpload(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -242,24 +242,24 @@ func (h *Handlers) GetIngest(c *gin.Context) {
 	if !ok {
 		return
 	}
-	operation, err := h.uploads.GetIngest(c.Request.Context(), owner.ID, id)
-	if errors.Is(err, ErrIngestNotFound) {
-		api.Refuse(c, http.StatusNotFound, "no such ingest operation")
+	operation, err := h.uploads.GetUpload(c.Request.Context(), owner.ID, id)
+	if errors.Is(err, ErrUploadNotFound) {
+		api.Refuse(c, http.StatusNotFound, "no such upload operation")
 		return
 	}
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not load import status. Try again.")
 		return
 	}
-	c.JSON(http.StatusOK, toAPIIngest(operation))
+	c.JSON(http.StatusOK, toAPIUpload(operation))
 }
 
-func toAPIIngest(operation Operation) gin.H {
+func toAPIUpload(operation Operation) gin.H {
 	response := gin.H{
 		"id":     operation.ID,
 		"status": operation.Status,
-		"url":    "/v1/ingests/" + operation.ID.String(),
-		"work":   ingestWork(operation.Work),
+		"url":    "/v1/uploads/" + operation.ID.String(),
+		"work":   uploadWork(operation.Work),
 	}
 	if operation.Failure != nil {
 		response["failure"] = gin.H{
@@ -276,7 +276,7 @@ func toAPIIngest(operation Operation) gin.H {
 			"privatePrompts":  operation.Preview.PrivatePrompts,
 		}
 	}
-	return aliasIngestKeys(response)
+	return aliasUploadKeys(response)
 }
 
 func nonNilStrings(values []string) []string {
@@ -286,7 +286,7 @@ func nonNilStrings(values []string) []string {
 	return values
 }
 
-func ingestWork(a *work.Work) *Work {
+func uploadWork(a *work.Work) *Work {
 	if a == nil {
 		return nil
 	}

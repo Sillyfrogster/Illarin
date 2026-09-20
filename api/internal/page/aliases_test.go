@@ -15,7 +15,7 @@ import (
 
 func TestAWorkPageCarriesTheFieldNamesItHadBeforeTheRename(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityUnlisted)
 
 	answer := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/assets/"+workID, nil))
@@ -36,7 +36,7 @@ func TestAWorkPageCarriesTheFieldNamesItHadBeforeTheRename(t *testing.T) {
 
 func TestVisibilityStillArrivesUnderItsOldFieldName(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
@@ -54,12 +54,12 @@ func TestVisibilityStillArrivesUnderItsOldFieldName(t *testing.T) {
 
 func TestBrowseStillFiltersOnTheOldNameForTheType(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Quiet Shelf")
 	metadata["filename"] = "quiet-shelf.lumitheme"
 	metadata["blurb"] = "A theme for a quiet shelf."
 	metadata["isNsfw"] = false
-	workID := apitest.WorkIDFromIngest(
+	workID := apitest.WorkIDFromUpload(
 		t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte("theme")))
 	gallery := apitest.Send(t, router, apitest.Authorized(apitest.MediaUploadRequest(
 		t, workID, "gallery", apitest.PNG(t, 400, 300),
@@ -95,10 +95,10 @@ func TestBrowseAndTheWorkPageStillAnswerToTheOldAppNames(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	router, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	router, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(`{
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, router, session, works, metadata, []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Keeps the archive.","first_mes":"Welcome back."}
 	}`)))

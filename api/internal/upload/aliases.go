@@ -19,9 +19,13 @@ func registerAliases(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPost, "/v1/works/:id/revisions", d.Upload, h.AddWorkOriginalFile)
 	routes.Handle(http.MethodPost, "/v1/works/:id/revisions/:operationId/accept", d.JSON, h.AcceptWorkOriginalFile)
 	routes.Handle(http.MethodDelete, "/v1/works/:id/revisions/:operationId", d.JSON, h.CancelWorkOriginalFile)
-	routes.Handle(http.MethodGet, "/v1/assets/:id/vault", d.JSON, h.ListVaultPictures)
-	routes.Handle(http.MethodDelete, "/v1/assets/:id/vault/:pictureId", d.JSON, h.DiscardVaultPicture)
-	routes.Handle(http.MethodPost, "/v1/assets/:id/vault/:pictureId/place", d.JSON, h.PlaceVaultPicture)
+	routes.Handle(http.MethodGet, "/v1/assets/:id/vault", d.JSON, h.ListFoundImages)
+	routes.Handle(http.MethodDelete, "/v1/assets/:id/vault/:pictureId", d.JSON, h.DiscardFoundImage)
+	routes.Handle(http.MethodPost, "/v1/assets/:id/vault/:pictureId/place", d.JSON, h.PlaceFoundImage)
+	routes.Handle(http.MethodGet, "/v1/works/:id/vault", d.JSON, h.ListFoundImages)
+	routes.Handle(http.MethodDelete, "/v1/works/:id/vault/:pictureId", d.JSON, h.DiscardFoundImage)
+	routes.Handle(http.MethodPost, "/v1/works/:id/vault/:pictureId/place", d.JSON, h.PlaceFoundImage)
+	routes.Handle(http.MethodGet, "/v1/ingests/:id", d.JSON, h.GetUpload)
 }
 
 // The field names an upload answered to before the rename, kept for sixty days
@@ -37,8 +41,8 @@ func (w Work) MarshalJSON() ([]byte, error) {
 	return api.MarshalAliased(plain(w), uploadedWorkAliases)
 }
 
-// aliasIngestKeys repeats an upload's answer under the key it had before the rename
-func aliasIngestKeys(response gin.H) gin.H {
+// aliasUploadKeys repeats an upload's answer under the key it had before the rename
+func aliasUploadKeys(response gin.H) gin.H {
 	response["asset"] = response["work"]
 	if preview, ok := response["preview"].(gin.H); ok {
 		preview["seals"] = preview["privatePrompts"]

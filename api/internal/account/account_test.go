@@ -445,7 +445,7 @@ func TestOnlyAVerifiedAccountCanUpload(t *testing.T) {
 		t.Fatalf("decode work: %v", err)
 	}
 	if work.Work == nil {
-		t.Fatal("completed ingest has no work")
+		t.Fatal("completed upload has no work")
 	}
 
 	viewer := apitest.SignUp(t, r, "viewer@example.com", "plain.viewer")

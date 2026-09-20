@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *Service) AcceptIngest(ctx context.Context, in IngestInput) (Operation, error) {
+func (s *Service) AcceptUpload(ctx context.Context, in UploadInput) (Operation, error) {
 	stored, err := s.store.Put(ctx, in.File)
 	if err != nil {
 		return Operation{}, fmt.Errorf("store upload: %w", err)
@@ -30,7 +30,7 @@ func (s *Service) AcceptIngest(ctx context.Context, in IngestInput) (Operation, 
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Operation{}, fmt.Errorf("begin ingest acceptance: %w", err)
+		return Operation{}, fmt.Errorf("begin upload acceptance: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	if err := s.works.EnsureAccountStorage(ctx, tx, in.OwnerID, []uuid.UUID{stored.ID}); err != nil {
@@ -42,14 +42,14 @@ func (s *Service) AcceptIngest(ctx context.Context, in IngestInput) (Operation, 
 		values ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9)
 	`, id, in.OwnerID, stored.ID, in.Filename, in.Name, in.Blurb, tags, in.IsNSFW, visibility)
 	if err != nil {
-		return Operation{}, fmt.Errorf("record ingest: %w", err)
+		return Operation{}, fmt.Errorf("record upload: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Operation{}, fmt.Errorf("commit ingest acceptance: %w", err)
+		return Operation{}, fmt.Errorf("commit upload acceptance: %w", err)
 	}
-	return Operation{ID: id, Status: IngestPending}, nil
+	return Operation{ID: id, Status: UploadPending}, nil
 }
-func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (Operation, error) {
+func (s *Service) GetUpload(ctx context.Context, ownerID, id uuid.UUID) (Operation, error) {
 	var status Status
 	var workID pgtype.UUID
 	var failureReason pgtype.Text
@@ -60,14 +60,14 @@ func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (Operati
 		  from upload_operations where id = $1 and owner_id = $2
 	`, id, ownerID).Scan(&status, &workID, &failureReason, &failureMessage, &replacementPreview)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Operation{}, ErrIngestNotFound
+		return Operation{}, ErrUploadNotFound
 	}
 	if err != nil {
-		return Operation{}, fmt.Errorf("read ingest: %w", err)
+		return Operation{}, fmt.Errorf("read upload: %w", err)
 	}
 	operation := Operation{ID: id, Status: status}
-	if status == IngestFailed && failureReason.Valid {
-		message := s.ingestFailureMessage(failureReason.String)
+	if status == UploadFailed && failureReason.Valid {
+		message := s.uploadFailureMessage(failureReason.String)
 		if failureMessage.Valid {
 			message = failureMessage.String
 		}
@@ -76,7 +76,7 @@ func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (Operati
 			Message: message,
 		}
 	}
-	if status == IngestPreview {
+	if status == UploadPreview {
 		var staged stagedReplacement
 		if err := json.Unmarshal(replacementPreview, &staged); err != nil {
 			return Operation{}, fmt.Errorf("read replacement preview: %w", err)
@@ -93,7 +93,7 @@ func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (Operati
 	return operation, nil
 }
 
-func (s *Service) ingestFailureMessage(reason string) string {
+func (s *Service) uploadFailureMessage(reason string) string {
 	switch reason {
 	case "malformed_input":
 		return "The file is malformed and could not be read."

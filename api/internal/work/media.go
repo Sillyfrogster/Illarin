@@ -322,7 +322,7 @@ func supersedeExtractedMedia(ctx context.Context, tx pgx.Tx, workID uuid.UUID) e
 	return nil
 }
 
-func MediaIngestFailure(err error) format.FailureReason {
+func MediaUploadFailure(err error) format.FailureReason {
 	switch {
 	case errors.Is(err, mediaproc.ErrImageTooLarge):
 		return format.FailureSafetyViolation

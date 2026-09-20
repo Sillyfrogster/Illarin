@@ -13,9 +13,7 @@ import { useDraftedChanges } from "@/lib/drafted-changes";
 export function PreservedPanel({ workId }: { workId: string }) {
   const candidate = useDraftedChanges();
   const [open, setOpen] = useState(false);
-  const [namespaces, setNamespaces] = useState<PreservedData[] | null>(
-    null,
-  );
+  const [namespaces, setNamespaces] = useState<PreservedData[] | null>(null);
   const [deleting, setDeleting] = useState<PreservedData | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");

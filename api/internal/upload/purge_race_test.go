@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
+func TestPurgeAndUploadFinalizationSerializeOnTheDigest(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -31,15 +31,15 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	`, ownerID, actorID); err != nil {
 		t.Fatalf("insert accounts: %v", err)
 	}
-	operation, err := service.AcceptIngest(ctx, IngestInput{
+	operation, err := service.AcceptUpload(ctx, UploadInput{
 		OwnerID: ownerID, Filename: "race.lumitheme", File: bytes.NewReader([]byte("racing bytes")),
 	})
 	if err != nil {
-		t.Fatalf("accept ingest: %v", err)
+		t.Fatalf("accept upload: %v", err)
 	}
-	job, ok, err := service.leaseNextIngest(ctx)
+	job, ok, err := service.leaseNextUpload(ctx)
 	if err != nil || !ok || job.ID != operation.ID {
-		t.Fatalf("lease ingest = %+v, %v, %v", job, ok, err)
+		t.Fatalf("lease upload = %+v, %v, %v", job, ok, err)
 	}
 	var digestBytes []byte
 	if err := pool.QueryRow(ctx, `select sha256 from blobs where id = $1`, job.BlobID).Scan(&digestBytes); err != nil {
@@ -47,7 +47,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	}
 	var digest [32]byte
 	copy(digest[:], digestBytes)
-	prepared := preparedIngest{
+	prepared := preparedUpload{
 		Type: "character", Format: "unknown", Name: "Race", Tags: []string{},
 		Visibility: work.VisibilityListed, MediaType: "application/octet-stream",
 	}
@@ -61,7 +61,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	purged := make(chan error, 1)
 	go func() {
 		<-start
-		finalized <- service.finalizeIngest(ctx, job, prepared)
+		finalized <- service.finalizeUpload(ctx, job, prepared)
 	}()
 	go func() {
 		<-start
@@ -71,7 +71,7 @@ func TestPurgeAndIngestFinalizationSerializeOnTheDigest(t *testing.T) {
 	if err := <-purged; err != nil {
 		t.Fatalf("purge: %v", err)
 	}
-	if err := <-finalized; err != nil && !errors.Is(err, errIngestLeaseLost) {
+	if err := <-finalized; err != nil && !errors.Is(err, errUploadLeaseLost) {
 		t.Fatalf("finalize: %v", err)
 	}
 

@@ -56,18 +56,18 @@ func TestImportPayloadLimitNamesTheLimitAndActualBytes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
-	operation, err := service.AcceptIngest(context.Background(), IngestInput{
+	operation, err := service.AcceptUpload(context.Background(), UploadInput{
 		OwnerID: ownerID, Filename: "too-large.json", File: bytes.NewReader(payload),
 	})
 	if err != nil {
-		t.Fatalf("AcceptIngest: %v", err)
+		t.Fatalf("AcceptUpload: %v", err)
 	}
-	if processed, err := service.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+	if processed, err := service.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v", processed, err)
 	}
-	got, err := service.GetIngest(context.Background(), ownerID, operation.ID)
+	got, err := service.GetUpload(context.Background(), ownerID, operation.ID)
 	if err != nil {
-		t.Fatalf("GetIngest: %v", err)
+		t.Fatalf("GetUpload: %v", err)
 	}
 	if got.Failure == nil || got.Failure.Reason != string(format.FailureLimitExceeded) ||
 		!strings.Contains(got.Failure.Message, strconv.Itoa(block.MaxPayloadBytes)) ||
@@ -93,21 +93,21 @@ func TestUnrecognisedImportFailsTerminallyAndReleasesItsBlobReference(t *testing
 		t.Fatalf("storage: %v", err)
 	}
 	service := NewService(pool, work.NewService(pool, format.NewRegistry(), blobs))
-	operation, err := service.AcceptIngest(context.Background(), IngestInput{
+	operation, err := service.AcceptUpload(context.Background(), UploadInput{
 		OwnerID: ownerID, Filename: "mystery.bundle", File: bytes.NewReader([]byte("mystery")),
 	})
 	if err != nil {
-		t.Fatalf("accept ingest: %v", err)
+		t.Fatalf("accept upload: %v", err)
 	}
-	if processed, err := service.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
+	if processed, err := service.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("process upload = %v, %v; want true, nil", processed, err)
 	}
 
-	got, err := service.GetIngest(context.Background(), ownerID, operation.ID)
+	got, err := service.GetUpload(context.Background(), ownerID, operation.ID)
 	if err != nil {
-		t.Fatalf("GetIngest: %v", err)
+		t.Fatalf("GetUpload: %v", err)
 	}
-	if got.Status != IngestFailed || got.Failure == nil ||
+	if got.Status != UploadFailed || got.Failure == nil ||
 		got.Failure.Reason != string(format.FailureUnsupportedFormat) {
 		t.Fatalf("operation = %+v, want terminal unsupported_format", got)
 	}
@@ -118,7 +118,7 @@ func TestUnrecognisedImportFailsTerminallyAndReleasesItsBlobReference(t *testing
 		t.Fatalf("count references: %v", err)
 	}
 	if blobReferences != 0 {
-		t.Fatalf("failed ingest blob references = %d, want 0", blobReferences)
+		t.Fatalf("failed upload blob references = %d, want 0", blobReferences)
 	}
 }
 
@@ -157,16 +157,16 @@ func TestExpiredLeaseIsTakenAgainAndFinalizationIsIdempotent(t *testing.T) {
 	if err := registry.Register(module); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	settings := work.DefaultIngestSettings()
+	settings := work.DefaultUploadSettings()
 	settings.LeaseDuration = time.Minute
-	service := NewService(pool, work.NewServiceWithIngestSettings(pool, registry, blobs, settings))
+	service := NewService(pool, work.NewServiceWithUploadSettings(pool, registry, blobs, settings))
 	name := "Leased card"
-	_, err = service.AcceptIngest(context.Background(), IngestInput{
+	_, err = service.AcceptUpload(context.Background(), UploadInput{
 		OwnerID: ownerID, Filename: "leased.json", File: bytes.NewReader([]byte(`{"value":true}`)),
 		Name: &name, Visibility: work.VisibilityListed,
 	})
 	if err != nil {
-		t.Fatalf("accept ingest: %v", err)
+		t.Fatalf("accept upload: %v", err)
 	}
 	var clock atomic.Value
 	clock.Store(time.Now().Add(time.Second))
@@ -174,13 +174,13 @@ func TestExpiredLeaseIsTakenAgainAndFinalizationIsIdempotent(t *testing.T) {
 
 	firstDone := make(chan error, 1)
 	go func() {
-		_, processErr := service.ProcessNextIngest(context.Background())
+		_, processErr := service.ProcessNextUpload(context.Background())
 		firstDone <- processErr
 	}()
 	<-module.started
 
 	clock.Store(clock.Load().(time.Time).Add(2 * time.Minute))
-	if processed, err := service.ProcessNextIngest(context.Background()); err != nil || !processed {
+	if processed, err := service.ProcessNextUpload(context.Background()); err != nil || !processed {
 		t.Fatalf("second process = %v, %v; want true, nil", processed, err)
 	}
 	close(module.release)
@@ -244,18 +244,18 @@ func TestAThemeArchiveOverItsFileLimitIsRefusedByName(t *testing.T) {
 		t.Fatalf("close bundle: %v", err)
 	}
 	service := NewService(pool, work.NewService(pool, registry, blobs))
-	operation, err := service.AcceptIngest(context.Background(), IngestInput{
+	operation, err := service.AcceptUpload(context.Background(), UploadInput{
 		OwnerID: ownerID, Filename: "crowded.lumitheme", File: bytes.NewReader(bundle.Bytes()),
 	})
 	if err != nil {
-		t.Fatalf("AcceptIngest: %v", err)
+		t.Fatalf("AcceptUpload: %v", err)
 	}
-	if processed, err := service.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+	if processed, err := service.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v", processed, err)
 	}
-	got, err := service.GetIngest(context.Background(), ownerID, operation.ID)
+	got, err := service.GetUpload(context.Background(), ownerID, operation.ID)
 	if err != nil {
-		t.Fatalf("GetIngest: %v", err)
+		t.Fatalf("GetUpload: %v", err)
 	}
 	want := fmt.Sprintf("holds %d files, and one may hold %d", format.MaxArchiveFiles+1, format.MaxArchiveFiles)
 	if got.Failure == nil || got.Failure.Reason != string(format.FailureLimitExceeded) ||

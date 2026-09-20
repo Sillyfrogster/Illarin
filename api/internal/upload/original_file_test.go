@@ -25,23 +25,23 @@ func originalFileOwner(t *testing.T, svc *Service, handle string) uuid.UUID {
 	return ownerID
 }
 
-func ingestOne(t *testing.T, svc *Service, ownerID uuid.UUID, filename string, file []byte) work.Work {
+func uploadOne(t *testing.T, svc *Service, ownerID uuid.UUID, filename string, file []byte) work.Work {
 	t.Helper()
-	operation, err := svc.AcceptIngest(context.Background(), IngestInput{
+	operation, err := svc.AcceptUpload(context.Background(), UploadInput{
 		OwnerID: ownerID, Filename: filename, File: bytes.NewReader(file),
 	})
 	if err != nil {
-		t.Fatalf("AcceptIngest: %v", err)
+		t.Fatalf("AcceptUpload: %v", err)
 	}
-	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v; want true, nil", processed, err)
+	if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v; want true, nil", processed, err)
 	}
-	operation, err = svc.GetIngest(context.Background(), ownerID, operation.ID)
+	operation, err = svc.GetUpload(context.Background(), ownerID, operation.ID)
 	if err != nil {
-		t.Fatalf("GetIngest: %v", err)
+		t.Fatalf("GetUpload: %v", err)
 	}
 	if operation.Work == nil {
-		t.Fatalf("ingest did not create a work: %+v", operation)
+		t.Fatalf("upload did not create a work: %+v", operation)
 	}
 	return *operation.Work
 }
@@ -77,14 +77,14 @@ func addRevision(
 	if err != nil {
 		t.Fatalf("AcceptOriginalFile: %v", err)
 	}
-	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v; want true, nil", processed, err)
+	if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v; want true, nil", processed, err)
 	}
-	got, err := svc.GetIngest(context.Background(), ownerID, operation.ID)
+	got, err := svc.GetUpload(context.Background(), ownerID, operation.ID)
 	if err != nil {
-		t.Fatalf("GetIngest: %v", err)
+		t.Fatalf("GetUpload: %v", err)
 	}
-	if got.Status == IngestPreview {
+	if got.Status == UploadPreview {
 		got, err = svc.AcceptReplacement(context.Background(), ownerID, workID, operation.ID, currentCandidate(t, svc, workID), nil, false)
 		if err != nil {
 			t.Fatalf("AcceptReplacement: %v", err)
@@ -104,11 +104,11 @@ func TestANewOriginalFileChangesTheDraftedChangesAndKeepsThePublishedOne(t *test
 	}})
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := originalFileOwner(t, svc, "revision.owner")
-	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"x","take":1}`))
+	created := uploadOne(t, svc, ownerID, "card.json", []byte(`{"spec":"x","take":1}`))
 	publishImported(t, svc, ownerID, created)
 
 	operation := addRevision(t, svc, ownerID, created.ID, "card.json", []byte(`{"spec":"x","take":2}`))
-	if operation.Status != IngestSuccess || operation.Work == nil {
+	if operation.Status != UploadSuccess || operation.Work == nil {
 		t.Fatalf("revision operation = %+v, want success", operation)
 	}
 	if operation.Work.ID != created.ID {
@@ -157,10 +157,10 @@ func TestAnOriginalFileResolvingToADifferentTypeIsRejected(t *testing.T) {
 	}
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := originalFileOwner(t, svc, "kind.owner")
-	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
+	created := uploadOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
 
 	operation := addRevision(t, svc, ownerID, created.ID, "book.json", []byte(`{"spec":"as_lorebook"}`))
-	if operation.Status != IngestFailed {
+	if operation.Status != UploadFailed {
 		t.Fatalf("revision status = %s, want failed", operation.Status)
 	}
 	if operation.Failure == nil || operation.Failure.Reason != "wrong_type" {
@@ -193,7 +193,7 @@ func TestAReplacementFileBecomesTheWorksOrigin(t *testing.T) {
 	}
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := originalFileOwner(t, svc, "replacement.origin.owner")
-	created := ingestOne(t, svc, ownerID, "card-v2.json", []byte(`{
+	created := uploadOne(t, svc, ownerID, "card-v2.json", []byte(`{
 		"spec":"chara_card_v2","spec_version":"2.0",
 		"data":{"name":"Ana","description":"Before","first_mes":"Hello","character_version":"v2"}
 	}`))
@@ -201,7 +201,7 @@ func TestAReplacementFileBecomesTheWorksOrigin(t *testing.T) {
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"After","first_mes":"Hello","character_version":"v3"}
 	}`))
-	if operation.Status != IngestSuccess {
+	if operation.Status != UploadSuccess {
 		t.Fatalf("replacement = %+v, want success", operation)
 	}
 	var origin, version string
@@ -220,10 +220,10 @@ func TestAnUnrecognisedOriginalFileIsRefusedWithoutChangingTheWork(t *testing.T)
 	registry := registryWithModule(t, typeModule{id: "as_character", workType: "character"})
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := originalFileOwner(t, svc, "unsupported.revision.owner")
-	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
+	created := uploadOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
 
 	operation := addRevision(t, svc, ownerID, created.ID, "mystery.bin", []byte("nothing matches this"))
-	if operation.Status != IngestFailed || operation.Work != nil {
+	if operation.Status != UploadFailed || operation.Work != nil {
 		t.Fatalf("revision operation = %+v, want failed without a work", operation)
 	}
 	if operation.Failure == nil || operation.Failure.Reason != string(format.FailureUnsupportedFormat) {
@@ -250,7 +250,7 @@ func TestOnlyTheOwnerOfALiveWorkCanAddAnOriginalFile(t *testing.T) {
 	registry := registryWithModule(t, typeModule{id: "as_character", workType: "character"})
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := originalFileOwner(t, svc, "guard.owner")
-	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
+	created := uploadOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
 
 	_, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: uuid.New(), WorkID: created.ID, Filename: "card.json",
@@ -284,7 +284,7 @@ func TestReimportedMediaFillsTheWork(t *testing.T) {
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	ownerID := originalFileOwner(t, svc, "scoped.owner")
 	first := archiveWithImage(t, testPNG(t, 40, 20, color.White))
-	created := ingestOne(t, svc, ownerID, "card.charx", first)
+	created := uploadOne(t, svc, ownerID, "card.charx", first)
 	added, err := svc.works.AddMedia(context.Background(), work.AddMediaInput{
 		OwnerID: ownerID, WorkID: created.ID, Role: work.MediaGallery,
 		File: bytes.NewReader(testPNG(t, 50, 25, color.Gray{Y: 128})),
@@ -295,7 +295,7 @@ func TestReimportedMediaFillsTheWork(t *testing.T) {
 
 	second := archiveWithImage(t, testPNG(t, 60, 30, color.Black))
 	operation := addRevision(t, svc, ownerID, created.ID, "card.charx", second)
-	if operation.Status != IngestSuccess || operation.Work == nil {
+	if operation.Status != UploadSuccess || operation.Work == nil {
 		t.Fatalf("revision operation = %+v, want success", operation)
 	}
 	media, err := svc.works.ListMedia(context.Background(), created.ID, &ownerID)

@@ -24,25 +24,25 @@ import (
 )
 
 var (
-	errIngestLeaseLost = errors.New("ingest lease lost")
+	errUploadLeaseLost = errors.New("upload lease lost")
 	errWrongType       = errors.New("the original file resolves to a different type")
 )
 
-func (s *Service) RunIngestWorkers(ctx context.Context, count int, report func(error)) {
+func (s *Service) RunUploadWorkers(ctx context.Context, count int, report func(error)) {
 	var workers sync.WaitGroup
 	workers.Add(count)
 	for range count {
 		go func() {
 			defer workers.Done()
-			s.runIngestWorker(ctx, report)
+			s.runUploadWorker(ctx, report)
 		}()
 	}
 	workers.Wait()
 }
 
-func (s *Service) runIngestWorker(ctx context.Context, report func(error)) {
+func (s *Service) runUploadWorker(ctx context.Context, report func(error)) {
 	for {
-		processed, err := s.ProcessNextIngest(ctx)
+		processed, err := s.ProcessNextUpload(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return
@@ -64,7 +64,7 @@ func (s *Service) runIngestWorker(ctx context.Context, report func(error)) {
 	}
 }
 
-type ingestJob struct {
+type uploadJob struct {
 	ID         uuid.UUID
 	OwnerID    uuid.UUID
 	BlobID     uuid.UUID
@@ -86,7 +86,7 @@ type originalFileTarget struct {
 	Type    string
 }
 
-type preparedIngest struct {
+type preparedUpload struct {
 	Type           string
 	Format         string
 	Name           string
@@ -100,18 +100,18 @@ type preparedIngest struct {
 	Remainder      []format.Remainder
 	PrivatePrompts []format.PrivatePrompt
 	Media          []work.PreparedMedia
-	Vault          []WaitingPicture
+	FoundImages    []WaitingPicture
 	CreatedAt      *time.Time
 	MediaType      string
 }
 
 type preparedImport struct {
-	Parsed    format.Parsed
-	Blocks    []block.Block
-	Elements  []block.Element
-	Media     []work.PreparedMedia
-	Vault     []WaitingPicture
-	MediaType string
+	Parsed      format.Parsed
+	Blocks      []block.Block
+	Elements    []block.Element
+	Media       []work.PreparedMedia
+	FoundImages []WaitingPicture
+	MediaType   string
 }
 
 func (s *Service) readImport(
@@ -238,8 +238,8 @@ func refusal(err error) string {
 	return message
 }
 
-func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
-	job, ok, err := s.leaseNextIngest(ctx)
+func (s *Service) ProcessNextUpload(ctx context.Context) (bool, error) {
+	job, ok, err := s.leaseNextUpload(ctx)
 	if err != nil || !ok {
 		return ok, err
 	}
@@ -249,16 +249,16 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 	)
 	if err != nil {
 		if violation := (format.ArchiveViolation{}); errors.As(err, &violation) {
-			return true, s.finishIngestFailure(ctx, job, format.FailureSafetyViolation,
+			return true, s.finishUploadFailure(ctx, job, format.FailureSafetyViolation,
 				"The file breaks an archive safety rule: "+violation.Rule+".")
 		}
 		if errors.Is(err, format.ErrSafetyViolation) {
-			return true, s.finishIngestFailure(ctx, job, format.FailureSafetyViolation)
+			return true, s.finishUploadFailure(ctx, job, format.FailureSafetyViolation)
 		}
 		if errors.Is(err, format.ErrMalformedInput) {
-			return true, s.finishIngestFailure(ctx, job, format.FailureMalformedInput)
+			return true, s.finishUploadFailure(ctx, job, format.FailureMalformedInput)
 		}
-		return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
+		return true, s.finishUploadFailure(ctx, job, format.FailureInternal)
 	}
 	expectedType := ""
 	if job.Target != nil {
@@ -267,9 +267,9 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 	read, err := s.readImport(ctx, inspected, expectedType)
 	if err != nil {
 		if err == format.ErrUnsupportedFormat {
-			return true, s.finishIngestFailure(ctx, job, format.FailureUnsupportedFormat)
+			return true, s.finishUploadFailure(ctx, job, format.FailureUnsupportedFormat)
 		}
-		reason := work.MediaIngestFailure(err)
+		reason := work.MediaUploadFailure(err)
 		if errors.Is(err, errWrongType) {
 			reason = format.FailureWrongType
 		}
@@ -279,51 +279,51 @@ func (s *Service) ProcessNextIngest(ctx context.Context) (bool, error) {
 		if classified, ok := format.FailureOf(err); ok {
 			reason = classified
 		}
-		return true, s.finishIngestFailure(ctx, job, reason, refusal(err))
+		return true, s.finishUploadFailure(ctx, job, reason, refusal(err))
 	}
 	if job.Target == nil {
 		if read, err = s.seedFromReadme(ctx, inspected, read); err != nil {
-			return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
+			return true, s.finishUploadFailure(ctx, job, format.FailureInternal)
 		}
 	}
 
-	prepared, err := prepareIngest(job, read.Parsed)
+	prepared, err := prepareUpload(job, read.Parsed)
 	if errors.Is(err, errWrongType) {
-		return true, s.finishIngestFailure(ctx, job, format.FailureWrongType)
+		return true, s.finishUploadFailure(ctx, job, format.FailureWrongType)
 	}
 	if err != nil {
-		return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
+		return true, s.finishUploadFailure(ctx, job, format.FailureInternal)
 	}
 	prepared.Blocks = read.Blocks
 	prepared.SuppliedRoles = suppliedRoles(read.Elements)
 	prepared.Media = read.Media
-	prepared.Vault = read.Vault
+	prepared.FoundImages = read.FoundImages
 	prepared.MediaType = read.MediaType
-	finish := s.finalizeIngest
+	finish := s.finalizeUpload
 	if job.Target != nil {
 		finish = s.stageReplacement
 	}
 	if err := finish(ctx, job, prepared); err != nil {
-		if errors.Is(err, errIngestLeaseLost) {
+		if errors.Is(err, errUploadLeaseLost) {
 			return true, nil
 		}
 		var conflict *work.VersionConflict
 		if errors.As(err, &conflict) || errors.Is(err, work.ErrVersionRequired) {
-			return true, s.failIngest(ctx, job, "drafted_changes_conflict", "The drafted changes changed. Review it before accepting the upload again.")
+			return true, s.failUpload(ctx, job, "drafted_changes_conflict", "The drafted changes changed. Review it before accepting the upload again.")
 		}
 		if errors.Is(err, work.ErrWorkFrozen) || errors.Is(err, work.ErrNotFound) {
-			return true, s.failIngest(ctx, job, "work_unavailable", "This work is no longer available for changes.")
+			return true, s.failUpload(ctx, job, "work_unavailable", "This work is no longer available for changes.")
 		}
 		if errors.Is(err, work.ErrStorageCap) {
-			return true, s.finishIngestFailure(
+			return true, s.finishUploadFailure(
 				ctx, job, format.FailureLimitExceeded,
 				"The imported file would take this account past its storage cap.",
 			)
 		}
 		if classified, why, ok := format.Explain(err); ok {
-			return true, s.finishIngestFailure(ctx, job, classified, why)
+			return true, s.finishUploadFailure(ctx, job, classified, why)
 		}
-		return true, s.finishIngestFailure(ctx, job, format.FailureInternal)
+		return true, s.finishUploadFailure(ctx, job, format.FailureInternal)
 	}
 	return true, nil
 }
@@ -338,7 +338,7 @@ func suppliedRoles(elements []block.Element) []block.Role {
 	return roles
 }
 
-func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) {
+func (s *Service) leaseNextUpload(ctx context.Context) (uploadJob, bool, error) {
 	now := s.now()
 	leaseToken := uuid.New()
 	leaseExpires := now.Add(s.settings.LeaseDuration)
@@ -370,7 +370,7 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 		          (select type from works where id = operation.target_work_id), coalesce(operation.candidate_version, 0)
 	`, now, leaseToken, leaseExpires)
 
-	var job ingestJob
+	var job uploadJob
 	var name, blurb, targetType pgtype.Text
 	var isNSFW pgtype.Bool
 	var targetWorkID pgtype.UUID
@@ -381,15 +381,15 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 		&targetWorkID, &targetType, &candidateVersion,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ingestJob{}, false, nil
+		return uploadJob{}, false, nil
 	}
 	if err != nil {
-		return ingestJob{}, false, fmt.Errorf("lease ingest: %w", err)
+		return uploadJob{}, false, fmt.Errorf("lease upload: %w", err)
 	}
 	job.LeaseToken = leaseToken
 	if targetWorkID.Valid {
 		if !targetType.Valid {
-			return ingestJob{}, false, fmt.Errorf("ingest %s targets a missing work", job.ID)
+			return uploadJob{}, false, fmt.Errorf("upload %s targets a missing work", job.ID)
 		}
 		job.Target = &originalFileTarget{
 			WorkID: uuidFromPgtype(targetWorkID), Type: targetType.String, Version: candidateVersion,
@@ -403,13 +403,13 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 	return job, true, nil
 }
 
-func prepareIngest(job ingestJob, parsed format.Parsed) (preparedIngest, error) {
+func prepareUpload(job uploadJob, parsed format.Parsed) (preparedUpload, error) {
 	workType := parsed.Type
 	if workType == "" {
-		return preparedIngest{}, errors.New("matched format did not declare a type")
+		return preparedUpload{}, errors.New("matched format did not declare a type")
 	}
 	if job.Target != nil && workType != job.Target.Type {
-		return preparedIngest{}, errWrongType
+		return preparedUpload{}, errWrongType
 	}
 
 	name := parsed.Header.Name
@@ -434,7 +434,7 @@ func prepareIngest(job ingestJob, parsed format.Parsed) (preparedIngest, error) 
 	if job.IsNSFW != nil {
 		isNSFW = *job.IsNSFW
 	}
-	return preparedIngest{
+	return preparedUpload{
 		Type: workType, Format: parsed.Format,
 		Name: name, Blurb: blurb, Tags: tags, IsNSFW: isNSFW,
 		Visibility:     job.Visibility,
@@ -445,23 +445,23 @@ func prepareIngest(job ingestJob, parsed format.Parsed) (preparedIngest, error) 
 	}, nil
 }
 
-func (s *Service) finishIngestFailure(
+func (s *Service) finishUploadFailure(
 	ctx context.Context,
-	job ingestJob,
+	job uploadJob,
 	reason format.FailureReason,
 	detail ...string,
 ) error {
 	if reason == format.FailureInternal && job.Attempts < s.settings.MaxAttempts {
-		return s.retryIngest(ctx, job)
+		return s.retryUpload(ctx, job)
 	}
 	message := ""
 	if len(detail) > 0 {
 		message = detail[0]
 	}
-	return s.failIngest(ctx, job, string(reason), message)
+	return s.failUpload(ctx, job, string(reason), message)
 }
 
-func (s *Service) retryIngest(ctx context.Context, job ingestJob) error {
+func (s *Service) retryUpload(ctx context.Context, job uploadJob) error {
 	delay := s.settings.RetryBase
 	for attempt := 1; attempt < job.Attempts; attempt++ {
 		delay *= 2
@@ -474,15 +474,15 @@ func (s *Service) retryIngest(ctx context.Context, job ingestJob) error {
 		 where id = $1 and lease_token = $2 and status = 'processing'
 	`, job.ID, job.LeaseToken, now.Add(delay), now)
 	if err != nil {
-		return fmt.Errorf("retry ingest: %w", err)
+		return fmt.Errorf("retry upload: %w", err)
 	}
 	if result.RowsAffected() == 0 {
-		return errIngestLeaseLost
+		return errUploadLeaseLost
 	}
 	return nil
 }
 
-func (s *Service) failIngest(ctx context.Context, job ingestJob, reason, message string) error {
+func (s *Service) failUpload(ctx context.Context, job uploadJob, reason, message string) error {
 	now := s.now()
 	result, err := s.pool.Exec(ctx, `
 		update upload_operations
@@ -491,24 +491,24 @@ func (s *Service) failIngest(ctx context.Context, job ingestJob, reason, message
 		 where id = $1 and lease_token = $2 and status = 'processing'
 	`, job.ID, job.LeaseToken, reason, message, now)
 	if err != nil {
-		return fmt.Errorf("fail ingest: %w", err)
+		return fmt.Errorf("fail upload: %w", err)
 	}
 	if result.RowsAffected() == 0 {
-		return errIngestLeaseLost
+		return errUploadLeaseLost
 	}
 	return nil
 }
 
-func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared preparedIngest) error {
+func (s *Service) finalizeUpload(ctx context.Context, job uploadJob, prepared preparedUpload) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin ingest finalization: %w", err)
+		return fmt.Errorf("begin upload finalization: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	if err := storage.LockBlobDigest(ctx, tx, job.BlobID); errors.Is(err, pgx.ErrNoRows) {
-		return errIngestLeaseLost
+		return errUploadLeaseLost
 	} else if err != nil {
-		return fmt.Errorf("lock ingest digest: %w", err)
+		return fmt.Errorf("lock upload digest: %w", err)
 	}
 
 	var status Status
@@ -516,13 +516,13 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 	if err := tx.QueryRow(ctx, `
 		select status, lease_token from upload_operations where id = $1 for update
 	`, job.ID).Scan(&status, &lease); err != nil {
-		return fmt.Errorf("lock ingest finalization: %w", err)
+		return fmt.Errorf("lock upload finalization: %w", err)
 	}
-	if status == IngestSuccess {
+	if status == UploadSuccess {
 		return nil
 	}
-	if status != IngestProcessing || !lease.Valid || uuidFromPgtype(lease) != job.LeaseToken {
-		return errIngestLeaseLost
+	if status != UploadProcessing || !lease.Valid || uuidFromPgtype(lease) != job.LeaseToken {
+		return errUploadLeaseLost
 	}
 	candidates := make([]uuid.UUID, 1, len(prepared.Media)+1)
 	candidates[0] = job.BlobID
@@ -533,7 +533,7 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 		return err
 	}
 
-	workID, err := s.writeIngestResult(ctx, tx, job, prepared)
+	workID, err := s.writeUploadResult(ctx, tx, job, prepared)
 	if err != nil {
 		return err
 	}
@@ -544,10 +544,10 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 		 where id = $1 and lease_token = $2 and status = 'processing'
 	`, job.ID, job.LeaseToken, workID, s.now())
 	if err != nil {
-		return fmt.Errorf("finish ingest operation: %w", err)
+		return fmt.Errorf("finish upload operation: %w", err)
 	}
 	if result.RowsAffected() == 0 {
-		return errIngestLeaseLost
+		return errUploadLeaseLost
 	}
 	if job.Target != nil {
 		candidate := &work.Candidate{Version: job.Target.Version}
@@ -555,7 +555,7 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 			return err
 		}
 	} else if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit ingest finalization: %w", err)
+		return fmt.Errorf("commit upload finalization: %w", err)
 	}
 	return nil
 }
@@ -567,7 +567,7 @@ func (s *Service) importPrivatePrompts(
 	workID uuid.UUID,
 	blocks []block.Block,
 	carried map[uuid.UUID]string,
-	prepared preparedIngest,
+	prepared preparedUpload,
 ) error {
 	if len(prepared.PrivatePrompts) == 0 {
 		return nil
@@ -581,20 +581,20 @@ func (s *Service) importPrivatePrompts(
 	return nil
 }
 
-func (s *Service) writeIngestResult(
+func (s *Service) writeUploadResult(
 	ctx context.Context,
 	tx pgx.Tx,
-	job ingestJob,
-	prepared preparedIngest,
+	job uploadJob,
+	prepared preparedUpload,
 ) (uuid.UUID, error) {
-	return s.writeIngestResultWithDecisions(ctx, tx, job, prepared, nil, false)
+	return s.writeUploadResultWithDecisions(ctx, tx, job, prepared, nil, false)
 }
 
-func (s *Service) writeIngestResultWithDecisions(
+func (s *Service) writeUploadResultWithDecisions(
 	ctx context.Context,
 	tx pgx.Tx,
-	job ingestJob,
-	prepared preparedIngest,
+	job uploadJob,
+	prepared preparedUpload,
 	decisions map[string]string,
 	makePromptsPublic bool,
 ) (uuid.UUID, error) {
@@ -657,7 +657,7 @@ func (s *Service) writeIngestResultWithDecisions(
 	if err := writeOriginalFile(ctx, tx, workID, 1, job, prepared); err != nil {
 		return uuid.Nil, err
 	}
-	if err := insertVaultPictures(ctx, tx, workID, prepared.Vault); err != nil {
+	if err := insertFoundImages(ctx, tx, workID, prepared.FoundImages); err != nil {
 		return uuid.Nil, err
 	}
 	return workID, s.writeSummary(ctx, tx, workID)
@@ -666,8 +666,8 @@ func (s *Service) writeIngestResultWithDecisions(
 func (s *Service) replaceContent(
 	ctx context.Context,
 	tx pgx.Tx,
-	job ingestJob,
-	prepared preparedIngest,
+	job uploadJob,
+	prepared preparedUpload,
 	existing, blocks []block.Block,
 	carried map[uuid.UUID]string,
 	decisions map[string]string,
@@ -750,8 +750,8 @@ func replacePreservedData(
 func appendOriginalFile(
 	ctx context.Context,
 	tx pgx.Tx,
-	job ingestJob,
-	prepared preparedIngest,
+	job uploadJob,
+	prepared preparedUpload,
 ) error {
 	var next int
 	if err := tx.QueryRow(ctx, `
@@ -767,8 +767,8 @@ func writeOriginalFile(
 	tx pgx.Tx,
 	workID uuid.UUID,
 	number int,
-	job ingestJob,
-	prepared preparedIngest,
+	job uploadJob,
+	prepared preparedUpload,
 ) error {
 	_, err := work.RecordOriginalFile(ctx, tx, work.OriginalFile{
 		WorkID: workID, Number: number, BlobID: job.BlobID, MediaType: prepared.MediaType,

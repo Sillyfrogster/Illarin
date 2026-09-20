@@ -75,7 +75,7 @@ func TestAQueuedOriginalFileCannotOverwriteNewerDraftedChanges(t *testing.T) {
 	registry := registryWithModule(t, typeModule{id: "as_character", workType: "character"})
 	svc, _ := newTestServiceWithRegistry(t, registry)
 	owner := originalFileOwner(t, svc, "queued.owner")
-	created := ingestOne(t, svc, owner, "card.json", []byte(`{"spec":"as_character"}`))
+	created := uploadOne(t, svc, owner, "card.json", []byte(`{"spec":"as_character"}`))
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: created.ID, Filename: "card.json", File: bytes.NewBufferString(`{"spec":"as_character"}`),
@@ -87,14 +87,14 @@ func TestAQueuedOriginalFileCannotOverwriteNewerDraftedChanges(t *testing.T) {
 	if err := works(svc).SetDetails(context.Background(), page.Details{OwnerID: owner, WorkID: created.ID, Name: "Newer work", IsNSFW: &nsfw}, candidate); err != nil {
 		t.Fatal(err)
 	}
-	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
+	if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
 		t.Fatalf("process stale upload = %v, %v", processed, err)
 	}
-	finished, err := svc.GetIngest(context.Background(), owner, operation.ID)
+	finished, err := svc.GetUpload(context.Background(), owner, operation.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if finished.Status != IngestFailed || finished.Failure == nil || finished.Failure.Reason != "drafted_changes_conflict" {
+	if finished.Status != UploadFailed || finished.Failure == nil || finished.Failure.Reason != "drafted_changes_conflict" {
 		t.Fatalf("stale upload = %+v", finished)
 	}
 	page, err := works(svc).DraftedChanges(context.Background(), created.ID, &owner, work.NSFWShown)

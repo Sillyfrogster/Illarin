@@ -104,7 +104,7 @@ func TestSchemaHasNoMutableReferenceCount(t *testing.T) {
 	}
 }
 
-func TestIngestFailureReasonsStayAtTheClosedFive(t *testing.T) {
+func TestUploadFailureReasonsStayAtTheClosedFive(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	var definition string
@@ -113,18 +113,18 @@ func TestIngestFailureReasonsStayAtTheClosedFive(t *testing.T) {
 		  from pg_constraint
 		 where conname = 'upload_operations_failure_reason_check'
 	`).Scan(&definition); err != nil {
-		t.Fatalf("read ingest failure reason constraint: %v", err)
+		t.Fatalf("read upload failure reason constraint: %v", err)
 	}
 	for _, reason := range []string{
 		"malformed_input", "unsupported_format", "unsupported_version",
 		"safety_violation", "internal_failure",
 	} {
 		if !strings.Contains(definition, reason) {
-			t.Errorf("ingest failure constraint is missing %q: %s", reason, definition)
+			t.Errorf("upload failure constraint is missing %q: %s", reason, definition)
 		}
 	}
 	if strings.Contains(definition, "purged_content") {
-		t.Errorf("ingest failure constraint added a public purge reason: %s", definition)
+		t.Errorf("upload failure constraint added a public purge reason: %s", definition)
 	}
 }
 

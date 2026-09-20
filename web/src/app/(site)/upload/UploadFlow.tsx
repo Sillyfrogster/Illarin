@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { type IngestOperation, readIngestOperation } from "@/lib/api/query";
+import { readUploadOperation, type UploadOperation } from "@/lib/api/query";
 import type { BuildChoices } from "@/lib/api/shapes";
 import { useAuth } from "@/lib/auth";
 import { importStage } from "@/lib/import-stage";
@@ -20,7 +20,7 @@ const LOST =
 export function UploadFlow({ choices }: { choices: BuildChoices | null }) {
   const { account } = useAuth();
   const heading = useRef<HTMLHeadingElement>(null);
-  const [operation, setOperation] = useState<IngestOperation | null>(null);
+  const [operation, setOperation] = useState<UploadOperation | null>(null);
   const [message, setMessage] = useState("");
 
   const stage = importStage(operation, message);
@@ -35,7 +35,7 @@ export function UploadFlow({ choices }: { choices: BuildChoices | null }) {
         await new Promise((resolve) => setTimeout(resolve, POLL_MS));
         if (!active) return;
         try {
-          const next = await readIngestOperation(current.url);
+          const next = await readUploadOperation(current.url);
           if (!active) return;
           setOperation(next);
           if (next.status !== "pending" && next.status !== "processing") return;

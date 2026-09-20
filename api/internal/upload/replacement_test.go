@@ -29,7 +29,7 @@ func TestReplacementPreviewLeavesThePublishedWorkAloneUntilAccepted(t *testing.T
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
 	owner := originalFileOwner(t, svc, "preview.owner")
-	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
+	created := uploadOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	publishImported(t, svc, owner, created)
 
 	parsed.Elements[0].Content = block.Prose{Text: "After"}
@@ -41,14 +41,14 @@ func TestReplacementPreviewLeavesThePublishedWorkAloneUntilAccepted(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+	if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v", processed, err)
 	}
-	preview, err := svc.GetIngest(context.Background(), owner, operation.ID)
+	preview, err := svc.GetUpload(context.Background(), owner, operation.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if preview.Status != IngestPreview || preview.Preview == nil {
+	if preview.Status != UploadPreview || preview.Preview == nil {
 		t.Fatalf("preview = %+v", preview)
 	}
 	public, err := works(svc).Detail(context.Background(), created.ID, nil, work.NSFWShown)
@@ -62,7 +62,7 @@ func TestReplacementPreviewLeavesThePublishedWorkAloneUntilAccepted(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if accepted.Status != IngestSuccess {
+	if accepted.Status != UploadSuccess {
 		t.Fatalf("accepted replacement = %+v", accepted)
 	}
 	working, err := works(svc).DraftedChanges(context.Background(), created.ID, &owner, work.NSFWShown)
@@ -82,7 +82,7 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
 	owner := originalFileOwner(t, svc, "stale.preview.owner")
-	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
+	created := uploadOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"payload":true}`),
@@ -90,8 +90,8 @@ func TestReplacementPreviewRefusesAStaleAcceptance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+	if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v", processed, err)
 	}
 	nsfw := false
 	if err := works(svc).SetDetails(context.Background(), page.Details{
@@ -117,7 +117,7 @@ func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
 	owner := originalFileOwner(t, svc, "unrepresentable.preview.owner")
-	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
+	created := uploadOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	parsed.Elements = parsed.Elements[:1]
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
@@ -126,10 +126,10 @@ func TestReplacementPreviewRequiresAChoiceForUnrepresentableContent(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+	if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v", processed, err)
 	}
-	preview, err := svc.GetIngest(context.Background(), owner, operation.ID)
+	preview, err := svc.GetUpload(context.Background(), owner, operation.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
 	}
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, replacingModule{parsed: &parsed}))
 	owner := originalFileOwner(t, svc, "cancel.preview.owner")
-	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
+	created := uploadOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	parsed.Elements[0].Content = block.Prose{Text: "After"}
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
@@ -181,14 +181,14 @@ func TestCancellingAReplacementPreviewLeavesTheCandidateAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+	if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v", processed, err)
 	}
 	if err := svc.CancelReplacement(context.Background(), owner, created.ID, operation.ID); err != nil {
 		t.Fatal(err)
 	}
-	cancelled, err := svc.GetIngest(context.Background(), owner, operation.ID)
-	if err != nil || cancelled.Status != IngestCancelled {
+	cancelled, err := svc.GetUpload(context.Background(), owner, operation.ID)
+	if err != nil || cancelled.Status != UploadCancelled {
 		t.Fatalf("cancelled operation = %+v, error = %v", cancelled, err)
 	}
 	working, err := works(svc).DraftedChanges(context.Background(), created.ID, &owner, work.NSFWShown)
@@ -282,7 +282,7 @@ func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
 	}
 	svc, pool := newTestServiceWithRegistry(t, registry)
 	owner := originalFileOwner(t, svc, "format.change.owner")
-	created := ingestOne(t, svc, owner, "wren.json", []byte(`{"spec":"old_character"}`))
+	created := uploadOne(t, svc, owner, "wren.json", []byte(`{"spec":"old_character"}`))
 	candidate := currentCandidate(t, svc, created.ID)
 	operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: owner, WorkID: created.ID, Filename: "wren.json", File: bytes.NewBufferString(`{"spec":"new_character"}`),
@@ -290,10 +290,10 @@ func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+	if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v", processed, err)
 	}
-	preview, err := svc.GetIngest(context.Background(), owner, operation.ID)
+	preview, err := svc.GetUpload(context.Background(), owner, operation.ID)
 	if err != nil || preview.Preview == nil || preview.Preview.Format != "new_character" {
 		t.Fatalf("format-change preview = %+v, error = %v", preview, err)
 	}
@@ -313,7 +313,7 @@ func TestReplacementPreviewsEveryBuildableType(t *testing.T) {
 			module := typeModule{id: "preview_" + workType, workType: workType}
 			svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, module))
 			owner := originalFileOwner(t, svc, "preview."+workType)
-			created := ingestOne(t, svc, owner, "asset.json", []byte(`{"spec":"preview_`+workType+`"}`))
+			created := uploadOne(t, svc, owner, "asset.json", []byte(`{"spec":"preview_`+workType+`"}`))
 			operation, err := svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 				OwnerID: owner, WorkID: created.ID, Filename: "asset.json",
 				File: bytes.NewBufferString(`{"spec":"preview_` + workType + `"}`),
@@ -321,11 +321,11 @@ func TestReplacementPreviewsEveryBuildableType(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
-				t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+			if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
+				t.Fatalf("ProcessNextUpload = %v, %v", processed, err)
 			}
-			found, err := svc.GetIngest(context.Background(), owner, operation.ID)
-			if err != nil || found.Status != IngestPreview || found.Preview == nil {
+			found, err := svc.GetUpload(context.Background(), owner, operation.ID)
+			if err != nil || found.Status != UploadPreview || found.Preview == nil {
 				t.Fatalf("preview = %+v, error = %v", found, err)
 			}
 		})

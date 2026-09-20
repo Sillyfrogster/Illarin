@@ -14,13 +14,13 @@ import (
 
 func TestWorkPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("The Quiet Archivist")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "archivist.lumitheme"
 	metadata["blurb"] = "She closes the book on a ribbon."
 	metadata["tags"] = []string{"Slow Burn", " Modern "}
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
 	cover := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, workID, "avatar", apitest.PNG(t, 800, 1000),
@@ -87,11 +87,11 @@ func TestWorkPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 
 func TestWorkPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Coverless Gallery")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "coverless-gallery.lumitheme"
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
 	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, workID, "gallery", apitest.PNG(t, 400, 300),
@@ -112,10 +112,10 @@ func TestWorkPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 
 func TestWorkPageShowsNoTotals(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Countless")
 	metadata["filename"] = "countless.lumitheme"
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
 	response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil))
 	var body map[string]any
@@ -142,11 +142,11 @@ func TestWorkPageShowsNoTotals(t *testing.T) {
 
 func TestWorkPageAnswersNormallyForAnUnlistedWork(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Kept Back")
 	metadata["filename"] = "kept-back.lumitheme"
 	metadata["visibility"] = "unlisted"
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 
 	page := apitest.FetchWorkPage(t, r, "/v1/works/"+workID)
 
@@ -157,11 +157,11 @@ func TestWorkPageAnswersNormallyForAnUnlistedWork(t *testing.T) {
 
 func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 	t.Parallel()
-	r, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
-	withhold := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(
+	r, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
+	withhold := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
 		t, r, session, works, withFilename(apitest.ExampleMetadata("Withheld"), "withheld"), []byte("a"),
 	))
-	deleted := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(
+	deleted := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
 		t, r, session, works, withFilename(apitest.ExampleMetadata("Deleted"), "deleted"), []byte("b"),
 	))
 	staff := "11111111-1111-1111-1111-111111111111"
@@ -200,12 +200,12 @@ func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 
 func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("After Dark")
 	metadata["_keepDraft"] = true
 	metadata["filename"] = "after-dark.lumitheme"
 	metadata["isNsfw"] = true
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte("theme")))
 	added := apitest.Send(t, r, apitest.Authorized(apitest.MediaUploadRequest(
 		t, workID, "avatar", apitest.PNG(t, 600, 600),
 	), session))

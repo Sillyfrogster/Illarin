@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
   addWorkImage,
-  discardVaultPicture,
-  placeVaultPicture,
-  type VaultPicture,
+  discardFoundImage,
+  type FoundImage,
+  placeFoundImage,
 } from "@/lib/api/query";
 import { useDraftedChanges } from "@/lib/drafted-changes";
 import { Note, RemoveAction } from "./fields";
@@ -17,12 +17,12 @@ import { useWorkspace } from "./state";
 const PLACE =
   "inline-flex min-h-11 items-center gap-2 rounded-control bg-deep px-4 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45";
 
-export function VaultPanel({
+export function FoundImagesPanel({
   pictures,
   onRelease,
   onReload,
 }: {
-  pictures: VaultPicture[];
+  pictures: FoundImage[];
   onRelease: (pictureId: string) => void;
   onReload: () => void;
 }) {
@@ -53,7 +53,7 @@ export function VaultPanel({
     }
   }
 
-  function place(picture: VaultPicture, file?: File) {
+  function place(picture: FoundImage, file?: File) {
     run(picture.id, async () => {
       let mediaId: string | undefined;
       if (file) {
@@ -64,7 +64,7 @@ export function VaultPanel({
           "gallery",
         );
       }
-      const saved = await placeVaultPicture(
+      const saved = await placeFoundImage(
         candidate,
         workspace.workId,
         picture.id,
@@ -77,15 +77,17 @@ export function VaultPanel({
     });
   }
 
-  function discard(picture: VaultPicture) {
+  function discard(picture: FoundImage) {
     run(picture.id, () =>
-      discardVaultPicture(candidate, workspace.workId, picture.id),
+      discardFoundImage(candidate, workspace.workId, picture.id),
     );
   }
 
   if (pictures.length === 0) {
     return (
-      <Note>Nothing is waiting. Every picture has been placed or let go.</Note>
+      <Note>
+        Nothing is waiting. Every found image has been placed or removed.
+      </Note>
     );
   }
 
@@ -120,7 +122,7 @@ function WaitingPicture({
   busy: boolean;
   onDiscard: () => void;
   onPlace: (file?: File) => void;
-  picture: VaultPicture;
+  picture: FoundImage;
   target?: string;
 }) {
   const file = useRef<HTMLInputElement>(null);
@@ -187,7 +189,7 @@ function WaitingPicture({
           </>
         )}
         <RemoveAction disabled={busy} onClick={onDiscard}>
-          Let it go
+          Remove
         </RemoveAction>
       </div>
     </li>

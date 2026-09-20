@@ -183,11 +183,11 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 	if err != nil {
 		t.Fatalf("put orphan: %v", err)
 	}
-	rejected, err := apitest.Uploads(service).AcceptIngest(ctx, upload.IngestInput{
+	rejected, err := apitest.Uploads(service).AcceptUpload(ctx, upload.UploadInput{
 		OwnerID: ownerID, Filename: "rejected.bin", File: bytes.NewReader([]byte("rejected")),
 	})
 	if err != nil {
-		t.Fatalf("accept rejected ingest: %v", err)
+		t.Fatalf("accept rejected upload: %v", err)
 	}
 	var rejectedBlob uuid.UUID
 	if err := pool.QueryRow(ctx,
@@ -200,7 +200,7 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 		   set status = 'failed', failure_reason = 'malformed_input', blob_id = null
 		 where id = $1
 	`, rejected.ID); err != nil {
-		t.Fatalf("reject ingest: %v", err)
+		t.Fatalf("reject upload: %v", err)
 	}
 	first, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx)
 	if err != nil {

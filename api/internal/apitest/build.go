@@ -184,25 +184,25 @@ func PublishedWork(t *testing.T, works *work.Service, handle string) (uuid.UUID,
 	return owner, id
 }
 
-// IngestOne reads one file in and returns the work it made
-func IngestOne(t *testing.T, works *work.Service, ownerID uuid.UUID, filename string, file []byte) work.Work {
+// UploadOne reads one file in and returns the work it made
+func UploadOne(t *testing.T, works *work.Service, ownerID uuid.UUID, filename string, file []byte) work.Work {
 	t.Helper()
 	uploads := Uploads(works)
-	operation, err := uploads.AcceptIngest(context.Background(), upload.IngestInput{
+	operation, err := uploads.AcceptUpload(context.Background(), upload.UploadInput{
 		OwnerID: ownerID, Filename: filename, File: bytes.NewReader(file),
 	})
 	if err != nil {
-		t.Fatalf("AcceptIngest: %v", err)
+		t.Fatalf("AcceptUpload: %v", err)
 	}
-	if processed, err := uploads.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v; want true, nil", processed, err)
+	if processed, err := uploads.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v; want true, nil", processed, err)
 	}
-	operation, err = uploads.GetIngest(context.Background(), ownerID, operation.ID)
+	operation, err = uploads.GetUpload(context.Background(), ownerID, operation.ID)
 	if err != nil {
-		t.Fatalf("GetIngest: %v", err)
+		t.Fatalf("GetUpload: %v", err)
 	}
 	if operation.Work == nil {
-		t.Fatalf("ingest did not create an asset: %+v", operation)
+		t.Fatalf("upload did not create an asset: %+v", operation)
 	}
 	return *operation.Work
 }
@@ -245,14 +245,14 @@ func AddOriginalFile(
 	if err != nil {
 		t.Fatalf("AcceptOriginalFile: %v", err)
 	}
-	if processed, err := uploads.ProcessNextIngest(ctx); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v; want true, nil", processed, err)
+	if processed, err := uploads.ProcessNextUpload(ctx); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v; want true, nil", processed, err)
 	}
-	got, err := uploads.GetIngest(ctx, ownerID, operation.ID)
+	got, err := uploads.GetUpload(ctx, ownerID, operation.ID)
 	if err != nil {
-		t.Fatalf("GetIngest: %v", err)
+		t.Fatalf("GetUpload: %v", err)
 	}
-	if got.Status == upload.IngestPreview {
+	if got.Status == upload.UploadPreview {
 		got, err = uploads.AcceptReplacement(
 			ctx, ownerID, workID, operation.ID,
 			CurrentCandidate(t, works, workID), nil, false,

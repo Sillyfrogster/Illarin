@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrIngestNotFound   = errors.New("ingest operation not found")
+	ErrUploadNotFound   = errors.New("upload operation not found")
 	ErrTypeNotBuildable = errors.New("that type cannot be built yet")
 	ErrAppNotAnswered   = errors.New("that type needs to know which app it is for")
 )
@@ -30,7 +30,7 @@ type CreateInput struct {
 	CreatedAt  *time.Time
 }
 
-type IngestInput struct {
+type UploadInput struct {
 	OwnerID    uuid.UUID
 	Filename   string
 	File       io.Reader
@@ -51,12 +51,12 @@ type OriginalFileInput struct {
 type Status string
 
 const (
-	IngestPending    Status = "pending"
-	IngestProcessing Status = "processing"
-	IngestPreview    Status = "preview"
-	IngestCancelled  Status = "cancelled"
-	IngestFailed     Status = "failed"
-	IngestSuccess    Status = "success"
+	UploadPending    Status = "pending"
+	UploadProcessing Status = "processing"
+	UploadPreview    Status = "preview"
+	UploadCancelled  Status = "cancelled"
+	UploadFailed     Status = "failed"
+	UploadSuccess    Status = "success"
 )
 
 type Operation struct {

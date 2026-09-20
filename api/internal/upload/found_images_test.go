@@ -68,7 +68,7 @@ func TestAReadmeSeedsTheNewPageWithBlocksTheCreatorOwns(t *testing.T) {
 	}
 	install := page.Blocks[3]
 	if proseText(t, install) != "Clone it." || len(imageIDs(t, install)) != 0 {
-		t.Fatalf("install = %+v, want its text, with its picture waiting in the vault", install)
+		t.Fatalf("install = %+v, want its text, with its picture waiting in found images", install)
 	}
 	if len(page.Media) != 2 || !page.Media[0].IsCover {
 		t.Errorf("media = %+v, want the banner as the cover beside the settings picture", page.Media)
@@ -76,14 +76,14 @@ func TestAReadmeSeedsTheNewPageWithBlocksTheCreatorOwns(t *testing.T) {
 	if usage := proseText(t, page.Blocks[4]); usage != "Type `/quiet`." {
 		t.Errorf("usage = %q, want the stylesheet left out", usage)
 	}
-	vault := readVault(t, r, session, workID)
-	if len(vault) != 2 || vault[0].Name != "Settings" || vault[0].BlockID != install.ID || vault[0].Media == nil ||
-		vault[0].Media.ID != page.Media[1].ID || vault[0].Media.ThumbURL == "" {
-		t.Fatalf("vault = %+v, want the settings picture waiting for the install block", vault)
+	foundImages := readFoundImages(t, r, session, workID)
+	if len(foundImages) != 2 || foundImages[0].Name != "Settings" || foundImages[0].BlockID != install.ID || foundImages[0].Media == nil ||
+		foundImages[0].Media.ID != page.Media[1].ID || foundImages[0].Media.ThumbURL == "" {
+		t.Fatalf("foundImages = %+v, want the settings picture waiting for the install block", foundImages)
 	}
-	if remote := vault[1]; remote.Media != nil || remote.Address != "https://example.com/wide.png" ||
+	if remote := foundImages[1]; remote.Media != nil || remote.Address != "https://example.com/wide.png" ||
 		remote.Name != "Wide" || remote.BlockID != page.Blocks[4].ID {
-		t.Errorf("vault[1] = %+v, want the remote picture listed by address for the usage block", remote)
+		t.Errorf("foundImages[1] = %+v, want the remote picture listed by address for the usage block", remote)
 	}
 }
 
@@ -94,11 +94,11 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}", "README.md": seededReadme,
 		"art/banner.png": pictureFile(t, 20), "art/settings.png": pictureFile(t, 200),
 	}))
-	vault := readVault(t, r, session, workID)
-	settings, wide := vault[0], vault[1]
+	foundImages := readFoundImages(t, r, session, workID)
+	settings, wide := foundImages[0], foundImages[1]
 
 	placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/works/"+workID+"/vault/"+settings.ID+"/place", nil), session))
+		http.MethodPost, "/v1/works/"+workID+"/found-images/"+settings.ID+"/place", nil), session))
 	if placed.Code != http.StatusOK {
 		t.Fatalf("place the settings picture = %d: %s", placed.Code, placed.Body.String())
 	}
@@ -112,7 +112,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	}
 
 	refused := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/works/"+workID+"/vault/"+wide.ID+"/place", nil), session))
+		http.MethodPost, "/v1/works/"+workID+"/found-images/"+wide.ID+"/place", nil), session))
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("place a remote picture without a copy = %d: %s", refused.Code, refused.Body.String())
 	}
@@ -126,7 +126,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	if err := json.Unmarshal(uploaded.Body.Bytes(), &copyMedia); err != nil {
 		t.Fatalf("decode the copy: %v", err)
 	}
-	withCopy := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/vault/"+wide.ID+"/place",
+	withCopy := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/found-images/"+wide.ID+"/place",
 		strings.NewReader(fmt.Sprintf(`{"mediaId":%q}`, copyMedia.ID)))
 	withCopy.Header.Set("Content-Type", "application/json")
 	if placed := apitest.Send(t, r, apitest.Authorized(withCopy, session)); placed.Code != http.StatusOK {
@@ -136,8 +136,8 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	if ids := imageIDs(t, blockTitledIn(t, page.Blocks, "Usage")); len(ids) != 1 || ids[0] != copyMedia.ID {
 		t.Errorf("usage after placing the copy = %v, want the uploaded picture", ids)
 	}
-	if left := readVault(t, r, session, workID); len(left) != 0 {
-		t.Errorf("vault after placing both = %+v, want it empty", left)
+	if left := readFoundImages(t, r, session, workID); len(left) != 0 {
+		t.Errorf("foundImages after placing both = %+v, want it empty", left)
 	}
 
 	second := apitest.UploadExtension(t, r, session, works, apitest.ExtensionZip(t, map[string]string{
@@ -145,16 +145,16 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 		"README.md":   "# Quiet Toolbox\n\n## Screenshots\n\n![One](art/one.png)\n\n![Two](art/two.png)\n\n## Install\n\nClone it.\n",
 		"art/one.png": pictureFile(t, 20), "art/two.png": pictureFile(t, 200),
 	}))
-	shots := readVault(t, r, session, second)
+	shots := readFoundImages(t, r, session, second)
 	if len(shots) != 2 || shots[0].BlockID != "" {
-		t.Fatalf("vault = %+v, want two pictures with no block, since their section held nothing else", shots)
+		t.Fatalf("foundImages = %+v, want two pictures with no block, since their section held nothing else", shots)
 	}
 	if placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/works/"+second+"/vault/"+shots[0].ID+"/place", nil), session)); placed.Code != http.StatusOK {
+		http.MethodPost, "/v1/works/"+second+"/found-images/"+shots[0].ID+"/place", nil), session)); placed.Code != http.StatusOK {
 		t.Fatalf("place a picture with no block = %d: %s", placed.Code, placed.Body.String())
 	}
 	if placed := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodPost, "/v1/works/"+second+"/vault/"+shots[1].ID+"/place", nil), session)); placed.Code != http.StatusOK {
+		http.MethodPost, "/v1/works/"+second+"/found-images/"+shots[1].ID+"/place", nil), session)); placed.Code != http.StatusOK {
 		t.Fatalf("place the second picture = %d: %s", placed.Code, placed.Body.String())
 	}
 	shotsPage := readSeededPage(t, r, session, second+"?draftedChanges=true")
@@ -169,9 +169,9 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 		"spindle.json": apitest.ToolboxManifest, "dist/frontend.js": "export default {}", "README.md": seededReadme,
 		"art/banner.png": pictureFile(t, 20), "art/settings.png": pictureFile(t, 200),
 	}))
-	waiting := readVault(t, r, session, third)[0]
+	waiting := readFoundImages(t, r, session, third)[0]
 	discarded := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/works/"+third+"/vault/"+waiting.ID, nil), session))
+		http.MethodDelete, "/v1/works/"+third+"/found-images/"+waiting.ID, nil), session))
 	if discarded.Code != http.StatusNoContent {
 		t.Fatalf("discard = %d: %s", discarded.Code, discarded.Body.String())
 	}
@@ -185,7 +185,7 @@ func TestACreatorPlacesOrDiscardsEachWaitingPicture(t *testing.T) {
 	}
 }
 
-type vaultPicture struct {
+type foundImagesPicture struct {
 	ID      string `json:"id"`
 	Address string `json:"address"`
 	Name    string `json:"name"`
@@ -196,17 +196,17 @@ type vaultPicture struct {
 	} `json:"media"`
 }
 
-func readVault(t *testing.T, r http.Handler, session *http.Cookie, workID string) []vaultPicture {
+func readFoundImages(t *testing.T, r http.Handler, session *http.Cookie, workID string) []foundImagesPicture {
 	t.Helper()
-	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"/vault", nil), session))
+	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/works/"+workID+"/found-images", nil), session))
 	if response.Code != http.StatusOK {
-		t.Fatalf("read the vault = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("read found images = %d: %s", response.Code, response.Body.String())
 	}
 	var listed struct {
-		Pictures []vaultPicture `json:"pictures"`
+		Pictures []foundImagesPicture `json:"pictures"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &listed); err != nil {
-		t.Fatalf("decode the vault: %v", err)
+		t.Fatalf("decode found images: %v", err)
 	}
 	return listed.Pictures
 }
@@ -240,7 +240,7 @@ func TestAReplacementArchiveLeavesTheSeededBlocksToTheCreator(t *testing.T) {
 	if uploaded.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement = %d: %s", uploaded.Code, uploaded.Body.String())
 	}
-	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
 	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))

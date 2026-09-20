@@ -8,10 +8,10 @@ import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
   acceptWorkReplacement,
   cancelWorkReplacement,
-  type IngestOperation,
   PromptsMadePublicError,
   type ReplacementDecision,
-  readIngestOperation,
+  readUploadOperation,
+  type UploadOperation,
   uploadWorkReplacement,
   type VersionChangeGroup,
 } from "@/lib/api/query";
@@ -39,14 +39,14 @@ export function ReplacementStep({
   onApplied: (groups: VersionChangeGroup[]) => void;
   onBack: () => void;
   onDiscarded: () => void;
-  waiting: IngestOperation | null;
-  onWaiting: (operation: IngestOperation | null) => void;
+  waiting: UploadOperation | null;
+  onWaiting: (operation: UploadOperation | null) => void;
 }) {
   const workspace = useWorkspace();
   const candidate = useDraftedChanges();
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [operation, setOperation] = useState<IngestOperation | null>(waiting);
+  const [operation, setOperation] = useState<UploadOperation | null>(waiting);
   const [decisions, setDecisions] = useState<ReplacementDecision>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -69,7 +69,7 @@ export function ReplacementStep({
         await new Promise((resolve) => setTimeout(resolve, POLL_MS));
         if (!polling) return;
         try {
-          const next = await readIngestOperation(current.url);
+          const next = await readUploadOperation(current.url);
           if (!polling) return;
           setOperation(next);
           onWaiting(unsettledReplacement(next));

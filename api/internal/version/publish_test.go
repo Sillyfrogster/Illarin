@@ -38,13 +38,13 @@ func TestBundledLumiverseScriptsChangeThroughAJSONReplacement(t *testing.T) {
 
 	svc, pool := apitest.WorksWithRegistry(t, apitest.RegistryWith(t, preset.LumiverseModule{}))
 	owner := apitest.Owner(t, svc, "bundled.scripts.update")
-	created := apitest.IngestOne(t, svc, owner, "preset.json", []byte(initial))
+	created := apitest.UploadOne(t, svc, owner, "preset.json", []byte(initial))
 	apitest.PublishImported(t, svc, owner, created)
 	number := apitest.VersionNumber(t, pool, created.ID.String())
 
 	replacement := strings.Replace(initial, "/before/g", "/updated/g", 1)
 	operation := apitest.AddOriginalFile(t, svc, owner, created.ID, "preset.json", []byte(replacement))
-	if operation.Status != upload.IngestSuccess {
+	if operation.Status != upload.UploadSuccess {
 		t.Fatalf("replacement = %+v, want success", operation)
 	}
 	working, err := apitest.Pages(svc).DraftedChanges(t.Context(), created.ID, &owner, work.NSFWShown)
@@ -79,7 +79,7 @@ func TestAnIdenticalReuploadCannotPublishAVersion(t *testing.T) {
 		}}
 	svc, pool := apitest.WorksWithRegistry(t, apitest.RegistryWith(t, apitest.ReplacingModule{Parsed: &parsed}))
 	owner := apitest.Owner(t, svc, "unchanged.upload")
-	created := apitest.IngestOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
+	created := apitest.UploadOne(t, svc, owner, "wren.json", []byte(`{"payload":true}`))
 	apitest.PublishImported(t, svc, owner, created)
 	number := apitest.VersionNumber(t, pool, created.ID.String())
 	parsed.Elements[1].Content = block.TextSet{Texts: []block.TextItem{{ID: uuid.New(), Text: "Hello"}}}
@@ -89,8 +89,8 @@ func TestAnIdenticalReuploadCannotPublishAVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if processed, err := apitest.Uploads(svc).ProcessNextIngest(t.Context()); err != nil || !processed {
-		t.Fatalf("ingest = %v, %v", processed, err)
+	if processed, err := apitest.Uploads(svc).ProcessNextUpload(t.Context()); err != nil || !processed {
+		t.Fatalf("upload = %v, %v", processed, err)
 	}
 	if _, err := apitest.Uploads(svc).AcceptReplacement(t.Context(), owner, created.ID, operation.ID, candidate, nil, false); err != nil {
 		t.Fatal(err)

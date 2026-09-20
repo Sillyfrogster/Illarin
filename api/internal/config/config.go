@@ -37,7 +37,7 @@ type Config struct {
 	LinkingHMACKey               []byte
 	IntegrationSecretKey         []byte
 	ProbeLimits                  format.Limits
-	IngestWorkers                int
+	UploadWorkers                int
 	Server                       ServerTimeouts
 	Deadlines                    api.Deadlines
 }
@@ -174,11 +174,11 @@ func Load() (Config, error) {
 		MaxArchiveBytes:     uint64(archiveBytes),
 		MaxCompressionRatio: ratio,
 	}
-	workers, err := intOrDefault("INGEST_WORKERS", 2)
+	workers, err := intOrDefault("UPLOAD_WORKERS", 2)
 	if err != nil {
 		return Config{}, err
 	}
-	cfg.IngestWorkers = workers
+	cfg.UploadWorkers = workers
 	if (cfg.SMTP.Address == "") != (cfg.SMTP.From == "") {
 		return Config{}, fmt.Errorf("SMTP_ADDR and SMTP_FROM must be set together")
 	}

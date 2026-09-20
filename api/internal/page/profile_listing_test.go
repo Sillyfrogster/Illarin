@@ -16,7 +16,7 @@ import (
 
 func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 	t.Parallel()
-	router, _, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, _, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	var firstID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = $1`, "verified.creator").Scan(&firstID); err != nil {
@@ -48,7 +48,7 @@ func TestCreatorProfileScopesTheBrowseListing(t *testing.T) {
 
 func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 	t.Parallel()
-	router, _, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, _, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	var creatorID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = $1`, "verified.creator").Scan(&creatorID); err != nil {
@@ -79,7 +79,7 @@ func TestCreatorProfileFollowsReaderAdultContentPreference(t *testing.T) {
 
 func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	var creatorID uuid.UUID
 	if err := pool.QueryRow(context.Background(),
 		`select id from users where username = $1`, "verified.creator").Scan(&creatorID); err != nil {

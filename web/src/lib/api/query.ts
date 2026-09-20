@@ -34,7 +34,8 @@ import type {
   ElementType,
   EntryTableContent,
   ExtensionDependency,
-  IngestOperation,
+  FoundImage,
+  FoundImageList,
   ListWorksParams,
   NsfwPreferenceRequest,
   OriginalUpload,
@@ -72,9 +73,8 @@ import type {
   SettingGroupContent,
   StylesheetSetContent,
   TypedValue,
+  UploadOperation,
   VariableSchemaContent,
-  VaultPicture,
-  VaultPictureList,
   VersionChange,
   VersionChangeGroup,
   VersionComparison,
@@ -117,7 +117,7 @@ export type {
   ElementType,
   EntryTableContent,
   ExtensionDependency,
-  IngestOperation,
+  UploadOperation,
   OriginalUpload,
   Post,
   PostAction,
@@ -164,7 +164,7 @@ export type {
   StylesheetSetContent,
   TypedValue,
   VariableSchemaContent,
-  VaultPicture,
+  FoundImage,
   VersionChange,
   VersionChangeGroup,
   VersionComparison,
@@ -423,10 +423,10 @@ export async function arrangeWorkBlocks(
 }
 
 /** The pictures a README showed, waiting for the creator to place or let go. */
-export async function fetchVault(workId: string): Promise<VaultPicture[]> {
-  const { data, error } = await api<VaultPictureList>(
+export async function fetchFoundImages(workId: string): Promise<FoundImage[]> {
+  const { data, error } = await api<FoundImageList>(
     "GET",
-    `/v1/works/${workId}/vault`,
+    `/v1/works/${workId}/found-images`,
   );
   if (error || !data) {
     throw new Error("The waiting pictures could not be read. Try again.");
@@ -434,7 +434,7 @@ export async function fetchVault(workId: string): Promise<VaultPicture[]> {
   return data.pictures;
 }
 
-export async function placeVaultPicture(
+export async function placeFoundImage(
   candidate: Candidate,
   workId: string,
   pictureId: string,
@@ -442,7 +442,7 @@ export async function placeVaultPicture(
 ): Promise<WorkBlock[]> {
   const { data, error, response } = await api<WorkBlock[]>(
     "POST",
-    `/v1/works/${workId}/vault/${pictureId}/place`,
+    `/v1/works/${workId}/found-images/${pictureId}/place`,
     {
       headers: { "X-Drafted-Changes-Version": String(candidate.version) },
       body: mediaId ? { mediaId } : undefined,
@@ -455,14 +455,14 @@ export async function placeVaultPicture(
   return data;
 }
 
-export async function discardVaultPicture(
+export async function discardFoundImage(
   candidate: Candidate,
   workId: string,
   pictureId: string,
 ) {
   const { error, response } = await api<void>(
     "DELETE",
-    `/v1/works/${workId}/vault/${pictureId}`,
+    `/v1/works/${workId}/found-images/${pictureId}`,
     { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
   );
   acceptCandidateVersion(candidate, response);
@@ -556,8 +556,8 @@ export async function publishWork(
 
 export async function fetchWaitingReplacement(
   id: string,
-): Promise<IngestOperation | null> {
-  const { data, error } = await api<IngestOperation | null>(
+): Promise<UploadOperation | null> {
+  const { data, error } = await api<UploadOperation | null>(
     "GET",
     `/v1/works/${id}/original-file`,
   );
@@ -569,10 +569,10 @@ export async function uploadWorkReplacement(
   candidate: Candidate,
   id: string,
   file: File,
-): Promise<IngestOperation> {
+): Promise<UploadOperation> {
   const body = new FormData();
   body.append("file", file, file.name);
-  const { data, error, response } = await api<IngestOperation>(
+  const { data, error, response } = await api<UploadOperation>(
     "POST",
     `/v1/works/${id}/original-file`,
     {
@@ -592,10 +592,10 @@ export async function uploadWorkReplacement(
   return data;
 }
 
-export async function readIngestOperation(
+export async function readUploadOperation(
   url: string,
-): Promise<IngestOperation> {
-  const { data } = await api<IngestOperation>("GET", url, {
+): Promise<UploadOperation> {
+  const { data } = await api<UploadOperation>("GET", url, {
     cache: "no-store",
   });
   if (!data) throw new Error("Illarin could not read this upload yet.");
@@ -608,8 +608,8 @@ export async function acceptWorkReplacement(
   operationId: string,
   unrepresentable: ReplacementDecision,
   makePromptsPublic = false,
-): Promise<IngestOperation> {
-  const { data, error, response } = await api<IngestOperation>(
+): Promise<UploadOperation> {
+  const { data, error, response } = await api<UploadOperation>(
     "POST",
     `/v1/works/${id}/original-file/${operationId}/accept`,
     {
@@ -677,9 +677,7 @@ export async function publishWorkVersion(
   };
 }
 
-export async function fetchPreservedData(
-  id: string,
-): Promise<PreservedData[]> {
+export async function fetchPreservedData(id: string): Promise<PreservedData[]> {
   const { data } = await api<PreservedData[]>(
     "GET",
     `/v1/works/${id}/preserved`,

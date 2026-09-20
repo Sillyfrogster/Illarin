@@ -26,43 +26,43 @@ const (
 	WorkVisibilityUnlisted WorkVisibility = "unlisted"
 )
 
-type IngestFailure struct {
+type UploadFailure struct {
 	Message string              `json:"message"`
-	Reason  IngestFailureReason `json:"reason"`
+	Reason  UploadFailureReason `json:"reason"`
 }
 
-type IngestFailureReason string
+type UploadFailureReason string
 
 const (
-	IngestFailureReasonWorkUnavailable        IngestFailureReason = "work_unavailable"
-	IngestFailureReasonInternalFailure        IngestFailureReason = "internal_failure"
-	IngestFailureReasonLimitExceeded          IngestFailureReason = "limit_exceeded"
-	IngestFailureReasonMalformedInput         IngestFailureReason = "malformed_input"
-	IngestFailureReasonSafetyViolation        IngestFailureReason = "safety_violation"
-	IngestFailureReasonUnsupportedFormat      IngestFailureReason = "unsupported_format"
-	IngestFailureReasonUnsupportedVersion     IngestFailureReason = "unsupported_version"
-	IngestFailureReasonDraftedChangesConflict IngestFailureReason = "drafted_changes_conflict"
-	IngestFailureReasonWrongType              IngestFailureReason = "wrong_type"
+	UploadFailureReasonWorkUnavailable        UploadFailureReason = "work_unavailable"
+	UploadFailureReasonInternalFailure        UploadFailureReason = "internal_failure"
+	UploadFailureReasonLimitExceeded          UploadFailureReason = "limit_exceeded"
+	UploadFailureReasonMalformedInput         UploadFailureReason = "malformed_input"
+	UploadFailureReasonSafetyViolation        UploadFailureReason = "safety_violation"
+	UploadFailureReasonUnsupportedFormat      UploadFailureReason = "unsupported_format"
+	UploadFailureReasonUnsupportedVersion     UploadFailureReason = "unsupported_version"
+	UploadFailureReasonDraftedChangesConflict UploadFailureReason = "drafted_changes_conflict"
+	UploadFailureReasonWrongType              UploadFailureReason = "wrong_type"
 )
 
-type IngestOperation struct {
+type UploadOperation struct {
 	Work    *Work                 `json:"work,omitempty"`
-	Failure *IngestFailure        `json:"failure,omitempty"`
+	Failure *UploadFailure        `json:"failure,omitempty"`
 	Id      uuid.UUID             `json:"id"`
 	Preview *ReplacementPreview   `json:"preview,omitempty"`
-	Status  IngestOperationStatus `json:"status"`
+	Status  UploadOperationStatus `json:"status"`
 	Url     string                `json:"url"`
 }
 
-type IngestOperationStatus string
+type UploadOperationStatus string
 
 const (
-	IngestOperationStatusCancelled  IngestOperationStatus = "cancelled"
-	IngestOperationStatusFailed     IngestOperationStatus = "failed"
-	IngestOperationStatusPending    IngestOperationStatus = "pending"
-	IngestOperationStatusPreview    IngestOperationStatus = "preview"
-	IngestOperationStatusProcessing IngestOperationStatus = "processing"
-	IngestOperationStatusSuccess    IngestOperationStatus = "success"
+	UploadOperationStatusCancelled  UploadOperationStatus = "cancelled"
+	UploadOperationStatusFailed     UploadOperationStatus = "failed"
+	UploadOperationStatusPending    UploadOperationStatus = "pending"
+	UploadOperationStatusPreview    UploadOperationStatus = "preview"
+	UploadOperationStatusProcessing UploadOperationStatus = "processing"
+	UploadOperationStatusSuccess    UploadOperationStatus = "success"
 )
 
 type ReplacementAcceptance struct {

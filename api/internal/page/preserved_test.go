@@ -59,7 +59,7 @@ func namespaceNames(rows []struct {
 
 func TestThePanelNamesTheNamespacesAnWorkCarries(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 
 	found := preservedData(t, r, session, workID)
@@ -83,7 +83,7 @@ func TestThePanelNamesTheNamespacesAnWorkCarries(t *testing.T) {
 
 func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 
 	response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
@@ -111,7 +111,7 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 
 func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 
 	page := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
@@ -134,7 +134,7 @@ func TestPreservedDataNeverRendersOnThePage(t *testing.T) {
 
 func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 	before := preservedData(t, r, session, workID)
 
@@ -160,7 +160,7 @@ func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 
 func TestDeletingAnEntryDeletesItsPreservedDataWithIt(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 
 	before := namespaceBytes(t, r, session, workID, "character_book")
@@ -252,7 +252,7 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 	if err := registry.Register(smallLimitModule{}); err != nil {
 		t.Fatalf("register the small-limit module: %v", err)
 	}
-	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	r, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	metadata := apitest.ExampleMetadata("Heavy")
 	metadata["filename"] = "heavy.json"
 	oversized, err := json.Marshal(map[string]any{
@@ -301,10 +301,10 @@ func TestAnOverLimitFileIsRefusedAndNamesWhereTheWeightIs(t *testing.T) {
 
 func TestAnExportInTheSameFormatBringsEveryPreservedKeyBack(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
 		t, r, session, works, metadata, []byte(apitest.CardWithThirdPartyNamespaces),
 	))
 

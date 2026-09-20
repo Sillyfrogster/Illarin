@@ -77,8 +77,8 @@ func TestUploadReturnsAPendingOperation(t *testing.T) {
 		t.Fatalf("status = %d, want 202. body: %s", rec.Code, rec.Body.String())
 	}
 	location := rec.Header().Get("Location")
-	if !strings.HasPrefix(location, "/v1/ingests/") {
-		t.Fatalf("Location = %q, want an ingest operation URL", location)
+	if !strings.HasPrefix(location, "/v1/uploads/") {
+		t.Fatalf("Location = %q, want an upload operation URL", location)
 	}
 
 	var operation struct {
@@ -109,8 +109,8 @@ func TestUploadWaitsWhenItsMaximumWriteWouldCrossTheStorageReserve(t *testing.T)
 		t.Skip("test filesystem has less than 8 MB free")
 	}
 
-	r, session, _, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
-		t, format.NewRegistry(), work.DefaultIngestSettings(),
+	r, session, _, pool := harness.NewVerifiedUploadRouterWithStoreFactory(
+		t, format.NewRegistry(), work.DefaultUploadSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			return storage.NewStoreWithCapacity(pool, root, storage.Capacity{
 				FreeSpaceReserveBytes: available - headroom,
@@ -132,10 +132,10 @@ func TestUploadWaitsWhenItsMaximumWriteWouldCrossTheStorageReserve(t *testing.T)
 	}
 	var operations int
 	if err := pool.QueryRow(context.Background(), `select count(*) from upload_operations`).Scan(&operations); err != nil {
-		t.Fatalf("count ingest operations: %v", err)
+		t.Fatalf("count upload operations: %v", err)
 	}
 	if operations != 0 {
-		t.Fatalf("refused upload recorded %d ingest operations", operations)
+		t.Fatalf("refused upload recorded %d upload operations", operations)
 	}
 }
 
@@ -144,8 +144,8 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 	shared := []byte("shared canonical bytes")
 	root := t.TempDir()
 	var blobs storage.Store
-	r, firstSession, works, pool := harness.NewVerifiedIngestRouterWithStoreFactory(
-		t, format.NewRegistry(), work.DefaultIngestSettings(),
+	r, firstSession, works, pool := harness.NewVerifiedUploadRouterWithStoreFactory(
+		t, format.NewRegistry(), work.DefaultUploadSettings(),
 		func(pool *pgxpool.Pool) (storage.Store, error) {
 			var err error
 			blobs, err = storage.NewStore(pool, root)
@@ -158,14 +158,14 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 	if seed.Code != http.StatusAccepted {
 		t.Fatalf("seed upload status = %d, want 202: %s", seed.Code, seed.Body.String())
 	}
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("process seed ingest = %v, %v; want true, nil", processed, err)
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("process seed upload = %v, %v; want true, nil", processed, err)
 	}
-	created := apitest.PollIngestWork(t, r, firstSession, seed.Header().Get("Location"))
+	created := apitest.PollUploadWork(t, r, firstSession, seed.Header().Get("Location"))
 
-	settings := work.DefaultIngestSettings()
+	settings := work.DefaultUploadSettings()
 	settings.AccountStorageCapBytes = int64(len(shared) - 1)
-	limitedWorks := work.NewServiceWithIngestSettings(
+	limitedWorks := work.NewServiceWithUploadSettings(
 		pool, format.NewRegistry(), blobs, settings,
 	)
 	outbox := &apitest.VerificationOutbox{}
@@ -209,7 +209,7 @@ func TestAccountStorageCapChargesSharedBytesPerAccountButNotRepeatedUse(t *testi
 	}
 }
 
-func TestCreatorCanPollTheirPendingIngest(t *testing.T) {
+func TestCreatorCanPollTheirPendingUpload(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	upload := apitest.Send(t, r, apitest.Authorized(
@@ -242,7 +242,7 @@ func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, registry)
+	r, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, registry)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
 	metadata["_keepDraft"] = true
@@ -257,7 +257,7 @@ func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
 		}
 	}`)
 	finished := apitest.UploadAndFinish(t, r, session, works, metadata, card)
-	workID := apitest.WorkIDFromIngest(t, finished)
+	workID := apitest.WorkIDFromUpload(t, finished)
 
 	pageResponse := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil), session,
@@ -343,11 +343,11 @@ func TestEveryCharacterReaderBuildsTheCatalogPage(t *testing.T) {
 					t.Fatalf("register %s: %v", module.ID(), err)
 				}
 			}
-			r, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, registry)
+			r, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, registry)
 			metadata := apitest.ExampleMetadata("Ana")
 			metadata["filename"] = test.filename
 			metadata["_keepDraft"] = true
-			workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, test.file))
+			workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, test.file))
 			response := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 				http.MethodGet, "/v1/works/"+workID, nil,
 			), session))
@@ -385,7 +385,7 @@ func TestAnUnreadableOptionalCharXImageDoesNotRejectTheCharacter(t *testing.T) {
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	r, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, registry)
+	r, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, registry)
 	card := []byte(`{
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":"Quiet","first_mes":"Hello",
@@ -403,7 +403,7 @@ func TestAnUnreadableOptionalCharXImageDoesNotRejectTheCharacter(t *testing.T) {
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.charx"
 	metadata["_keepDraft"] = true
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(t, r, session, works, metadata, file))
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, file))
 
 	var mediaCount int
 	if err := pool.QueryRow(context.Background(),
@@ -445,9 +445,9 @@ func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 			"assets":[{"type":"emotion","uri":"embeded://assets/happy.png","name":"happy","ext":"png"}]}
 	}`)
 	file := zipCharacterCardWithFiles(t, card, map[string][]byte{"assets/happy.png": image})
-	settings := work.DefaultIngestSettings()
+	settings := work.DefaultUploadSettings()
 	settings.AccountStorageCapBytes = int64(len(file) + len(image) - 1)
-	r, session, works, pool := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
+	r, session, works, pool := harness.NewVerifiedUploadRouterWithSettings(t, registry, settings)
 	metadata := apitest.ExampleMetadata("Ana")
 	metadata["filename"] = "ana.charx"
 	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, file), session))
@@ -455,8 +455,8 @@ func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 		t.Fatalf("upload status = %d, want 202: %s", upload.Code, upload.Body.String())
 	}
 
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("process upload = %v, %v; want true, nil", processed, err)
 	}
 	poll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
@@ -468,7 +468,7 @@ func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 		} `json:"failure"`
 	}
 	if err := json.Unmarshal(poll.Body.Bytes(), &operation); err != nil {
-		t.Fatalf("decode ingest: %v", err)
+		t.Fatalf("decode upload: %v", err)
 	}
 	if operation.Status != "failed" || operation.Failure == nil || operation.Failure.Reason != "limit_exceeded" {
 		t.Fatalf("operation = %#v, want a storage-limit failure", operation)
@@ -478,7 +478,7 @@ func TestExtractedMediaCannotTakeTheAccountPastItsStorageCap(t *testing.T) {
 		t.Fatalf("count works: %v", err)
 	}
 	if workCount != 0 {
-		t.Fatalf("over-cap ingest recorded %d works", workCount)
+		t.Fatalf("over-cap upload recorded %d works", workCount)
 	}
 }
 
@@ -518,14 +518,14 @@ func TestUnknownUploadIsRefusedAndNothingIsStored(t *testing.T) {
 	if err := registry.Register(apitest.NeverMatchesModule{}); err != nil {
 		t.Fatalf("register non-matching module: %v", err)
 	}
-	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	r, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	metadata := apitest.ExampleMetadata("Unknown")
 	metadata["filename"] = "velvet-night.bundle"
 	upload := apitest.Send(t, r, apitest.Authorized(
 		apitest.UploadRequest(t, metadata, []byte("unrecognised bytes")), session,
 	))
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("process upload = %v, %v; want true, nil", processed, err)
 	}
 
 	poll := apitest.Send(t, r, apitest.Authorized(
@@ -557,14 +557,14 @@ func TestMatchedFileThatFailsToParseIsRejectedWithoutAnWork(t *testing.T) {
 	if err := registry.Register(parseFailureModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	r, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	metadata := apitest.ExampleMetadata("Broken card")
 	metadata["filename"] = "broken.json"
 	upload := apitest.Send(t, r, apitest.Authorized(
 		apitest.UploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
 	))
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("process upload = %v, %v; want true, nil", processed, err)
 	}
 
 	poll := apitest.Send(t, r, apitest.Authorized(
@@ -585,14 +585,14 @@ func TestMatchedFileThatFailsToParseIsRejectedWithoutAnWork(t *testing.T) {
 		t.Fatalf("operation = %#v, want malformed_input", operation)
 	}
 	if operation.Work != nil {
-		t.Fatalf("failed ingest returned work %#v", operation.Work)
+		t.Fatalf("failed upload returned work %#v", operation.Work)
 	}
 	if listed := apitest.ListItems(t, r, "/v1/works"); len(listed) != 0 {
 		t.Fatalf("browse found %d works after a failed parse, want none", len(listed))
 	}
 }
 
-func TestTerminalIngestFailuresStayDistinct(t *testing.T) {
+func TestTerminalUploadFailuresStayDistinct(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name       string
@@ -631,12 +631,12 @@ func TestTerminalIngestFailuresStayDistinct(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			r, session, works := harness.NewVerifiedIngestRouter(t, test.registry(t))
+			r, session, works := harness.NewVerifiedUploadRouter(t, test.registry(t))
 			metadata := apitest.ExampleMetadata("Refused")
 			metadata["filename"] = "refused.json"
 			upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, test.file), session))
-			if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
-				t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
+			if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
+				t.Fatalf("process upload = %v, %v; want true, nil", processed, err)
 			}
 			poll := apitest.Send(t, r, apitest.Authorized(
 				httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
@@ -713,12 +713,12 @@ func TestArchiveStructuralFailuresAreReportedFromTheWorker(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+			r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 			metadata := apitest.ExampleMetadata("Unsafe theme")
 			metadata["filename"] = "unsafe.lumitheme"
 			upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, test.file(t)), session))
-			if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
-				t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
+			if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
+				t.Fatalf("process upload = %v, %v; want true, nil", processed, err)
 			}
 			poll := apitest.Send(t, r, apitest.Authorized(
 				httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
@@ -809,7 +809,7 @@ func (m *internalFailureModule) Parse(context.Context, format.Inspection, format
 
 func TestOnlyInternalFailuresRetry(t *testing.T) {
 	t.Parallel()
-	settings := work.DefaultIngestSettings()
+	settings := work.DefaultUploadSettings()
 	settings.RetryBase = 0
 	settings.MaxAttempts = 2
 	module := &internalFailureModule{failuresLeft: 1}
@@ -817,14 +817,14 @@ func TestOnlyInternalFailuresRetry(t *testing.T) {
 	if err := registry.Register(module); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, works, _ := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
+	r, session, works, _ := harness.NewVerifiedUploadRouterWithSettings(t, registry, settings)
 	metadata := apitest.ExampleMetadata("Recovered card")
 	metadata["filename"] = "recovered.json"
 	upload := apitest.Send(t, r, apitest.Authorized(
 		apitest.UploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
 	))
 
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
 		t.Fatalf("first process = %v, %v; want true, nil", processed, err)
 	}
 	firstPoll := apitest.Send(t, r, apitest.Authorized(
@@ -840,7 +840,7 @@ func TestOnlyInternalFailuresRetry(t *testing.T) {
 		t.Fatalf("status after retryable failure = %q, want pending", first.Status)
 	}
 
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
 		t.Fatalf("second process = %v, %v; want true, nil", processed, err)
 	}
 	secondPoll := apitest.Send(t, r, apitest.Authorized(
@@ -859,21 +859,21 @@ func TestOnlyInternalFailuresRetry(t *testing.T) {
 
 func TestExhaustedInternalFailureIsReported(t *testing.T) {
 	t.Parallel()
-	settings := work.DefaultIngestSettings()
+	settings := work.DefaultUploadSettings()
 	settings.RetryBase = 0
 	settings.MaxAttempts = 2
 	registry := format.NewRegistry()
 	if err := registry.Register(&internalFailureModule{failuresLeft: 3}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, works, _ := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
+	r, session, works, _ := harness.NewVerifiedUploadRouterWithSettings(t, registry, settings)
 	metadata := apitest.ExampleMetadata("Still broken")
 	metadata["filename"] = "broken.json"
 	upload := apitest.Send(t, r, apitest.Authorized(
 		apitest.UploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
 	))
 	for attempt := 0; attempt < settings.MaxAttempts; attempt++ {
-		if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
+		if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
 			t.Fatalf("process %d = %v, %v; want true, nil", attempt+1, processed, err)
 		}
 	}
@@ -895,21 +895,21 @@ func TestExhaustedInternalFailureIsReported(t *testing.T) {
 
 func TestAMatchedTypeWithoutABlockCatalogIsRefused(t *testing.T) {
 	t.Parallel()
-	settings := work.DefaultIngestSettings()
+	settings := work.DefaultUploadSettings()
 	settings.RetryBase = 0
 	settings.MaxAttempts = 2
 	registry := format.NewRegistry()
 	if err := registry.Register(invalidFinalizationModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, works, _ := harness.NewVerifiedIngestRouterWithSettings(t, registry, settings)
+	r, session, works, _ := harness.NewVerifiedUploadRouterWithSettings(t, registry, settings)
 	metadata := apitest.ExampleMetadata("Invalid finalization")
 	metadata["filename"] = "invalid.json"
 	upload := apitest.Send(t, r, apitest.Authorized(
 		apitest.UploadRequest(t, metadata, []byte(`{"payload":true}`)), session,
 	))
 
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
 		t.Fatalf("process = %v, %v; want true, nil", processed, err)
 	}
 	poll := apitest.Send(t, r, apitest.Authorized(
@@ -936,13 +936,13 @@ func TestDetailsSeedFromParseWithoutChangingTheFile(t *testing.T) {
 	if err := registry.Register(catalogModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	r, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	file := []byte(`{"payload":"original"}`)
 	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, map[string]any{
 		"filename": "visitor.json", "confirmed": true,
 	}, file), session))
-	if processed, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
+	if processed, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("process upload = %v, %v; want true, nil", processed, err)
 	}
 	poll := apitest.Send(t, r, apitest.Authorized(
 		httptest.NewRequest(http.MethodGet, upload.Header().Get("Location"), nil), session,
@@ -1017,7 +1017,7 @@ func TestPollingReportsProcessingWhileAWorkerHoldsTheLease(t *testing.T) {
 	if err := registry.Register(module); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
+	r, session, works := harness.NewVerifiedUploadRouter(t, registry)
 	metadata := apitest.ExampleMetadata("Patient card")
 	metadata["filename"] = "patient.json"
 	upload := apitest.Send(t, r, apitest.Authorized(
@@ -1025,7 +1025,7 @@ func TestPollingReportsProcessingWhileAWorkerHoldsTheLease(t *testing.T) {
 	))
 	done := make(chan error, 1)
 	go func() {
-		_, err := apitest.Uploads(works).ProcessNextIngest(context.Background())
+		_, err := apitest.Uploads(works).ProcessNextUpload(context.Background())
 		done <- err
 	}()
 	<-module.started
@@ -1044,17 +1044,17 @@ func TestPollingReportsProcessingWhileAWorkerHoldsTheLease(t *testing.T) {
 	}
 	close(module.release)
 	if err := <-done; err != nil {
-		t.Fatalf("finish ingest: %v", err)
+		t.Fatalf("finish upload: %v", err)
 	}
 }
 
-func TestIngestContinuesAfterTheUploadConnectionCloses(t *testing.T) {
+func TestUploadContinuesAfterTheUploadConnectionCloses(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	workerContext, stopWorkers := context.WithCancel(context.Background())
 	workersDone := make(chan struct{})
 	go func() {
-		apitest.Uploads(works).RunIngestWorkers(workerContext, 1, nil)
+		apitest.Uploads(works).RunUploadWorkers(workerContext, 1, nil)
 		close(workersDone)
 	}()
 	defer func() {
@@ -1092,14 +1092,14 @@ func TestIngestContinuesAfterTheUploadConnectionCloses(t *testing.T) {
 
 func TestANewOriginalFileKeepsThePublishedBytesAndDetails(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
 	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, []byte("first bytes")), session))
-	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
-		t.Fatalf("process ingest: %v", err)
+	if _, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil {
+		t.Fatalf("process upload: %v", err)
 	}
-	created := apitest.PollIngestWork(t, r, session, upload.Header().Get("Location"))
+	created := apitest.PollUploadWork(t, r, session, upload.Header().Get("Location"))
 	published := apitest.Send(t, r, apitest.Authorized(httptest.NewRequest(
 		http.MethodPost, "/v1/works/"+created.ID+"/publish", nil,
 	), session))
@@ -1114,11 +1114,11 @@ func TestANewOriginalFileKeepsThePublishedBytesAndDetails(t *testing.T) {
 	if uploaded.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want 202. body: %s", uploaded.Code, uploaded.Body.String())
 	}
-	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil {
 		t.Fatalf("process revision: %v", err)
 	}
 	apitest.AcceptReplacementPreview(t, r, session, created.ID, uploaded.Header().Get("Location"))
-	updated := apitest.PollIngestWork(t, r, session, uploaded.Header().Get("Location"))
+	updated := apitest.PollUploadWork(t, r, session, uploaded.Header().Get("Location"))
 	if updated.ID != created.ID {
 		t.Fatalf("revision made work %s, want %s", updated.ID, created.ID)
 	}
@@ -1146,14 +1146,14 @@ func servedSourcePath(t *testing.T, r *gin.Engine, workID string) string {
 
 func TestAnOriginalFileForSomebodyElsesWorkIsNotFound(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Evening Theme")
 	metadata["filename"] = "evening.lumitheme"
 	upload := apitest.Send(t, r, apitest.Authorized(apitest.UploadRequest(t, metadata, []byte("first bytes")), session))
-	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
-		t.Fatalf("process ingest: %v", err)
+	if _, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil {
+		t.Fatalf("process upload: %v", err)
 	}
-	created := apitest.PollIngestWork(t, r, session, upload.Header().Get("Location"))
+	created := apitest.PollUploadWork(t, r, session, upload.Header().Get("Location"))
 
 	stranger := apitest.Send(t, r, apitest.OriginalFileRequest(t, created.ID, "evening.lumitheme", []byte("second")))
 	if stranger.Code != http.StatusUnauthorized {

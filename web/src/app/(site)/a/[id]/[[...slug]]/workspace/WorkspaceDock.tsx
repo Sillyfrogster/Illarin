@@ -54,11 +54,11 @@ export function WorkspaceDock({
           <DockTool icon={Command} label="Go to content" onClick={onJump} />
           {waiting > 0 ? (
             <DockTool
-              active={workspace.pane?.kind === "vault"}
+              active={workspace.pane?.kind === "found-images"}
               count={waiting}
               icon={Images}
-              label={`${waiting} ${waiting === 1 ? "picture" : "pictures"} waiting from the README`}
-              onClick={() => workspace.openPane({ kind: "vault" })}
+              label={`${waiting} found ${waiting === 1 ? "image" : "images"} waiting`}
+              onClick={() => workspace.openPane({ kind: "found-images" })}
             />
           ) : null}
           <DockTool

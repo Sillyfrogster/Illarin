@@ -34,7 +34,7 @@ type Service struct {
 	reg     *format.Registry
 	store   storage.Store
 	media   *mediaproc.Library
-	ingest  IngestSettings
+	upload  UploadSettings
 	signer  dispatch.Key
 	now     func() time.Time
 	siteURL string
@@ -54,7 +54,7 @@ func (s *Service) BeginReadSnapshot(ctx context.Context) (pgx.Tx, error) {
 	return tx, nil
 }
 
-type IngestSettings struct {
+type UploadSettings struct {
 	ProbeLimits            format.Limits
 	LeaseDuration          time.Duration
 	RetryBase              time.Duration
@@ -65,8 +65,8 @@ type IngestSettings struct {
 
 type MediaProcessor = mediaproc.Renderer
 
-func DefaultIngestSettings() IngestSettings {
-	return IngestSettings{
+func DefaultUploadSettings() UploadSettings {
+	return UploadSettings{
 		ProbeLimits:   format.DefaultLimits(),
 		LeaseDuration: 30 * time.Second,
 		RetryBase:     time.Second,
@@ -76,7 +76,7 @@ func DefaultIngestSettings() IngestSettings {
 }
 
 func NewService(pool *pgxpool.Pool, reg *format.Registry, store storage.Store) *Service {
-	return NewServiceWithIngestSettings(pool, reg, store, DefaultIngestSettings())
+	return NewServiceWithUploadSettings(pool, reg, store, DefaultUploadSettings())
 }
 
 func NewServiceWithProbeLimits(
@@ -85,9 +85,9 @@ func NewServiceWithProbeLimits(
 	store storage.Store,
 	limits format.Limits,
 ) *Service {
-	settings := DefaultIngestSettings()
+	settings := DefaultUploadSettings()
 	settings.ProbeLimits = limits
-	return NewServiceWithIngestSettings(pool, reg, store, settings)
+	return NewServiceWithUploadSettings(pool, reg, store, settings)
 }
 
 func NewServiceForSite(
@@ -98,19 +98,19 @@ func NewServiceForSite(
 	siteURL string,
 	accountStorageCapBytes int64,
 ) *Service {
-	settings := DefaultIngestSettings()
+	settings := DefaultUploadSettings()
 	settings.ProbeLimits = limits
 	settings.AccountStorageCapBytes = accountStorageCapBytes
-	service := NewServiceWithIngestSettings(pool, reg, store, settings)
+	service := NewServiceWithUploadSettings(pool, reg, store, settings)
 	service.siteURL = strings.TrimRight(siteURL, "/")
 	return service
 }
 
-func NewServiceWithIngestSettings(
+func NewServiceWithUploadSettings(
 	pool *pgxpool.Pool,
 	reg *format.Registry,
 	store storage.Store,
-	settings IngestSettings,
+	settings UploadSettings,
 ) *Service {
 	return NewServiceWithMediaProcessor(
 		pool, reg, store, settings,
@@ -134,7 +134,7 @@ func NewServiceWithMediaProcessor(
 	pool *pgxpool.Pool,
 	reg *format.Registry,
 	store storage.Store,
-	settings IngestSettings,
+	settings UploadSettings,
 	processor MediaProcessor,
 ) *Service {
 	workers := settings.MediaWorkers
@@ -144,7 +144,7 @@ func NewServiceWithMediaProcessor(
 	return &Service{
 		pool: pool, reg: reg, store: store,
 		media:  mediaproc.NewLibrary(store, processor, workers),
-		ingest: settings, signer: dispatch.NewKey(), now: time.Now,
+		upload: settings, signer: dispatch.NewKey(), now: time.Now,
 	}
 }
 
@@ -154,7 +154,7 @@ func (s *Service) EnsureAccountStorage(
 	ownerID uuid.UUID,
 	candidates []uuid.UUID,
 ) error {
-	capBytes := s.ingest.AccountStorageCapBytes
+	capBytes := s.upload.AccountStorageCapBytes
 	if capBytes <= 0 || len(candidates) == 0 {
 		return nil
 	}
@@ -263,8 +263,8 @@ func (s *Service) Store() storage.Store {
 	return s.store
 }
 
-func (s *Service) IngestSettings() IngestSettings {
-	return s.ingest
+func (s *Service) UploadSettings() UploadSettings {
+	return s.upload
 }
 
 func (s *Service) Pool() *pgxpool.Pool {

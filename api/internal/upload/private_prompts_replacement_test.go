@@ -77,7 +77,7 @@ func TestAPrivatePlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 	}, "setup")
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, privatePromptModule{parsed: &parsed}))
 	owner := originalFileOwner(t, svc, "private.owner")
-	created := ingestOne(t, svc, owner, "loom.json", []byte(`{"payload":true}`))
+	created := uploadOne(t, svc, owner, "loom.json", []byte(`{"payload":true}`))
 	publishImported(t, svc, owner, created)
 
 	arriving := block.NewItemID()
@@ -90,7 +90,7 @@ func TestAPrivatePlaceholderTakesTheWordingTheWorkAlreadyHolds(t *testing.T) {
 	parsed = replacement
 
 	operation := stageReplacementFile(t, svc, owner, created.ID)
-	if operation.Status != IngestPreview {
+	if operation.Status != UploadPreview {
 		t.Fatalf("staged = %+v", operation)
 	}
 	if operation.Preview.PrivatePrompts != 1 {
@@ -121,7 +121,7 @@ func TestAPrivatePlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.
 	}, "setup")
 	svc, _ := newTestServiceWithRegistry(t, registryWithModule(t, privatePromptModule{parsed: &parsed}))
 	owner := originalFileOwner(t, svc, "unfillable.owner")
-	created := ingestOne(t, svc, owner, "loom.json", []byte(`{"payload":true}`))
+	created := uploadOne(t, svc, owner, "loom.json", []byte(`{"payload":true}`))
 	publishImported(t, svc, owner, created)
 
 	arriving := block.NewItemID()
@@ -134,7 +134,7 @@ func TestAPrivatePlaceholderWithNoWordingAnywhereCanBeReviewedByName(t *testing.
 	parsed = replacement
 
 	operation := stageReplacementFile(t, svc, owner, created.ID)
-	if operation.Status != IngestPreview || operation.Preview == nil {
+	if operation.Status != UploadPreview || operation.Preview == nil {
 		t.Fatalf("staged = %+v, want a replacement preview", operation)
 	}
 	if !slices.Equal(operation.Preview.MissingWording, []string{"Late addition"}) {
@@ -164,10 +164,10 @@ func stageReplacementFile(t *testing.T, svc *Service, owner, workID uuid.UUID) O
 	if err != nil {
 		t.Fatalf("AcceptOriginalFile: %v", err)
 	}
-	if processed, err := svc.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("ProcessNextIngest = %v, %v", processed, err)
+	if processed, err := svc.ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("ProcessNextUpload = %v, %v", processed, err)
 	}
-	staged, err := svc.GetIngest(context.Background(), owner, operation.ID)
+	staged, err := svc.GetUpload(context.Background(), owner, operation.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

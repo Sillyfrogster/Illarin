@@ -19,7 +19,7 @@ const (
 	shownSections = 3
 )
 
-// seedFromReadme turns a README into blocks and holds its pictures in the vault when a work is first made
+// seedFromReadme turns a README into blocks and holds its pictures in found images when a work is first made
 func (s *Service) seedFromReadme(ctx context.Context, file format.Inspection, read preparedImport) (preparedImport, error) {
 	source := read.Parsed.Readme
 	if source == nil {
@@ -35,13 +35,13 @@ func (s *Service) seedFromReadme(ctx context.Context, file format.Inspection, re
 	for index := range blocks {
 		blocks[index].Position = index
 	}
-	prepared, vault, err := s.readmePictures(ctx, file, page, held, targets)
+	prepared, foundImages, err := s.readmePictures(ctx, file, page, held, targets)
 	if err != nil {
 		return preparedImport{}, err
 	}
 	read.Blocks = blocks
 	read.Media = append(read.Media, prepared...)
-	read.Vault = vault
+	read.FoundImages = foundImages
 	return read, nil
 }
 
@@ -59,7 +59,7 @@ func (s *Service) readmePictures(
 	ctx context.Context, file format.Inspection, page readmePage, held map[string]uint32, targets []*uuid.UUID,
 ) ([]work.PreparedMedia, []WaitingPicture, error) {
 	var prepared []work.PreparedMedia
-	var vault []WaitingPicture
+	var foundImages []WaitingPicture
 	if page.Cover != nil {
 		cover, ok, err := s.seededPicture(ctx, file, held[page.Cover.Entry], work.MediaAvatar)
 		if err != nil {
@@ -86,18 +86,18 @@ func (s *Service) readmePictures(
 				id, stored[image.Entry] = picture.ID, picture.ID
 			}
 			media := id
-			vault = append(vault, WaitingPicture{
+			foundImages = append(foundImages, WaitingPicture{
 				ID: uuid.New(), MediaID: &media, Address: image.Entry, Name: image.Name,
 				BlockID: target, Section: section.Title,
 			})
 		}
 		for _, picture := range section.Remote {
-			vault = append(vault, WaitingPicture{
+			foundImages = append(foundImages, WaitingPicture{
 				ID: uuid.New(), Address: picture.Address, Name: picture.Name, BlockID: target, Section: section.Title,
 			})
 		}
 	}
-	return prepared, vault, nil
+	return prepared, foundImages, nil
 }
 
 func (s *Service) seededPicture(

@@ -78,7 +78,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (work.Work, error)
 	if err := block.Insert(ctx, tx, a.ID, blocks); err != nil {
 		return work.Work{}, err
 	}
-	if err := insertVaultPictures(ctx, tx, a.ID, read.Vault); err != nil {
+	if err := insertFoundImages(ctx, tx, a.ID, read.FoundImages); err != nil {
 		return work.Work{}, err
 	}
 	if err := replacePreservedData(ctx, tx, a.ID, parsed.Remainder); err != nil {

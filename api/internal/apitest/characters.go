@@ -73,13 +73,13 @@ func PublishCharacter(t *testing.T, r http.Handler, session *http.Cookie, workID
 	}
 }
 
-func (h Harness) NewCharacterIngestRouter(t *testing.T) (*gin.Engine, *http.Cookie, *work.Service) {
+func (h Harness) NewCharacterUploadRouter(t *testing.T) (*gin.Engine, *http.Cookie, *work.Service) {
 	t.Helper()
-	router, session, works, _ := h.NewCharacterIngestRouterWithPool(t)
+	router, session, works, _ := h.NewCharacterUploadRouterWithPool(t)
 	return router, session, works
 }
 
-func (h Harness) NewCharacterIngestRouterWithPool(
+func (h Harness) NewCharacterUploadRouterWithPool(
 	t *testing.T,
 ) (*gin.Engine, *http.Cookie, *work.Service, *pgxpool.Pool) {
 	t.Helper()
@@ -89,7 +89,7 @@ func (h Harness) NewCharacterIngestRouterWithPool(
 			t.Fatalf("register %s: %v", module.ID(), err)
 		}
 	}
-	return h.NewVerifiedIngestRouterWithPool(t, registry)
+	return h.NewVerifiedUploadRouterWithPool(t, registry)
 }
 
 func SummaryComputedAt(t *testing.T, pool *pgxpool.Pool, workID string) time.Time {
@@ -118,7 +118,7 @@ func UploadedCharacterID(
 	metadata := ExampleMetadata("Ana")
 	metadata["filename"] = "ana.json"
 	metadata["_keepDraft"] = true
-	return WorkIDFromIngest(t, UploadAndFinish(t, r, session, works, metadata, []byte(card)))
+	return WorkIDFromUpload(t, UploadAndFinish(t, r, session, works, metadata, []byte(card)))
 }
 
 func NamespacesOf(t *testing.T, raw json.RawMessage) map[string]json.RawMessage {

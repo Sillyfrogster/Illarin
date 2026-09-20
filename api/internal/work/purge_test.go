@@ -185,7 +185,7 @@ func TestPurgedBytesCannotBeStoredAgain(t *testing.T) {
 	if err := storage.NewSweeper(pool, store).Purge(ctx, stored.Digest, "illegal_content", actorID); err != nil {
 		t.Fatalf("purge: %v", err)
 	}
-	_, err = apitest.Uploads(service).AcceptIngest(ctx, upload.IngestInput{
+	_, err = apitest.Uploads(service).AcceptUpload(ctx, upload.UploadInput{
 		OwnerID: ownerID, Filename: "same.bin", File: bytes.NewReader([]byte("bytes that stay gone")),
 	})
 	if !errors.Is(err, storage.ErrTombstoned) {

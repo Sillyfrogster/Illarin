@@ -9,9 +9,9 @@ import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
   fetchWaitingReplacement,
   fetchWork,
-  type IngestOperation,
   publishWork,
   type ReadinessItem,
+  type UploadOperation,
   type VersionChangeGroup,
 } from "@/lib/api/query";
 import {
@@ -45,7 +45,7 @@ export function PublishRail({
   const router = useRouter();
   const [step, setStep] = useState<Step>("home");
   const [changed, setChanged] = useState(unpublishedChanges);
-  const [waiting, setWaiting] = useState<IngestOperation | null>(null);
+  const [waiting, setWaiting] = useState<UploadOperation | null>(null);
   const [applied, setApplied] = useState<VersionChangeGroup[] | null>(null);
 
   useEffect(() => setChanged(unpublishedChanges), [unpublishedChanges]);

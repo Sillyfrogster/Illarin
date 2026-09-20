@@ -94,7 +94,7 @@ func TestDraftedChangesMediaIsPrivateOnAPublishedWork(t *testing.T) {
 
 func TestPrivatePromptTextDoesNotReachASend(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, apitest.Registry(t))
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, apitest.Registry(t))
 	id := apitest.PublishPrivatePromptPreset(t, router, session, "Recorded preset", "Recorded secret")
 	owner := apitest.FetchStartedWork(t, router, session, id)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))

@@ -250,7 +250,7 @@ func TestLoadRejectsIncompleteMicrosoft365Settings(t *testing.T) {
 	}
 }
 
-func TestLoadUsesSettledIngestLimits(t *testing.T) {
+func TestLoadUsesSettledUploadLimits(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
@@ -261,7 +261,7 @@ func TestLoadUsesSettledIngestLimits(t *testing.T) {
 		"MAX_ARCHIVE_ENTRY_BYTES",
 		"MAX_ARCHIVE_BYTES",
 		"MAX_ARCHIVE_COMPRESSION_RATIO",
-		"INGEST_WORKERS",
+		"UPLOAD_WORKERS",
 		"STORAGE_FREE_SPACE_RESERVE_BYTES",
 		"ACCOUNT_STORAGE_CAP_BYTES",
 	} {
@@ -287,8 +287,8 @@ func TestLoadUsesSettledIngestLimits(t *testing.T) {
 	if cfg.ProbeLimits.MaxCompressionRatio != 100 {
 		t.Errorf("compression ratio = %v, want 100", cfg.ProbeLimits.MaxCompressionRatio)
 	}
-	if cfg.IngestWorkers != 2 {
-		t.Errorf("ingest workers = %d, want 2", cfg.IngestWorkers)
+	if cfg.UploadWorkers != 2 {
+		t.Errorf("upload workers = %d, want 2", cfg.UploadWorkers)
 	}
 	if cfg.StorageFreeSpaceReserveBytes != 5<<30 {
 		t.Errorf("storage reserve = %d, want 5 GB", cfg.StorageFreeSpaceReserveBytes)
@@ -298,7 +298,7 @@ func TestLoadUsesSettledIngestLimits(t *testing.T) {
 	}
 }
 
-func TestLoadReadsIngestLimitOverrides(t *testing.T) {
+func TestLoadReadsUploadLimitOverrides(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
@@ -308,7 +308,7 @@ func TestLoadReadsIngestLimitOverrides(t *testing.T) {
 	t.Setenv("MAX_ARCHIVE_ENTRY_BYTES", "103")
 	t.Setenv("MAX_ARCHIVE_BYTES", "104")
 	t.Setenv("MAX_ARCHIVE_COMPRESSION_RATIO", "10.5")
-	t.Setenv("INGEST_WORKERS", "3")
+	t.Setenv("UPLOAD_WORKERS", "3")
 	t.Setenv("STORAGE_FREE_SPACE_RESERVE_BYTES", "105")
 	t.Setenv("ACCOUNT_STORAGE_CAP_BYTES", "106")
 
@@ -318,8 +318,8 @@ func TestLoadReadsIngestLimitOverrides(t *testing.T) {
 	}
 	if cfg.MaxUploadBytes != 101 || cfg.ProbeLimits.MaxArchiveEntries != 102 ||
 		cfg.ProbeLimits.MaxEntryBytes != 103 || cfg.ProbeLimits.MaxArchiveBytes != 104 ||
-		cfg.ProbeLimits.MaxCompressionRatio != 10.5 || cfg.IngestWorkers != 3 ||
+		cfg.ProbeLimits.MaxCompressionRatio != 10.5 || cfg.UploadWorkers != 3 ||
 		cfg.StorageFreeSpaceReserveBytes != 105 || cfg.AccountStorageCapBytes != 106 {
-		t.Fatalf("overridden ingest settings = %+v", cfg)
+		t.Fatalf("overridden upload settings = %+v", cfg)
 	}
 }

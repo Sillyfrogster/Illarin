@@ -56,5 +56,5 @@ func (s *Service) AcceptOriginalFile(ctx context.Context, in OriginalFileInput, 
 	if err := tx.Commit(ctx); err != nil {
 		return Operation{}, fmt.Errorf("commit accepting the original file: %w", err)
 	}
-	return Operation{ID: id, Status: IngestPending}, nil
+	return Operation{ID: id, Status: UploadPending}, nil
 }

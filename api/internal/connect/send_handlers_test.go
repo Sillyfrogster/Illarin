@@ -88,7 +88,7 @@ func TestSendingAWorkReleasesItInTheFormatTheConnectedAppAccepts(t *testing.T) {
 
 func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
 	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"invented_by_the_client"})

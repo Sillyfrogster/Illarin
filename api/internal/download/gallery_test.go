@@ -23,7 +23,7 @@ type carriedImage struct {
 
 func TestASavedGalleryImageTravelsInEveryFormatThatCarriesIt(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	first, second := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
 	giveGallery(t, r, session, workID, map[string][]byte{
@@ -187,7 +187,7 @@ func archivedCardImages(t *testing.T, archive []byte) []carriedImage {
 
 func TestTheCreatorChoosesWhichGalleryImagesTravelByDefault(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	kept, left := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
 	gallery := savedGallery(t, r, session, workID, []galleryItem{
@@ -210,7 +210,7 @@ func TestTheCreatorChoosesWhichGalleryImagesTravelByDefault(t *testing.T) {
 
 func TestAReaderChoosesImagesForOneDownloadAndChangesNothingStored(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	kept, left := apitest.PNG(t, 64, 64), apitest.PNG(t, 48, 48)
 	gallery := savedGallery(t, r, session, workID, []galleryItem{
@@ -243,7 +243,7 @@ func TestAReaderChoosesImagesForOneDownloadAndChangesNothingStored(t *testing.T)
 
 func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 	t.Parallel()
-	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, pool := harness.NewCharacterUploadRouterWithPool(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	gallery := savedGallery(t, r, session, workID, []galleryItem{
 		{name: "Kept", file: apitest.PNG(t, 64, 64)},
@@ -296,7 +296,7 @@ func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 
 func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 	t.Parallel()
-	r, session, works, pool := harness.NewCharacterIngestRouterWithPool(t)
+	r, session, works, pool := harness.NewCharacterUploadRouterWithPool(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	gallery := savedGallery(t, r, session, workID, []galleryItem{
 		{name: "Huge", file: apitest.PNG(t, 64, 64)},
@@ -330,7 +330,7 @@ func TestAnOversizedChoiceIsRefusedWholeRatherThanTrimmed(t *testing.T) {
 
 func TestAnExpressionImageIsNotOfferedTheGallerysDownloadChoice(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	mediaID := apitest.UploadedImageID(t, r, session, workID, "expression", apitest.PNG(t, 64, 64))
 
@@ -348,7 +348,7 @@ func TestAnExpressionImageIsNotOfferedTheGallerysDownloadChoice(t *testing.T) {
 
 func TestTheOwnerAndAReaderAreToldTheSameAboutTheGallery(t *testing.T) {
 	t.Parallel()
-	r, session, works := harness.NewCharacterIngestRouter(t)
+	r, session, works := harness.NewCharacterUploadRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
 	savedGallery(t, r, session, workID, []galleryItem{
 		{name: "Kept", file: apitest.PNG(t, 64, 64)},

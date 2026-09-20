@@ -19,8 +19,8 @@ import (
 
 func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
 		t, router, session, works,
 		withFilename(apitest.ExampleMetadata("Recoverable garden"), "recoverable-garden"),
 		[]byte("the retained source"),
@@ -141,9 +141,9 @@ func TestPrivatePromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 
 func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	file := []byte("bytes that cannot return")
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
 		t, router, session, works,
 		withFilename(apitest.ExampleMetadata("Gone for good"), "gone-for-good"), file,
 	))
@@ -186,8 +186,8 @@ func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 
 func TestDeletedListingBelongsOnlyToItsOwner(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
-	workID := apitest.WorkIDFromIngest(t, apitest.UploadAndFinish(
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
 		t, router, session, works,
 		withFilename(apitest.ExampleMetadata("Private recovery"), "private-recovery"), []byte("source"),
 	))

@@ -23,7 +23,7 @@ func TestUploadAcceptsVisibilityAndDefaultsToListed(t *testing.T) {
 		{name: "explicit unlisted", visibility: work.VisibilityUnlisted, want: "unlisted"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+			router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 			workID := apitest.UploadVisibilityTestWork(t, router, session, works, test.visibility)
 
 			page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID)
@@ -36,7 +36,7 @@ func TestUploadAcceptsVisibilityAndDefaultsToListed(t *testing.T) {
 
 func TestCreatorChangesWorkVisibility(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
@@ -58,7 +58,7 @@ func TestCreatorChangesWorkVisibility(t *testing.T) {
 
 func TestChangingVisibilityRequiresTheCreator(t *testing.T) {
 	t.Parallel()
-	router, session, works := harness.NewVerifiedIngestRouter(t, format.NewRegistry())
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 
 	changed := apitest.Send(t, router, httptest.NewRequest(
@@ -73,7 +73,7 @@ func TestChangingVisibilityRequiresTheCreator(t *testing.T) {
 
 func TestWithheldWorkVisibilityIsFrozen(t *testing.T) {
 	t.Parallel()
-	router, session, works, pool := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
 	var ownerID uuid.UUID
 	if err := pool.QueryRow(context.Background(),

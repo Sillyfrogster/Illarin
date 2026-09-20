@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { fetchVault, type VaultPicture } from "@/lib/api/query";
+import { type FoundImage, fetchFoundImages } from "@/lib/api/query";
 
-/** useVault keeps the pictures waiting for the creator, read once the workspace opens. */
-export function useVault(workId: string, enabled: boolean) {
-  const [pictures, setPictures] = useState<VaultPicture[]>([]);
+/** useFoundImages keeps the pictures waiting for the creator, read once the workspace opens. */
+export function useFoundImages(workId: string, enabled: boolean) {
+  const [pictures, setPictures] = useState<FoundImage[]>([]);
 
   const reload = useCallback(() => {
     let live = true;
-    fetchVault(workId)
+    fetchFoundImages(workId)
       .then((found) => {
         if (live) setPictures(found);
       })

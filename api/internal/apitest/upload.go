@@ -87,8 +87,8 @@ func UploadAndFinish(
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("upload status = %d, want 202. body: %s", accepted.Code, accepted.Body.String())
 	}
-	if processed, err := Uploads(works).ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("process ingest = %v, %v; want true, nil", processed, err)
+	if processed, err := Uploads(works).ProcessNextUpload(context.Background()); err != nil || !processed {
+		t.Fatalf("process upload = %v, %v; want true, nil", processed, err)
 	}
 	finished := Send(t, r, Authorized(
 		httptest.NewRequest(http.MethodGet, accepted.Header().Get("Location"), nil), session,
@@ -139,7 +139,7 @@ func MediaUploadRequest(t *testing.T, workID, role string, file []byte) *http.Re
 	return request
 }
 
-func WorkIDFromIngest(t *testing.T, response *httptest.ResponseRecorder) string {
+func WorkIDFromUpload(t *testing.T, response *httptest.ResponseRecorder) string {
 	t.Helper()
 	var operation struct {
 		Work *struct {
@@ -147,10 +147,10 @@ func WorkIDFromIngest(t *testing.T, response *httptest.ResponseRecorder) string 
 		} `json:"work"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &operation); err != nil {
-		t.Fatalf("decode ingest response: %v", err)
+		t.Fatalf("decode upload response: %v", err)
 	}
 	if operation.Work == nil {
-		t.Fatalf("ingest response has no work: %s", response.Body.String())
+		t.Fatalf("upload response has no work: %s", response.Body.String())
 	}
 	return operation.Work.ID
 }
@@ -170,7 +170,7 @@ func UploadVisibilityTestWork(
 	} else {
 		metadata["visibility"] = visibility
 	}
-	return WorkIDFromIngest(
+	return WorkIDFromUpload(
 		t, UploadAndFinish(t, router, session, works, metadata, []byte("theme")),
 	)
 }
@@ -223,9 +223,9 @@ func UploadExtension(t *testing.T, r http.Handler, session *http.Cookie, works *
 	metadata["_keepDraft"] = true
 	finished := UploadAndFinish(t, r, session, works, metadata, file)
 	if !strings.Contains(finished.Body.String(), `"success"`) {
-		t.Fatalf("extension ingest did not succeed: %s", finished.Body.String())
+		t.Fatalf("extension upload did not succeed: %s", finished.Body.String())
 	}
-	return WorkIDFromIngest(t, finished)
+	return WorkIDFromUpload(t, finished)
 }
 
 // ExtensionZip packs files into a ZIP archive
@@ -248,8 +248,8 @@ func ExtensionZip(t *testing.T, files map[string]string) []byte {
 	return file.Bytes()
 }
 
-// PollIngestWork reads a finished upload and fails the test unless it made a work
-func PollIngestWork(t *testing.T, r *gin.Engine, session *http.Cookie, location string) struct {
+// PollUploadWork reads a finished upload and fails the test unless it made a work
+func PollUploadWork(t *testing.T, r *gin.Engine, session *http.Cookie, location string) struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 } {

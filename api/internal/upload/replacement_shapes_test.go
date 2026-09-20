@@ -8,8 +8,8 @@ import (
 
 func TestAStoredReplacementPreviewReturnsArraysInsteadOfNull(t *testing.T) {
 	t.Parallel()
-	response := toAPIIngest(Operation{
-		Status:  IngestPreview,
+	response := toAPIUpload(Operation{
+		Status:  UploadPreview,
 		Preview: &Preview{},
 	})
 	preview := response["preview"].(gin.H)

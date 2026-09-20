@@ -123,7 +123,7 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 
 func TestRestorationKeepsTheCurrentPrivatePromptsAndAllowedApps(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, apitest.LumiverseRegistry(t))
+	r, session, _, _ := harness.NewVerifiedUploadRouterWithPool(t, apitest.LumiverseRegistry(t))
 	publicID, privateID := uuid.New(), uuid.New()
 	started := apitest.PublishTwoPromptPreset(t, r, session, publicID, privateID,
 		"First public prompt.", "First private prompt.")
@@ -256,7 +256,7 @@ func TestCorrectingNotesMarksTheEditWithoutPublishingContent(t *testing.T) {
 
 func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsContent(t *testing.T) {
 	t.Parallel()
-	r, session, _, _ := harness.NewVerifiedIngestRouterWithPool(t, format.NewRegistry())
+	r, session, _, _ := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	started := apitest.StartCharacter(t, r, session)
 	apitest.WriteCharacterFloor(t, r, session, started)
 	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {

@@ -194,7 +194,7 @@ func TestAReplacementArchiveRefreshesTheElementsFromTheFileAndTheVersionNumber(t
 	if uploaded.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement = %d: %s", uploaded.Code, uploaded.Body.String())
 	}
-	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
 	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))
@@ -257,7 +257,7 @@ func TestAnExtensionPageListsWhatItsCodeAddsUntilANewArchiveSaysOtherwise(t *tes
 	if uploaded.Code != http.StatusAccepted {
 		t.Fatalf("upload the replacement = %d: %s", uploaded.Code, uploaded.Body.String())
 	}
-	if _, err := apitest.Uploads(works).ProcessNextIngest(context.Background()); err != nil {
+	if _, err := apitest.Uploads(works).ProcessNextUpload(context.Background()); err != nil {
 		t.Fatalf("process the replacement: %v", err)
 	}
 	apitest.AcceptReplacementPreview(t, r, session, workID, uploaded.Header().Get("Location"))
@@ -341,10 +341,10 @@ func TestAnUnsafeOrInvalidExtensionArchiveIsRefused(t *testing.T) {
 				} `json:"failure"`
 			}
 			if err := json.Unmarshal(finished.Body.Bytes(), &operation); err != nil {
-				t.Fatalf("decode the ingest: %v", err)
+				t.Fatalf("decode the upload: %v", err)
 			}
 			if operation.Status != "failed" || operation.Failure == nil || operation.Failure.Reason != tc.reason {
-				t.Fatalf("ingest = %s, want failed with %s", finished.Body.String(), tc.reason)
+				t.Fatalf("upload = %s, want failed with %s", finished.Body.String(), tc.reason)
 			}
 		})
 	}

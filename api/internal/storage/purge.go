@@ -68,7 +68,7 @@ func (s *Sweeper) preparePurge(
 		       lease_token = null, lease_expires_at = null, updated_at = $2
 		 where blob_id = $1 and status <> 'success'
 	`, blobID, now); err != nil {
-		return uuid.Nil, fmt.Errorf("break purged ingest references: %w", err)
+		return uuid.Nil, fmt.Errorf("break purged upload references: %w", err)
 	}
 	for _, statement := range []string{
 		`update work_media set blob_id = null where blob_id = $1`,

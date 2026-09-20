@@ -273,7 +273,7 @@ func WithReviewedVersion(t *testing.T, r http.Handler, req *http.Request) {
 		return
 	}
 	switch parts[3] {
-	case "details", "blocks", "publish", "versions", "preserved", "media", "original-file", "vault":
+	case "details", "blocks", "publish", "versions", "preserved", "media", "original-file", "found-images":
 	default:
 		return
 	}
