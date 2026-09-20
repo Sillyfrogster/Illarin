@@ -26,9 +26,9 @@ export function cardTitleSize(title: string): number {
 
 export function markImage(fill: string): string {
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">` +
-    `<g fill="${fill}" transform="translate(16 8)"><path d="${MARK_PATH}"/>` +
-    `<path d="${MARK_PATH}" transform="translate(112 0) scale(-1 1)"/></g></svg>`;
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 440">` +
+    `<g fill="${fill}" transform="translate(0 70)"><path d="${MARK_PATH}"/>` +
+    `</g></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
