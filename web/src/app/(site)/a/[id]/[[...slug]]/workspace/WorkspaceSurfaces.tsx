@@ -24,8 +24,8 @@ import {
   PrivatePromptsControl,
 } from "../PrivatePromptsControl";
 import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
+import { TakedownControl } from "../TakedownControl";
 import { VisibilityControl } from "../VisibilityControl";
-import { WithholdControl } from "../WithholdControl";
 import { AddBlock } from "./AddBlock";
 import { FoundImagesPanel } from "./FoundImagesPanel";
 import { useFoundImages } from "./found-images";
@@ -46,7 +46,7 @@ export type WorkspaceSurfacesProps = {
   preservedPrompts?: number;
   hasPrivatePrompts: boolean;
   unpublishedChanges: boolean;
-  withheld: boolean;
+  takenDown: boolean;
 };
 
 export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
@@ -55,8 +55,8 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const reduced = useReducedMotion();
   const [jumping, setJumping] = useState(false);
   const foundImages = useFoundImages(workspace.workId, workspace.isOwner);
-  const canWithhold = Boolean(
-    account?.role === "admin" && !workspace.isDraft && !props.withheld,
+  const canTakeDown = Boolean(
+    account?.role === "admin" && !workspace.isDraft && !props.takenDown,
   );
   const _previewing =
     workspace.isOwner && !workspace.editing && workspace.sweep > 0;
@@ -127,7 +127,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 
   return (
     <>
-      {!workspace.isOwner && canWithhold && workspace.pane === null ? (
+      {!workspace.isOwner && canTakeDown && workspace.pane === null ? (
         <button
           className="fixed right-4 bottom-4 z-30 inline-flex min-h-11 items-center gap-2 rounded-control bg-ink px-4 text-meta font-medium text-field shadow-popover outline-offset-3"
           onClick={() => workspace.openPane({ kind: "access" })}
@@ -281,7 +281,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
               {workspace.isOwner && !workspace.isDraft ? (
                 <VisibilityControl
                   workId={workspace.workId}
-                  frozen={props.withheld}
+                  frozen={props.takenDown}
                   initialVisibility={props.visibility}
                   typeName={props.typeName}
                 />
@@ -304,13 +304,13 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
                 <DeleteControl
                   workId={workspace.workId}
                   creator={props.creator}
-                  frozen={props.withheld}
+                  frozen={props.takenDown}
                   isDraft={workspace.isDraft}
                   typeName={props.typeName}
                 />
               ) : null}
-              {canWithhold ? (
-                <WithholdControl
+              {canTakeDown ? (
+                <TakedownControl
                   workId={workspace.workId}
                   creator={props.creator}
                   typeName={props.typeName}

@@ -100,7 +100,7 @@ export default async function WorkPage({
           preservedPrompts={work.preservedPrompts}
           hasPrivatePrompts={work.hasPrivatePrompts}
           unpublishedChanges={Boolean(work.unpublishedChanges)}
-          withheld={Boolean(work.withhold)}
+          takenDown={Boolean(work.takedown)}
         />
       </WorkspaceProvider>
     </DraftedChangesProvider>

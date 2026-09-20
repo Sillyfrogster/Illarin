@@ -19,7 +19,7 @@ const NOW = new Date("2026-09-14T12:00:00Z");
 function entry(overrides: Partial<Notification> = {}): Notification {
   return {
     id: "8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
-    type: "work_withheld",
+    type: "work_taken_down",
     createdAt: "2026-09-14T09:00:00Z",
     work: WORK,
     reason: "Copyright report under review",
@@ -31,9 +31,9 @@ function before(milliseconds: number): string {
   return new Date(NOW.getTime() - milliseconds).toISOString();
 }
 
-test("a withheld work says Illarin staff withheld it, gives the reason and opens the work", () => {
+test("a taken-down work says Illarin staff took it down, gives the reason and opens the work", () => {
   expect(notificationWords(entry())).toEqual({
-    lead: "Illarin staff withheld",
+    lead: "Illarin staff took down",
     subject: "Moonlit Archive",
     detail: "Copyright report under review",
     href: "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive",

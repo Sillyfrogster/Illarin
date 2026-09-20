@@ -41,7 +41,6 @@ export function publishAction(
 
 export function accountDestinations(
   account: SignedInAccount | null | undefined,
-  publicationAuthority: boolean,
   writer: boolean,
 ): AccountDestination[] {
   if (!account)
@@ -56,7 +55,7 @@ export function accountDestinations(
     ...(writer
       ? [{ id: "posts" as const, label: "Your posts", href: "/posts" }]
       : []),
-    ...(publicationAuthority
+    ...(account.role === "admin"
       ? [
           {
             id: "blog-admin" as const,

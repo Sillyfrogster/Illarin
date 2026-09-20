@@ -59,14 +59,14 @@ function connectedApp(over: Partial<WorkConnectedApp> = {}): WorkConnectedApp {
   };
 }
 
-test("only a published work that staff have not withheld can be sent to an installation", () => {
-  const withhold = {
+test("only a published work that staff have not taken down can be sent to an installation", () => {
+  const takedown = {
     reason: "Copyright report under review",
     actor: "night.staff",
     at: "2026-09-14T09:00:00Z",
   };
   expect(canSendWork({ lifecycle: "published" })).toBe(true);
-  expect(canSendWork({ lifecycle: "published", withhold })).toBe(false);
+  expect(canSendWork({ lifecycle: "published", takedown })).toBe(false);
   expect(canSendWork({ lifecycle: "draft" })).toBe(false);
 });
 

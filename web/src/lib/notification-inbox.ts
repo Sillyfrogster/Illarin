@@ -23,9 +23,9 @@ export function notificationWords(entry: Notification): NotificationWords {
   const workName = entry.work?.name ?? "One of your works";
   const workPage = entry.work ? workHref(entry.work.id, entry.work.name) : null;
   switch (entry.type) {
-    case "work_withheld":
+    case "work_taken_down":
       return {
-        lead: "Illarin staff withheld",
+        lead: "Illarin staff took down",
         subject: workName,
         detail: entry.reason ?? "",
         href: workPage,

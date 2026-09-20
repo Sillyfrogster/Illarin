@@ -51,7 +51,7 @@ export function DeleteControl({
           </h3>
           <p className="mt-1 text-meta text-mute">
             {frozen
-              ? `A withheld ${typeName} cannot be deleted.`
+              ? `A taken-down ${typeName} cannot be deleted.`
               : isDraft
                 ? "Every block and image goes with it. You can restore it from your profile for 30 days."
                 : "Its page and downloads stop now. You can restore it from your profile for 30 days."}

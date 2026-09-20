@@ -55,7 +55,6 @@ import type {
   PrivatePromptMismatchList,
   Profile,
   ProfileLink,
-  ProfileRestriction,
   PromptCorrespondenceRequest,
   PromptListContent,
   PublicPost,
@@ -67,6 +66,7 @@ import type {
   RecordListContent,
   ReplacementAcceptance,
   ReplacementPreview,
+  RestrictedProfile,
   RotatedBlogSecret,
   SaveWorkBlockRequest,
   ScriptListContent,
@@ -136,7 +136,7 @@ export type {
   PreservedData,
   Profile,
   ProfileLink,
-  ProfileRestriction,
+  RestrictedProfile,
   PromptCorrespondenceRequest,
   PromptListContent,
   PrivatePromptMismatch,
@@ -891,21 +891,21 @@ export async function fetchPostCategories(): Promise<BlogCategory[]> {
   return answer?.data?.categories ?? [];
 }
 
-export async function fetchProfileRestriction(
+export async function fetchRestrictedProfile(
   handle: string,
-): Promise<ProfileRestriction | null> {
-  const { data, error } = await api<ProfileRestriction>(
+): Promise<RestrictedProfile | null> {
+  const { data, error } = await api<RestrictedProfile>(
     "GET",
-    `/v1/profiles/${encodeURIComponent(handle)}/restriction`,
+    `/v1/profiles/${encodeURIComponent(handle)}/restricted`,
   );
   if (error || !data) return null;
   return data;
 }
 
 export async function restrictProfile(handle: string, reason: string) {
-  const { data, error } = await api<ProfileRestriction>(
+  const { data, error } = await api<RestrictedProfile>(
     "PUT",
-    `/v1/profiles/${encodeURIComponent(handle)}/restriction`,
+    `/v1/profiles/${encodeURIComponent(handle)}/restricted`,
     { body: { reason } },
   );
   if (error || !data) throw new Error("Could not restrict the profile");
@@ -915,16 +915,16 @@ export async function restrictProfile(handle: string, reason: string) {
 export async function restoreProfile(handle: string) {
   const { error } = await api<void>(
     "DELETE",
-    `/v1/profiles/${encodeURIComponent(handle)}/restriction`,
+    `/v1/profiles/${encodeURIComponent(handle)}/restricted`,
   );
   if (error) throw new Error("Could not restore the profile");
 }
 
-export async function withholdWork(id: string, reason: string) {
-  const { error } = await api<void>("PUT", `/v1/works/${id}/withhold`, {
+export async function takeDownWork(id: string, reason: string) {
+  const { error } = await api<void>("PUT", `/v1/works/${id}/takedown`, {
     body: { reason },
   });
-  if (error) throw new Error("Could not withhold the work");
+  if (error) throw new Error("Could not take down the work");
 }
 
 export async function deleteWork(id: string) {

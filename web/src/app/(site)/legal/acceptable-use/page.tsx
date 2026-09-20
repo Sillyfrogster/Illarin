@@ -186,7 +186,7 @@ const CLAUSES: LegalClause[] = [
           automated classifiers, and nothing you upload is scored by a machine.
         </p>
         <p>
-          We may withhold a work, which takes it out of Browse and makes it
+          We may take down a work, which takes it out of Browse and makes it
           answer as missing to everyone but its creator, who can still read it,
           download it, and see why. We may also remove work outright, suspend an
           account, or close one. What happens depends on how serious it is and
@@ -233,7 +233,7 @@ export default function AcceptableUse() {
         <>
           Illarin holds characters, lorebooks, presets, themes, and packs made
           by the people who use it. These rules apply to all of it, and to how
-          you behave here. Breaking them can mean your work is withheld or
+          you behave here. Breaking them can mean your work is taken down or
           removed, or your account is suspended or closed.
         </>
       }

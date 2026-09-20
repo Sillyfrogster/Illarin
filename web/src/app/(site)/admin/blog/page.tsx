@@ -1,5 +1,5 @@
 import { BlogAdmin } from "@/components/blog/admin/BlogAdmin";
-import { AuthorityPage } from "@/components/register/AuthorityPage";
+import { AdminPage } from "@/components/register/AdminPage";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
@@ -9,11 +9,11 @@ export const metadata = pageMetadata(
 
 export default function BlogAdminPage() {
   return (
-    <AuthorityPage
+    <AdminPage
       heading="Blog administration"
       hint="Manage blog writers, categories and announcements."
     >
       <BlogAdmin />
-    </AuthorityPage>
+    </AdminPage>
   );
 }

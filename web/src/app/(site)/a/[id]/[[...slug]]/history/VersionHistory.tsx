@@ -93,7 +93,7 @@ export function VersionHistory({
       : listed.find((v) => v.number === chosen);
   const owner: HistoryOwner = {
     workName: work.name,
-    canManage: Boolean(work.isOwner && !work.withhold),
+    canManage: Boolean(work.isOwner && !work.takedown),
     isOwner: work.isOwner,
     draftedChangesVersion: work.draftedChangesVersion ?? 0,
   };

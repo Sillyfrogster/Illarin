@@ -59,7 +59,7 @@ export function VisibilityControl({
           </h3>
           <p className="mt-1 text-meta text-mute">
             {frozen
-              ? `Locked while this ${typeName} is withheld. Only an admin can remove the withhold.`
+              ? `Locked while this ${typeName} is taken down. Only an admin can lift the takedown.`
               : listed
                 ? "Listed in Browse and on your public profile."
                 : "Not listed in Browse. Anyone with the link can still view and download it."}

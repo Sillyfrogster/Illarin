@@ -7,7 +7,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { LineLink } from "@/components/ui/line-link";
 import type { Profile } from "@/lib/api/query";
 import { siteUrl } from "@/lib/site-metadata";
-import { RestrictionControl } from "./RestrictionControl";
+import { RestrictedControl } from "./RestrictedControl";
 
 function Portrait({ profile }: { profile: Profile }) {
   return (
@@ -131,7 +131,7 @@ export function ProfileBanner({
         </div>
       </div>
 
-      <RestrictionControl
+      <RestrictedControl
         handle={profile.handle}
         restricted={profile.restricted}
       />

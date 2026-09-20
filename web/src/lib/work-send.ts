@@ -36,9 +36,9 @@ export const DOWNLOAD_DESTINATION = "file";
 
 /** canSendWork says whether the API will send this work to a connected app. */
 export function canSendWork(
-  work: Pick<WorkDetail, "lifecycle" | "withhold">,
+  work: Pick<WorkDetail, "lifecycle" | "takedown">,
 ): boolean {
-  return work.lifecycle === "published" && !work.withhold;
+  return work.lifecycle === "published" && !work.takedown;
 }
 
 /** isWaiting says whether a send is still on its way to the connected app. */

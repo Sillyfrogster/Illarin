@@ -19,7 +19,7 @@ const GIVEN_BACK_TONE = "bg-accent-wash text-accent";
 const NEWS_TONE = "bg-deep text-ink";
 
 const MARKS = {
-  work_withheld: { icon: LockKeyhole, tone: TAKEN_TONE },
+  work_taken_down: { icon: LockKeyhole, tone: TAKEN_TONE },
   work_restored: { icon: LockKeyholeOpen, tone: GIVEN_BACK_TONE },
   work_updated: { icon: Sparkles, tone: NEWS_TONE },
   profile_restricted: { icon: ShieldOff, tone: TAKEN_TONE },

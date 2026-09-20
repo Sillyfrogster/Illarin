@@ -23,7 +23,7 @@ const OUR_DOING = new Set([
   "removed",
   "disabled",
   "moved",
-  "withheld",
+  "taken_down",
   "unpublished",
   "unlisted",
   "deleted",
@@ -41,7 +41,7 @@ const STOPPED_WORDS: Record<string, string> = {
   removed: "The integration was removed.",
   disabled: "The integration was switched off.",
   moved: "The integration moved to another address.",
-  withheld: "Cancelled: this work is withheld.",
+  taken_down: "Cancelled: this work is taken down.",
   withdrawn: "Cancelled: this update was withdrawn.",
   unlisted:
     "Cancelled: this work is unlisted and sharing its link was not approved.",

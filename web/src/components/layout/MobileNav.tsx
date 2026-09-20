@@ -31,16 +31,12 @@ const ROW =
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { account, publicationAuthority, writer } = useAuth();
+  const { account, writer } = useAuth();
   const { blog } = useOrigins();
   const [open, setOpen] = useState(false);
   const { signingOut, failed, signOut } = useSignOut(() => setOpen(false));
   const publish = publishAction(account);
-  const destinations = accountDestinations(
-    account,
-    publicationAuthority,
-    writer,
-  );
+  const destinations = accountDestinations(account, writer);
 
   const previousPathname = useRef(pathname);
   useEffect(() => {

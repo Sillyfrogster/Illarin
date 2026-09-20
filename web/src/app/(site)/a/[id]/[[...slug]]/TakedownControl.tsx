@@ -4,10 +4,10 @@ import { Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { withholdWork } from "@/lib/api/query";
+import { takeDownWork } from "@/lib/api/query";
 import { Field, TextAreaField } from "./workspace/fields";
 
-export function WithholdControl({
+export function TakedownControl({
   workId,
   creator,
   typeName,
@@ -29,15 +29,15 @@ export function WithholdControl({
     setConfirming(true);
   }
 
-  async function withhold() {
+  async function takeDown() {
     setPending(true);
     setMessage("");
     try {
-      await withholdWork(workId, reason.trim());
+      await takeDownWork(workId, reason.trim());
       router.replace("/browse");
     } catch {
       setMessage(
-        `The ${typeName} could not be withheld. Your reason is still here.`,
+        `The ${typeName} could not be taken down. Your reason is still here.`,
       );
       setConfirming(false);
       setPending(false);
@@ -45,14 +45,14 @@ export function WithholdControl({
   }
 
   return (
-    <section aria-labelledby="withhold-heading" className="flex gap-3">
+    <section aria-labelledby="takedown-heading" className="flex gap-3">
       <span aria-hidden="true" className="mt-0.5 shrink-0 text-mute">
         <Shield size={18} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div>
-          <h3 className="text-ui font-medium text-ink" id="withhold-heading">
-            Withhold this {typeName}
+          <h3 className="text-ui font-medium text-ink" id="takedown-heading">
+            Take down this {typeName}
           </h3>
           <p className="mt-1 text-meta text-mute">
             It leaves Browse and answers as missing to everyone but @{creator},
@@ -78,12 +78,12 @@ export function WithholdControl({
           {confirming ? (
             <div className="flex flex-col gap-3 rounded-plate bg-stop-wash p-4">
               <p className="text-ui text-ink">
-                Withhold this {typeName}? Only its creator will be able to open
+                Take down this {typeName}? Only its creator will be able to open
                 its page.
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <Button loading={pending} onClick={withhold} variant="stop">
-                  Withhold {typeName}
+                <Button loading={pending} onClick={takeDown} variant="stop">
+                  Take down {typeName}
                 </Button>
                 <Button
                   disabled={pending}
@@ -100,7 +100,7 @@ export function WithholdControl({
               disabled={!reason.trim()}
               type="submit"
             >
-              Withhold {typeName}
+              Take down {typeName}
             </Button>
           )}
         </form>

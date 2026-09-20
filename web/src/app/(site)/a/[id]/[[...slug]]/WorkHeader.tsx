@@ -14,7 +14,7 @@ import { FollowControl } from "./follow/FollowControl";
 import { WorkFollowProvider } from "./follow/state";
 import { GetWork } from "./GetWork";
 import { VersionHistory } from "./history/VersionHistory";
-import { WithholdNotice } from "./WithholdNotice";
+import { TakedownNotice } from "./TakedownNotice";
 import type { WorkChooserProps } from "./WorkChooser";
 import { coverMedia, WorkMedia } from "./WorkMedia";
 import {
@@ -321,7 +321,7 @@ export function WorkHeader({
               </p>
             ) : null}
 
-            {work.withhold ? <WithholdNotice withhold={work.withhold} /> : null}
+            {work.takedown ? <TakedownNotice takedown={work.takedown} /> : null}
 
             <VersionHistory
               work={work}

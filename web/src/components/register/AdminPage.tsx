@@ -6,7 +6,7 @@ import { Gate } from "@/components/ui/gate";
 import { Waiting } from "@/components/ui/waiting";
 import { useAuth } from "@/lib/auth";
 
-export function AuthorityPage({
+export function AdminPage({
   children,
   heading,
   hint,
@@ -15,7 +15,8 @@ export function AuthorityPage({
   heading: string;
   hint: string;
 }) {
-  const { account, publicationAuthority } = useAuth();
+  const { account } = useAuth();
+  const admin = account?.role === "admin";
 
   return (
     <Shell className="pt-10 pb-chapter lg:pt-14">
@@ -29,15 +30,15 @@ export function AuthorityPage({
         {account === undefined ? (
           <Waiting>Checking your account…</Waiting>
         ) : null}
-        {account !== undefined && (!account || !publicationAuthority) ? (
+        {account !== undefined && (!account || !admin) ? (
           <Gate
             action={account ? "Back to Illarin" : "Sign in"}
-            heading="Blog management permission required"
+            heading="Admins only"
             href={account ? "/" : "/sign-in"}
-            line="Only the account designated to manage blog access can use these controls."
+            line="Only an admin can use these controls."
           />
         ) : null}
-        {account && publicationAuthority ? children : null}
+        {account && admin ? children : null}
       </div>
     </Shell>
   );

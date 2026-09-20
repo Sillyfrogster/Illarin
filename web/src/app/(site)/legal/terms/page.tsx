@@ -140,10 +140,10 @@ const CLAUSES: LegalClause[] = [
           scored by a machine learning model.
         </p>
         <p>
-          We may withhold a work, which takes it out of Browse and makes it
-          answer as missing to everyone except you. While a work is withheld you
-          can still read and download it, and you can see the reason it was
-          withheld, but you cannot edit or delete it. We may also remove work
+          We may take down a work, which takes it out of Browse and makes it
+          answer as missing to everyone except you. While a work is taken down
+          you can still read and download it, and you can see the reason it was
+          taken down, but you cannot edit or delete it. We may also remove work
           outright and close accounts. We try to be fair, and we do not promise
           a formal appeal for every decision.
         </p>

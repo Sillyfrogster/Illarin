@@ -39,7 +39,7 @@ export function VersionChanges({
 
   return (
     <div className="mt-4 max-w-[70ch]">
-      {compared.promptsWithheld ? (
+      {compared.promptsHidden ? (
         <p className="mb-4 max-w-[60ch] text-meta text-mute">
           This {typeName} has private prompts. Their wording is not shown here.
         </p>

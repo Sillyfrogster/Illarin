@@ -6,8 +6,8 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, TextArea, Trouble } from "@/components/ui/field";
 import {
-  fetchProfileRestriction,
-  type ProfileRestriction,
+  fetchRestrictedProfile,
+  type RestrictedProfile,
   restoreProfile,
   restrictProfile,
 } from "@/lib/api/query";
@@ -19,7 +19,7 @@ const REASON_LIMIT = 500;
 const PANEL = "mt-8 rounded-plate bg-deep p-5 sm:p-6";
 const HEADING = "flex items-center gap-2 font-ui text-ui font-medium text-ink";
 
-export function RestrictionControl({
+export function RestrictedControl({
   handle,
   restricted,
 }: {
@@ -29,7 +29,7 @@ export function RestrictionControl({
   const router = useRouter();
   const { account } = useAuth();
   const isAdmin = account?.role === "admin";
-  const [inForce, setInForce] = useState<ProfileRestriction | null>(null);
+  const [inForce, setInForce] = useState<RestrictedProfile | null>(null);
   const [reading, setReading] = useState(false);
   const [composing, setComposing] = useState(false);
   const [reason, setReason] = useState("");
@@ -44,7 +44,7 @@ export function RestrictionControl({
     }
     let current = true;
     setReading(true);
-    void fetchProfileRestriction(handle).then((found) => {
+    void fetchRestrictedProfile(handle).then((found) => {
       if (!current) return;
       setInForce(found);
       setReading(false);
@@ -97,8 +97,8 @@ export function RestrictionControl({
 
   if (restricted) {
     return (
-      <section aria-labelledby="restriction-heading" className={PANEL}>
-        <h2 className={HEADING} id="restriction-heading">
+      <section aria-labelledby="restricted-heading" className={PANEL}>
+        <h2 className={HEADING} id="restricted-heading">
           <ShieldMinus
             aria-hidden="true"
             className="size-4 text-stop"
@@ -123,7 +123,7 @@ export function RestrictionControl({
         ) : (
           <p className="mt-3 max-w-[70ch] font-ui text-meta text-mute">
             {reading
-              ? "Loading the restriction reason…"
+              ? "Loading the reason…"
               : "The reason could not be read. Reload the page to see it."}
           </p>
         )}
@@ -175,11 +175,11 @@ export function RestrictionControl({
 
   return (
     <form
-      aria-labelledby="restriction-heading"
+      aria-labelledby="restricted-heading"
       className={PANEL}
       onSubmit={restrict}
     >
-      <h2 className={HEADING} id="restriction-heading">
+      <h2 className={HEADING} id="restricted-heading">
         <ShieldPlus
           aria-hidden="true"
           className="size-4 text-stop"
@@ -194,7 +194,7 @@ export function RestrictionControl({
       <div className="mt-5 max-w-[70ch]">
         <Field
           hint="Only admins read this. It is kept in the audit record."
-          htmlFor="restriction-reason"
+          htmlFor="restricted-reason"
           label="Reason"
           trailing={
             <span
@@ -209,7 +209,7 @@ export function RestrictionControl({
         >
           <TextArea
             disabled={pending}
-            id="restriction-reason"
+            id="restricted-reason"
             maxLength={REASON_LIMIT}
             onChange={(event) => setReason(event.target.value)}
             required

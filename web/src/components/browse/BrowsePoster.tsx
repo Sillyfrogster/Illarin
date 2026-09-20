@@ -151,26 +151,26 @@ export function BrowsePoster({
           ) : null}
         </div>
 
-        {work.withhold ? <Withheld withhold={work.withhold} /> : null}
+        {work.takedown ? <TakenDown takedown={work.takedown} /> : null}
       </div>
     </li>
   );
 }
 
-function Withheld({
-  withhold,
+function TakenDown({
+  takedown,
 }: {
-  withhold: NonNullable<BrowseWork["withhold"]>;
+  takedown: NonNullable<BrowseWork["takedown"]>;
 }) {
   return (
     <div className="relative z-1 mt-3 rounded-control bg-stop-wash p-3">
       <p className="font-ui text-meta font-medium text-stop">
-        {withhold.reason}
+        {takedown.reason}
       </p>
       <p className="mt-1 font-ui text-label text-mute">
         Illarin staff ·{" "}
-        <time dateTime={withhold.at}>
-          {new Date(withhold.at).toLocaleString("en-GB", {
+        <time dateTime={takedown.at}>
+          {new Date(takedown.at).toLocaleString("en-GB", {
             dateStyle: "medium",
             timeStyle: "short",
           })}
