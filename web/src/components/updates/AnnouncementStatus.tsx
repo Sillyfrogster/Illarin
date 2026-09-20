@@ -15,7 +15,7 @@ export function AnnouncementStatus({ workId }: { workId: string }) {
     const controller = new AbortController();
     void readWorkAnnouncementAttempts(workId, controller.signal).then(
       (answer) => {
-        if (answer.value) setSent(answer.value.tries);
+        if (answer.value) setSent(answer.value.attempts);
       },
     );
     return () => controller.abort();

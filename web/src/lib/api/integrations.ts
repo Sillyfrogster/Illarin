@@ -5,6 +5,7 @@ import type {
   AddWorkIntegrationRequest,
   UpdateWorkIntegrationRequest,
   WorkAnnouncementAttempt,
+  WorkAnnouncementAttemptList,
   WorkIntegration,
   WorkIntegrationChoice,
 } from "./shapes";
@@ -61,7 +62,7 @@ export function readWorkAnnouncementAttempts(
   workId: string,
   signal?: AbortSignal,
 ) {
-  return ask<{ tries: WorkAnnouncementAttempt[] }>(
+  return ask<WorkAnnouncementAttemptList>(
     "GET",
     `/works/${workId}/announcement-attempts`,
     { signal },
