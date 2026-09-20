@@ -2,14 +2,14 @@ import { blogAddress, blogHostname, postPermalink } from "@/lib/blog-address";
 import {
   BLOG_TREE,
   postAddressIn,
-  type WithdrawnPost,
-} from "@/lib/publication-withdrawal";
+  type UnpublishedPost,
+} from "@/lib/post-unpublishing";
 
 export type Route =
   | { kind: "pass" }
   | { kind: "rewrite"; to: string }
   | { kind: "redirect"; to: string }
-  | { kind: "withdrawn"; slug: string };
+  | { kind: "unpublished"; slug: string };
 
 export type Asked = { host: string | null; pathname: string; search: string };
 
@@ -25,10 +25,10 @@ const ROOT_FILES = new Set([
 /** Decides what one request gets, from the hostname it arrived on and the path it asked for. */
 export async function routeRequest(
   asked: Asked,
-  withdrawnPost: (slug: string) => Promise<WithdrawnPost | null>,
+  unpublishedPost: (slug: string) => Promise<UnpublishedPost | null>,
 ): Promise<Route> {
   if (hostnameOf(asked.host) === blogHostname)
-    return onBlogOrigin(asked, withdrawnPost);
+    return onBlogOrigin(asked, unpublishedPost);
   if (
     asked.pathname === BLOG_TREE ||
     asked.pathname.startsWith(`${BLOG_TREE}/`)
@@ -41,7 +41,7 @@ export async function routeRequest(
 
 async function onBlogOrigin(
   asked: Asked,
-  withdrawnPost: (slug: string) => Promise<WithdrawnPost | null>,
+  unpublishedPost: (slug: string) => Promise<UnpublishedPost | null>,
 ): Promise<Route> {
   if (
     asked.pathname.startsWith("/_next/") ||
@@ -53,11 +53,11 @@ async function onBlogOrigin(
   const inside =
     asked.pathname === "/" ? BLOG_TREE : `${BLOG_TREE}${asked.pathname}`;
   const slug = postAddressIn(inside);
-  const withdrawn = slug ? await withdrawnPost(slug) : null;
-  if (withdrawn && slug !== withdrawn.slug) {
-    return { kind: "redirect", to: postPermalink(withdrawn.slug) };
+  const unpublished = slug ? await unpublishedPost(slug) : null;
+  if (unpublished && slug !== unpublished.slug) {
+    return { kind: "redirect", to: postPermalink(unpublished.slug) };
   }
-  if (withdrawn) return { kind: "withdrawn", slug: withdrawn.slug };
+  if (unpublished) return { kind: "unpublished", slug: unpublished.slug };
   return { kind: "rewrite", to: inside + asked.search };
 }
 

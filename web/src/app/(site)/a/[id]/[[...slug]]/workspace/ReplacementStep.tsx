@@ -21,7 +21,7 @@ import {
   replacementAction,
   replacementReady,
   unsettledReplacement,
-} from "@/lib/work-publication";
+} from "@/lib/work-publish";
 import { MakePublicConfirmation } from "../MakePublicConfirmation";
 import { Note } from "./fields";
 import { ReplacementWarnings } from "./ReplacementWarnings";

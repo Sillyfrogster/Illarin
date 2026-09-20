@@ -1,7 +1,7 @@
 {
   "note": "A table heading row becomes heading cells and an empty cell stays a cell",
   "markdown": "| Name | Size |\n| --- | --- |\n| One | 1 |\n| Two |  |\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

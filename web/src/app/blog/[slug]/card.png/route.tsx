@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
 import { fetchPublishedPost, type PublicPost } from "@/lib/api/query";
-import { type CardSubject, PostCard } from "@/lib/publication-card";
-import { CARD_SIZE, ILLARIN_APP } from "@/lib/publication-metadata";
+import { CARD_SIZE } from "@/lib/blog-metadata";
+import { type CardSubject, PostCard } from "@/lib/link-card";
 import { mediaUrl } from "@/lib/site-metadata";
 
 export const dynamic = "force-dynamic";
@@ -50,11 +50,8 @@ async function composed(post: PublicPost): Promise<CardSubject> {
   const header = post.header
     ? post.media.find((one) => one.id === post.header?.mediaId)
     : undefined;
-  const app = post.release?.app ?? post.byline.app ?? null;
-  const named = app && app.slug !== ILLARIN_APP ? app : null;
   return {
     title: post.title,
-    app: named ? { name: named.name } : null,
     plate: header ? await drawable(header.url) : null,
   };
 }

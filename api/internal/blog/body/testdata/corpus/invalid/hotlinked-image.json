@@ -1,7 +1,7 @@
 {
   "note": "An address where an uploaded image belongs",
   "path": "body.content.0.mediaId",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {

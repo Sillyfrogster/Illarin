@@ -1,6 +1,6 @@
 {
   "note": "Windows line endings and a trailing blank line settle to one form",
-  "document": {
+  "body": {
     "version": 2,
     "content": [{"type": "codeBlock", "language": "json", "source": "{\r\n  \"a\": 1\r\n}\r\n\r\n"}]
   },

@@ -1,7 +1,7 @@
 {
   "note": "A hard line break is said out loud because a paragraph has no lines",
   "markdown": "One line  \nand the next.\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

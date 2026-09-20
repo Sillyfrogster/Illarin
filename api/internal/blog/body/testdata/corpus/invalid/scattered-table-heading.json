@@ -1,7 +1,7 @@
 {
   "note": "A heading cell that is neither a first row nor a first column",
   "path": "body.content.0.content.1.content.1.heading",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {

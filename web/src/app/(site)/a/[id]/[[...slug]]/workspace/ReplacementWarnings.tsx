@@ -1,6 +1,6 @@
 import type { ReplacementPreview } from "@/lib/api/query";
 import { replacementSubjectLabel } from "@/lib/replacement-subject";
-import { previewConflicts } from "@/lib/work-publication";
+import { previewConflicts } from "@/lib/work-publish";
 
 export function ReplacementWarnings({
   preview,

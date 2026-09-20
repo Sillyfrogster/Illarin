@@ -1,7 +1,7 @@
 {
   "note": "Two headings answering to one address",
   "path": "body.content.1.anchor",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {

@@ -1,5 +1,5 @@
 {
   "note": "A language Illarin does not label code with",
   "path": "body.content.0.language",
-  "document": {"version": 2, "content": [{"type": "codeBlock", "language": "brainfuck", "source": "+++"}]}
+  "body": {"version": 2, "content": [{"type": "codeBlock", "language": "brainfuck", "source": "+++"}]}
 }

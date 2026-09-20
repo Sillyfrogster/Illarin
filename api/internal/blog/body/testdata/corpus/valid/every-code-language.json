@@ -1,6 +1,6 @@
 {
   "note": "Every language label a code block may carry",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {"type": "codeBlock", "language": "plain", "source": "one = 1"},

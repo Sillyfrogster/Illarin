@@ -394,7 +394,7 @@ func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
 	}
 	postID := uuid.New()
 	if _, err := pool.Exec(ctx, `
-		insert into posts (id, author_id, category_id, title, document, body_version)
+		insert into posts (id, author_id, category_id, title, body, body_version)
 		values ($1, $2, $3, 'A post with pictures', '{"version":2,"content":[]}', 2)
 	`, postID, authorID, categoryID); err != nil {
 		t.Fatalf("insert post: %v", err)
@@ -412,7 +412,7 @@ func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
 	for id, blobID := range map[uuid.UUID]uuid.UUID{keptMedia: kept.ID, droppedMedia: dropped.ID} {
 		if _, err := pool.Exec(ctx, `
 			insert into post_media (id, post_id, blob_id, purpose, width, height)
-			values ($1, $2, $3, 'document', 10, 10)
+			values ($1, $2, $3, 'body', 10, 10)
 		`, id, postID, blobID); err != nil {
 			t.Fatalf("insert post media: %v", err)
 		}
@@ -420,9 +420,9 @@ func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
 	originalFileID := uuid.New()
 	if _, err := pool.Exec(ctx, `
 		insert into post_revisions (id, post_id, number, title, summary, slug, category_id,
-		                            document, body_version, captured_for)
+		                            body, body_version, captured_for)
 		values ($1, $2, 1, 'A post with pictures', 'A summary.', 'a-post-with-pictures', $3,
-		        '{"version":2,"content":[]}', 2, 'publication')
+		        '{"version":2,"content":[]}', 2, 'publish')
 	`, originalFileID, postID, categoryID); err != nil {
 		t.Fatalf("insert revision: %v", err)
 	}

@@ -1,7 +1,7 @@
 {
   "note": "A numbered list that starts elsewhere is said out loud",
   "markdown": "3. Third\n4. Fourth\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

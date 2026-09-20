@@ -15,7 +15,7 @@ function delivery(
   return {
     id: "d",
     announcementId: "e",
-    announcementType: "publication.post.published.v1",
+    announcementType: "blog.post.published.v1",
     postId: "p",
     postTitle: "Illarin keeps its own writing now",
     revisionId: "r",
@@ -148,9 +148,9 @@ describe("what a delivery is doing", () => {
 describe("the words for one public transition", () => {
   test("gives every event a short word and a sentence", () => {
     for (const announcement of [
-      "publication.post.published.v1",
-      "publication.post.updated.v1",
-      "publication.post.withdrawn.v1",
+      "blog.post.published.v1",
+      "blog.post.updated.v1",
+      "blog.post.unpublished.v1",
     ] as const) {
       expect(ANNOUNCEMENT_WORDS[announcement].word).not.toBe("");
       expect(ANNOUNCEMENT_WORDS[announcement].what).not.toBe("");
@@ -158,16 +158,14 @@ describe("the words for one public transition", () => {
   });
 
   test("reads an event name off the wire", () => {
-    expect(announcementWord("publication.post.withdrawn.v1")).toBe("Withdrawn");
-    expect(announcementWord("publication.post.invented.v9")).toBe(
-      "Publication",
-    );
+    expect(announcementWord("blog.post.unpublished.v1")).toBe("Unpublished");
+    expect(announcementWord("blog.post.invented.v9")).toBe("Publication");
   });
 
   test("names the event each editor action sends", () => {
-    expect(transitionEvent("publish")).toBe("publication.post.published.v1");
-    expect(transitionEvent("changes")).toBe("publication.post.updated.v1");
-    expect(transitionEvent("withdraw")).toBe("publication.post.withdrawn.v1");
-    expect(transitionEvent("republish")).toBe("publication.post.published.v1");
+    expect(transitionEvent("publish")).toBe("blog.post.published.v1");
+    expect(transitionEvent("changes")).toBe("blog.post.updated.v1");
+    expect(transitionEvent("unpublish")).toBe("blog.post.unpublished.v1");
+    expect(transitionEvent("republish")).toBe("blog.post.published.v1");
   });
 });

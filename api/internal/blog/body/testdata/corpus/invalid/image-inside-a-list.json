@@ -1,7 +1,7 @@
 {
   "note": "A picture where only text structures go",
   "path": "body.content.0.content.0.content.0.type",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {

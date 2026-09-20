@@ -61,6 +61,7 @@ func TestLoadRequiresAnExactUnpaddedIntegrationSecretKey(t *testing.T) {
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
 	setBlogURL(t)
 	t.Setenv("LINKING_HMAC_KEY", linkingKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", "")
 
 	for _, key := range []string{
 		"",
@@ -80,6 +81,16 @@ func TestLoadRequiresAnExactUnpaddedIntegrationSecretKey(t *testing.T) {
 	}
 	if len(cfg.IntegrationSecretKey) != 32 {
 		t.Errorf("IntegrationSecretKey is %d bytes, want 32", len(cfg.IntegrationSecretKey))
+	}
+
+	t.Setenv("INTEGRATION_SECRET_KEY", "")
+	t.Setenv("PUBLICATION_SECRET_KEY", integrationKey)
+	older, err := Load()
+	if err != nil {
+		t.Fatalf("Load with the name the key had before 18 November 2026: %v", err)
+	}
+	if len(older.IntegrationSecretKey) != 32 {
+		t.Errorf("the older name gave %d bytes, want 32", len(older.IntegrationSecretKey))
 	}
 }
 

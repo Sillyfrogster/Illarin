@@ -28,7 +28,7 @@ import { VisibilityControl } from "../VisibilityControl";
 import { WithholdControl } from "../WithholdControl";
 import { AddBlock } from "./AddBlock";
 import { type Destination, destinationsIn, JumpPalette } from "./JumpPalette";
-import { PublicationRail } from "./PublicationRail";
+import { PublishRail } from "./PublishRail";
 import { RemoveBlock } from "./RemoveBlock";
 import { firstCursor } from "./save";
 import { useWorkspace } from "./state";
@@ -144,7 +144,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
         <WorkspaceDock
           detail={detail(props, workspace.isDraft, workspace.saveState)}
           onJump={() => setJumping(true)}
-          publicationLabel={workspace.isDraft ? "Publish" : "Review version"}
+          publishLabel={workspace.isDraft ? "Publish" : "Review version"}
           waiting={vault.pictures.length}
         />
       ) : null}
@@ -257,7 +257,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             onClose={workspace.closePane}
             title="Publication"
           >
-            <PublicationRail
+            <PublishRail
               typeName={props.typeName}
               onGo={goToPage}
               readiness={props.readiness}

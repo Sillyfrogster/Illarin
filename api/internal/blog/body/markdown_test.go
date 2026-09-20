@@ -13,7 +13,7 @@ import (
 type importCase struct {
 	Note     string          `json:"note"`
 	Markdown string          `json:"markdown"`
-	Document json.RawMessage `json:"document"`
+	Body     json.RawMessage `json:"body"`
 	Warnings []expectedNote  `json:"warnings"`
 	Refusals []expectedNote  `json:"refusals"`
 }
@@ -31,8 +31,8 @@ func TestEveryCarriedImportBecomesItsCanonicalDocument(t *testing.T) {
 			if err != nil {
 				t.Fatalf("convert %s: %v", one.Note, err)
 			}
-			if compact(t, document) != compact(t, one.Document) {
-				t.Errorf("converted to %s, want %s", document, compact(t, one.Document))
+			if compact(t, document) != compact(t, one.Body) {
+				t.Errorf("converted to %s, want %s", document, compact(t, one.Body))
 			}
 			checkNotes(t, warnings, one.Warnings)
 			if _, err := postbody.Read(document); err != nil {

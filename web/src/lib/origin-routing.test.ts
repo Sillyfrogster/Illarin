@@ -1,14 +1,14 @@
 import { expect, test } from "bun:test";
 import { type Asked, routeRequest } from "./origin-routing";
-import type { WithdrawnPost } from "./publication-withdrawal";
+import type { UnpublishedPost } from "./post-unpublishing";
 
 const BLOG = "blog.localhost:8000";
 const SITE = "localhost:8000";
 
-const nothingWithdrawn = async () => null;
+const nothingUnpublished = async () => null;
 
-function withdrawn(current: string, ...former: string[]) {
-  const post: WithdrawnPost = { slug: current, explanation: "" };
+function unpublished(current: string, ...former: string[]) {
+  const post: UnpublishedPost = { slug: current, explanation: "" };
   return async (slug: string) =>
     slug === current || former.includes(slug) ? post : null;
 }
@@ -18,7 +18,7 @@ function asked(host: string | null, pathname: string, search = ""): Asked {
 }
 
 test("the blog origin's front page is the blog tree's root", async () => {
-  expect(await routeRequest(asked(BLOG, "/"), nothingWithdrawn)).toEqual({
+  expect(await routeRequest(asked(BLOG, "/"), nothingUnpublished)).toEqual({
     kind: "rewrite",
     to: "/blog",
   });
@@ -34,27 +34,30 @@ test("every path on the blog origin is read inside the blog tree, query and all"
     ["/sitemap.xml", "/blog/sitemap.xml"],
     ["/robots.txt", "/blog/robots.txt"],
   ]) {
-    expect(await routeRequest(asked(BLOG, path), nothingWithdrawn)).toEqual({
+    expect(await routeRequest(asked(BLOG, path), nothingUnpublished)).toEqual({
       kind: "rewrite",
       to: inside,
     });
   }
   expect(
-    await routeRequest(asked(BLOG, "/page/2", "?from=feed"), nothingWithdrawn),
+    await routeRequest(
+      asked(BLOG, "/page/2", "?from=feed"),
+      nothingUnpublished,
+    ),
   ).toEqual({ kind: "rewrite", to: "/blog/page/2?from=feed" });
 });
 
 test("nothing on the blog origin escapes the blog tree, so the site's own pages never render there", async () => {
   for (const path of [
     "/sign-in",
-    "/admin/blog",
+    "/posts",
     "/browse",
     "/settings",
     "/upload",
     "/api/v1/auth/session",
     "/@someone",
   ]) {
-    const route = await routeRequest(asked(BLOG, path), nothingWithdrawn);
+    const route = await routeRequest(asked(BLOG, path), nothingUnpublished);
     expect(route).toEqual({ kind: "rewrite", to: `/blog${path}` });
   }
 });
@@ -73,28 +76,28 @@ test("the blog origin still serves the application's own files and icons", async
     "/brand/icon-192.png",
     "/brand/app-icon-maskable.png",
   ]) {
-    expect(await routeRequest(asked(BLOG, path), nothingWithdrawn)).toEqual({
+    expect(await routeRequest(asked(BLOG, path), nothingUnpublished)).toEqual({
       kind: "pass",
     });
   }
 });
 
-test("a withdrawn post's address answers gone, under the blog's own tombstone", async () => {
+test("an unpublished post's address answers gone, under the blog's own tombstone", async () => {
   expect(
-    await routeRequest(asked(BLOG, "/gone-now"), withdrawn("gone-now")),
-  ).toEqual({ kind: "withdrawn", slug: "gone-now" });
+    await routeRequest(asked(BLOG, "/gone-now"), unpublished("gone-now")),
+  ).toEqual({ kind: "unpublished", slug: "gone-now" });
 });
 
-test("a withdrawn post's former address goes straight to its current one", async () => {
+test("an unpublished post's former address goes straight to its current one", async () => {
   expect(
     await routeRequest(
       asked(BLOG, "/old-name"),
-      withdrawn("gone-now", "old-name"),
+      unpublished("gone-now", "old-name"),
     ),
   ).toEqual({ kind: "redirect", to: "http://blog.localhost:8000/gone-now" });
 });
 
-test("only a single post address is checked for withdrawal", async () => {
+test("only a single post address is checked for unpublishing", async () => {
   const lookedUp: string[] = [];
   const noting = async (slug: string) => {
     lookedUp.push(slug);
@@ -109,14 +112,14 @@ test("only a single post address is checked for withdrawal", async () => {
 });
 
 test("the blog's former home on the main site sends readers to the blog origin for good", async () => {
-  expect(await routeRequest(asked(SITE, "/blog"), nothingWithdrawn)).toEqual({
+  expect(await routeRequest(asked(SITE, "/blog"), nothingUnpublished)).toEqual({
     kind: "redirect",
     to: "http://blog.localhost:8000/",
   });
   expect(
     await routeRequest(
       asked(SITE, "/blog/first-post", "?ref=x"),
-      nothingWithdrawn,
+      nothingUnpublished,
     ),
   ).toEqual({
     kind: "redirect",
@@ -125,7 +128,7 @@ test("the blog's former home on the main site sends readers to the blog origin f
   expect(
     await routeRequest(
       asked(SITE, "/blog/category/release/feed.xml"),
-      nothingWithdrawn,
+      nothingUnpublished,
     ),
   ).toEqual({
     kind: "redirect",
@@ -137,7 +140,7 @@ test("a doctored blog path never sends a reader off the blog host", async () => 
   for (const path of ["/blog//evil.com", "/blog/\\evil.com", "/blog//"]) {
     const route = await routeRequest(
       asked(SITE, path, "?x=1"),
-      nothingWithdrawn,
+      nothingUnpublished,
     );
     expect(route.kind).toBe("redirect");
     if (route.kind === "redirect") {
@@ -148,14 +151,8 @@ test("a doctored blog path never sends a reader off the blog host", async () => 
 });
 
 test("the main site is left alone everywhere else", async () => {
-  for (const path of [
-    "/",
-    "/browse",
-    "/blogger",
-    "/api/v1/posts",
-    "/admin/blog",
-  ]) {
-    expect(await routeRequest(asked(SITE, path), nothingWithdrawn)).toEqual({
+  for (const path of ["/", "/browse", "/blogger", "/api/v1/posts", "/posts"]) {
+    expect(await routeRequest(asked(SITE, path), nothingUnpublished)).toEqual({
       kind: "pass",
     });
   }
@@ -167,13 +164,13 @@ test("the blog origin is known by its hostname whatever port or case it arrives 
     "Blog.Localhost:8000",
     "blog.localhost:3000",
   ]) {
-    expect(await routeRequest(asked(host, "/"), nothingWithdrawn)).toEqual({
+    expect(await routeRequest(asked(host, "/"), nothingUnpublished)).toEqual({
       kind: "rewrite",
       to: "/blog",
     });
   }
   for (const host of [null, "", "localhost:3000", "notblog.localhost:8000"]) {
-    expect(await routeRequest(asked(host, "/"), nothingWithdrawn)).toEqual({
+    expect(await routeRequest(asked(host, "/"), nothingUnpublished)).toEqual({
       kind: "pass",
     });
   }

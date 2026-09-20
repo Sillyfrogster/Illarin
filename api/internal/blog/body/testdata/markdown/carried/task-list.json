@@ -1,7 +1,7 @@
 {
   "note": "A checklist keeps the state of every task",
   "markdown": "- [x] Written\n- [ ] Not yet\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

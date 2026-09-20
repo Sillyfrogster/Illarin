@@ -7,24 +7,24 @@ export const ANNOUNCEMENT_WORDS: Record<
   BlogAnnouncementType,
   { word: string; what: string }
 > = {
-  "publication.post.published.v1": {
+  "blog.post.published.v1": {
     word: "Published",
     what: "A post is published or republished.",
   },
-  "publication.post.updated.v1": {
+  "blog.post.updated.v1": {
     word: "Updated",
     what: "Changes to a published post are published.",
   },
-  "publication.post.withdrawn.v1": {
-    word: "Withdrawn",
-    what: "A post is withdrawn from public view.",
+  "blog.post.unpublished.v1": {
+    word: "Unpublished",
+    what: "A post is unpublished from public view.",
   },
 };
 
 export const EVENTS: BlogAnnouncementType[] = [
-  "publication.post.published.v1",
-  "publication.post.updated.v1",
-  "publication.post.withdrawn.v1",
+  "blog.post.published.v1",
+  "blog.post.updated.v1",
+  "blog.post.unpublished.v1",
 ];
 
 export function announcementWord(type: string): string {
@@ -32,12 +32,12 @@ export function announcementWord(type: string): string {
   return held ? ANNOUNCEMENT_WORDS[held].word : "Publication";
 }
 
-export type Transition = "publish" | "changes" | "withdraw" | "republish";
+export type Transition = "publish" | "changes" | "unpublish" | "republish";
 
 export function transitionEvent(transition: Transition): BlogAnnouncementType {
-  if (transition === "changes") return "publication.post.updated.v1";
-  if (transition === "withdraw") return "publication.post.withdrawn.v1";
-  return "publication.post.published.v1";
+  if (transition === "changes") return "blog.post.updated.v1";
+  if (transition === "unpublish") return "blog.post.unpublished.v1";
+  return "blog.post.published.v1";
 }
 
 export function offeredFor(

@@ -797,7 +797,7 @@ func readCorpus(t *testing.T, name string) json.RawMessage {
 		t.Fatalf("read the corpus: %v", err)
 	}
 	var one struct {
-		Body json.RawMessage `json:"document"`
+		Body json.RawMessage `json:"body"`
 	}
 	if err := json.Unmarshal(raw, &one); err != nil {
 		t.Fatalf("decode %s: %v", name, err)

@@ -15,13 +15,14 @@ const account: SignedInAccount = {
 };
 
 test("account navigation names each task and keeps icons when labels change", () => {
-  const destinations = accountDestinations(account, true);
+  const destinations = accountDestinations(account, true, true);
   expect(destinations.map(({ label, href }) => [label, href])).toEqual([
     ["Your work", "/@copy_fixture"],
     ["Account settings", "/settings"],
-    ["Blog administration", "/publication"],
+    ["Your posts", "/posts"],
+    ["Blog administration", "/admin/blog"],
   ]);
-  const icons = ["circle-user-round", "settings", "notebook-pen"];
+  const icons = ["circle-user-round", "settings", "notebook-pen", "signature"];
   for (const [index, destination] of destinations.entries()) {
     const renamed = { ...destination, label: "A different label" };
     const markup = renderToStaticMarkup(<DestinationIcon id={renamed.id} />);
@@ -32,7 +33,7 @@ test("account navigation names each task and keeps icons when labels change", ()
 
 test("sign-in and verification destinations keep their labels and icons", () => {
   for (const visitor of [null, undefined]) {
-    const destinations = accountDestinations(visitor, false);
+    const destinations = accountDestinations(visitor, false, false);
     expect(destinations.map(({ label }) => label)).toEqual([
       "Sign in",
       "Create account",
@@ -46,6 +47,7 @@ test("sign-in and verification destinations keep their labels and icons", () => 
   }
   const destinations = accountDestinations(
     { ...account, emailVerified: false },
+    false,
     false,
   );
   expect(destinations.map(({ label }) => label)).toEqual([

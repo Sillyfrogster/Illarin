@@ -31,7 +31,7 @@ function words(children: RichInline[]): string {
     .join("");
 }
 
-describe("restricted markdown", () => {
+describe("page markdown", () => {
   test("keeps a plain paragraph exactly as it was written", () => {
     const rich = readRichText("She closes the book on a ribbon.");
     expect(rich.blocks).toEqual([

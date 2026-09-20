@@ -1,4 +1,4 @@
-import type { PostDocument } from "@/lib/post-document";
+import type { PostBody } from "@/lib/post-body";
 
 const CONTENTS_FLOOR = 3;
 
@@ -10,9 +10,9 @@ export type PostContentsEntry = {
   level: number;
 };
 
-export function postContents(document: PostDocument): PostContentsEntry[] {
+export function postContents(body: PostBody): PostContentsEntry[] {
   const entries: PostContentsEntry[] = [];
-  for (const block of document.content) {
+  for (const block of body.content) {
     if (block.type !== "heading") continue;
     if (block.level > CONTENTS_DEPTH) continue;
     if (!block.anchor) continue;

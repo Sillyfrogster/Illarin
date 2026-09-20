@@ -1,7 +1,7 @@
 {
   "note": "A quotation and a divider come across as themselves",
   "markdown": "> Illarin owns the document.\n\n---\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

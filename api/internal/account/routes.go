@@ -9,9 +9,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Authority says whether an account may publish on the blog
+// Authority says whether an account administers the blog and whether its writer switch is on
 type Authority interface {
 	HoldsAuthority(ctx context.Context, accountID uuid.UUID) (bool, error)
+	IsWriter(ctx context.Context, accountID uuid.UUID) (bool, error)
 }
 
 type Handlers struct {

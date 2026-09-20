@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { routeRequest } from "@/lib/origin-routing";
 import {
-  fetchWithdrawnPost,
-  WITHDRAWN_HEADER,
-  WITHDRAWN_ROUTE,
-} from "@/lib/publication-withdrawal";
+  fetchUnpublishedPost,
+  UNPUBLISHED_HEADER,
+  UNPUBLISHED_ROUTE,
+} from "@/lib/post-unpublishing";
 
 export const config = { matcher: ["/((?!_next/).*)"] };
 
@@ -16,7 +16,7 @@ export async function proxy(request: NextRequest) {
       pathname: request.nextUrl.pathname,
       search: request.nextUrl.search,
     },
-    fetchWithdrawnPost,
+    fetchUnpublishedPost,
   );
   switch (route.kind) {
     case "pass":
@@ -27,10 +27,10 @@ export async function proxy(request: NextRequest) {
       return NextResponse.rewrite(new URL(route.to, request.url), {
         request: { headers: readerHeaders(request) },
       });
-    case "withdrawn": {
+    case "unpublished": {
       const headers = readerHeaders(request);
-      headers.set(WITHDRAWN_HEADER, route.slug);
-      return NextResponse.rewrite(new URL(WITHDRAWN_ROUTE, request.url), {
+      headers.set(UNPUBLISHED_HEADER, route.slug);
+      return NextResponse.rewrite(new URL(UNPUBLISHED_ROUTE, request.url), {
         request: { headers },
         status: 410,
       });
@@ -42,6 +42,6 @@ export async function proxy(request: NextRequest) {
 function readerHeaders(request: NextRequest): Headers {
   const headers = new Headers(request.headers);
   headers.delete("cookie");
-  headers.delete(WITHDRAWN_HEADER);
+  headers.delete(UNPUBLISHED_HEADER);
   return headers;
 }

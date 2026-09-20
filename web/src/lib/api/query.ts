@@ -16,11 +16,14 @@ import type {
   BlogAnnouncementAttemptState,
   BlogAnnouncementTry,
   BlogAnnouncementType,
+  BlogCategory,
+  BlogCategoryList,
   BlogChannel,
   BlogIntegration,
   BlogIntegrationChoice,
   BlogIntegrationChoiceList,
   BlogIntegrationType,
+  BlogWorkspace,
   BrowseCursor,
   BrowseWork,
   BuildChoices,
@@ -42,11 +45,10 @@ import type {
   PostDeletion,
   PostMedia,
   PostMediaPurpose,
-  PostRelease,
   PostRevision,
   PostSchedule,
   PostSummary,
-  PostWithdrawal,
+  PostUnpublishing,
   PreservedNamespace,
   PrivatePromptMismatch,
   PrivatePromptMismatchList,
@@ -55,12 +57,6 @@ import type {
   ProfileRestriction,
   PromptCorrespondenceRequest,
   PromptListContent,
-  PublicationApp,
-  PublicationAppList,
-  PublicationCategory,
-  PublicationCategoryList,
-  PublicationGrant,
-  PublicationWorkspace,
   PublicPost,
   QueuedSend,
   ReadinessItem,
@@ -94,6 +90,8 @@ import type {
   WorkVersion,
   WorkVersionNotesRequest,
   WorkVersionRequest,
+  WriterList,
+  WriterResponse,
 } from "./shapes";
 export type {
   AddableBlock,
@@ -131,11 +129,10 @@ export type {
   BlogAnnouncementAttemptState,
   PostMedia,
   PostMediaPurpose,
-  PostRelease,
   PostRevision,
   PostSchedule,
   PostSummary,
-  PostWithdrawal,
+  PostUnpublishing,
   PreservedNamespace,
   Profile,
   ProfileLink,
@@ -144,16 +141,16 @@ export type {
   PromptListContent,
   PrivatePromptMismatch,
   PublicPost,
-  PublicationApp,
-  PublicationCategory,
+  BlogCategory,
   BlogChannel,
   BlogIntegration,
   BlogIntegrationChoice,
   BlogIntegrationChoiceList,
   BlogIntegrationType,
   BlogAnnouncementType,
-  PublicationGrant,
-  PublicationWorkspace,
+  BlogWorkspace,
+  WriterList,
+  WriterResponse,
   QueuedSend,
   ReadinessItem,
   RecordListContent,
@@ -738,7 +735,7 @@ export async function withdrawWorkVersion(
 ) {
   const { error } = await api<void>(
     "POST",
-    `/v1/works/${id}/versions/${number}/withdraw`,
+    `/v1/works/${id}/versions/${number}/unpublish`,
     { body: { explanation } },
   );
   if (error) throw writeRefusal(error, "That version could not be withdrawn.");
@@ -888,18 +885,12 @@ export async function fetchPostArchive(query: {
   return data;
 }
 
-export async function fetchPostCategories(): Promise<PublicationCategory[]> {
-  const answer = await api<PublicationCategoryList>(
+export async function fetchPostCategories(): Promise<BlogCategory[]> {
+  const answer = await api<BlogCategoryList>(
     "GET",
     "/v1/post-categories",
   ).catch(() => null);
   return answer?.data?.categories ?? [];
-}
-
-export async function fetchPostApps(): Promise<PublicationApp[]> {
-  const { data, error } = await api<PublicationAppList>("GET", "/v1/post-apps");
-  if (error || !data) return [];
-  return data.apps;
 }
 
 export async function fetchProfileRestriction(

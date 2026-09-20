@@ -1,7 +1,7 @@
 {
   "note": "Links reach an https address, an autolink and a mailto address",
   "markdown": "[Read more](https://example.com/notes), <https://example.com/feed> and [write in](mailto:someone@example.com).\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

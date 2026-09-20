@@ -1,7 +1,7 @@
 {
   "note": "Prose carries every mark Illarin has",
   "markdown": "Illarin ships **bold**, *italic*, ~~struck~~ and `inline code` prose.\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

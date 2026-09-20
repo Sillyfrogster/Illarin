@@ -192,8 +192,13 @@ func (h *Handlers) GetSession(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
 		return
 	}
+	writer, err := h.blog.IsWriter(c.Request.Context(), current.ID)
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
+		return
+	}
 	user := toAPIAccount(*current)
-	c.JSON(http.StatusOK, SessionState{User: &user, PublicationAuthority: authority})
+	c.JSON(http.StatusOK, SessionState{User: &user, PublicationAuthority: authority, Writer: writer})
 }
 
 func (h *Handlers) VerifyEmail(c *gin.Context) {

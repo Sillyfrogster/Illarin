@@ -1,7 +1,7 @@
 {
   "note": "A marked quotation becomes the callout it names",
   "markdown": "> [!note]\n> Illarin keeps the document.\n\n> [!warning]\n> This is going away.\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

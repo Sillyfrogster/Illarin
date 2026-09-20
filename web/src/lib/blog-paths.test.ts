@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 import {
   archivePage,
   archivePath,
+  BLOG_FEEDS,
   BLOG_HOME,
   feedAddresses,
-  PUBLICATION_FEEDS,
   pageAddress,
   postPath,
 } from "./blog-paths";
@@ -16,7 +16,6 @@ test("a post lives directly beneath the blog's front page", () => {
 
 test("a narrowed archive lives under its scope", () => {
   expect(archivePath("category", "release")).toBe("/category/release");
-  expect(archivePath("app", "lumiverse")).toBe("/app/lumiverse");
 });
 
 test("page one is the archive itself and later pages count from it", () => {
@@ -31,10 +30,10 @@ test("a feed answers beneath the archive it summarizes", () => {
     rss: "/feed.xml",
     json: "/feed.json",
   });
-  expect(PUBLICATION_FEEDS).toEqual({ rss: "/feed.xml", json: "/feed.json" });
-  expect(feedAddresses("/app/lumiverse")).toEqual({
-    rss: "/app/lumiverse/feed.xml",
-    json: "/app/lumiverse/feed.json",
+  expect(BLOG_FEEDS).toEqual({ rss: "/feed.xml", json: "/feed.json" });
+  expect(feedAddresses("/category/release")).toEqual({
+    rss: "/category/release/feed.xml",
+    json: "/category/release/feed.json",
   });
 });
 

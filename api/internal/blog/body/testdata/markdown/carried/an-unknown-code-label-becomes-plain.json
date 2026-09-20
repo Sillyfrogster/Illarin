@@ -1,7 +1,7 @@
 {
   "note": "Code Illarin has no label for keeps its source and loses its label",
   "markdown": "```brainfuck\n+++++.\n```\n",
-  "document": {
+  "body": {
     "content": [
       {
         "language": "plain",

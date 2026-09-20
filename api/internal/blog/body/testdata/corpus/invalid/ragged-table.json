@@ -1,7 +1,7 @@
 {
   "note": "A table whose rows hold different numbers of cells",
   "path": "body.content.0.content.1",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {

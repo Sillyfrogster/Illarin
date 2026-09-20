@@ -1,7 +1,7 @@
 /** The blog origin's front page. Every other blog path hangs off it. */
 export const BLOG_HOME = "/";
 
-export type ArchiveScope = "category" | "app";
+export type ArchiveScope = "category";
 
 export function postPath(slug: string): string {
   return `/${encodeURI(slug)}`;
@@ -22,7 +22,7 @@ export function feedAddresses(address: string): { rss: string; json: string } {
   };
 }
 
-export const PUBLICATION_FEEDS = feedAddresses(BLOG_HOME);
+export const BLOG_FEEDS = feedAddresses(BLOG_HOME);
 
 export function archivePage(paging: string[] | undefined): number | null {
   if (!paging || paging.length === 0) return 1;

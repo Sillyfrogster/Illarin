@@ -16,12 +16,12 @@ const STATUS: Record<SaveState, string> = {
 export function WorkspaceDock({
   detail,
   onJump,
-  publicationLabel,
+  publishLabel,
   waiting = 0,
 }: {
   detail: string;
   onJump: () => void;
-  publicationLabel: string;
+  publishLabel: string;
   waiting?: number;
 }) {
   const workspace = useWorkspace();
@@ -42,7 +42,7 @@ export function WorkspaceDock({
             onClick={() => workspace.openPane({ kind: "publication" })}
             strong
           >
-            {publicationLabel}
+            {publishLabel}
           </DockAction>
         </>
       }

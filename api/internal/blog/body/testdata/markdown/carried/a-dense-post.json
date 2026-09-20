@@ -1,7 +1,7 @@
 {
   "note": "A post using most of the vocabulary at once",
   "markdown": "## What shipped\n\nIllarin now reads **constrained Markdown**. See the [notes](https://example.com/notes).\n\n> [!tip]\n> Upload a picture before you place it.\n\n1. Write it\n2. Import it\n\n```json\n{\"version\": 2}\n```\n\n| Field | Meaning |\n| --- | --- |\n| version | The document version |\n\n---\n\n![A workspace](media:6f2c1b40-9d38-4a7e-b512-0c8e37a41d59)\n",
-  "document": {
+  "body": {
     "content": [
       {
         "anchor": "what-shipped",

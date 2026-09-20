@@ -24,7 +24,7 @@ const OUR_DOING = new Set([
   "disabled",
   "moved",
   "withheld",
-  "withdrawn",
+  "unpublished",
   "unlisted",
   "deleted",
 ]);

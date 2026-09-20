@@ -1,6 +1,6 @@
 {
   "note": "A heading with no address is given the one its words make",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {"type": "heading", "level": 2, "content": [{"type": "text", "text": "Release notes"}]},

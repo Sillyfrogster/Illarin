@@ -1,11 +1,19 @@
-import { PostDesk } from "@/components/publication/writing/PostDesk";
+import { BlogAdmin } from "@/components/blog/admin/BlogAdmin";
+import { AuthorityPage } from "@/components/register/AuthorityPage";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
-  "Your posts",
-  "Everything you have written for the Illarin blog.",
+  "Blog administration",
+  "Manage blog writers, categories and announcements.",
 );
 
-export default function PublicationWorkspacePage() {
-  return <PostDesk />;
+export default function BlogAdminPage() {
+  return (
+    <AuthorityPage
+      heading="Blog administration"
+      hint="Manage blog writers, categories and announcements."
+    >
+      <BlogAdmin />
+    </AuthorityPage>
+  );
 }

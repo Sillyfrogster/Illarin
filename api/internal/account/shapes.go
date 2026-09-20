@@ -71,6 +71,7 @@ type RenameHandleRequest struct {
 type SessionState struct {
 	PublicationAuthority bool     `json:"publicationAuthority"`
 	User                 *Account `json:"user" tstype:"Account | null,required"`
+	Writer               bool     `json:"writer"`
 }
 
 type SignInRequest struct {

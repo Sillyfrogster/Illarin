@@ -17,6 +17,7 @@ export type SignedInAccount = Account;
 type AuthContextValue = {
   account: SignedInAccount | null | undefined;
   publicationAuthority: boolean;
+  writer: boolean;
   refresh: () => Promise<void>;
   setAccount: (account: SignedInAccount | null) => void;
   signOut: () => Promise<void>;
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     undefined,
   );
   const [publicationAuthority, setPublicationAuthority] = useState(false);
+  const [writer, setWriter] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -40,13 +42,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!state) {
         setAccount(null);
         setPublicationAuthority(false);
+        setWriter(false);
         return;
       }
       setAccount(state.user);
       setPublicationAuthority(state.publicationAuthority);
+      setWriter(state.writer);
     } catch {
       setAccount(null);
       setPublicationAuthority(false);
+      setWriter(false);
     }
   }, []);
 
@@ -59,11 +64,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!response.ok) throw new Error("Could not sign out");
     setAccount(null);
     setPublicationAuthority(false);
+    setWriter(false);
   }, []);
 
   const value = useMemo(
-    () => ({ account, publicationAuthority, refresh, setAccount, signOut }),
-    [account, publicationAuthority, refresh, signOut],
+    () => ({
+      account,
+      publicationAuthority,
+      refresh,
+      setAccount,
+      signOut,
+      writer,
+    }),
+    [account, publicationAuthority, refresh, signOut, writer],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -12,7 +12,7 @@ import (
 type corpusCase struct {
 	Note      string          `json:"note"`
 	Path      string          `json:"path"`
-	Document  json.RawMessage `json:"document"`
+	Body      json.RawMessage `json:"body"`
 	Canonical json.RawMessage `json:"canonical"`
 }
 
@@ -20,7 +20,7 @@ func TestEveryValidCorpusDocumentReadsBackUnchanged(t *testing.T) {
 	t.Parallel()
 	for name, one := range corpus(t, "valid") {
 		t.Run(name, func(t *testing.T) {
-			read, err := postbody.Read(one.Document)
+			read, err := postbody.Read(one.Body)
 			if err != nil {
 				t.Fatalf("read %s: %v", one.Note, err)
 			}
@@ -30,7 +30,7 @@ func TestEveryValidCorpusDocumentReadsBackUnchanged(t *testing.T) {
 			}
 			want := one.Canonical
 			if want == nil {
-				want = one.Document
+				want = one.Body
 			}
 			if compact(t, written) != compact(t, want) {
 				t.Errorf("canonical form = %s, want %s", written, compact(t, want))
@@ -54,7 +54,7 @@ func TestEveryInvalidCorpusDocumentIsRefusedWhereItSaysSo(t *testing.T) {
 	t.Parallel()
 	for name, one := range corpus(t, "invalid") {
 		t.Run(name, func(t *testing.T) {
-			_, err := postbody.Read(one.Document)
+			_, err := postbody.Read(one.Body)
 			if err == nil {
 				t.Fatalf("%s was accepted", one.Note)
 			}

@@ -1,7 +1,7 @@
 {
   "note": "Bulleted, numbered and nested lists keep their shape",
   "markdown": "- One\n- Two\n  - Nested\n\n1. First\n2. Second\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

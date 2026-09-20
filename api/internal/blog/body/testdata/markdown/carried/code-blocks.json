@@ -1,7 +1,7 @@
 {
   "note": "A fenced block keeps its code and its label",
   "markdown": "```go\nfunc main() {\n\tprintln(\"one\")\n}\n```\n",
-  "document": {
+  "body": {
     "content": [
       {
         "language": "go",

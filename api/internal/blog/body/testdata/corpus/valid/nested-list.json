@@ -1,6 +1,6 @@
 {
   "note": "A list item holding a list of its own",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {

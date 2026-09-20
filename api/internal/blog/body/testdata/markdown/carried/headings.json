@@ -1,7 +1,7 @@
 {
   "note": "Headings run from level two to level four and are given addresses",
   "markdown": "## Release notes\n\n### What changed\n\n#### The details\n",
-  "document": {
+  "body": {
     "content": [
       {
         "anchor": "release-notes",

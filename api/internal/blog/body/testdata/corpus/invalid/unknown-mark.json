@@ -1,7 +1,7 @@
 {
   "note": "A mark outside the vocabulary",
   "path": "body.content.0.content.0.marks.0.type",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {

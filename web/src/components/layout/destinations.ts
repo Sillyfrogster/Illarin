@@ -12,7 +12,14 @@ export function primaryDestinations(blog: string): Destination[] {
   ];
 }
 export type AccountDestination = Destination & {
-  id: "profile" | "settings" | "publication" | "verify" | "sign-in" | "sign-up";
+  id:
+    | "profile"
+    | "settings"
+    | "posts"
+    | "blog-admin"
+    | "verify"
+    | "sign-in"
+    | "sign-up";
 };
 
 export function publishAction(
@@ -35,6 +42,7 @@ export function publishAction(
 export function accountDestinations(
   account: SignedInAccount | null | undefined,
   publicationAuthority: boolean,
+  writer: boolean,
 ): AccountDestination[] {
   if (!account)
     return [
@@ -45,12 +53,15 @@ export function accountDestinations(
   return [
     { id: "profile", label: "Your work", href: `/@${account.handle}` },
     { id: "settings", label: "Account settings", href: "/settings" },
+    ...(writer
+      ? [{ id: "posts" as const, label: "Your posts", href: "/posts" }]
+      : []),
     ...(publicationAuthority
       ? [
           {
-            id: "publication" as const,
+            id: "blog-admin" as const,
             label: "Blog administration",
-            href: "/publication",
+            href: "/admin/blog",
           },
         ]
       : []),

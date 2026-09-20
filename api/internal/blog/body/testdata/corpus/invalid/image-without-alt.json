@@ -1,7 +1,7 @@
 {
   "note": "A displayed picture with nothing said about it",
   "path": "body.content.0.alt",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {"type": "image", "mediaId": "0f3b1c4e-6a2d-4a19-9c51-2f7d8e5b41a0", "alt": "   "}

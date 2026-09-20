@@ -1,5 +1,5 @@
 {
   "note": "A gallery with no pictures in it",
   "path": "body.content.0.content",
-  "document": {"version": 2, "content": [{"type": "gallery", "content": []}]}
+  "body": {"version": 2, "content": [{"type": "gallery", "content": []}]}
 }

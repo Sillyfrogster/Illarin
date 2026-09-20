@@ -1,7 +1,7 @@
 {
   "note": "A link keeps its address and loses its hover title",
   "markdown": "[Notes](https://example.com/notes \"Hover text\")\n",
-  "document": {
+  "body": {
     "content": [
       {
         "content": [

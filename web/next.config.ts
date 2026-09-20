@@ -40,7 +40,11 @@ const nextConfig: NextConfig = {
     ];
   },
   async redirects() {
-    return [{ source: "/link", destination: "/connect", permanent: false }];
+    return [
+      { source: "/link", destination: "/connect", permanent: false },
+      { source: "/publication", destination: "/admin/blog", permanent: true },
+      { source: "/admin/blog/:id", destination: "/posts/:id", permanent: true },
+    ];
   },
   async rewrites() {
     return [

@@ -1,7 +1,7 @@
 {
   "note": "A source attribute a client hoped would be kept beside the media id",
   "path": "body.content.0.src",
-  "document": {
+  "body": {
     "version": 2,
     "content": [
       {

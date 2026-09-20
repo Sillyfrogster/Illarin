@@ -1,6 +1,6 @@
 import type { Post } from "@/lib/api/query";
 
-export type Lifecycle = "draft" | "published" | "withdrawn" | "deleted";
+export type Lifecycle = "draft" | "published" | "unpublished" | "deleted";
 
 export type Standing = "everything" | Lifecycle | "scheduled";
 
@@ -9,7 +9,7 @@ export const STANDINGS: Standing[] = [
   "draft",
   "scheduled",
   "published",
-  "withdrawn",
+  "unpublished",
   "deleted",
 ];
 
@@ -18,14 +18,14 @@ const STANDING_NAMES: Record<Standing, string> = {
   draft: "Drafts",
   scheduled: "Scheduled",
   published: "Published",
-  withdrawn: "Withdrawn",
+  unpublished: "Unpublished",
   deleted: "Deleted",
 };
 
 const LIFECYCLE_NAMES: Record<Lifecycle, string> = {
   draft: "Draft",
   published: "Published",
-  withdrawn: "Withdrawn",
+  unpublished: "Unpublished",
   deleted: "Deleted",
 };
 
@@ -34,7 +34,7 @@ const NOTHING_THERE: Record<Standing, string> = {
   draft: "No draft posts.",
   scheduled: "No scheduled posts.",
   published: "No published posts.",
-  withdrawn: "No withdrawn posts.",
+  unpublished: "No unpublished posts.",
   deleted: "No deleted posts to restore.",
 };
 
@@ -53,7 +53,7 @@ export function nothingThere(standing: Standing): string {
 export function lifecycleOf(post: Post): Lifecycle {
   if (post.deletion) return "deleted";
   if (post.status === "published") return "published";
-  if (post.status === "withdrawn") return "withdrawn";
+  if (post.status === "unpublished") return "unpublished";
   return "draft";
 }
 
