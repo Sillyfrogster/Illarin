@@ -59,7 +59,7 @@ export function PostDesk() {
           Your posts
         </h1>
         <p className="mt-4 font-prose text-lede text-mute">
-          Manage your blog posts and publishing permissions.
+          Everything you have written for the Illarin blog.
         </p>
       </header>
 
