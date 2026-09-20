@@ -62,7 +62,7 @@ func (s *Service) Rollup(ctx context.Context, now time.Time) error {
 	return nil
 }
 
-// recordVisits counts Umami's visits per day where Umami runs, leaving out the oldest day its retention has already cut into
+// recordVisits counts Umami's visits per day where Umami runs, over the same complete days the report reads
 func recordVisits(ctx context.Context, tx pgx.Tx, today time.Time) error {
 	var present bool
 	if err := tx.QueryRow(ctx, `select to_regclass('umami.website_event') is not null`).Scan(&present); err != nil {
@@ -79,7 +79,7 @@ func recordVisits(ctx context.Context, tx pgx.Tx, today time.Time) error {
 		 where day >= $1::date and day < $2::date
 		 group by day
 		on conflict (day, kind, work_id) do update set count = excluded.count
-	`, day(today.AddDate(0, 0, -(EventRetentionDays-1))), day(today)); err != nil {
+	`, day(today.AddDate(0, 0, -ReportDays)), day(today)); err != nil {
 		return fmt.Errorf("record Umami's visits: %w", err)
 	}
 	return nil
