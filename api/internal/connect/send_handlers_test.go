@@ -492,7 +492,7 @@ func TestASendTakenTooManyTimesWithoutAcknowledgementStops(t *testing.T) {
 	}
 }
 
-func TestAnExpiredSendIsCleanedUpAway(t *testing.T) {
+func TestAnExpiredSendIsCleanedUp(t *testing.T) {
 	t.Parallel()
 	settings := apitest.SendSettings()
 	settings.Retention = 250 * time.Millisecond

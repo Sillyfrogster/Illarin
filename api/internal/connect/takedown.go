@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// takeTakedownNotices returns each takedown of an installed type the connected app has not been told about, and records that it now has.
+// takeTakedownNotices returns the takedowns of installed extensions the app has not heard about yet, and records that it now has
 func takeTakedownNotices(ctx context.Context, queries *db.Queries, appID uuid.UUID) ([]TakenDownWork, error) {
 	rows, err := queries.TakeTakedownNotices(ctx, db.TakeTakedownNoticesParams{
 		ConnectedAppID: uuidValue(appID), Types: format.InstalledTypes(),
