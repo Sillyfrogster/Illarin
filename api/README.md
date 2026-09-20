@@ -70,3 +70,15 @@ Everything else is plumbing a feature reaches for:
 
 `cmd/` holds three programs: `server` serves the API, `backup` writes and
 restores a dump, and `make-admin` makes an existing account an admin.
+
+## Generated code
+
+Two things under the API are written by tools and never edited by hand.
+`make generate` from the repository root rewrites both.
+
+- `internal/db` is sqlc's output from `migrations/` and
+  `internal/db/queries.sql`. Change a query or a migration, then regenerate.
+- The site's API types under `web/src/lib/api/shapes/` are tygo's output from
+  the `shapes.go` in each feature package, following `tygo.yaml`. Change a
+  request or response struct, then regenerate. `make lint` regenerates them
+  before it type-checks the site, so a renamed field fails there.

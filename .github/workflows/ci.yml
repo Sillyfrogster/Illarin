@@ -28,7 +28,7 @@ jobs:
 
       - name: Check formatting
         if: ${{ !cancelled() }}
-        run: make fmt-check
+        run: make format-check
 
       - name: Vet the Go code
         if: ${{ !cancelled() }}
