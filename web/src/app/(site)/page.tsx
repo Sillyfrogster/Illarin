@@ -20,7 +20,7 @@ export default function LandingPage() {
 async function RecentCreations() {
   const cookie = (await cookies()).toString();
   const latest = await fetchWorks(
-    { limit: 5 },
+    { limit: 3 },
     cookie,
     AbortSignal.timeout(6000),
   ).catch(() => null);
