@@ -11,19 +11,19 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 )
 
-func (s publicationStack) correctAddress(
+func (s blogStack) correctAddress(
 	t *testing.T,
 	session *http.Cookie,
 	id, slug string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPut, "/v1/publication/posts/"+id+"/address",
+		http.MethodPut, "/v1/blog/posts/"+id+"/address",
 		fmt.Sprintf(`{"slug":%q}`, slug),
 	), session))
 }
 
-func (s publicationStack) addressCorrected(
+func (s blogStack) addressCorrected(
 	t *testing.T,
 	session *http.Cookie,
 	id, slug string,
@@ -36,19 +36,19 @@ func (s publicationStack) addressCorrected(
 	return decodePost(t, response)
 }
 
-func (s publicationStack) correctByline(
+func (s blogStack) correctByline(
 	t *testing.T,
 	session *http.Cookie,
 	id, handle string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPut, "/v1/publication/posts/"+id+"/byline",
+		http.MethodPut, "/v1/blog/posts/"+id+"/byline",
 		fmt.Sprintf(`{"handle":%q}`, handle),
 	), session))
 }
 
-func (s publicationStack) livePost(t *testing.T, session *http.Cookie, title string) blogPost {
+func (s blogStack) livePost(t *testing.T, session *http.Cookie, title string) blogPost {
 	t.Helper()
 	draft := s.illarinDraft(t, session, title)
 	s.saved(t, session, draft.ID, finished(draft, nil))
@@ -57,8 +57,8 @@ func (s publicationStack) livePost(t *testing.T, session *http.Cookie, title str
 
 func TestADraftAddressIsTheAuthorsToChooseAndNormalizes(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Choose the address")
 
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
@@ -82,13 +82,13 @@ func TestADraftAddressIsTheAuthorsToChooseAndNormalizes(t *testing.T) {
 
 func TestAPostAddressRefusesEveryReservedBlogRouteAndFeedName(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Reserved words")
 
 	for _, candidate := range []string{
 		"category", "app", "page", "feed", "feed.xml", "feed.json", "rss", "sitemap", "atom",
-		"media", "withdrawn",
+		"media", "unpublished",
 	} {
 		response := stack.save(t, session, draft.ID, finished(draft, map[string]any{
 			"slug": candidate,
@@ -101,11 +101,11 @@ func TestAPostAddressRefusesEveryReservedBlogRouteAndFeedName(t *testing.T) {
 
 func TestPublicationLocksTheAddressForEveryOrdinarySave(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Address locked"}`, writer.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"Address locked"}`, announcement.ID,
 	))
 	written := stack.saved(t, writer.session, draft.ID, finished(draft, map[string]any{
 		"slug": "address-locked",
@@ -119,7 +119,7 @@ func TestPublicationLocksTheAddressForEveryOrdinarySave(t *testing.T) {
 		t.Errorf("the author moved a published post: %d", byAuthor.Code)
 	}
 
-	admin := stack.admin(t, "admin@example.com", "the.admin")
+	admin := stack.siteAdmin(t, "the.admin@example.com", "the.admin")
 	bySave := stack.save(t, admin, draft.ID, finished(written, map[string]any{
 		"version": live.Version, "slug": "somewhere-else",
 	}))
@@ -133,8 +133,8 @@ func TestPublicationLocksTheAddressForEveryOrdinarySave(t *testing.T) {
 
 func TestEveryCorrectedAddressReachesThePostDirectly(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "Illarin 3 is heer")
 
 	once := stack.addressCorrected(t, session, live.ID, "illarin-3-is-here")
@@ -161,8 +161,8 @@ func TestEveryCorrectedAddressReachesThePostDirectly(t *testing.T) {
 
 func TestAnAddressAPostHasLeftIsNeverGivenToAnother(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "The first name")
 	stack.addressCorrected(t, session, live.ID, "the-second-name")
 
@@ -182,15 +182,15 @@ func TestAnAddressAPostHasLeftIsNeverGivenToAnother(t *testing.T) {
 
 func TestOnlyAnAdminCorrectsAnAddressAndOnlyOnceItIsPublished(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Not yours to move"}`, writer.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"Not yours to move"}`, announcement.ID,
 	))
 	stack.saved(t, writer.session, draft.ID, finished(draft, nil))
 
-	admin := stack.admin(t, "admin@example.com", "the.admin")
+	admin := stack.siteAdmin(t, "the.admin@example.com", "the.admin")
 	if code := stack.correctAddress(t, admin, draft.ID, "too-early").Code; code != http.StatusBadRequest {
 		t.Errorf("an unpublished post was corrected: %d", code)
 	}
@@ -206,7 +206,7 @@ func TestOnlyAnAdminCorrectsAnAddressAndOnlyOnceItIsPublished(t *testing.T) {
 
 	var actions int
 	err := stack.pool.QueryRow(context.Background(), `
-		select count(*) from publication_audits
+		select count(*) from blog_activity_log
 		 where post_id = $1 and action = 'post.address.corrected'
 	`, draft.ID).Scan(&actions)
 	if err != nil {
@@ -219,19 +219,18 @@ func TestOnlyAnAdminCorrectsAnAddressAndOnlyOnceItIsPublished(t *testing.T) {
 
 func TestAnAdminCorrectsAMistakenBylineAndNothingElse(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Signed by the wrong hand"}`,
-		writer.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"Signed by the wrong hand"}`, announcement.ID,
 	))
 	stack.saved(t, writer.session, draft.ID, finished(draft, nil))
 	live := stack.published(t, writer.session, draft.ID)
 
 	colleague := stack.member(t, "colleague@example.com", "the.colleague")
 	apitest.SaveProfile(t, stack.router, colleague, `{"displayName":"The Colleague","links":[]}`)
-	admin := stack.admin(t, "admin@example.com", "the.admin")
+	admin := stack.siteAdmin(t, "the.admin@example.com", "the.admin")
 
 	if code := stack.correctByline(t, writer.session, draft.ID, "the.colleague").Code; code != http.StatusForbidden {
 		t.Errorf("a contributor corrected a byline: %d", code)
@@ -251,16 +250,10 @@ func TestAnAdminCorrectsAMistakenBylineAndNothingElse(t *testing.T) {
 	if corrected.Author.Handle != "writer.dev" {
 		t.Errorf("the correction changed the author to %q", corrected.Author.Handle)
 	}
-	if corrected.GrantID != live.GrantID {
-		t.Errorf("the correction changed the grant to %q", corrected.GrantID)
-	}
 
 	found := stack.reader(t, live.Slug)
 	if found.Byline.Handle != "the.colleague" || found.Byline.DisplayName != "The Colleague" {
 		t.Errorf("public byline = %+v", found.Byline)
-	}
-	if found.Byline.App == nil || found.Byline.App.ID != live.App.ID {
-		t.Errorf("the correction dropped the app attribution: %+v", found.Byline.App)
 	}
 
 	var revisions int
@@ -275,7 +268,7 @@ func TestAnAdminCorrectsAMistakenBylineAndNothingElse(t *testing.T) {
 
 	var subject string
 	err = stack.pool.QueryRow(context.Background(), `
-		select subject_id::text from publication_audits
+		select subject_id::text from blog_activity_log
 		 where post_id = $1 and action = 'post.byline.corrected'
 	`, draft.ID).Scan(&subject)
 	if err != nil {
@@ -288,8 +281,8 @@ func TestAnAdminCorrectsAMistakenBylineAndNothingElse(t *testing.T) {
 
 func TestABylineIsNeverCorrectedBeforeAPostIsPublished(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Still private")
 
 	if code := stack.correctByline(t, session, draft.ID, "illarin.editor").Code; code != http.StatusBadRequest {
@@ -302,8 +295,8 @@ func TestABylineIsNeverCorrectedBeforeAPostIsPublished(t *testing.T) {
 
 func TestOrdinaryPublicationNeverLeavesABylineWithoutAnAccount(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "Somebody wrote this")
 
 	var accounts int
@@ -318,19 +311,19 @@ func TestOrdinaryPublicationNeverLeavesABylineWithoutAnAccount(t *testing.T) {
 	}
 }
 
-func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T) {
+func TestNeitherAProfileRestrictionNorTheWriterSwitchRewritesAByline(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	apitest.SaveProfile(t, stack.router, writer.session, `{"displayName":"The Writer","links":[]}`)
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"History stands"}`, writer.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"History stands"}`, announcement.ID,
 	))
 	stack.saved(t, writer.session, draft.ID, finished(draft, nil))
 	live := stack.published(t, writer.session, draft.ID)
 
-	admin := stack.admin(t, "admin@example.com", "the.admin")
+	admin := stack.siteAdmin(t, "the.admin@example.com", "the.admin")
 	restrict := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPut, "/v1/profiles/writer.dev/restriction", `{"reason":"checking something"}`,
 	), admin))
@@ -338,8 +331,8 @@ func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T)
 		t.Fatalf("restrict status = %d: %s", restrict.Code, restrict.Body.String())
 	}
 	revoke := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodDelete, "/v1/publication/grants/"+writer.grant.ID, "",
-	), stack.authority))
+		http.MethodDelete, "/v1/blog/writers/"+writer.writer.AccountID, "",
+	), stack.admin))
 	if revoke.Code != http.StatusNoContent {
 		t.Fatalf("revoke status = %d: %s", revoke.Code, revoke.Body.String())
 	}
@@ -347,9 +340,6 @@ func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T)
 	found := stack.reader(t, live.Slug)
 	if found.Byline.DisplayName != "The Writer" {
 		t.Errorf("byline name = %q after a restriction", found.Byline.DisplayName)
-	}
-	if found.Byline.App == nil || found.Byline.App.ID != live.App.ID {
-		t.Errorf("byline app = %+v after a revocation", found.Byline.App)
 	}
 	if !found.PublishedAt.Equal(*live.PublishedAt) {
 		t.Errorf("the publication date moved to %v", found.PublishedAt)
@@ -368,8 +358,8 @@ func TestNeitherAProfileRestrictionNorARevokedGrantRewritesAByline(t *testing.T)
 
 func TestACorrectedAddressNeverFormsARedirectChain(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "One hop only")
 	stack.addressCorrected(t, session, live.ID, "second-address")
 	stack.addressCorrected(t, session, live.ID, "third-address")
@@ -402,8 +392,8 @@ func TestACorrectedAddressNeverFormsARedirectChain(t *testing.T) {
 
 func TestACorrectedAddressIsRefusedWhenItIsAlreadyTheCurrentOne(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "Stay where you are")
 
 	response := stack.correctAddress(t, session, live.ID, live.Slug)

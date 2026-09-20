@@ -71,9 +71,9 @@ func TestTheBlogsIntegrationsStillAnswerUnderTheirOldPathAndFieldNames(t *testin
 
 	made := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/publication/destinations",
-		fmt.Sprintf(`{"name":"Old names","address":%q,"events":["publication.post.published.v1"]}`,
+		fmt.Sprintf(`{"name":"Old names","address":%q,"events":["blog.post.published.v1"]}`,
 			stack.to.address()),
-	), stack.authority))
+	), stack.admin))
 	if made.Code != http.StatusCreated {
 		t.Fatalf("create on the old path = %d, want 201: %s", made.Code, made.Body.String())
 	}
@@ -92,7 +92,7 @@ func TestTheBlogsIntegrationsStillAnswerUnderTheirOldPathAndFieldNames(t *testin
 
 	sent := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/publication/deliveries", nil,
-	), stack.authority))
+	), stack.admin))
 	var queued struct {
 		Deliveries []map[string]any `json:"deliveries"`
 	}

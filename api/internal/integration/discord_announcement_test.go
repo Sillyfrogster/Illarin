@@ -165,7 +165,7 @@ func (s integrationStack) channelWithRole(t *testing.T, role string) integration
 			discordCapability(), discordRoleID, role,
 		)
 	}
-	response := s.addChannel(t, s.authority, body)
+	response := s.addChannel(t, s.admin, body)
 	if response.Code != http.StatusCreated {
 		t.Fatalf("add channel status = %d: %s", response.Code, response.Body.String())
 	}
@@ -215,7 +215,7 @@ func TestOnlyADiscordWebhookAddressBecomesAChannel(t *testing.T) {
 		"https://discord.com/api/webhooks/1234567890123456789",
 		"https://discord.com/api/webhooks/nope/token",
 	} {
-		response := stack.addChannel(t, stack.authority, fmt.Sprintf(
+		response := stack.addChannel(t, stack.admin, fmt.Sprintf(
 			`{"name":"Announcements","address":%q}`, address,
 		))
 		if response.Code != http.StatusBadRequest {
@@ -229,14 +229,14 @@ func TestAChannelIsOnlyConfiguredWhenDiscordConfirmsIt(t *testing.T) {
 	stack := newIntegrationStack(t)
 	stack.discord.answersReadWith(func() (int, string) { return http.StatusUnauthorized, `{}` })
 
-	refused := stack.addChannel(t, stack.authority, fmt.Sprintf(
+	refused := stack.addChannel(t, stack.admin, fmt.Sprintf(
 		`{"name":"Announcements","address":%q}`, discordCapability(),
 	))
 
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("add channel status = %d, want 400: %s", refused.Code, refused.Body.String())
 	}
-	if listed := stack.integrations(t, stack.authority); len(listed.Integrations) != 0 {
+	if listed := stack.integrations(t, stack.admin); len(listed.Integrations) != 0 {
 		t.Errorf("a refused capability left %d integrations", len(listed.Integrations))
 	}
 }
@@ -246,7 +246,7 @@ func TestAMissingWebhookSaysWhatToDoAboutIt(t *testing.T) {
 	stack := newIntegrationStack(t)
 	stack.discord.answersReadWith(func() (int, string) { return http.StatusNotFound, `{}` })
 
-	refused := stack.addChannel(t, stack.authority, fmt.Sprintf(
+	refused := stack.addChannel(t, stack.admin, fmt.Sprintf(
 		`{"name":"Announcements","address":%q}`, discordCapability(),
 	))
 
@@ -265,7 +265,7 @@ func TestAWebhookOutsideAGuildChannelIsRefused(t *testing.T) {
 		return http.StatusOK, `{"id":"1234567890123456789","name":"Somewhere"}`
 	})
 
-	refused := stack.addChannel(t, stack.authority, fmt.Sprintf(
+	refused := stack.addChannel(t, stack.admin, fmt.Sprintf(
 		`{"name":"Announcements","address":%q}`, discordCapability(),
 	))
 
@@ -292,10 +292,10 @@ func TestAChannelKeepsOnlySafeIdentityAndIsReadyToAnnounce(t *testing.T) {
 	if made.Channel.RoleName != "Blog readers" {
 		t.Errorf("role name = %q", made.Channel.RoleName)
 	}
-	if len(made.Announcements) != 1 || made.Announcements[0] != "publication.post.published.v1" {
-		t.Errorf("events = %v, want first publications alone", made.Announcements)
+	if len(made.Announcements) != 1 || made.Announcements[0] != "blog.post.published.v1" {
+		t.Errorf("events = %v, want first posts alone", made.Announcements)
 	}
-	body, _ := json.Marshal(stack.integrations(t, stack.authority))
+	body, _ := json.Marshal(stack.integrations(t, stack.admin))
 	if strings.Contains(string(body), discordToken) {
 		t.Error("the listing carried the Discord capability token")
 	}
@@ -315,7 +315,7 @@ func TestOnlyASnowflakeRoleIsApproved(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 
-	refused := stack.addChannel(t, stack.authority, fmt.Sprintf(
+	refused := stack.addChannel(t, stack.admin, fmt.Sprintf(
 		`{"name":"Announcements","address":%q,"roleId":"everyone","roleName":"Everyone"}`,
 		discordCapability(),
 	))
@@ -330,7 +330,7 @@ func TestADiscordChannelHasNoSigningSecretToRotate(t *testing.T) {
 	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")
 
-	response := stack.rotate(t, stack.authority, made.ID)
+	response := stack.rotate(t, stack.admin, made.ID)
 
 	if response.Code != http.StatusBadRequest {
 		t.Errorf("rotate status = %d, want 400: %s", response.Code, response.Body.String())
@@ -566,11 +566,11 @@ func TestAWithdrawnAndRepublishedPostAnnouncesNothingFurther(t *testing.T) {
 
 	post, _ := stack.announcedPost(t, chosen)
 	live := stack.working(t, stack.editor, post.ID)
-	taken := stack.withdraw(t, stack.editor, post.ID, fmt.Sprintf(
+	taken := stack.unpublish(t, stack.editor, post.ID, fmt.Sprintf(
 		`{"version":%d,"reason":"A correction is coming.",%s}`, live.Version, chosen,
 	))
 	if taken.Code != http.StatusOK {
-		t.Fatalf("withdraw status = %d: %s", taken.Code, taken.Body.String())
+		t.Fatalf("unpublish status = %d: %s", taken.Code, taken.Body.String())
 	}
 	down := decodePost(t, taken)
 	back := stack.republish(t, stack.editor, post.ID, fmt.Sprintf(

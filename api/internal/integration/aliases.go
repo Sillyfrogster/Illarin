@@ -36,7 +36,6 @@ func registerAliases(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodGet, "/v1/publication/deliveries/:id/attempts", d.JSON, h.ListBlogAnnouncementTries)
 	routes.Handle(http.MethodPost, "/v1/publication/deliveries/:id/replay", d.JSON, h.ReplayBlogAnnouncementAttempt)
 	routes.Handle(http.MethodPost, "/v1/publication/deliveries/:id/repair", d.Verify, h.RepairDiscordAnnouncement)
-	routes.Handle(http.MethodPut, "/v1/publication/grants/:id/destinations", d.JSON, h.SetBlogGrantIntegrations)
 	routes.Handle(http.MethodGet, "/v1/publication/posts/:id/destinations", d.JSON, h.ListPostIntegrations)
 	routes.Handle(http.MethodGet, "/v1/publication/posts/:id/deliveries", d.JSON, h.ListPostAnnouncementAttempts)
 }
@@ -48,11 +47,8 @@ var (
 	integrationListAliases = map[string]string{"integrations": "destinations"}
 	addedAliases           = map[string]string{"integration": "destination"}
 	defaultsAliases        = map[string]string{"integrationIds": "destinationIds"}
-	policyAliases          = map[string]string{
-		"integrationIds": "destinationIds", "defaultIntegrationIds": "defaultDestinationIds",
-	}
-	attemptListAliases = map[string]string{"attempts": "announcements"}
-	attemptAliases     = map[string]string{
+	attemptListAliases     = map[string]string{"attempts": "announcements"}
+	attemptAliases         = map[string]string{
 		"type": "kind", "integration": "destination", "announcementId": "eventId",
 		"versionId": "updateId", "versionNumber": "updateNumber", "tries": "attempts",
 	}
@@ -139,11 +135,6 @@ func (r *AddBlogIntegrationRequest) UnmarshalJSON(data []byte) error {
 func (r *UpdateBlogIntegrationRequest) UnmarshalJSON(data []byte) error {
 	type plain UpdateBlogIntegrationRequest
 	return api.UnmarshalAliased(data, (*plain)(r), integrationAliases)
-}
-
-func (r *IntegrationPolicyRequest) UnmarshalJSON(data []byte) error {
-	type plain IntegrationPolicyRequest
-	return api.UnmarshalAliased(data, (*plain)(r), policyAliases)
 }
 
 func (d BlogAnnouncementAttempt) MarshalJSON() ([]byte, error) {

@@ -13,48 +13,45 @@ import (
 )
 
 type postSummary struct {
-	ID             string              `json:"id"`
-	Slug           string              `json:"slug"`
-	OriginalSlug   string              `json:"originalSlug"`
-	Title          string              `json:"title"`
-	Summary        string              `json:"summary"`
-	Category       publicationCategory `json:"category"`
-	App            *publicationApp     `json:"app"`
-	ReleaseVersion string              `json:"releaseVersion"`
-	Byline         postByline          `json:"byline"`
-	PublishedAt    time.Time           `json:"publishedAt"`
-	UpdatedAt      *time.Time          `json:"updatedAt"`
+	ID           string       `json:"id"`
+	Slug         string       `json:"slug"`
+	OriginalSlug string       `json:"originalSlug"`
+	Title        string       `json:"title"`
+	Summary      string       `json:"summary"`
+	Category     blogCategory `json:"category"`
+	Byline       postByline   `json:"byline"`
+	PublishedAt  time.Time    `json:"publishedAt"`
+	UpdatedAt    *time.Time   `json:"updatedAt"`
 }
 
 type postArchive struct {
-	Posts    []postSummary        `json:"posts"`
-	Page     int                  `json:"page"`
-	Pages    int                  `json:"pages"`
-	Total    int                  `json:"total"`
-	Category *publicationCategory `json:"category"`
-	App      *publicationApp      `json:"app"`
+	Posts    []postSummary `json:"posts"`
+	Page     int           `json:"page"`
+	Pages    int           `json:"pages"`
+	Total    int           `json:"total"`
+	Category *blogCategory `json:"category"`
 }
 
-func (s publicationStack) browse(t *testing.T, query string) *httptest.ResponseRecorder {
+func (s blogStack) browse(t *testing.T, query string) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/posts"+query, nil))
 }
 
-func (s publicationStack) readableCategories(t *testing.T) []publicationCategory {
+func (s blogStack) readableCategories(t *testing.T) []blogCategory {
 	t.Helper()
 	response := apitest.Send(t, s.router,
 		httptest.NewRequest(http.MethodGet, "/v1/post-categories", nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read the blog categories status = %d: %s", response.Code, response.Body.String())
 	}
-	var found publicationCategoryList
+	var found blogCategoryList
 	if err := json.Unmarshal(response.Body.Bytes(), &found); err != nil {
 		t.Fatalf("decode the blog categories: %v", err)
 	}
 	return found.Categories
 }
 
-func (s publicationStack) archive(t *testing.T, query string) postArchive {
+func (s blogStack) archive(t *testing.T, query string) postArchive {
 	t.Helper()
 	response := s.browse(t, query)
 	if response.Code != http.StatusOK {
@@ -67,7 +64,7 @@ func (s publicationStack) archive(t *testing.T, query string) postArchive {
 	return found
 }
 
-func (s publicationStack) dated(t *testing.T, id string, at time.Time) {
+func (s blogStack) dated(t *testing.T, id string, at time.Time) {
 	t.Helper()
 	_, err := s.pool.Exec(context.Background(), `
 		update posts set published_at = $2 where id = $1
@@ -77,7 +74,7 @@ func (s publicationStack) dated(t *testing.T, id string, at time.Time) {
 	}
 }
 
-func (s publicationStack) revisedOn(t *testing.T, id string, at time.Time) {
+func (s blogStack) revisedOn(t *testing.T, id string, at time.Time) {
 	t.Helper()
 	_, err := s.pool.Exec(context.Background(), `
 		update posts set updated_public_at = $2 where id = $1
@@ -87,7 +84,7 @@ func (s publicationStack) revisedOn(t *testing.T, id string, at time.Time) {
 	}
 }
 
-func (s publicationStack) publishedOn(
+func (s blogStack) publishedOn(
 	t *testing.T,
 	session *http.Cookie,
 	title string,
@@ -111,8 +108,8 @@ func titlesOf(found postArchive) []string {
 
 func TestTheArchiveLeadsWithTheNewestPostAndCarriesTwelveToAPage(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	day := time.Date(2026, time.March, 1, 9, 0, 0, 0, time.UTC)
 
 	for number := 1; number <= 14; number++ {
@@ -153,16 +150,14 @@ func TestTheArchiveLeadsWithTheNewestPostAndCarriesTwelveToAPage(t *testing.T) {
 
 func TestTheArchiveCarriesWhatAnEntryShowsWithoutReadingALiveProfile(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
-	illarin := stack.appBySlug(t, "illarin")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	release := stack.categoryBySlug(t, "release")
 
 	draft := stack.illarinDraft(t, session, "The catalog reads faster")
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
 		"categoryId": release.ID,
 		"summary":    "Browse answers in half the time it did.",
-		"release":    map[string]any{"appId": illarin.ID, "version": "1.4"},
 	}))
 	stack.publishedAt(t, session, written.ID, written.Version)
 
@@ -176,22 +171,15 @@ func TestTheArchiveCarriesWhatAnEntryShowsWithoutReadingALiveProfile(t *testing.
 	if entry.Category.Slug != "release" {
 		t.Errorf("entry category = %q", entry.Category.Slug)
 	}
-	if entry.App == nil || entry.App.Slug != "illarin" {
-		t.Errorf("entry app = %+v, want the release app", entry.App)
-	}
-	if entry.ReleaseVersion != "1.4" {
-		t.Errorf("entry version = %q", entry.ReleaseVersion)
-	}
 	if entry.PublishedAt.IsZero() || entry.UpdatedAt != nil {
 		t.Errorf("entry dates = %v / %v", entry.PublishedAt, entry.UpdatedAt)
 	}
 }
 
-func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
+func TestTheArchiveNarrowsToOneCategory(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
-	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	release := stack.categoryBySlug(t, "release")
 	day := time.Date(2026, time.April, 1, 9, 0, 0, 0, time.UTC)
 
@@ -200,21 +188,14 @@ func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
 	releaseDraft := stack.illarinDraft(t, session, "Lumiverse 2.0 is out")
 	releaseWritten := stack.saved(t, session, releaseDraft.ID, finished(releaseDraft, map[string]any{
 		"categoryId": release.ID,
-		"release":    map[string]any{"appId": lumiverse.ID, "version": "2.0"},
 	}))
 	releaseLive := stack.publishedAt(t, session, releaseWritten.ID, releaseWritten.Version)
 	stack.dated(t, releaseLive.ID, day.AddDate(0, 0, 1))
 
-	announcementCategory := stack.categoryBySlug(t, "announcement")
-	contributor := stack.member(t, "dev@example.com", "lumiverse.dev")
-	grant := stack.approved(t, "lumiverse.dev", lumiverse.ID,
-		[]string{announcementCategory.ID}, announcementCategory.ID)
-	filed := stack.started(t, contributor, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse says hello"}`,
-		grant.ID, announcementCategory.ID,
-	))
-	filedWritten := stack.saved(t, contributor, filed.ID, finished(filed, nil))
-	filedLive := stack.publishedAt(t, contributor, filedWritten.ID, filedWritten.Version)
+	writer := stack.contributor(t, "dev@example.com", "lumiverse.dev")
+	filed := stack.illarinDraft(t, writer.session, "Lumiverse says hello")
+	filedWritten := stack.saved(t, writer.session, filed.ID, finished(filed, nil))
+	filedLive := stack.publishedAt(t, writer.session, filedWritten.ID, filedWritten.Version)
 	stack.dated(t, filedLive.ID, day.AddDate(0, 0, -1))
 
 	byCategory := stack.archive(t, "?category=release")
@@ -223,21 +204,6 @@ func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
 	}
 	if byCategory.Category == nil || byCategory.Category.Slug != "release" {
 		t.Errorf("the release archive names the scope %+v", byCategory.Category)
-	}
-	if byCategory.App != nil {
-		t.Errorf("a category archive names an app scope %+v", byCategory.App)
-	}
-
-	byApp := stack.archive(t, "?app=lumiverse")
-	if len(byApp.Posts) != 2 {
-		t.Fatalf("the Lumiverse archive holds %v", titlesOf(byApp))
-	}
-	if byApp.Posts[0].Title != "Lumiverse 2.0 is out" ||
-		byApp.Posts[1].Title != "Lumiverse says hello" {
-		t.Errorf("the Lumiverse archive holds %v", titlesOf(byApp))
-	}
-	if byApp.App == nil || byApp.App.Name != "Lumiverse" {
-		t.Errorf("the app archive names the scope %+v", byApp.App)
 	}
 
 	if whole := stack.archive(t, ""); len(whole.Posts) != 3 {
@@ -250,13 +216,10 @@ func TestTheArchiveNarrowsToOneCategoryAndOneApp(t *testing.T) {
 
 func TestAnUnknownArchiveScopeIsNotFound(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 
 	if got := stack.browse(t, "?category=musings"); got.Code != http.StatusNotFound {
 		t.Errorf("an unknown category status = %d, want 404", got.Code)
-	}
-	if got := stack.browse(t, "?app=nowhere"); got.Code != http.StatusNotFound {
-		t.Errorf("an unknown app status = %d, want 404", got.Code)
 	}
 	if got := stack.browse(t, "?page=0"); got.Code != http.StatusBadRequest {
 		t.Errorf("page zero status = %d, want 400", got.Code)
@@ -265,8 +228,8 @@ func TestAnUnknownArchiveScopeIsNotFound(t *testing.T) {
 
 func TestTheArchiveHoldsOnlyPostsAReaderCanAlreadyOpen(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	live := stack.publishedOn(t, session, "The one public post",
 		time.Date(2026, time.May, 1, 9, 0, 0, 0, time.UTC))
@@ -288,11 +251,10 @@ func TestTheArchiveHoldsOnlyPostsAReaderCanAlreadyOpen(t *testing.T) {
 	}
 }
 
-func TestAnArticleOffersThreeOtherPostsPreferringItsAppThenItsCategory(t *testing.T) {
+func TestAnArticleOffersThreeOtherPostsPreferringItsCategory(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
-	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	release := stack.categoryBySlug(t, "release")
 	article := stack.categoryBySlug(t, "article")
 	day := time.Date(2026, time.June, 1, 9, 0, 0, 0, time.UTC)
@@ -301,7 +263,6 @@ func TestAnArticleOffersThreeOtherPostsPreferringItsAppThenItsCategory(t *testin
 		draft := stack.illarinDraft(t, session, title)
 		written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
 			"categoryId": release.ID,
-			"release":    map[string]any{"appId": lumiverse.ID, "version": "3.0"},
 		}))
 		live := stack.publishedAt(t, session, written.ID, written.Version)
 		stack.dated(t, live.ID, on)
@@ -328,7 +289,7 @@ func TestAnArticleOffersThreeOtherPostsPreferringItsAppThenItsCategory(t *testin
 		t.Fatalf("the article offers %d other posts, want 3", len(found.Related))
 	}
 	if found.Related[0].Title != "Lumiverse 2.9 is out" {
-		t.Errorf("the first related post is %q, want the same app", found.Related[0].Title)
+		t.Errorf("the first related post is %q, want the same category", found.Related[0].Title)
 	}
 	if found.Related[1].Title != "Writing a lorebook that holds" {
 		t.Errorf("the second related post is %q", found.Related[1].Title)
@@ -346,14 +307,14 @@ func TestAnArticleOffersThreeOtherPostsPreferringItsAppThenItsCategory(t *testin
 		}
 	}
 	if len(alone.Related) != 3 {
-		t.Errorf("a post with no app or category match offers %d posts", len(alone.Related))
+		t.Errorf("a post with no category match offers %d posts", len(alone.Related))
 	}
 }
 
 func TestTheBlogOffersOnlyCategoriesThatCarryWriting(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	if len(stack.readableCategories(t)) != 0 {
 		t.Fatalf("an empty publication offers %v", stack.readableCategories(t))
@@ -371,8 +332,8 @@ func TestTheBlogOffersOnlyCategoriesThatCarryWriting(t *testing.T) {
 
 func TestAPostCorrectedInPublicRetakesTheLead(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	day := time.Date(2026, time.May, 1, 9, 0, 0, 0, time.UTC)
 
 	corrected := stack.publishedOn(t, session, "The older post", day)

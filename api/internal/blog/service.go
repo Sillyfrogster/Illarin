@@ -21,19 +21,12 @@ import (
 )
 
 var (
-	ErrNotAuthority    = errors.New("account does not hold publication authority")
-	ErrAccountNotFound = errors.New("no such account")
-	ErrIncompleteOrder = errors.New("order does not name every member exactly once")
-
-	ErrAppNotFound       = errors.New("no such publication app")
-	ErrCategoryNotFound  = errors.New("no such publication category")
-	ErrGrantNotFound     = errors.New("no such publication grant")
+	ErrNotAuthority      = errors.New("account does not hold publication authority")
+	ErrAccountNotFound   = errors.New("no such account")
+	ErrIncompleteOrder   = errors.New("order does not name every member exactly once")
+	ErrCategoryNotFound  = errors.New("no such blog category")
 	ErrAccountUnverified = errors.New("the account has not verified its email")
-	ErrAlreadyGranted    = errors.New("the account already publishes for that app")
-	ErrGrantRevoked      = errors.New("the grant has been revoked")
 )
-
-var ErrCategoryRefused = errors.New("the grant does not cover that category")
 
 type FieldError = announcements.FieldError
 
@@ -74,7 +67,7 @@ func NewService(
 		now: time.Now,
 	}
 	s.Service = announcements.NewService(pool, sending.Sealing, sending.Sender, s.summaryWith, func(ctx context.Context, tx pgx.Tx, made announcements.Change) error {
-		return recordPublicationAudit(ctx, tx, made)
+		return recordActivity(ctx, tx, made)
 	})
 	return s
 }
@@ -240,7 +233,6 @@ const TryUnconfirmed = announcements.TryUnconfirmed
 const AttemptPoll = announcements.AttemptPoll
 
 type Announcement = announcements.Announcement
-type IntegrationPolicy = announcements.IntegrationPolicy
 
 var ErrRoleRefused = announcements.ErrRoleRefused
 
@@ -256,7 +248,7 @@ func (s *Service) PostIntegrations(
 	if err := s.mayManage(ctx, editor, found); err != nil {
 		return nil, err
 	}
-	allowed, err := s.PostChoices(ctx, found.GrantID)
+	allowed, err := s.PostChoices(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -278,21 +270,13 @@ func (s *Service) PostAttempts(
 	return s.Service.PostAttempts(ctx, postID)
 }
 
-func (s *Service) SetGrantIntegrations(ctx context.Context, actor, grantID uuid.UUID, in IntegrationPolicy) error {
-	current, err := s.grant(ctx, grantID)
-	if err != nil {
-		return err
-	}
-	return s.Service.SetGrantIntegrations(ctx, actor, grantID, current.App.ID, current.Holder.ID, in)
-}
-
 const CredentialSession = "session"
 
 const CredentialSystem = "system"
 
 type change = announcements.Change
 
-func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
+func recordActivity(ctx context.Context, tx pgx.Tx, made change) error {
 	if made.Credential == "" {
 		made.Credential = CredentialSession
 	}
@@ -301,17 +285,17 @@ func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
 		actor = &made.Actor
 	}
 	_, err := tx.Exec(ctx, `
-		insert into publication_audits
-		       (id, actor_id, credential, action, app_id, category_id, grant_id,
+		insert into blog_activity_log
+		       (id, actor_id, credential, action, category_id,
 		        post_id, revision_id, schedule_id, subject_id,
 		        integration_id, attempt_id, before_state, after_state)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-	`, uuid.New(), actor, made.Credential, made.Action, made.AppID, made.CategoryID,
-		made.GrantID, made.PostID, made.RevisionID, made.ScheduleID,
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, uuid.New(), actor, made.Credential, made.Action, made.CategoryID,
+		made.PostID, made.RevisionID, made.ScheduleID,
 		made.SubjectID, made.IntegrationID, made.AttemptID,
 		nullable(made.Before), nullable(made.After))
 	if err != nil {
-		return fmt.Errorf("record publication audit: %w", err)
+		return fmt.Errorf("record blog activity: %w", err)
 	}
 	return nil
 }
@@ -319,8 +303,6 @@ func recordPublicationAudit(ctx context.Context, tx pgx.Tx, made change) error {
 type sent = announcements.Event
 type sentPost = announcements.AnnouncementPost
 type sentCategory = announcements.AnnouncementCategory
-type sentApp = announcements.AnnouncementApp
-type sentRelease = announcements.AnnouncementRelease
 type sentByline = announcements.AnnouncementByline
 
 func (s *Service) summary(ctx context.Context, eventID uuid.UUID) (sent, error) {
@@ -331,22 +313,22 @@ func (s *Service) summaryWith(ctx context.Context, q db.DBTX, eventID uuid.UUID)
 	var held sent
 	var post sentPost
 	var slug, categorySlug, categoryLabel string
-	var socialID *uuid.UUID
+	var linkCardID *uuid.UUID
 	err := q.QueryRow(ctx, `
 		select event.id, event.type, event.occurred_at, event.note,
 		       post.id, revision.id, revision.title, revision.summary,
 		       category.slug, category.label, post.slug,
-		       revision.social_media_id, post.published_at, post.updated_public_at
+		       revision.link_card_media_id, post.published_at, post.updated_public_at
 		  from blog_announcements event
 		  join posts post on post.id = event.post_id
 		  join post_revisions revision on revision.id = event.revision_id
-		  join publication_categories category on category.id = revision.category_id
+		  join blog_categories category on category.id = revision.category_id
 		 where event.id = $1
 	`, eventID).Scan(
 		&held.ID, &held.Type, &held.OccurredAt, &held.Note,
 		&post.ID, &post.RevisionID, &post.Title, &post.Summary,
 		&categorySlug, &categoryLabel, &slug,
-		&socialID, &post.PublishedAt, &post.UpdatedAt,
+		&linkCardID, &post.PublishedAt, &post.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return sent{}, fmt.Errorf("no such announcement")
@@ -356,29 +338,14 @@ func (s *Service) summaryWith(ctx context.Context, q db.DBTX, eventID uuid.UUID)
 	}
 	post.Category = sentCategory{Slug: categorySlug, Label: categoryLabel}
 	post.URL = s.postAddress(slug)
-	if socialID != nil {
-		post.SocialImage = s.postAddress(slug) + "/card.png"
-	}
-	if post.Release, err = s.sentRelease(ctx, q, post.RevisionID); err != nil {
-		return sent{}, err
+	if linkCardID != nil {
+		post.LinkCardImage = s.postAddress(slug) + "/card.png"
 	}
 	if post.Byline, err = s.sentByline(ctx, q, post.ID); err != nil {
 		return sent{}, err
 	}
 	held.Post = post
 	return held, nil
-}
-
-func (s *Service) sentRelease(ctx context.Context, q db.DBTX, revisionID uuid.UUID) (*sentRelease, error) {
-	release, err := s.publishedReleaseWith(ctx, q, revisionID)
-	if err != nil || release == nil {
-		return nil, err
-	}
-	return &sentRelease{
-		App:     sentApp{Slug: release.App.Slug, Name: release.App.Name, URL: s.appAddress(release.App.Slug)},
-		Version: release.Version,
-		URL:     release.Address,
-	}, nil
 }
 
 func (s *Service) sentByline(ctx context.Context, q db.DBTX, postID uuid.UUID) (sentByline, error) {
@@ -394,20 +361,11 @@ func (s *Service) sentByline(ctx context.Context, q db.DBTX, postID uuid.UUID) (
 	if shown.Name == "" {
 		shown.Name = byline.Handle
 	}
-	if byline.App != nil {
-		shown.App = &sentApp{
-			Slug: byline.App.Slug, Name: byline.App.Name, URL: s.appAddress(byline.App.Slug),
-		}
-	}
 	return shown, nil
 }
 
 func (s *Service) postAddress(slug string) string {
 	return s.blogAddress("/" + url.PathEscape(slug))
-}
-
-func (s *Service) appAddress(slug string) string {
-	return s.blogAddress("/app/" + url.PathEscape(slug))
 }
 
 func (s *Service) profileAddress(handle string) string {

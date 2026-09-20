@@ -19,25 +19,25 @@ type tombstone struct {
 	Explanation string `json:"explanation"`
 }
 
-type postWithdrawal struct {
+type postUnpublishing struct {
 	Reason      string    `json:"reason"`
 	Explanation string    `json:"explanation"`
 	By          string    `json:"by"`
 	At          time.Time `json:"at"`
 }
 
-func (s publicationStack) withdraw(
+func (s blogStack) unpublish(
 	t *testing.T,
 	session *http.Cookie,
 	id, body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+id+"/withdraw", body,
+		http.MethodPost, "/v1/blog/posts/"+id+"/unpublish", body,
 	), session))
 }
 
-func (s publicationStack) withdrawn(
+func (s blogStack) unpublished(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -47,25 +47,25 @@ func (s publicationStack) withdrawn(
 	t.Helper()
 	body := fmt.Sprintf(`{"version":%d,"reason":%q,"explanation":%q}`,
 		version, reason, explanation)
-	response := s.withdraw(t, session, id, body)
+	response := s.unpublish(t, session, id, body)
 	if response.Code != http.StatusOK {
-		t.Fatalf("withdraw status = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("unpublish status = %d: %s", response.Code, response.Body.String())
 	}
 	return decodePost(t, response)
 }
 
-func (s publicationStack) republish(
+func (s blogStack) republish(
 	t *testing.T,
 	session *http.Cookie,
 	id, body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+id+"/republish", body,
+		http.MethodPost, "/v1/blog/posts/"+id+"/republish", body,
 	), session))
 }
 
-func (s publicationStack) republished(
+func (s blogStack) republished(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -82,7 +82,7 @@ func (s publicationStack) republished(
 	return decodePost(t, response)
 }
 
-func (s publicationStack) gone(t *testing.T, slug string) (tombstone, string) {
+func (s blogStack) gone(t *testing.T, slug string) (tombstone, string) {
 	t.Helper()
 	response := s.read(t, slug)
 	if response.Code != http.StatusGone {
@@ -95,7 +95,7 @@ func (s publicationStack) gone(t *testing.T, slug string) (tombstone, string) {
 	return found, response.Body.String()
 }
 
-func (s publicationStack) events(t *testing.T, postID string) []string {
+func (s blogStack) events(t *testing.T, postID string) []string {
 	t.Helper()
 	rows, err := s.pool.Query(context.Background(), `
 		select type from blog_announcements where post_id = $1 order by occurred_at, id
@@ -117,15 +117,15 @@ func (s publicationStack) events(t *testing.T, postID string) []string {
 
 func TestWithdrawingAPostLeavesATombstoneAndKeepsEverythingElse(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post we took down")
 
-	gone := stack.withdrawn(t, session, live.ID, live.Version,
+	gone := stack.unpublished(t, session, live.ID, live.Version,
 		"Legal asked for it while they check a claim.",
 		"We are checking a claim in this article and will put it back.")
 
-	if gone.Status != "withdrawn" {
+	if gone.Status != "unpublished" {
 		t.Fatalf("withdrawing left the post %q", gone.Status)
 	}
 	if gone.Slug != live.Slug {
@@ -135,19 +135,19 @@ func TestWithdrawingAPostLeavesATombstoneAndKeepsEverythingElse(t *testing.T) {
 		t.Errorf("original publication date = %v, want %v", gone.PublishedAt, live.PublishedAt)
 	}
 	if gone.UpdatedPublicAt != nil {
-		t.Errorf("withdrawal set the public updated date to %v", gone.UpdatedPublicAt)
+		t.Errorf("unpublishing set the public updated date to %v", gone.UpdatedPublicAt)
 	}
 	if gone.Byline == nil || gone.Byline.Handle != "illarin.editor" {
-		t.Errorf("withdrawal changed the byline to %+v", gone.Byline)
+		t.Errorf("unpublishing changed the byline to %+v", gone.Byline)
 	}
 	if gone.PublicRevision != live.PublicRevision {
-		t.Errorf("withdrawal changed the kept public edition to %q", gone.PublicRevision)
+		t.Errorf("unpublishing changed the kept public edition to %q", gone.PublicRevision)
 	}
-	if len(gone.Document.Content) == 0 {
-		t.Error("withdrawal emptied the drafted changes")
+	if len(gone.Body.Content) == 0 {
+		t.Error("unpublishing emptied the drafted changes")
 	}
 	if len(stack.revisions(t, session, live.ID)) == 0 {
-		t.Error("withdrawal removed the editions the post had kept")
+		t.Error("unpublishing removed the editions the post had kept")
 	}
 
 	found, body := stack.gone(t, live.Slug)
@@ -169,43 +169,37 @@ func TestWithdrawingAPostLeavesATombstoneAndKeepsEverythingElse(t *testing.T) {
 
 func TestAWithdrawnPostLeavesEveryPlaceAReaderCouldFindIt(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	staying := stack.livePost(t, session, "The post that stays")
 	going := stack.livePost(t, session, "The post that goes")
 
-	stack.withdrawn(t, session, going.ID, going.Version, "It named the wrong version.", "")
+	stack.unpublished(t, session, going.ID, going.Version, "It named the wrong version.", "")
 
 	whole := stack.archive(t, "")
 	if whole.Total != 1 || len(whole.Posts) != 1 || whole.Posts[0].ID != staying.ID {
-		t.Fatalf("the archive still lists the withdrawn post: %+v", whole)
+		t.Fatalf("the archive still lists the unpublished post: %+v", whole)
 	}
 	narrowed := stack.archive(t, "?category="+staying.Category.Slug)
 	if narrowed.Total != 1 {
 		t.Errorf("the category archive holds %d posts, want 1", narrowed.Total)
 	}
-	if staying.App != nil {
-		byApp := stack.archive(t, "?app="+staying.App.Slug)
-		if byApp.Total != 1 {
-			t.Errorf("the app archive holds %d posts, want 1", byApp.Total)
-		}
-	}
 	for _, further := range stack.reader(t, staying.Slug).Related {
 		if further.ID == going.ID {
-			t.Error("further reading offers a withdrawn post")
+			t.Error("further reading offers a unpublished post")
 		}
 	}
 }
 
 func TestAFormerAddressOfAWithdrawnPostReachesTheSameTombstone(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post that moved and went")
 	moved := stack.addressCorrected(t, session, live.ID, "a-post-that-moved")
 
-	stack.withdrawn(t, session, moved.ID, moved.Version, "It quoted the wrong person.", "")
+	stack.unpublished(t, session, moved.ID, moved.Version, "It quoted the wrong person.", "")
 
 	for _, address := range []string{"a-post-that-moved", live.Slug} {
 		found, body := stack.gone(t, address)
@@ -220,11 +214,11 @@ func TestAFormerAddressOfAWithdrawnPostReachesTheSameTombstone(t *testing.T) {
 
 func TestRepublishingReturnsTheSamePostToTheSameAddress(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post that came back")
 
-	gone := stack.withdrawn(t, session, live.ID, live.Version, "A picture needed clearing.", "")
+	gone := stack.unpublished(t, session, live.ID, live.Version, "A picture needed clearing.", "")
 	back := stack.republished(t, session, gone.ID, gone.Version, live.PublicRevision)
 
 	if back.Status != "published" || back.ID != live.ID {
@@ -246,9 +240,9 @@ func TestRepublishingReturnsTheSamePostToTheSameAddress(t *testing.T) {
 		t.Errorf("the archive holds %d posts after republication, want 1", whole.Total)
 	}
 	want := []string{
-		"publication.post.published.v1",
-		"publication.post.withdrawn.v1",
-		"publication.post.published.v1",
+		"blog.post.published.v1",
+		"blog.post.unpublished.v1",
+		"blog.post.published.v1",
 	}
 	if got := stack.events(t, live.ID); !slices.Equal(got, want) {
 		t.Errorf("events = %v, want %v", got, want)
@@ -257,15 +251,15 @@ func TestRepublishingReturnsTheSamePostToTheSameAddress(t *testing.T) {
 
 func TestRepublishingACorrectedEditionSetsThePublicUpdatedDate(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post we fixed while it was down")
 
-	gone := stack.withdrawn(t, session, live.ID, live.Version, "One paragraph was wrong.", "")
+	gone := stack.unpublished(t, session, live.ID, live.Version, "One paragraph was wrong.", "")
 	corrected := stack.saved(t, session, gone.ID, finished(gone, map[string]any{
-		"version":  gone.Version,
-		"summary":  "What Illarin corrected this week.",
-		"document": json.RawMessage(paragraph("Illarin corrected the paragraph.")),
+		"version": gone.Version,
+		"summary": "What Illarin corrected this week.",
+		"body":    json.RawMessage(paragraph("Illarin corrected the paragraph.")),
 	}))
 	edition := stack.checkpointed(t, session, corrected.ID, corrected.Version)
 	held := stack.working(t, session, corrected.ID)
@@ -285,17 +279,17 @@ func TestRepublishingACorrectedEditionSetsThePublicUpdatedDate(t *testing.T) {
 
 func TestWithdrawalKeepsThePrivateReasonApartFromWhatReadersSee(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with a private reason")
 
-	silent := stack.withdraw(t, session, live.ID,
+	silent := stack.unpublish(t, session, live.ID,
 		fmt.Sprintf(`{"version":%d,"reason":""}`, live.Version))
 	if silent.Code != http.StatusBadRequest {
-		t.Fatalf("a withdrawal without a reason returned %d: %s",
+		t.Fatalf("a unpublishing without a reason returned %d: %s",
 			silent.Code, silent.Body.String())
 	}
-	same := stack.withdraw(t, session, live.ID, fmt.Sprintf(
+	same := stack.unpublish(t, session, live.ID, fmt.Sprintf(
 		`{"version":%d,"reason":"A claim we are checking.","explanation":"A claim we are checking."}`,
 		live.Version,
 	))
@@ -304,16 +298,16 @@ func TestWithdrawalKeepsThePrivateReasonApartFromWhatReadersSee(t *testing.T) {
 			same.Code, same.Body.String())
 	}
 
-	quiet := stack.withdrawn(t, session, live.ID, live.Version, "A claim we are checking.", "")
-	if quiet.Withdrawal == nil || quiet.Withdrawal.Reason != "A claim we are checking." {
-		t.Fatalf("the editor cannot see why the post came down: %+v", quiet.Withdrawal)
+	quiet := stack.unpublished(t, session, live.ID, live.Version, "A claim we are checking.", "")
+	if quiet.Unpublishing == nil || quiet.Unpublishing.Reason != "A claim we are checking." {
+		t.Fatalf("the editor cannot see why the post came down: %+v", quiet.Unpublishing)
 	}
-	if quiet.Withdrawal.Explanation != "" || quiet.Withdrawal.By != "illarin.editor" {
-		t.Errorf("withdrawal = %+v", quiet.Withdrawal)
+	if quiet.Unpublishing.Explanation != "" || quiet.Unpublishing.By != "illarin.editor" {
+		t.Errorf("unpublishing = %+v", quiet.Unpublishing)
 	}
 	found, body := stack.gone(t, live.Slug)
 	if found.Explanation != "" {
-		t.Errorf("a withdrawal with no public explanation shows %q", found.Explanation)
+		t.Errorf("a unpublishing with no public explanation shows %q", found.Explanation)
 	}
 	if strings.Contains(body, "A claim we are checking.") {
 		t.Errorf("the tombstone shows the private reason: %s", body)
@@ -322,57 +316,56 @@ func TestWithdrawalKeepsThePrivateReasonApartFromWhatReadersSee(t *testing.T) {
 
 func TestOnlyThePostsOwnPeopleWithdrawItAndOnlyAtTheVersionTheyHold(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "dev@example.com", "illarin.dev")
 	stranger := stack.contributor(t, "other@example.com", "other.dev")
-	admin := stack.admin(t, "boss@example.com", "illarin.boss")
+	admin := stack.siteAdmin(t, "boss@example.com", "illarin.boss")
 
 	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"A contributor's post"}`,
-		writer.grant.ID, stack.categoryBySlug(t, "announcement").ID,
+		`{"categoryId":%q,"title":"A contributor's post"}`, stack.categoryBySlug(t, "announcement").ID,
 	))
 	stack.saved(t, writer.session, draft.ID, finished(draft, nil))
 	live := stack.published(t, writer.session, draft.ID)
 
-	refused := stack.withdraw(t, stranger.session, live.ID, fmt.Sprintf(
+	refused := stack.unpublish(t, stranger.session, live.ID, fmt.Sprintf(
 		`{"version":%d,"reason":"I do not like it."}`, live.Version,
 	))
 	if refused.Code != http.StatusForbidden && refused.Code != http.StatusNotFound {
 		t.Fatalf("a stranger withdrew the post: %d %s", refused.Code, refused.Body.String())
 	}
-	stale := stack.withdraw(t, writer.session, live.ID, fmt.Sprintf(
+	stale := stack.unpublish(t, writer.session, live.ID, fmt.Sprintf(
 		`{"version":%d,"reason":"It was wrong."}`, live.Version-1,
 	))
 	if stale.Code != http.StatusConflict {
-		t.Fatalf("a stale withdrawal returned %d: %s", stale.Code, stale.Body.String())
+		t.Fatalf("a stale unpublishing returned %d: %s", stale.Code, stale.Body.String())
 	}
 	if stack.read(t, live.Slug).Code != http.StatusOK {
-		t.Error("a refused withdrawal took the post down anyway")
+		t.Error("a refused unpublishing took the post down anyway")
 	}
 
-	byAdmin := stack.withdrawn(t, admin, live.ID, live.Version, "It named an unreleased build.", "")
-	if byAdmin.Status != "withdrawn" {
-		t.Errorf("an admin could not withdraw the post: %q", byAdmin.Status)
+	byAdmin := stack.unpublished(t, admin, live.ID, live.Version, "It named an unreleased build.", "")
+	if byAdmin.Status != "unpublished" {
+		t.Errorf("an admin could not unpublish the post: %q", byAdmin.Status)
 	}
 }
 
 func TestAWithdrawnPostIsPutBackByRepublishingAndNotByPublishing(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with one way back")
-	gone := stack.withdrawn(t, session, live.ID, live.Version, "It was early.", "")
+	gone := stack.unpublished(t, session, live.ID, live.Version, "It was early.", "")
 
 	if again := stack.publishAt(t, session, gone.ID, gone.Version); again.Code != http.StatusBadRequest {
-		t.Fatalf("publishing a withdrawn post returned %d: %s", again.Code, again.Body.String())
+		t.Fatalf("publishing a unpublished post returned %d: %s", again.Code, again.Body.String())
 	}
 	later := time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339)
 	scheduled := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+gone.ID+"/schedule",
+		http.MethodPost, "/v1/blog/posts/"+gone.ID+"/schedule",
 		fmt.Sprintf(`{"version":%d,"at":%q}`, gone.Version, later),
 	), session))
 	if scheduled.Code != http.StatusBadRequest {
-		t.Fatalf("scheduling a withdrawn post returned %d: %s",
+		t.Fatalf("scheduling a unpublished post returned %d: %s",
 			scheduled.Code, scheduled.Body.String())
 	}
 	if stack.read(t, live.Slug).Code != http.StatusGone {
@@ -392,12 +385,12 @@ func TestAWithdrawnPostIsPutBackByRepublishingAndNotByPublishing(t *testing.T) {
 
 func TestWithdrawalStopsAnEditionThatWasWaitingToGoLive(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with an update on the way")
 	later := time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339)
 	waiting := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+live.ID+"/schedule",
+		http.MethodPost, "/v1/blog/posts/"+live.ID+"/schedule",
 		fmt.Sprintf(`{"version":%d,"at":%q}`, live.Version, later),
 	), session))
 	if waiting.Code != http.StatusCreated {
@@ -405,7 +398,7 @@ func TestWithdrawalStopsAnEditionThatWasWaitingToGoLive(t *testing.T) {
 	}
 	held := decodePost(t, waiting)
 
-	gone := stack.withdrawn(t, session, held.ID, held.Version, "Hold everything.", "")
+	gone := stack.unpublished(t, session, held.ID, held.Version, "Hold everything.", "")
 
 	if gone.Schedule == nil || gone.Schedule.State != "cancelled" {
 		t.Fatalf("the waiting edition is %+v, want a cancelled schedule", gone.Schedule)
@@ -414,42 +407,42 @@ func TestWithdrawalStopsAnEditionThatWasWaitingToGoLive(t *testing.T) {
 
 func TestWithdrawalAndReturnAreBothInThePrivateRecord(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post the record follows")
 
-	gone := stack.withdrawn(t, session, live.ID, live.Version, "The build slipped.", "")
+	gone := stack.unpublished(t, session, live.ID, live.Version, "The build slipped.", "")
 	stack.republished(t, session, gone.ID, gone.Version, live.PublicRevision)
 
 	done, body := stack.history(t, session, live.ID)
 	names := taken(done)
-	for _, wanted := range []string{"post.withdrawn", "post.republished"} {
+	for _, wanted := range []string{"post.unpublished", "post.republished"} {
 		if !slices.Contains(names, wanted) {
 			t.Errorf("the history is %v, want it to name %s", names, wanted)
 		}
 	}
 	if strings.Contains(body, "The build slipped.") {
-		t.Errorf("the action log copied the withdrawal reason: %s", body)
+		t.Errorf("the action log copied the unpublishing reason: %s", body)
 	}
 	var states []string
 	rows, err := stack.pool.Query(context.Background(), `
 		select before_state || ' to ' || after_state
-		  from publication_audits
-		 where post_id = $1 and action in ('post.withdrawn', 'post.republished')
+		  from blog_activity_log
+		 where post_id = $1 and action in ('post.unpublished', 'post.republished')
 		 order by recorded_at
 	`, live.ID)
 	if err != nil {
-		t.Fatalf("read the withdrawal audits: %v", err)
+		t.Fatalf("read the unpublishing audits: %v", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var one string
 		if err := rows.Scan(&one); err != nil {
-			t.Fatalf("read a withdrawal audit: %v", err)
+			t.Fatalf("read a unpublishing audit: %v", err)
 		}
 		states = append(states, one)
 	}
-	want := []string{"published to withdrawn", "withdrawn to published"}
+	want := []string{"published to unpublished", "unpublished to published"}
 	if !slices.Equal(states, want) {
 		t.Errorf("audited states = %v, want %v", states, want)
 	}
@@ -457,11 +450,11 @@ func TestWithdrawalAndReturnAreBothInThePrivateRecord(t *testing.T) {
 
 func TestAStaleOrUnknownEditionNeverPutsAPostBack(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	other := stack.livePost(t, session, "Another post entirely")
 	live := stack.livePost(t, session, "A post somebody raced")
-	gone := stack.withdrawn(t, session, live.ID, live.Version, "It named the wrong date.", "")
+	gone := stack.unpublished(t, session, live.ID, live.Version, "It named the wrong date.", "")
 
 	stale := stack.republish(t, session, gone.ID, fmt.Sprintf(
 		`{"version":%d,"revisionId":%q}`, gone.Version-1, live.PublicRevision,
@@ -482,21 +475,21 @@ func TestAStaleOrUnknownEditionNeverPutsAPostBack(t *testing.T) {
 
 func TestWhatIsSaidAboutAWithdrawalIsKeptAsOneParagraph(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	live := stack.livePost(t, session, "A post with a wordy reason")
 
-	gone := stack.withdrawn(t, session, live.ID, live.Version,
+	gone := stack.unpublished(t, session, live.ID, live.Version,
 		"  Legal\n\nasked   for it.  ", "We are\nchecking   a claim.")
 
-	if gone.Withdrawal.Reason != "Legal asked for it." {
-		t.Errorf("kept reason = %q", gone.Withdrawal.Reason)
+	if gone.Unpublishing.Reason != "Legal asked for it." {
+		t.Errorf("kept reason = %q", gone.Unpublishing.Reason)
 	}
-	if gone.Withdrawal.Explanation != "We are checking a claim." {
-		t.Errorf("kept explanation = %q", gone.Withdrawal.Explanation)
+	if gone.Unpublishing.Explanation != "We are checking a claim." {
+		t.Errorf("kept explanation = %q", gone.Unpublishing.Explanation)
 	}
 	long := strings.Repeat("a", 501)
-	refused := stack.withdraw(t, session, live.ID, fmt.Sprintf(
+	refused := stack.unpublish(t, session, live.ID, fmt.Sprintf(
 		`{"version":%d,"reason":%q}`, gone.Version, long,
 	))
 	if refused.Code != http.StatusBadRequest {

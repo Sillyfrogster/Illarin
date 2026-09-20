@@ -53,15 +53,15 @@ var variants = []Variant{
 	{Name: "thumb_blurred", MaxWidth: 160, MaxHeight: 160, Blurred: true},
 }
 
-var socialPreviews = []Variant{
+var linkCards = []Variant{
 	{Name: "og", MaxWidth: 1200, MaxHeight: 630},
 	{Name: "og_blurred", MaxWidth: 1200, MaxHeight: 630, Blurred: true},
 }
 
 var previewField = color.RGBA{R: 0x05, G: 0x05, B: 0x05, A: 0xff}
 
-func SocialPreviewByName(name string) (Variant, bool) {
-	for _, preview := range socialPreviews {
+func LinkCardByName(name string) (Variant, bool) {
+	for _, preview := range linkCards {
 		if preview.Name == name {
 			return preview, true
 		}
@@ -165,12 +165,12 @@ func (p *Processor) Render(ctx context.Context, source io.Reader, name string) (
 	return p.render(decoded, variant)
 }
 
-func (p *Processor) ComposeSocialPreview(
+func (p *Processor) ComposeLinkCard(
 	ctx context.Context,
 	source io.Reader,
 	name string,
 ) (Derivative, error) {
-	preview, ok := SocialPreviewByName(name)
+	preview, ok := LinkCardByName(name)
 	if !ok {
 		return Derivative{}, ErrUnknownVariant
 	}

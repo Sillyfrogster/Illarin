@@ -33,11 +33,11 @@ var (
 )
 
 const (
-	stoppedByRevocation = "The approval behind this post was revoked."
-	stoppedByAddress    = "Another post took this address before the edition went live."
-	stoppedByFailure    = "Illarin could not publish this edition."
-	stoppedByWithdrawal = "The post left public view before this edition went live."
-	stoppedByDeletion   = "The post was deleted before this edition went live."
+	stoppedBySwitch       = "The writer switch behind this post was turned off."
+	stoppedByAddress      = "Another post took this address before the edition went live."
+	stoppedByFailure      = "Illarin could not publish this edition."
+	stoppedByUnpublishing = "The post left public view before this edition went live."
+	stoppedByDeletion     = "The post was deleted before this edition went live."
 )
 
 type Schedule struct {
@@ -69,7 +69,7 @@ func (s *Service) SchedulePost(
 	if err := s.checkInstant(at); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.Chosen(ctx, current.GrantID, announcement)
+	chosen, note, err := s.Chosen(ctx, announcement)
 	if err != nil {
 		return Post{}, err
 	}
@@ -85,10 +85,10 @@ func (s *Service) SchedulePost(
 	if locked.Version != version {
 		return Post{}, Stale{Version: locked.Version, UpdatedAt: locked.UpdatedAt}
 	}
-	if locked.Status == StatusWithdrawn {
-		return Post{}, ErrPostWithdrawn
+	if locked.Status == StatusUnpublished {
+		return Post{}, ErrPostUnpublished
 	}
-	if locked.Document, err = readyToPublish(locked); err != nil {
+	if locked.Body, err = readyToPublish(locked); err != nil {
 		return Post{}, err
 	}
 	revisionID, err := captureRevision(ctx, tx, editor, locked, RevisionSchedule)
@@ -112,10 +112,9 @@ func (s *Service) SchedulePost(
 	if err := keepScheduleChoice(ctx, tx, scheduleID, chosen); err != nil {
 		return Post{}, err
 	}
-	err = recordPublicationAudit(ctx, tx, change{
+	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.scheduled",
-		GrantID: locked.GrantID,
-		PostID:  &id, RevisionID: &revisionID, ScheduleID: &scheduleID,
+		PostID: &id, RevisionID: &revisionID, ScheduleID: &scheduleID,
 		Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {
@@ -144,7 +143,7 @@ func (s *Service) ReplaceSchedule(
 	if err := s.checkInstant(at); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.Chosen(ctx, current.GrantID, announcement)
+	chosen, note, err := s.Chosen(ctx, announcement)
 	if err != nil {
 		return Post{}, err
 	}
@@ -181,10 +180,9 @@ func (s *Service) ReplaceSchedule(
 	if err := keepScheduleChoice(ctx, tx, waiting, chosen); err != nil {
 		return Post{}, err
 	}
-	err = recordPublicationAudit(ctx, tx, change{
+	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.schedule.replaced",
-		GrantID: locked.GrantID,
-		PostID:  &id, RevisionID: &revisionID, ScheduleID: &waiting,
+		PostID: &id, RevisionID: &revisionID, ScheduleID: &waiting,
 		Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {
@@ -223,10 +221,9 @@ func (s *Service) CancelSchedule(ctx context.Context, editor Editor, id uuid.UUI
 	if err := settleSchedule(ctx, tx, waiting, ScheduleCancelled, ""); err != nil {
 		return Post{}, err
 	}
-	err = recordPublicationAudit(ctx, tx, change{
+	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.schedule.cancelled",
-		GrantID: locked.GrantID,
-		PostID:  &id, ScheduleID: &waiting,
+		PostID: &id, ScheduleID: &waiting,
 		Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {
@@ -314,7 +311,7 @@ func (s *Service) leaseDueSchedule(ctx context.Context, now time.Time) (leased, 
 func (s *Service) publishLeased(ctx context.Context, held leased) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin scheduled publication: %w", err)
+		return fmt.Errorf("begin scheduled publishing: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	locked, err := lockRemovedPost(ctx, tx, held.PostID)
@@ -373,23 +370,22 @@ func refusesLeased(
 	if held.Tries > ScheduleAttempts {
 		return stoppedByFailure, nil
 	}
-	if locked.GrantID != nil {
-		var active bool
-		err := tx.QueryRow(ctx, `
-			select active from publication_grants where id = $1
-		`, *locked.GrantID).Scan(&active)
-		if err != nil {
-			return "", fmt.Errorf("read the approval behind a scheduled post: %w", err)
-		}
-		if !active {
-			return stoppedByRevocation, nil
-		}
+	var mayPublish bool
+	err := tx.QueryRow(ctx, `
+		select exists (select 1 from blog_writers where user_id = $1)
+		    or exists (select 1 from users where id = $1 and role = 'admin')
+	`, locked.AuthorID).Scan(&mayPublish)
+	if err != nil {
+		return "", fmt.Errorf("read whether the author may still publish: %w", err)
+	}
+	if !mayPublish {
+		return stoppedBySwitch, nil
 	}
 	if locked.DeletedAt != nil {
 		return stoppedByDeletion, nil
 	}
-	if locked.Status == StatusWithdrawn {
-		return stoppedByWithdrawal, nil
+	if locked.Status == StatusUnpublished {
+		return stoppedByUnpublishing, nil
 	}
 	if locked.PublishedAt != nil {
 		return "", nil
@@ -494,16 +490,16 @@ func recordScheduleRun(
 	action string,
 	after string,
 ) error {
-	return recordPublicationAudit(ctx, tx, change{
+	return recordActivity(ctx, tx, change{
 		Actor: actorOf(held, locked), Credential: CredentialSystem, Action: action,
-		GrantID: locked.GrantID, PostID: &held.PostID, RevisionID: &held.RevisionID,
+		PostID: &held.PostID, RevisionID: &held.RevisionID,
 		ScheduleID: &held.ID, Before: locked.Status, After: after,
 	})
 }
 
 func commitScheduleRun(ctx context.Context, tx pgx.Tx) error {
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit scheduled publication: %w", err)
+		return fmt.Errorf("commit scheduled publishing: %w", err)
 	}
 	return nil
 }
@@ -525,17 +521,17 @@ func (s *Service) checkInstant(at time.Time) error {
 	return nil
 }
 
-func stopSchedulesUnder(ctx context.Context, tx pgx.Tx, grantID uuid.UUID) error {
+func stopSchedulesBy(ctx context.Context, tx pgx.Tx, authorID uuid.UUID) error {
 	_, err := tx.Exec(ctx, `
 		update post_schedules schedule
 		   set state = $2, stopped_because = $3, settled_at = now(),
 		       lease_token = null, lease_expires_at = null, updated_at = now()
 		  from posts post
-		 where post.id = schedule.post_id and post.grant_id = $1
+		 where post.id = schedule.post_id and post.author_id = $1
 		   and schedule.state in ($4, $5)
-	`, grantID, ScheduleStopped, stoppedByRevocation, SchedulePending, SchedulePublishing)
+	`, authorID, ScheduleStopped, stoppedBySwitch, SchedulePending, SchedulePublishing)
 	if err != nil {
-		return fmt.Errorf("stop the schedules a revoked approval left: %w", err)
+		return fmt.Errorf("stop the schedules a former writer left: %w", err)
 	}
 	return nil
 }
@@ -612,9 +608,9 @@ func overtakeSchedule(
 	if err := settleSchedule(ctx, tx, waiting, ScheduleCancelled, ""); err != nil {
 		return err
 	}
-	return recordPublicationAudit(ctx, tx, change{
+	return recordActivity(ctx, tx, change{
 		Actor:  editor.ID,
-		Action: "post.schedule.cancelled", GrantID: locked.GrantID,
+		Action: "post.schedule.cancelled",
 		PostID: &locked.ID, ScheduleID: &waiting,
 		Before: locked.Status, After: after,
 	})

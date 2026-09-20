@@ -20,50 +20,40 @@ type postAuthor struct {
 	Handle string `json:"handle"`
 }
 
-type postRelease struct {
-	App     publicationApp `json:"app"`
-	Version string         `json:"version"`
-	Address string         `json:"address"`
-}
-
 type postByline struct {
-	Handle       string          `json:"handle"`
-	DisplayName  string          `json:"displayName"`
-	ContactEmail string          `json:"contactEmail"`
-	Avatar       *profileAvatar  `json:"avatar"`
-	App          *publicationApp `json:"app"`
+	Handle       string         `json:"handle"`
+	DisplayName  string         `json:"displayName"`
+	ContactEmail string         `json:"contactEmail"`
+	Avatar       *profileAvatar `json:"avatar"`
 }
 
-type postDocument struct {
+type postBody struct {
 	Version int              `json:"version"`
 	Content []map[string]any `json:"content"`
 }
 
 type blogPost struct {
-	ID              string              `json:"id"`
-	Status          string              `json:"status"`
-	Title           string              `json:"title"`
-	Summary         string              `json:"summary"`
-	Slug            string              `json:"slug"`
-	Category        publicationCategory `json:"category"`
-	Document        postDocument        `json:"document"`
-	DocumentVersion int                 `json:"documentVersion"`
-	Release         *postRelease        `json:"release"`
-	Header          *postHeader         `json:"header"`
-	SocialMediaID   string              `json:"socialMediaId"`
-	PublicRevision  string              `json:"publicRevisionId"`
-	Schedule        *postSchedule       `json:"schedule"`
-	Withdrawal      *postWithdrawal     `json:"withdrawal"`
-	Deletion        *postDeletion       `json:"deletion"`
-	Media           []postPicture       `json:"media"`
-	Byline          *postByline         `json:"byline"`
-	FormerAddresses []string            `json:"formerAddresses"`
-	App             *publicationApp     `json:"app"`
-	GrantID         string              `json:"grantId"`
-	Version         int                 `json:"version"`
-	Author          postAuthor          `json:"author"`
-	PublishedAt     *time.Time          `json:"publishedAt"`
-	UpdatedPublicAt *time.Time          `json:"updatedPublicAt"`
+	ID              string            `json:"id"`
+	Status          string            `json:"status"`
+	Title           string            `json:"title"`
+	Summary         string            `json:"summary"`
+	Slug            string            `json:"slug"`
+	Category        blogCategory      `json:"category"`
+	Body            postBody          `json:"body"`
+	BodyVersion     int               `json:"bodyVersion"`
+	Header          *postHeader       `json:"header"`
+	LinkCardMediaID string            `json:"linkCardMediaId"`
+	PublicRevision  string            `json:"publicRevisionId"`
+	Schedule        *postSchedule     `json:"schedule"`
+	Unpublishing    *postUnpublishing `json:"unpublishing"`
+	Deletion        *postDeletion     `json:"deletion"`
+	Media           []postPicture     `json:"media"`
+	Byline          *postByline       `json:"byline"`
+	FormerAddresses []string          `json:"formerAddresses"`
+	Version         int               `json:"version"`
+	Author          postAuthor        `json:"author"`
+	PublishedAt     *time.Time        `json:"publishedAt"`
+	UpdatedPublicAt *time.Time        `json:"updatedPublicAt"`
 }
 
 type postList struct {
@@ -71,21 +61,20 @@ type postList struct {
 }
 
 type publicPost struct {
-	ID           string              `json:"id"`
-	Slug         string              `json:"slug"`
-	OriginalSlug string              `json:"originalSlug"`
-	Title        string              `json:"title"`
-	Summary      string              `json:"summary"`
-	Category     publicationCategory `json:"category"`
-	Document     postDocument        `json:"document"`
-	Release      *postRelease        `json:"release"`
-	Header       *postHeader         `json:"header"`
-	SocialImage  *postPicture        `json:"socialImage"`
-	Media        []postPicture       `json:"media"`
-	Byline       postByline          `json:"byline"`
-	Related      []postSummary       `json:"related"`
-	PublishedAt  time.Time           `json:"publishedAt"`
-	UpdatedAt    *time.Time          `json:"updatedAt"`
+	ID            string        `json:"id"`
+	Slug          string        `json:"slug"`
+	OriginalSlug  string        `json:"originalSlug"`
+	Title         string        `json:"title"`
+	Summary       string        `json:"summary"`
+	Category      blogCategory  `json:"category"`
+	Body          postBody      `json:"body"`
+	Header        *postHeader   `json:"header"`
+	LinkCardImage *postPicture  `json:"linkCardImage"`
+	Media         []postPicture `json:"media"`
+	Byline        postByline    `json:"byline"`
+	Related       []postSummary `json:"related"`
+	PublishedAt   time.Time     `json:"publishedAt"`
+	UpdatedAt     *time.Time    `json:"updatedAt"`
 }
 
 func paragraph(words string) string {
@@ -95,18 +84,18 @@ func paragraph(words string) string {
 	)
 }
 
-func (s publicationStack) start(
+func (s blogStack) start(
 	t *testing.T,
 	session *http.Cookie,
 	body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts", body,
+		http.MethodPost, "/v1/blog/posts", body,
 	), session))
 }
 
-func (s publicationStack) started(t *testing.T, session *http.Cookie, body string) blogPost {
+func (s blogStack) started(t *testing.T, session *http.Cookie, body string) blogPost {
 	t.Helper()
 	response := s.start(t, session, body)
 	if response.Code != http.StatusCreated {
@@ -115,7 +104,7 @@ func (s publicationStack) started(t *testing.T, session *http.Cookie, body strin
 	return decodePost(t, response)
 }
 
-func (s publicationStack) save(
+func (s blogStack) save(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -127,7 +116,7 @@ func (s publicationStack) save(
 		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPut, "/v1/publication/posts/"+id, string(body),
+		http.MethodPut, "/v1/blog/posts/"+id, string(body),
 	), session))
 }
 
@@ -138,7 +127,7 @@ func finished(draft blogPost, changes map[string]any) map[string]any {
 		"title":      draft.Title,
 		"summary":    "What Illarin changed this week.",
 		"slug":       draft.Slug,
-		"document":   json.RawMessage(paragraph("Illarin now keeps its own writing.")),
+		"body":       json.RawMessage(paragraph("Illarin now keeps its own writing.")),
 	}
 	for key, value := range changes {
 		working[key] = value
@@ -146,7 +135,7 @@ func finished(draft blogPost, changes map[string]any) map[string]any {
 	return working
 }
 
-func (s publicationStack) saved(
+func (s blogStack) saved(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -160,7 +149,7 @@ func (s publicationStack) saved(
 	return decodePost(t, response)
 }
 
-func (s publicationStack) publish(
+func (s blogStack) publish(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -168,7 +157,7 @@ func (s publicationStack) publish(
 	t.Helper()
 	version := 1
 	reading := apitest.Send(t, s.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+id, nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/posts/"+id, nil), session,
 	))
 	if reading.Code == http.StatusOK {
 		version = decodePost(t, reading).Version
@@ -176,7 +165,7 @@ func (s publicationStack) publish(
 	return s.publishAt(t, session, id, version)
 }
 
-func (s publicationStack) publishAt(
+func (s blogStack) publishAt(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -184,15 +173,15 @@ func (s publicationStack) publishAt(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+id+"/publish",
+		http.MethodPost, "/v1/blog/posts/"+id+"/publish",
 		fmt.Sprintf(`{"version":%d}`, version),
 	), session))
 }
 
-func (s publicationStack) working(t *testing.T, session *http.Cookie, id string) blogPost {
+func (s blogStack) working(t *testing.T, session *http.Cookie, id string) blogPost {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+id, nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/posts/"+id, nil), session,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("read post status = %d: %s", response.Code, response.Body.String())
@@ -200,7 +189,7 @@ func (s publicationStack) working(t *testing.T, session *http.Cookie, id string)
 	return decodePost(t, response)
 }
 
-func (s publicationStack) published(t *testing.T, session *http.Cookie, id string) blogPost {
+func (s blogStack) published(t *testing.T, session *http.Cookie, id string) blogPost {
 	t.Helper()
 	response := s.publish(t, session, id)
 	if response.Code != http.StatusOK {
@@ -209,7 +198,7 @@ func (s publicationStack) published(t *testing.T, session *http.Cookie, id strin
 	return decodePost(t, response)
 }
 
-func (s publicationStack) publishedAt(
+func (s blogStack) publishedAt(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -223,12 +212,12 @@ func (s publicationStack) publishedAt(
 	return decodePost(t, response)
 }
 
-func (s publicationStack) read(t *testing.T, slug string) *httptest.ResponseRecorder {
+func (s blogStack) read(t *testing.T, slug string) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/posts/"+slug, nil))
 }
 
-func (s publicationStack) reader(t *testing.T, slug string) publicPost {
+func (s blogStack) reader(t *testing.T, slug string) publicPost {
 	t.Helper()
 	response := s.read(t, slug)
 	if response.Code != http.StatusOK {
@@ -250,14 +239,14 @@ func decodePost(t *testing.T, response *httptest.ResponseRecorder) blogPost {
 	return found
 }
 
-func (s publicationStack) admin(t *testing.T, email, handle string) *http.Cookie {
+func (s blogStack) siteAdmin(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
 	session := s.member(t, email, handle)
 	apitest.SetRole(t, s.pool, handle, "admin")
 	return session
 }
 
-func (s publicationStack) illarinDraft(t *testing.T, session *http.Cookie, title string) blogPost {
+func (s blogStack) illarinDraft(t *testing.T, session *http.Cookie, title string) blogPost {
 	t.Helper()
 	announcement := s.categoryBySlug(t, "announcement")
 	return s.started(t, session, fmt.Sprintf(
@@ -267,8 +256,8 @@ func (s publicationStack) illarinDraft(t *testing.T, session *http.Cookie, title
 
 func TestAnAdminWritesAndPublishesTheFirstPost(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Illarin has a blog again")
 	if draft.Status != "draft" {
@@ -301,47 +290,35 @@ func TestAnAdminWritesAndPublishesTheFirstPost(t *testing.T) {
 	if found.Title != draft.Title || found.Summary != "What Illarin changed this week." {
 		t.Errorf("public post = %q / %q", found.Title, found.Summary)
 	}
-	if len(found.Document.Content) != 1 || found.Document.Version != 2 {
-		t.Errorf("public body = %+v", found.Document)
+	if len(found.Body.Content) != 1 || found.Body.Version != 2 {
+		t.Errorf("public body = %+v", found.Body)
 	}
-	if found.Byline.Handle != "illarin.editor" || found.Byline.App != nil {
-		t.Errorf("byline = %+v, want an Illarin byline", found.Byline)
+	if found.Byline.Handle != "illarin.editor" {
+		t.Errorf("byline = %+v", found.Byline)
 	}
 }
 
-func TestAContributorPublishesUnderTheirGrantAndNobodyElses(t *testing.T) {
+func TestAWriterPublishesUnderTheirOwnByline(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	lumiverse := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
+	stack := newBlogStack(t)
 	announcement := stack.categoryBySlug(t, "announcement")
-	article := stack.categoryBySlug(t, "article")
 	session := stack.member(t, "dev@example.com", "lumiverse.dev")
-	grant := stack.approved(t, "lumiverse.dev", lumiverse.ID, []string{announcement.ID}, announcement.ID)
-
-	refused := stack.start(t, session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"An article"}`, grant.ID, article.ID,
-	))
-	if refused.Code != http.StatusBadRequest {
-		t.Fatalf("a category outside the grant returned %d: %s", refused.Code, refused.Body.String())
-	}
 
 	alone := stack.start(t, session, fmt.Sprintf(
-		`{"categoryId":%q,"title":"No grant named"}`, announcement.ID,
+		`{"categoryId":%q,"title":"Not a writer yet"}`, announcement.ID,
 	))
 	if alone.Code != http.StatusForbidden {
-		t.Fatalf("writing with no grant returned %d", alone.Code)
+		t.Fatalf("writing without the switch returned %d", alone.Code)
 	}
 
+	stack.switchedOn(t, "lumiverse.dev")
 	draft := stack.started(t, session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse 3 is out"}`, grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"Lumiverse 3 is out"}`, announcement.ID,
 	))
 	stack.saved(t, session, draft.ID, finished(draft, nil))
 	stack.published(t, session, draft.ID)
 
 	found := stack.reader(t, draft.Slug)
-	if found.Byline.App == nil || found.Byline.App.Slug != "lumiverse" {
-		t.Fatalf("byline app = %+v, want Lumiverse", found.Byline.App)
-	}
 	if found.Byline.Handle != "lumiverse.dev" {
 		t.Errorf("byline handle = %q", found.Byline.Handle)
 	}
@@ -349,19 +326,17 @@ func TestAContributorPublishesUnderTheirGrantAndNobodyElses(t *testing.T) {
 
 func TestOneContributorNeverReachesAnothersPost(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	first := stack.contributor(t, "first@example.com", "first.dev")
-	sillytavern := stack.configureApp(t, "sillytavern", "SillyTavern", "https://sillytavern.example")
 	announcement := stack.categoryBySlug(t, "announcement")
-	second := stack.member(t, "second@example.com", "second.dev")
-	stack.approved(t, "second.dev", sillytavern.ID, []string{announcement.ID}, announcement.ID)
+	second := stack.contributor(t, "second@example.com", "second.dev").session
 
 	draft := stack.started(t, first.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"First post"}`, first.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"First post"}`, announcement.ID,
 	))
 
 	reading := apitest.Send(t, stack.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), second,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/posts/"+draft.ID, nil), second,
 	))
 	if reading.Code != http.StatusForbidden {
 		t.Errorf("another contributor read the post: %d", reading.Code)
@@ -374,7 +349,7 @@ func TestOneContributorNeverReachesAnothersPost(t *testing.T) {
 	}
 
 	listed := apitest.Send(t, stack.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/posts", nil), second,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/posts", nil), second,
 	))
 	var mine postList
 	if err := json.Unmarshal(listed.Body.Bytes(), &mine); err != nil {
@@ -387,11 +362,11 @@ func TestOneContributorNeverReachesAnothersPost(t *testing.T) {
 
 func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Quiet news"}`, writer.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"Quiet news"}`, announcement.ID,
 	))
 
 	moderator := stack.member(t, "mod@example.com", "the.moderator")
@@ -402,7 +377,7 @@ func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
 		"moderator": moderator, "ordinary account": ordinary,
 	} {
 		response := apitest.Send(t, stack.router, apitest.Authorized(
-			httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), session,
+			httptest.NewRequest(http.MethodGet, "/v1/blog/posts/"+draft.ID, nil), session,
 		))
 		if response.Code != http.StatusForbidden {
 			t.Errorf("a %s read the draft: %d", name, response.Code)
@@ -417,8 +392,8 @@ func TestAModeratorAndAnOrdinaryAccountReachNoPostAtAll(t *testing.T) {
 
 func TestAStaleSaveIsRefusedAndLeavesTheNewerDraftedChanges(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Two editors one post")
 
 	first := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
@@ -446,7 +421,7 @@ func TestAStaleSaveIsRefusedAndLeavesTheNewerDraftedChanges(t *testing.T) {
 	}
 
 	current := apitest.Send(t, stack.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/posts/"+draft.ID, nil), session,
 	))
 	if title := decodePost(t, current).Title; title != "The newer title" {
 		t.Errorf("the stale save overwrote the drafted changes: %q", title)
@@ -455,8 +430,8 @@ func TestAStaleSaveIsRefusedAndLeavesTheNewerDraftedChanges(t *testing.T) {
 
 func TestPublicationRefusesAPostThatIsNotFinished(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Nothing written yet")
 	if code := stack.publish(t, session, draft.ID).Code; code != http.StatusBadRequest {
@@ -471,68 +446,14 @@ func TestPublicationRefusesAPostThatIsNotFinished(t *testing.T) {
 	}
 }
 
-func TestAReleaseNeedsTheProjectAndVersionItAnnounces(t *testing.T) {
+func TestARefusedBodyNamesWhereItWentWrong(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
-	release := stack.categoryBySlug(t, "release")
-	illarin := stack.appBySlug(t, "illarin")
-
-	draft := stack.started(t, session, fmt.Sprintf(
-		`{"categoryId":%q,"title":"Illarin 2.0"}`, release.ID,
-	))
-	bare := stack.save(t, session, draft.ID, finished(draft, nil))
-	if bare.Code != http.StatusBadRequest {
-		t.Fatalf("a release with no version saved: %d", bare.Code)
-	}
-
-	stack.saved(t, session, draft.ID, finished(draft, map[string]any{
-		"release": map[string]any{
-			"appId": illarin.ID, "version": "2.0", "address": "https://illarin.com/releases/2-0",
-		},
-	}))
-	stack.published(t, session, draft.ID)
-
-	found := stack.reader(t, draft.Slug)
-	if found.Release == nil || found.Release.Version != "2.0" {
-		t.Fatalf("public release = %+v", found.Release)
-	}
-	if found.Release.App.Slug != "illarin" {
-		t.Errorf("release app = %q", found.Release.App.Slug)
-	}
-}
-
-func TestARefusedReleaseAddressNamesTheField(t *testing.T) {
-	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
-	release := stack.categoryBySlug(t, "release")
-	illarin := stack.appBySlug(t, "illarin")
-
-	draft := stack.started(t, session, fmt.Sprintf(
-		`{"categoryId":%q,"title":"Illarin 2.1"}`, release.ID,
-	))
-	response := stack.save(t, session, draft.ID, finished(draft, map[string]any{
-		"release": map[string]any{
-			"appId": illarin.ID, "version": "2.1", "address": "http://illarin.com/releases",
-		},
-	}))
-	if response.Code != http.StatusBadRequest {
-		t.Fatalf("a plain http release address saved: %d", response.Code)
-	}
-	if !strings.Contains(response.Body.String(), "release.address") {
-		t.Errorf("the refusal does not name the field: %s", response.Body.String())
-	}
-}
-
-func TestARefusedDocumentNamesWhereItWentWrong(t *testing.T) {
-	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Nothing dangerous here")
 
 	response := stack.save(t, session, draft.ID, finished(draft, map[string]any{
-		"document": json.RawMessage(
+		"body": json.RawMessage(
 			`{"version":2,"content":[{"type":"paragraph","content":[` +
 				`{"type":"text","text":"Go","marks":[{"type":"link","href":"javascript:alert(1)"}]}]}]}`,
 		),
@@ -557,8 +478,8 @@ func TestARefusedDocumentNamesWhereItWentWrong(t *testing.T) {
 
 func TestAPublishedRevisionIsTheOneReadersGetUntilItIsPublishedAgain(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "First edition")
 
 	written := stack.saved(t, session, draft.ID, finished(draft, nil))
@@ -591,14 +512,14 @@ func TestAPublishedRevisionIsTheOneReadersGetUntilItIsPublishedAgain(t *testing.
 		t.Fatalf("count revisions: %v", err)
 	}
 	if revisions != 2 {
-		t.Errorf("two publications left %d revisions", revisions)
+		t.Errorf("two posts left %d revisions", revisions)
 	}
 }
 
 func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	apitest.SaveProfile(t, stack.router, session, `{"displayName":"The Editor","links":[]}`)
 
 	draft := stack.illarinDraft(t, session, "Signed and dated")
@@ -619,8 +540,8 @@ func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
 
 func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "On the record")
 	stack.saved(t, session, draft.ID, finished(draft, nil))
 	stack.published(t, session, draft.ID)
@@ -631,7 +552,7 @@ func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read the announcement: %v", err)
 	}
-	if announcementType != "publication.post.published.v1" {
+	if announcementType != "blog.post.published.v1" {
 		t.Errorf("event type = %q", announcementType)
 	}
 
@@ -640,7 +561,7 @@ func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
 	err = stack.pool.QueryRow(context.Background(), `
 		select action, credential, coalesce(before_state, ''), coalesce(after_state, ''),
 		       revision_id::text
-		  from publication_audits where post_id = $1 and action = 'post.published'
+		  from blog_activity_log where post_id = $1 and action = 'post.published'
 	`, draft.ID).Scan(&action, &credential, &before, &after, &revisionID)
 	if err != nil {
 		t.Fatalf("read the publication audit: %v", err)
@@ -654,7 +575,7 @@ func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
 
 	var rows int
 	err = stack.pool.QueryRow(context.Background(), `
-		select count(*) from publication_audits
+		select count(*) from blog_activity_log
 		 where post_id = $1 and (before_state ilike '%Illarin now keeps%'
 		    or after_state ilike '%Illarin now keeps%')
 	`, draft.ID).Scan(&rows)
@@ -668,8 +589,8 @@ func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
 
 func TestAPostAddressCannotTakeABlogRouteOrAnotherPosts(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	first := stack.illarinDraft(t, session, "Taken already")
 	stack.saved(t, session, first.ID, finished(first, nil))
@@ -687,39 +608,39 @@ func TestAPostAddressCannotTakeABlogRouteOrAnotherPosts(t *testing.T) {
 	}
 }
 
-func TestRevokingAGrantEndsPostAccessAndLeavesThePublishedPost(t *testing.T) {
+func TestSwitchingAWriterOffEndsPostAccessAndLeavesThePublishedPost(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Still readable"}`, writer.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"Still readable"}`, announcement.ID,
 	))
 	stack.saved(t, writer.session, draft.ID, finished(draft, nil))
 	stack.published(t, writer.session, draft.ID)
 
 	revoke := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodDelete, "/v1/publication/grants/"+writer.grant.ID, "",
-	), stack.authority))
+		http.MethodDelete, "/v1/blog/writers/"+writer.writer.AccountID, "",
+	), stack.admin))
 	if revoke.Code != http.StatusNoContent {
 		t.Fatalf("revoke status = %d: %s", revoke.Code, revoke.Body.String())
 	}
 
 	response := apitest.Send(t, stack.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), writer.session,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/posts/"+draft.ID, nil), writer.session,
 	))
 	if response.Code != http.StatusForbidden {
-		t.Errorf("a revoked contributor still reads the post: %d", response.Code)
+		t.Errorf("a former writer still reads the post: %d", response.Code)
 	}
 	if found := stack.reader(t, draft.Slug); found.Title != "Still readable" {
-		t.Errorf("revocation changed the public post: %q", found.Title)
+		t.Errorf("the switch changed the public post: %q", found.Title)
 	}
 }
 
 func TestARevisionIsNotRewrittenWhenTheDraftedChangesChanges(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Held still")
 	written := stack.saved(t, session, draft.ID, finished(draft, nil))
 	stack.published(t, session, draft.ID)
@@ -749,8 +670,8 @@ func TestARevisionIsNotRewrittenWhenTheDraftedChangesChanges(t *testing.T) {
 
 func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Not ready yet")
 
 	if code := stack.publish(t, session, draft.ID).Code; code != http.StatusBadRequest {
@@ -772,7 +693,7 @@ func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 	}
 
 	current := apitest.Send(t, stack.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/publication/posts/"+draft.ID, nil), session,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/posts/"+draft.ID, nil), session,
 	))
 	if status := decodePost(t, current).Status; status != "draft" {
 		t.Errorf("the post is %q after a refused publication", status)
@@ -781,8 +702,8 @@ func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 
 func TestPublishingRefusesDraftedChangesWhoseTitleWentMissing(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "A title that goes away")
 	stack.saved(t, session, draft.ID, finished(draft, nil))
 
@@ -803,50 +724,50 @@ func TestPublishingRefusesDraftedChangesWhoseTitleWentMissing(t *testing.T) {
 
 func TestAnOlderDocumentIsStoredAndPublishedAtTheCurrentVersion(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Written a version ago")
 
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
-		"document": json.RawMessage(
+		"body": json.RawMessage(
 			`{"version":1,"content":[` +
 				`{"type":"heading","level":2,"content":[{"type":"text","text":"Release notes"}]},` +
 				`{"type":"paragraph","content":[{"type":"text","text":"Stored before headings had addresses."}]}]}`,
 		),
 	}))
-	if written.Document.Version != 2 || written.DocumentVersion != 2 {
-		t.Fatalf("saved body = version %d, column %d", written.Document.Version, written.DocumentVersion)
+	if written.Body.Version != 2 || written.BodyVersion != 2 {
+		t.Fatalf("saved body = version %d, column %d", written.Body.Version, written.BodyVersion)
 	}
-	if written.Document.Content[0]["anchor"] != "release-notes" {
-		t.Errorf("upgraded heading = %+v, want the address its words make", written.Document.Content[0])
+	if written.Body.Content[0]["anchor"] != "release-notes" {
+		t.Errorf("upgraded heading = %+v, want the address its words make", written.Body.Content[0])
 	}
 
 	stack.published(t, session, draft.ID)
 	found := stack.reader(t, draft.Slug)
-	if found.Document.Version != 2 {
-		t.Errorf("published body = version %d, want the current one", found.Document.Version)
+	if found.Body.Version != 2 {
+		t.Errorf("published body = version %d, want the current one", found.Body.Version)
 	}
-	if found.Document.Content[0]["anchor"] != "release-notes" {
-		t.Errorf("published heading = %+v", found.Document.Content[0])
+	if found.Body.Content[0]["anchor"] != "release-notes" {
+		t.Errorf("published heading = %+v", found.Body.Content[0])
 	}
 }
 
 func TestEveryStructureSurvivesTheRoundTripThroughStorage(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	draft := stack.illarinDraft(t, session, "Every structure at once")
 
 	body := readCorpus(t, "a-dense-technical-post.json")
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
-		"document": body,
+		"body": body,
 	}))
-	stored, err := json.Marshal(written.Document)
+	stored, err := json.Marshal(written.Body)
 	if err != nil {
 		t.Fatalf("encode the stored body: %v", err)
 	}
 	stack.published(t, session, draft.ID)
-	public, err := json.Marshal(stack.reader(t, draft.Slug).Document)
+	public, err := json.Marshal(stack.reader(t, draft.Slug).Body)
 	if err != nil {
 		t.Fatalf("encode the public body: %v", err)
 	}
@@ -854,7 +775,7 @@ func TestEveryStructureSurvivesTheRoundTripThroughStorage(t *testing.T) {
 		t.Errorf("the published body differs from the drafted changes:\n%s\n%s", stored, public)
 	}
 	types := map[string]bool{}
-	for _, block := range written.Document.Content {
+	for _, block := range written.Body.Content {
 		types[fmt.Sprint(block["type"])] = true
 	}
 	for _, want := range []string{
@@ -876,10 +797,10 @@ func readCorpus(t *testing.T, name string) json.RawMessage {
 		t.Fatalf("read the corpus: %v", err)
 	}
 	var one struct {
-		Document json.RawMessage `json:"document"`
+		Body json.RawMessage `json:"document"`
 	}
 	if err := json.Unmarshal(raw, &one); err != nil {
 		t.Fatalf("decode %s: %v", name, err)
 	}
-	return one.Document
+	return one.Body
 }

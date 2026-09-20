@@ -387,14 +387,14 @@ func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
 	}
 	var categoryID uuid.UUID
 	err = pool.QueryRow(ctx,
-		`select id from publication_categories where slug = 'announcement'`,
+		`select id from blog_categories where slug = 'announcement'`,
 	).Scan(&categoryID)
 	if err != nil {
 		t.Fatalf("read a category: %v", err)
 	}
 	postID := uuid.New()
 	if _, err := pool.Exec(ctx, `
-		insert into posts (id, author_id, category_id, title, document, document_version)
+		insert into posts (id, author_id, category_id, title, document, body_version)
 		values ($1, $2, $3, 'A post with pictures', '{"version":2,"content":[]}', 2)
 	`, postID, authorID, categoryID); err != nil {
 		t.Fatalf("insert post: %v", err)
@@ -420,7 +420,7 @@ func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
 	originalFileID := uuid.New()
 	if _, err := pool.Exec(ctx, `
 		insert into post_revisions (id, post_id, number, title, summary, slug, category_id,
-		                            document, document_version, captured_for)
+		                            document, body_version, captured_for)
 		values ($1, $2, 1, 'A post with pictures', 'A summary.', 'a-post-with-pictures', $3,
 		        '{"version":2,"content":[]}', 2, 'publication')
 	`, originalFileID, postID, categoryID); err != nil {

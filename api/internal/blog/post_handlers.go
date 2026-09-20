@@ -42,9 +42,9 @@ func (h *Handlers) listing(params ListPostsParams) func(
 	context.Context, Editor,
 ) ([]Post, error) {
 	if params.Deleted != nil && *params.Deleted {
-		return h.publications.DeletedPosts
+		return h.blog.DeletedPosts
 	}
-	return h.publications.Posts
+	return h.blog.Posts
 }
 
 func (h *Handlers) CreatePost(c *gin.Context) {
@@ -54,11 +54,10 @@ func (h *Handlers) CreatePost(c *gin.Context) {
 	}
 	var request CreatePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the post as JSON.")
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Send the post as JSON.")
 		return
 	}
-	started, err := h.publications.CreatePost(c.Request.Context(), editor, PostEdit{
-		GrantID:    optionalID(request.GrantId),
+	started, err := h.blog.CreatePost(c.Request.Context(), editor, PostEdit{
 		CategoryID: request.CategoryId,
 		Title:      request.Title,
 	})
@@ -78,7 +77,7 @@ func (h *Handlers) GetPost(c *gin.Context) {
 	if !ok {
 		return
 	}
-	found, err := h.publications.Post(c.Request.Context(), editor, id)
+	found, err := h.blog.Post(c.Request.Context(), editor, id)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -97,25 +96,24 @@ func (h *Handlers) SavePost(c *gin.Context) {
 	}
 	var request SavePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the drafted changes as JSON.")
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Send the drafted changes as JSON.")
 		return
 	}
-	document, err := json.Marshal(request.Document)
+	body, err := json.Marshal(request.Body)
 	if err != nil {
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the post body as JSON.")
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Send the post body as JSON.")
 		return
 	}
-	saved, err := h.publications.SavePost(c.Request.Context(), editor, id,
+	saved, err := h.blog.SavePost(c.Request.Context(), editor, id,
 		PostSave{
-			Version:       request.Version,
-			CategoryID:    request.CategoryId,
-			Title:         request.Title,
-			Summary:       request.Summary,
-			Slug:          request.Slug,
-			Document:      document,
-			Release:       toReleaseEdit(request.Release),
-			Header:        toHeaderEdit(request.Header),
-			SocialMediaID: optionalID(request.SocialMediaId),
+			Version:         request.Version,
+			CategoryID:      request.CategoryId,
+			Title:           request.Title,
+			Summary:         request.Summary,
+			Slug:            request.Slug,
+			Body:            body,
+			Header:          toHeaderEdit(request.Header),
+			LinkCardMediaID: optionalID(request.LinkCardMediaId),
 		})
 	if err != nil {
 		h.postError(c, err)
@@ -153,7 +151,7 @@ func (h *Handlers) AddPostMedia(c *gin.Context) {
 	}
 	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
 	defer limitedFile.Close()
-	added, err := h.publications.AddPostMedia(
+	added, err := h.blog.AddPostMedia(
 		c.Request.Context(), editor, id, string(metadata.Purpose), limitedFile,
 	)
 	var refused FieldError
@@ -168,7 +166,7 @@ func (h *Handlers) AddPostMedia(c *gin.Context) {
 		h.refusePostMedia(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, toAPIPostPicture(&added, h.publications.SignPrivate))
+	c.JSON(http.StatusCreated, toAPIPostPicture(&added, h.blog.SignPrivate))
 }
 
 func (h *Handlers) PublishPost(c *gin.Context) {
@@ -182,11 +180,11 @@ func (h *Handlers) PublishPost(c *gin.Context) {
 	}
 	var request PublishPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"Include the current drafted changes version.", "version")
 		return
 	}
-	published, err := h.publications.PublishPost(
+	published, err := h.blog.PublishPost(
 		c.Request.Context(), editor, id, request.Version,
 		announcementOf(request.IntegrationIds, request.RoleIntegrationIds, request.Note),
 	)
@@ -211,7 +209,7 @@ func (h *Handlers) CorrectPostAddress(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "Send the address as JSON.")
 		return
 	}
-	moved, err := h.publications.CorrectAddress(
+	moved, err := h.blog.CorrectAddress(
 		c.Request.Context(), editor, id, request.Slug,
 	)
 	if err != nil {
@@ -235,7 +233,7 @@ func (h *Handlers) CorrectPostByline(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "Send the handle as JSON.")
 		return
 	}
-	corrected, err := h.publications.CorrectByline(
+	corrected, err := h.blog.CorrectByline(
 		c.Request.Context(), editor, id, request.Handle,
 	)
 	if err != nil {
@@ -245,22 +243,13 @@ func (h *Handlers) CorrectPostByline(c *gin.Context) {
 	c.JSON(http.StatusOK, h.toAPIPost(corrected))
 }
 
-func (h *Handlers) ListPostApps(c *gin.Context) {
-	found, err := h.publications.ReadableApps(c.Request.Context())
-	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the apps.")
-		return
-	}
-	c.JSON(http.StatusOK, PublicationAppList{Apps: toAPIApps(found)})
-}
-
 func (h *Handlers) ListPostCategories(c *gin.Context) {
-	found, err := h.publications.ReadableCategories(c.Request.Context())
+	found, err := h.blog.ReadableCategories(c.Request.Context())
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the categories.")
 		return
 	}
-	c.JSON(http.StatusOK, PublicationCategoryList{Categories: toAPICategories(found)})
+	c.JSON(http.StatusOK, BlogCategoryList{Categories: toAPICategories(found)})
 }
 
 func (h *Handlers) ListPublishedPosts(c *gin.Context) {
@@ -268,7 +257,6 @@ func (h *Handlers) ListPublishedPosts(c *gin.Context) {
 	params := ListPublishedPostsParams{
 		Page:     api.QueryNumber(q, "page"),
 		Category: api.QueryText[string](q, "category"),
-		App:      api.QueryText[string](q, "app"),
 	}
 	if q.Refused(c) {
 		return
@@ -284,16 +272,10 @@ func (h *Handlers) ListPublishedPosts(c *gin.Context) {
 	if params.Category != nil {
 		asked.Category = *params.Category
 	}
-	if params.App != nil {
-		asked.App = *params.App
-	}
-	found, err := h.publications.Archive(c.Request.Context(), asked)
+	found, err := h.blog.Archive(c.Request.Context(), asked)
 	switch {
 	case errors.Is(err, ErrCategoryNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such publication category.")
-		return
-	case errors.Is(err, ErrAppNotFound):
-		api.Refuse(c, http.StatusNotFound, "No such publication app.")
+		api.Refuse(c, http.StatusNotFound, "No such blog category.")
 		return
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not load blog posts. Try again.")
@@ -304,9 +286,9 @@ func (h *Handlers) ListPublishedPosts(c *gin.Context) {
 
 func (h *Handlers) GetPublishedPost(c *gin.Context) {
 	slug := c.Param("slug")
-	found, err := h.publications.PublishedPost(c.Request.Context(), slug)
+	found, err := h.blog.PublishedPost(c.Request.Context(), slug)
 	if errors.Is(err, ErrPostNotFound) {
-		if h.withdrawnPost(c, slug) {
+		if h.unpublishedPost(c, slug) {
 			return
 		}
 		api.Refuse(c, http.StatusNotFound, "No such post.")
@@ -323,13 +305,13 @@ func (h *Handlers) refusePostMedia(c *gin.Context, err error) {
 	var tooLarge *http.MaxBytesError
 	switch {
 	case errors.As(err, &tooLarge):
-		refuseField(c, http.StatusRequestEntityTooLarge, PublicationErrorCodeInvalid,
+		refuseField(c, http.StatusRequestEntityTooLarge, BlogErrorCodeInvalid,
 			"That picture is larger than the upload limit.", api.FilePart)
 	case errors.Is(err, storage.ErrInsufficientSpace):
-		refusePublication(c, http.StatusServiceUnavailable, PublicationErrorCodeServerError,
+		refuseBlog(c, http.StatusServiceUnavailable, BlogErrorCodeServerError,
 			"Uploads are temporarily unavailable because storage is low.")
 	default:
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"That picture could not be read. Use a PNG, JPEG, WebP or GIF.", api.FilePart)
 	}
 }
@@ -349,67 +331,67 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	var stale Stale
 	switch {
 	case errors.Is(err, ErrPostNotFound):
-		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such post.")
+		refuseBlog(c, http.StatusNotFound, BlogErrorCodeNotFound, "No such post.")
 	case errors.Is(err, ErrRevisionNotFound):
-		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound,
+		refuseBlog(c, http.StatusNotFound, BlogErrorCodeNotFound,
 			"This post has no such revision.")
 	case errors.Is(err, ErrIntegrationRefused):
-		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
+		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
 			"This post may not send to that integration.")
 	case errors.Is(err, ErrRoleRefused):
-		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
+		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
 			"This post may not mention that integration's role.")
 	case errors.Is(err, ErrNotPostEditor):
-		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
+		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
 			"Only this post's contributor or an Illarin admin can do that.")
 	case errors.Is(err, ErrSlugLocked):
-		refuseField(c, http.StatusForbidden, PublicationErrorCodeForbidden,
+		refuseField(c, http.StatusForbidden, BlogErrorCodeForbidden,
 			"The address of a published post is fixed. An admin can correct it.", "slug")
 	case errors.Is(err, ErrNotPostAdmin):
-		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
+		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
 			"Only an Illarin admin can correct a published post.")
-	case errors.Is(err, ErrPostUnpublished):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+	case errors.Is(err, ErrPostNotPublished):
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"There is nothing to correct until the post is published.")
 	case errors.Is(err, ErrPostNotPublic):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"Only a published post can be withdrawn.")
-	case errors.Is(err, ErrPostNotWithdrawn):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"This post is not withdrawn.")
-	case errors.Is(err, ErrPostWithdrawn):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"This post is withdrawn. Republish it to make it public again.")
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
+			"Only a published post can be unpublished.")
+	case errors.Is(err, ErrPostNotUnpublished):
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
+			"This post is not unpublished.")
+	case errors.Is(err, ErrPostUnpublished):
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
+			"This post is unpublished. Republish it to make it public again.")
 	case errors.Is(err, ErrPostDeleted):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"This post is deleted. Restore it before editing.")
 	case errors.Is(err, ErrPostNotDeleted):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"This post has not been deleted.")
 	case errors.Is(err, ErrPostInPublicView):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"Withdraw the post before deleting it.")
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
+			"Unpublish the post before deleting it.")
 	case errors.Is(err, ErrRecoveryExpired):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"The recovery deadline has passed. This post cannot be restored.")
 	case errors.Is(err, ErrDeletePublished):
-		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
+		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
 			"Only an Illarin admin can delete or restore a previously published post.")
 	case errors.Is(err, ErrSchedulePublishing):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error: "This revision is being published and can no longer be changed.",
-			Code:  PublicationErrorCodeScheduleRunning,
+			Code:  BlogErrorCodeScheduleRunning,
 		})
 	case errors.As(err, &stale):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error:     "This post was saved in another session. Copy any unsaved text, then reload to edit the latest version.",
-			Code:      PublicationErrorCodeStaleVersion,
+			Code:      BlogErrorCodeStaleVersion,
 			Field:     pointer("version"),
 			Version:   &stale.Version,
 			UpdatedAt: &stale.UpdatedAt,
 		})
 	default:
-		h.publicationError(c, err)
+		h.blogError(c, err)
 	}
 }
 
@@ -429,11 +411,10 @@ func (h *Handlers) toAPIPost(found Post) PostResponse {
 		Summary:         found.Summary,
 		Slug:            found.Slug,
 		Category:        toAPICategory(found.Category),
-		Document:        toAPIDocument(found.Document),
-		DocumentVersion: found.DocumentVersion,
-		Release:         toAPIRelease(found.Release),
+		Body:            toAPIBody(found.Body),
+		BodyVersion:     found.BodyVersion,
 		Header:          toAPIHeader(found.Header),
-		Media:           showPostMedia(found.Media, h.publications.SignPrivate),
+		Media:           showPostMedia(found.Media, h.blog.SignPrivate),
 		FormerAddresses: found.FormerAddresses,
 		Version:         found.Version,
 		Author:          PostAuthor{Handle: found.Author.Handle},
@@ -442,24 +423,16 @@ func (h *Handlers) toAPIPost(found Post) PostResponse {
 		CreatedAt:       found.CreatedAt,
 		UpdatedAt:       found.UpdatedAt,
 	}
-	if found.GrantID != nil {
-		grantID := *found.GrantID
-		shown.GrantId = &grantID
-	}
-	if found.App != nil {
-		app := toAPIApp(*found.App)
-		shown.App = &app
-	}
-	if found.SocialMediaID != nil {
-		social := *found.SocialMediaID
-		shown.SocialMediaId = &social
+	if found.LinkCardMediaID != nil {
+		linkCard := *found.LinkCardMediaID
+		shown.LinkCardMediaId = &linkCard
 	}
 	if found.PublicRevision != nil {
 		public := *found.PublicRevision
 		shown.PublicRevisionId = &public
 	}
 	shown.Schedule = toAPISchedule(found.Schedule)
-	shown.Withdrawal = toAPIWithdrawal(found.Withdrawal)
+	shown.Unpublishing = toAPIUnpublishing(found.Unpublishing)
 	shown.Deletion = toAPIDeletion(found.Deletion)
 	if found.Byline != nil {
 		byline := toAPIByline(*found.Byline)
@@ -470,21 +443,20 @@ func (h *Handlers) toAPIPost(found Post) PostResponse {
 
 func toAPIPublicPost(found PublicPost) PublicPostResponse {
 	return PublicPostResponse{
-		Id:           found.ID,
-		Slug:         found.Slug,
-		OriginalSlug: found.OriginalSlug,
-		Title:        found.Title,
-		Summary:      found.Summary,
-		Category:     toAPICategory(found.Category),
-		Document:     toAPIDocument(found.Document),
-		Release:      toAPIRelease(found.Release),
-		Header:       toAPIHeader(found.Header),
-		SocialImage:  toAPIPostPicture(found.SocialMedia, nil),
-		Media:        showPostMedia(found.Media, nil),
-		Byline:       toAPIByline(found.Byline),
-		Related:      toAPISummaries(found.Related),
-		PublishedAt:  found.PublishedAt,
-		UpdatedAt:    found.UpdatedAt,
+		Id:            found.ID,
+		Slug:          found.Slug,
+		OriginalSlug:  found.OriginalSlug,
+		Title:         found.Title,
+		Summary:       found.Summary,
+		Category:      toAPICategory(found.Category),
+		Body:          toAPIBody(found.Body),
+		Header:        toAPIHeader(found.Header),
+		LinkCardImage: toAPIPostPicture(found.LinkCard, nil),
+		Media:         showPostMedia(found.Media, nil),
+		Byline:        toAPIByline(found.Byline),
+		Related:       toAPISummaries(found.Related),
+		PublishedAt:   found.PublishedAt,
+		UpdatedAt:     found.UpdatedAt,
 	}
 }
 
@@ -498,10 +470,6 @@ func toAPIArchive(found Archive) PostArchive {
 	if found.Category != nil {
 		category := toAPICategory(*found.Category)
 		shown.Category = &category
-	}
-	if found.App != nil {
-		app := toAPIApp(*found.App)
-		shown.App = &app
 	}
 	return shown
 }
@@ -525,13 +493,6 @@ func toAPISummary(found PostSummary) PostSummaryResponse {
 		Byline:       toAPIByline(found.Byline),
 		PublishedAt:  found.PublishedAt,
 		UpdatedAt:    found.UpdatedAt,
-	}
-	if found.App != nil {
-		app := toAPIApp(*found.App)
-		shown.App = &app
-	}
-	if found.ReleaseVersion != "" {
-		shown.ReleaseVersion = pointer(found.ReleaseVersion)
 	}
 	return shown
 }
@@ -590,47 +551,18 @@ func toAPIByline(found Byline) PostByline {
 			Height: found.Avatar.Height,
 		}
 	}
-	if found.App != nil {
-		app := toAPIApp(*found.App)
-		shown.App = &app
-	}
 	return shown
 }
 
-func toAPIRelease(found *Release) *PostRelease {
-	if found == nil {
-		return nil
-	}
-	shown := PostRelease{App: toAPIApp(found.App), Version: found.Version}
-	if found.Address != "" {
-		shown.Address = pointer(found.Address)
-	}
-	return &shown
-}
-
-func toAPIDocument(stored json.RawMessage) PostDocument {
-	var shown PostDocument
+func toAPIBody(stored json.RawMessage) PostBody {
+	var shown PostBody
 	if err := json.Unmarshal(stored, &shown); err != nil {
-		return PostDocument{Version: 0, Content: []map[string]any{}}
+		return PostBody{Version: 0, Content: []map[string]any{}}
 	}
 	if shown.Content == nil {
 		shown.Content = []map[string]any{}
 	}
 	return shown
-}
-
-func toReleaseEdit(request *PostReleaseEdit) *ReleaseEdit {
-	if request == nil {
-		return nil
-	}
-	edit := &ReleaseEdit{
-		AppID:   request.AppId,
-		Version: request.Version,
-	}
-	if request.Address != nil {
-		edit.Address = *request.Address
-	}
-	return edit
 }
 
 func toHeaderEdit(request *PostHeaderEdit) *HeaderEdit {
@@ -665,43 +597,38 @@ type CorrectPostBylineRequest struct {
 }
 
 type CreatePostRequest struct {
-	CategoryId uuid.UUID  `json:"categoryId"`
-	GrantId    *uuid.UUID `json:"grantId,omitempty"`
-	Title      string     `json:"title"`
+	CategoryId uuid.UUID `json:"categoryId"`
+	Title      string    `json:"title"`
 }
 
 type PostResponse struct {
-	App              *PublicationApp     `json:"app,omitempty"`
 	Author           PostAuthor          `json:"author"`
 	Byline           *PostByline         `json:"byline,omitempty"`
-	Category         PublicationCategory `json:"category"`
+	Category         BlogCategory        `json:"category"`
 	CreatedAt        time.Time           `json:"createdAt"`
 	Deletion         *PostDeletion       `json:"deletion,omitempty"`
-	Document         PostDocument        `json:"document"`
-	DocumentVersion  int                 `json:"documentVersion"`
+	Body             PostBody            `json:"body"`
+	BodyVersion      int                 `json:"bodyVersion"`
 	FormerAddresses  []string            `json:"formerAddresses"`
-	GrantId          *uuid.UUID          `json:"grantId,omitempty"`
 	Header           *PostHeader         `json:"header,omitempty"`
 	Id               uuid.UUID           `json:"id"`
 	Media            []PostMediaResponse `json:"media"`
 	PublicRevisionId *uuid.UUID          `json:"publicRevisionId,omitempty"`
 	PublishedAt      *time.Time          `json:"publishedAt,omitempty"`
-	Release          *PostRelease        `json:"release,omitempty"`
 	Schedule         *PostSchedule       `json:"schedule,omitempty"`
 	Slug             string              `json:"slug"`
-	SocialMediaId    *uuid.UUID          `json:"socialMediaId,omitempty"`
+	LinkCardMediaId  *uuid.UUID          `json:"linkCardMediaId,omitempty"`
 	Status           PostStatus          `json:"status"`
 	Summary          string              `json:"summary"`
 	Title            string              `json:"title"`
 	UpdatedAt        time.Time           `json:"updatedAt"`
 	UpdatedPublicAt  *time.Time          `json:"updatedPublicAt,omitempty"`
 	Version          int                 `json:"version"`
-	Withdrawal       *PostWithdrawal     `json:"withdrawal,omitempty"`
+	Unpublishing     *PostUnpublishing   `json:"unpublishing,omitempty"`
 }
 
 type PostArchive struct {
-	App      *PublicationApp       `json:"app,omitempty"`
-	Category *PublicationCategory  `json:"category,omitempty"`
+	Category *BlogCategory         `json:"category,omitempty"`
 	Page     int                   `json:"page"`
 	Pages    int                   `json:"pages"`
 	Posts    []PostSummaryResponse `json:"posts"`
@@ -713,7 +640,6 @@ type PostAuthor struct {
 }
 
 type PostByline struct {
-	App          *PublicationApp        `json:"app,omitempty"`
 	Avatar       *profile.ProfileAvatar `json:"avatar,omitempty"`
 	ContactEmail string                 `json:"contactEmail"`
 	DisplayName  string                 `json:"displayName"`
@@ -722,14 +648,14 @@ type PostByline struct {
 }
 
 type PostConflict struct {
-	Code      PublicationErrorCode `json:"code"`
-	Error     string               `json:"error"`
-	Field     *string              `json:"field,omitempty"`
-	UpdatedAt *time.Time           `json:"updatedAt,omitempty"`
-	Version   *int                 `json:"version,omitempty"`
+	Code      BlogErrorCode `json:"code"`
+	Error     string        `json:"error"`
+	Field     *string       `json:"field,omitempty"`
+	UpdatedAt *time.Time    `json:"updatedAt,omitempty"`
+	Version   *int          `json:"version,omitempty"`
 }
 
-type PostDocument struct {
+type PostBody struct {
 	Content []map[string]interface{} `json:"content"`
 	Version int                      `json:"version"`
 }
@@ -763,65 +689,46 @@ type PostMediaResponse struct {
 type PostMediaPurpose string
 
 const (
-	PostMediaPurposeDocument PostMediaPurpose = "document"
+	PostMediaPurposeBody     PostMediaPurpose = "body"
 	PostMediaPurposeHeader   PostMediaPurpose = "header"
-	PostMediaPurposeSocial   PostMediaPurpose = "social"
+	PostMediaPurposeLinkCard PostMediaPurpose = "link_card"
 )
-
-type PostRelease struct {
-	Address *string        `json:"address,omitempty"`
-	App     PublicationApp `json:"app"`
-	Version string         `json:"version"`
-}
-
-type PostReleaseEdit struct {
-	Address *string   `json:"address,omitempty"`
-	AppId   uuid.UUID `json:"appId"`
-	Version string    `json:"version"`
-}
 
 type PostStatus string
 
 const (
-	PostStatusDraft     PostStatus = "draft"
-	PostStatusPublished PostStatus = "published"
-	PostStatusWithdrawn PostStatus = "withdrawn"
+	PostStatusDraft       PostStatus = "draft"
+	PostStatusPublished   PostStatus = "published"
+	PostStatusUnpublished PostStatus = "unpublished"
 )
 
 type PostSummaryResponse struct {
-	App            *PublicationApp     `json:"app,omitempty"`
-	Byline         PostByline          `json:"byline"`
-	Category       PublicationCategory `json:"category"`
-	Id             uuid.UUID           `json:"id"`
-	OriginalSlug   string              `json:"originalSlug"`
-	PublishedAt    time.Time           `json:"publishedAt"`
-	ReleaseVersion *string             `json:"releaseVersion,omitempty"`
-	Slug           string              `json:"slug"`
-	Summary        string              `json:"summary"`
-	Title          string              `json:"title"`
-	UpdatedAt      *time.Time          `json:"updatedAt,omitempty"`
+	Byline       PostByline   `json:"byline"`
+	Category     BlogCategory `json:"category"`
+	Id           uuid.UUID    `json:"id"`
+	OriginalSlug string       `json:"originalSlug"`
+	PublishedAt  time.Time    `json:"publishedAt"`
+	Slug         string       `json:"slug"`
+	Summary      string       `json:"summary"`
+	Title        string       `json:"title"`
+	UpdatedAt    *time.Time   `json:"updatedAt,omitempty"`
 }
 
 type PublicPostResponse struct {
-	Byline       PostByline            `json:"byline"`
-	Category     PublicationCategory   `json:"category"`
-	Document     PostDocument          `json:"document"`
-	Header       *PostHeader           `json:"header,omitempty"`
-	Id           uuid.UUID             `json:"id"`
-	Media        []PostMediaResponse   `json:"media"`
-	OriginalSlug string                `json:"originalSlug"`
-	PublishedAt  time.Time             `json:"publishedAt"`
-	Related      []PostSummaryResponse `json:"related"`
-	Release      *PostRelease          `json:"release,omitempty"`
-	Slug         string                `json:"slug"`
-	SocialImage  *PostMediaResponse    `json:"socialImage,omitempty"`
-	Summary      string                `json:"summary"`
-	Title        string                `json:"title"`
-	UpdatedAt    *time.Time            `json:"updatedAt,omitempty"`
-}
-
-type PublicationAppList struct {
-	Apps []PublicationApp `json:"apps"`
+	Byline        PostByline            `json:"byline"`
+	Category      BlogCategory          `json:"category"`
+	Body          PostBody              `json:"body"`
+	Header        *PostHeader           `json:"header,omitempty"`
+	Id            uuid.UUID             `json:"id"`
+	Media         []PostMediaResponse   `json:"media"`
+	OriginalSlug  string                `json:"originalSlug"`
+	PublishedAt   time.Time             `json:"publishedAt"`
+	Related       []PostSummaryResponse `json:"related"`
+	Slug          string                `json:"slug"`
+	LinkCardImage *PostMediaResponse    `json:"linkCardImage,omitempty"`
+	Summary       string                `json:"summary"`
+	Title         string                `json:"title"`
+	UpdatedAt     *time.Time            `json:"updatedAt,omitempty"`
 }
 
 type PublishPostRequest struct {
@@ -832,15 +739,14 @@ type PublishPostRequest struct {
 }
 
 type SavePostRequest struct {
-	CategoryId    uuid.UUID        `json:"categoryId"`
-	Document      PostDocument     `json:"document"`
-	Header        *PostHeaderEdit  `json:"header,omitempty"`
-	Release       *PostReleaseEdit `json:"release,omitempty"`
-	Slug          string           `json:"slug"`
-	SocialMediaId *uuid.UUID       `json:"socialMediaId,omitempty"`
-	Summary       string           `json:"summary"`
-	Title         string           `json:"title"`
-	Version       int              `json:"version"`
+	CategoryId      uuid.UUID       `json:"categoryId"`
+	Body            PostBody        `json:"body"`
+	Header          *PostHeaderEdit `json:"header,omitempty"`
+	Slug            string          `json:"slug"`
+	LinkCardMediaId *uuid.UUID      `json:"linkCardMediaId,omitempty"`
+	Summary         string          `json:"summary"`
+	Title           string          `json:"title"`
+	Version         int             `json:"version"`
 }
 
 type ListPostsParams struct {
@@ -850,7 +756,6 @@ type ListPostsParams struct {
 type ListPublishedPostsParams struct {
 	Page     *int    `json:"page,omitempty"`
 	Category *string `json:"category,omitempty"`
-	App      *string `json:"app,omitempty"`
 }
 
 func readPostMediaMetadata(parts *multipart.Reader) (AddPostMediaRequest, error) {

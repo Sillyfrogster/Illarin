@@ -43,26 +43,26 @@ var blockPlaces = map[string][]string{
 func Read(raw []byte) (Document, error) {
 	var body map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &body); err != nil {
-		return Document{}, Problem{Path: "document", Message: "Send the post body as a JSON object."}
+		return Document{}, Problem{Path: "body", Message: "Send the post body as a JSON object."}
 	}
-	if err := onlyKeys("document", body, "version", "content"); err != nil {
+	if err := onlyKeys("body", body, "version", "content"); err != nil {
 		return Document{}, err
 	}
-	version, err := readInt("document.version", body, "version")
+	version, err := readInt("body.version", body, "version")
 	if err != nil {
 		return Document{}, err
 	}
 	if version < firstVersion || version > Version {
 		return Document{}, Problem{
-			Path: "document.version",
+			Path: "body.version",
 			Message: fmt.Sprintf(
-				"This build reads post document versions %d to %d and writes %d.",
+				"This build reads post body versions %d to %d and writes %d.",
 				firstVersion, Version, Version,
 			),
 		}
 	}
 	state := &reader{anchors: map[string]bool{}}
-	blocks, err := state.blocks("document.content", body["content"], "content", 1)
+	blocks, err := state.blocks("body.content", body["content"], "content", 1)
 	if err != nil {
 		return Document{}, err
 	}
@@ -238,7 +238,7 @@ func onlyKeys(path string, fields map[string]json.RawMessage, allowed ...string)
 		if !known {
 			return Problem{
 				Path:    path + "." + key,
-				Message: fmt.Sprintf("%q is not part of a post document.", key),
+				Message: fmt.Sprintf("%q is not part of a post body.", key),
 			}
 		}
 	}

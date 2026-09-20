@@ -117,7 +117,7 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 	}
 	defer tx.Rollback(ctx)
 	tag, err := tx.Exec(ctx, `
-		insert into publication_audits (id, actor_id, credential, action, post_id, integration_id, attempt_id)
+		insert into blog_activity_log (id, actor_id, credential, action, post_id, integration_id, attempt_id)
 		values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing
 	`, in.RequestID, actor, CredentialSession, "discord."+in.Action, held.PostID, integrationID, id)
 	if err != nil {
@@ -125,7 +125,7 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 	}
 	if tag.RowsAffected() == 0 {
 		var previous string
-		err := tx.QueryRow(ctx, `select result::text from publication_discord_repairs
+		err := tx.QueryRow(ctx, `select result::text from blog_discord_repairs
 			where id = $1 and actor_id = $2 and attempt_id = $3 and fingerprint = $4`,
 			in.RequestID, actor, id, fingerprint).Scan(&previous)
 		if err != nil {
@@ -136,7 +136,7 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 		}
 		return result, nil
 	}
-	_, err = tx.Exec(ctx, `insert into publication_discord_repairs
+	_, err = tx.Exec(ctx, `insert into blog_discord_repairs
 		(id, actor_id, attempt_id, target_message_id, fingerprint, result)
 		values ($1, $2, $3, $4, $5, $6)`, in.RequestID, actor, id, in.MessageID, fingerprint, string(stored))
 	if err != nil {
@@ -170,7 +170,7 @@ func (s *Service) RepairDiscord(ctx context.Context, actor, id uuid.UUID, in Dis
 		}
 	}
 	stored, _ = json.Marshal(result)
-	_, err = s.pool.Exec(ctx, `update publication_discord_repairs set result = $2 where id = $1`, in.RequestID, string(stored))
+	_, err = s.pool.Exec(ctx, `update blog_discord_repairs set result = $2 where id = $1`, in.RequestID, string(stored))
 	if err != nil {
 		return DiscordRepairResult{}, fmt.Errorf("record the Discord repair outcome: %w", err)
 	}

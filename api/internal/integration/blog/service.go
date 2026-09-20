@@ -30,9 +30,7 @@ type Change struct {
 	Actor      uuid.UUID
 	Credential string
 	Action     string
-	AppID      *uuid.UUID
 	CategoryID *uuid.UUID
-	GrantID    *uuid.UUID
 	PostID     *uuid.UUID
 	RevisionID *uuid.UUID
 	ScheduleID *uuid.UUID
@@ -45,9 +43,9 @@ type Change struct {
 }
 
 const (
-	PostPublished    = "publication.post.published.v1"
-	PostUpdated      = "publication.post.updated.v1"
-	PostWithdrawn    = "publication.post.withdrawn.v1"
+	PostPublished    = "blog.post.published.v1"
+	PostUpdated      = "blog.post.updated.v1"
+	PostUnpublished  = "blog.post.unpublished.v1"
 	CredentialSystem = "system"
 )
 

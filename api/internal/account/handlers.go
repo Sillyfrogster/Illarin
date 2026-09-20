@@ -187,7 +187,7 @@ func (h *Handlers) GetSession(c *gin.Context) {
 		c.JSON(http.StatusOK, SessionState{User: nil})
 		return
 	}
-	authority, err := h.publications.HoldsAuthority(c.Request.Context(), current.ID)
+	authority, err := h.blog.HoldsAuthority(c.Request.Context(), current.ID)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
 		return

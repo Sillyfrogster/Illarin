@@ -1,6 +1,6 @@
 {
   "note": "A displayed picture with nothing said about it",
-  "path": "document.content.0.alt",
+  "path": "body.content.0.alt",
   "document": {
     "version": 2,
     "content": [

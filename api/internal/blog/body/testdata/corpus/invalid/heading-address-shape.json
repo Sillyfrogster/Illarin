@@ -1,6 +1,6 @@
 {
   "note": "A heading address that is not an address",
-  "path": "document.content.0.anchor",
+  "path": "body.content.0.anchor",
   "document": {
     "version": 2,
     "content": [

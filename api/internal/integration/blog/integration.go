@@ -26,14 +26,14 @@ const (
 
 const integrationNameLimit = 48
 
-var AnnouncementTypes = []string{PostPublished, PostUpdated, PostWithdrawn}
+var AnnouncementTypes = []string{PostPublished, PostUpdated, PostUnpublished}
 
 var ErrAnnouncementTypeUnknown = errors.New("no such announcement")
 
 var ErrNotWebhook = errors.New("the integration is a Discord channel")
 
 var (
-	ErrIntegrationNotFound = errors.New("no such publication integration")
+	ErrIntegrationNotFound = errors.New("no such blog integration")
 	ErrIntegrationRefused  = errors.New("the integration is not one this post may send to")
 	ErrIntegrationInactive = errors.New("the integration has not been verified")
 )
@@ -92,7 +92,7 @@ type Choice struct {
 func (s *Service) Integrations(ctx context.Context) ([]Integration, error) {
 	rows, err := s.pool.Query(ctx, selectIntegrations+` order by held.name, held.created_at`)
 	if err != nil {
-		return nil, fmt.Errorf("read publication integrations: %w", err)
+		return nil, fmt.Errorf("read blog integrations: %w", err)
 	}
 	return collectIntegrations(rows)
 }
@@ -298,7 +298,7 @@ func (s *Service) RemoveIntegration(ctx context.Context, actor uuid.UUID, id uui
 func (s *Service) Integration(ctx context.Context, id uuid.UUID) (Integration, error) {
 	rows, err := s.pool.Query(ctx, selectIntegrations+` where held.id = $1`, id)
 	if err != nil {
-		return Integration{}, fmt.Errorf("read a publication integration: %w", err)
+		return Integration{}, fmt.Errorf("read a blog integration: %w", err)
 	}
 	found, err := collectIntegrations(rows)
 	if err != nil {
@@ -402,14 +402,14 @@ func collectIntegrations(rows pgx.Rows) ([]Integration, error) {
 			&one.VerifiedAt, &one.DisabledAt, &one.CreatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("read a publication integration: %w", err)
+			return nil, fmt.Errorf("read a blog integration: %w", err)
 		}
 		one.Address = maskAddress(one.Host)
 		one.Channel = scanChannel(guildID, channelID, webhookName, roleID, roleName)
 		found = append(found, one)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read publication integrations: %w", err)
+		return nil, fmt.Errorf("read blog integrations: %w", err)
 	}
 	return found, nil
 }

@@ -40,7 +40,7 @@ func TestTheSignatureIsOverIdTimestampAndBody(t *testing.T) {
 	key := make([]byte, SecretBytes)
 	secret := Prefix + base64.StdEncoding.EncodeToString(key)
 	at := time.Unix(1700000000, 0)
-	body := []byte(`{"type":"publication.post.published.v1"}`)
+	body := []byte(`{"type":"blog.post.published.v1"}`)
 
 	signature, err := Sign(secret, "msg_1", at, body)
 

@@ -10,13 +10,13 @@ import (
 type BlogAccess = blog.IntegrationAccess
 
 type Handlers struct {
-	publications *blog.Service
+	blog         *blog.Service
 	integrations *Service
 	access       BlogAccess
 }
 
-func NewHandlers(publications *blog.Service, integrations *Service, access BlogAccess) *Handlers {
-	return &Handlers{publications: publications, integrations: integrations, access: access}
+func NewHandlers(posts *blog.Service, integrations *Service, access BlogAccess) *Handlers {
+	return &Handlers{blog: posts, integrations: integrations, access: access}
 }
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
@@ -44,7 +44,6 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodGet, "/v1/blog/announcement-attempts/:id/tries", d.JSON, h.ListBlogAnnouncementTries)
 	routes.Handle(http.MethodPost, "/v1/blog/announcement-attempts/:id/replay", d.JSON, h.ReplayBlogAnnouncementAttempt)
 	routes.Handle(http.MethodPost, "/v1/blog/announcement-attempts/:id/repair", d.Verify, h.RepairDiscordAnnouncement)
-	routes.Handle(http.MethodPut, "/v1/blog/grants/:id/integrations", d.JSON, h.SetBlogGrantIntegrations)
 	routes.Handle(http.MethodGet, "/v1/blog/posts/:id/integrations", d.JSON, h.ListPostIntegrations)
 	routes.Handle(http.MethodGet, "/v1/blog/posts/:id/announcement-attempts", d.JSON, h.ListPostAnnouncementAttempts)
 	registerAliases(routes, h)

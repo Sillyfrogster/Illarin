@@ -32,7 +32,7 @@ var attemptTables = dispatch.Tables{
 	Attempts: "blog_announcement_attempts", Tries: "blog_announcement_tries",
 }
 
-var ErrAttemptNotFound = errors.New("no such publication attempt")
+var ErrAttemptNotFound = errors.New("no such announcement attempt")
 
 var ErrAttemptUnsettled = errors.New("the attempt has not finished trying")
 
@@ -79,7 +79,7 @@ func (s *Service) Attempts(ctx context.Context, state string, limit int) ([]Atte
 		 limit $2
 	`, state, limit)
 	if err != nil {
-		return nil, fmt.Errorf("read publication attempts: %w", err)
+		return nil, fmt.Errorf("read announcement attempts: %w", err)
 	}
 	return collectAttempts(rows)
 }
@@ -87,7 +87,7 @@ func (s *Service) Attempts(ctx context.Context, state string, limit int) ([]Atte
 func (s *Service) Attempt(ctx context.Context, id uuid.UUID) (Attempt, error) {
 	rows, err := s.pool.Query(ctx, selectAttempts+` where work.id = $1`, id)
 	if err != nil {
-		return Attempt{}, fmt.Errorf("read a publication attempt: %w", err)
+		return Attempt{}, fmt.Errorf("read an announcement attempt: %w", err)
 	}
 	found, err := collectAttempts(rows)
 	if err != nil {

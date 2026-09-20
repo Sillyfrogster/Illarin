@@ -54,7 +54,7 @@ func MediaLibrary(store storage.Store) *mediaproc.Library {
 	return mediaproc.NewLibrary(store, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
 }
 
-func NewPublicationService(pool *pgxpool.Pool, store storage.Store) *blog.Service {
+func NewBlogService(pool *pgxpool.Pool, store storage.Store) *blog.Service {
 	return blog.NewService(
 		pool, MediaLibrary(store), Publishing(nil),
 	)

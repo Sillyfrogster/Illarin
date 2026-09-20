@@ -30,7 +30,7 @@ func TestDiscordRepairsRequireAuthorityAndDoNotRepeatOrRewriteHistory(t *testing
 			t.Fatalf("contributor repair = %d", refused.Code)
 		}
 		for repeat := 0; repeat < 2; repeat++ {
-			response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t, http.MethodPost, path, body), stack.authority))
+			response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t, http.MethodPost, path, body), stack.admin))
 			if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"state":"completed"`) {
 				t.Fatalf("%s = %d: %s", action, response.Code, response.Body.String())
 			}
@@ -60,7 +60,7 @@ func TestDiscordRepairsRequireAuthorityAndDoNotRepeatOrRewriteHistory(t *testing
 	stack.discord.answersSendWith(func(arrived) (int, string) { return 0, "" })
 	ambiguous := fmt.Sprintf(`{"requestId":%q,"action":"correction","text":"A later correction"}`, uuid.NewString())
 	for repeat := 0; repeat < 2; repeat++ {
-		response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t, http.MethodPost, path, ambiguous), stack.authority))
+		response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t, http.MethodPost, path, ambiguous), stack.admin))
 		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"state":"unconfirmed"`) {
 			t.Fatalf("lost repair response = %d: %s", response.Code, response.Body.String())
 		}
@@ -72,7 +72,7 @@ func TestDiscordRepairsRequireAuthorityAndDoNotRepeatOrRewriteHistory(t *testing
 	err := stack.pool.QueryRow(t.Context(), `select working_version,
 		(select count(*) from blog_announcements where post_id = $1),
 		(select count(*) from blog_announcement_tries where attempt_id = $2),
-		(select count(*) from publication_audits where attempt_id = $2 and action like 'discord.%')
+		(select count(*) from blog_activity_log where attempt_id = $2 and action like 'discord.%')
 		from posts where id = $1`, post.ID, id).Scan(&after, &announced, &tries, &audits)
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +119,7 @@ func TestDiscordAmbiguityStopsRetriesAndAMissingWebhookIsDisabled(t *testing.T) 
 			if stack.sendQueuedAt(t, time.Now().Add(48*time.Hour)) != 0 || len(stack.discord.announcements()) != 1 {
 				t.Fatal("Discord was retried automatically")
 			}
-			if status == http.StatusNotFound && stack.integrations(t, stack.authority).Integrations[0].State != "disabled" {
+			if status == http.StatusNotFound && stack.integrations(t, stack.admin).Integrations[0].State != "disabled" {
 				t.Fatal("missing webhook remained active")
 			}
 		})

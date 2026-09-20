@@ -54,7 +54,7 @@ func (h *Handlers) AddWorkIntegration(c *gin.Context) {
 		return
 	}
 	if request.Address == nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Enter the integration address.", "address")
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Enter the integration address.", "address")
 		return
 	}
 	added, err := h.integrations.Add(c.Request.Context(), owner.ID, string(request.Type), request.Name, *request.Address)
@@ -79,9 +79,9 @@ func (h *Handlers) workIntegrationError(c *gin.Context, err error) {
 	case errors.Is(err, work.ErrWorkFrozen):
 		api.Refuse(c, http.StatusConflict, "This work is frozen while it is withheld.")
 	case errors.Is(err, version.ErrIntegrationIneligible):
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Choose only your own verified, active integrations.", "integrationIds")
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Choose only your own verified, active integrations.", "integrationIds")
 	case errors.As(err, &field):
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, field.Message, field.Field)
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid, field.Message, field.Field)
 	default:
 		api.Refuse(c, http.StatusInternalServerError, "Could not update your integration. Try again.")
 	}
@@ -210,7 +210,7 @@ func (h *Handlers) SetWorkIntegrationDefaults(c *gin.Context) {
 		return
 	}
 	if request.IntegrationIds == nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send integration IDs, or an empty list to disable default announcements.", "integrationIds")
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Send integration IDs, or an empty list to disable default announcements.", "integrationIds")
 		return
 	}
 	if err := h.integrations.SetIntegrations(c.Request.Context(), owner.ID, id, readIDs(&request.IntegrationIds)); err != nil {

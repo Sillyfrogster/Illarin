@@ -1,6 +1,6 @@
 {
   "note": "A data address is not a link",
-  "path": "document.content.0.content.0.marks.0.href",
+  "path": "body.content.0.content.0.marks.0.href",
   "document": {
     "version": 2,
     "content": [

@@ -153,11 +153,11 @@ func TestOGIsASeparateComposedPreview(t *testing.T) {
 		}
 	}
 	processor := NewProcessor(DefaultLimits())
-	preview, err := processor.ComposeSocialPreview(
+	preview, err := processor.ComposeLinkCard(
 		context.Background(), bytes.NewReader(encodePNG(t, source)), "og",
 	)
 	if err != nil {
-		t.Fatalf("ComposeSocialPreview: %v", err)
+		t.Fatalf("ComposeLinkCard: %v", err)
 	}
 	if preview.Variant != "og" {
 		t.Fatalf("preview variant = %q, want og", preview.Variant)
@@ -247,13 +247,13 @@ func TestSocialPreviewOfFlaggedWorkIsBlurred(t *testing.T) {
 	encoded := encodePNG(t, source)
 	processor := NewProcessor(DefaultLimits())
 
-	clear, err := processor.ComposeSocialPreview(
+	clear, err := processor.ComposeLinkCard(
 		context.Background(), bytes.NewReader(encoded), "og",
 	)
 	if err != nil {
 		t.Fatalf("compose og: %v", err)
 	}
-	blurred, err := processor.ComposeSocialPreview(
+	blurred, err := processor.ComposeLinkCard(
 		context.Background(), bytes.NewReader(encoded), "og_blurred",
 	)
 	if err != nil {
@@ -276,7 +276,7 @@ func TestSocialPreviewOfFlaggedWorkIsBlurred(t *testing.T) {
 	if _, ordinary := VariantByName("og_blurred"); ordinary {
 		t.Fatal("the blurred composed preview entered the ordinary variant set")
 	}
-	if _, ok := SocialPreviewByName("grid"); ok {
+	if _, ok := LinkCardByName("grid"); ok {
 		t.Fatal("an ordinary variant was accepted as a social preview")
 	}
 }

@@ -24,10 +24,9 @@ const (
 )
 
 const (
-	titleLimit          = 160
-	summaryLimit        = 320
-	releaseVersionLimit = 40
-	headerTextLimit     = 300
+	titleLimit      = 160
+	summaryLimit    = 320
+	headerTextLimit = 300
 )
 
 var (
@@ -53,30 +52,21 @@ type Author struct {
 	Handle string
 }
 
-type Release struct {
-	App     App
-	Version string
-	Address string
-}
-
 type Post struct {
 	ID              uuid.UUID
 	Author          Author
-	GrantID         *uuid.UUID
-	App             *App
 	Category        Category
 	Status          string
 	Slug            string
 	Title           string
 	Summary         string
-	Document        json.RawMessage
-	DocumentVersion int
-	Release         *Release
+	Body            json.RawMessage
+	BodyVersion     int
 	Header          *Header
-	SocialMediaID   *uuid.UUID
+	LinkCardMediaID *uuid.UUID
 	PublicRevision  *uuid.UUID
 	Schedule        *Schedule
-	Withdrawal      *Withdrawal
+	Unpublishing    *Unpublishing
 	Deletion        *Deletion
 	Media           []PostMedia
 	Byline          *Byline
@@ -89,33 +79,25 @@ type Post struct {
 }
 
 type PostEdit struct {
-	GrantID    *uuid.UUID
 	CategoryID uuid.UUID
 	Title      string
 }
 
 type PostSave struct {
-	Version       int
-	CategoryID    uuid.UUID
-	Title         string
-	Summary       string
-	Slug          string
-	Document      []byte
-	Release       *ReleaseEdit
-	Header        *HeaderEdit
-	SocialMediaID *uuid.UUID
+	Version         int
+	CategoryID      uuid.UUID
+	Title           string
+	Summary         string
+	Slug            string
+	Body            []byte
+	Header          *HeaderEdit
+	LinkCardMediaID *uuid.UUID
 }
 
 type HeaderEdit struct {
 	MediaID uuid.UUID
 	Alt     string
 	Caption string
-}
-
-type ReleaseEdit struct {
-	AppID   uuid.UUID
-	Version string
-	Address string
 }
 
 func (s *Service) Posts(ctx context.Context, editor Editor) ([]Post, error) {
@@ -136,8 +118,15 @@ func (s *Service) postsFor(
 	if editor.Admin {
 		return s.postsWhere(ctx, `where `+standingClause+` `+orderClause)
 	}
+	writer, err := s.IsWriter(ctx, editor.ID)
+	if err != nil {
+		return nil, err
+	}
+	if !writer {
+		return nil, ErrNotPostEditor
+	}
 	return s.postsWhere(ctx, `
-		where `+standingClause+` and grant_row.user_id = $1 and grant_row.active
+		where `+standingClause+` and post.author_id = $1
 	`+orderClause, editor.ID)
 }
 
@@ -160,8 +149,7 @@ func (s *Service) CreatePost(ctx context.Context, editor Editor, in PostEdit) (P
 	if category.Retired {
 		return Post{}, FieldError{Field: "categoryId", Message: "That category has been retired."}
 	}
-	grantID := in.GrantID
-	if err := s.mayWriteAs(ctx, editor, grantID, category); err != nil {
+	if err := s.mayWrite(ctx, editor); err != nil {
 		return Post{}, err
 	}
 	title, err := checkTitle(in.Title)
@@ -179,17 +167,15 @@ func (s *Service) CreatePost(ctx context.Context, editor Editor, in PostEdit) (P
 	}
 	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `
-		insert into posts (id, author_id, grant_id, category_id, title, slug,
-		                   document, document_version)
-		values ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, id, editor.ID, grantID, category.ID, title,
+		insert into posts (id, author_id, category_id, title, slug, body, body_version)
+		values ($1, $2, $3, $4, $5, $6, $7)
+	`, id, editor.ID, category.ID, title,
 		freeSlug(ctx, tx, normalizeSlug(title)), empty, postbody.Version)
 	if err != nil {
 		return Post{}, fmt.Errorf("create post: %w", err)
 	}
-	err = recordPublicationAudit(ctx, tx, change{
+	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.created",
-		GrantID:    grantID,
 		CategoryID: &category.ID, PostID: &id, After: StatusDraft,
 	})
 	if err != nil {
@@ -232,15 +218,13 @@ func (s *Service) SavePost(
 	tag, err := tx.Exec(ctx, `
 		update posts
 		   set category_id = $3, title = $4, summary = $5, slug = $6,
-		       document = $7, document_version = $8,
-		       release_app_id = $9, release_version = $10, release_url = $11,
-		       header_media_id = $12, header_alt = $13, header_caption = $14,
-		       social_media_id = $15,
+		       body = $7, body_version = $8,
+		       header_media_id = $9, header_alt = $10, header_caption = $11,
+		       link_card_media_id = $12,
 		       working_version = working_version + 1, updated_at = now()
 		 where id = $1 and working_version = $2
 	`, id, in.Version, edition.categoryID, edition.title, edition.summary,
-		nullable(edition.slug), edition.document, postbody.Version,
-		edition.releaseAppID, nullable(edition.releaseVersion), nullable(edition.releaseAddress),
+		nullable(edition.slug), edition.body, postbody.Version,
 		headerMediaID(edition.pictures.header), headerAlt(edition.pictures.header),
 		headerCaption(edition.pictures.header), edition.pictures.social)
 	if isUniqueViolation(err) {
@@ -305,22 +289,15 @@ func importRefusal(err error) error {
 	return err
 }
 
-func (p Post) carrying(document []byte) PostSave {
+func (p Post) carrying(body []byte) PostSave {
 	save := PostSave{
-		Version:       p.Version,
-		CategoryID:    p.Category.ID,
-		Title:         p.Title,
-		Summary:       p.Summary,
-		Slug:          p.Slug,
-		Document:      document,
-		SocialMediaID: p.SocialMediaID,
-	}
-	if p.Release != nil {
-		save.Release = &ReleaseEdit{
-			AppID:   p.Release.App.ID,
-			Version: p.Release.Version,
-			Address: p.Release.Address,
-		}
+		Version:         p.Version,
+		CategoryID:      p.Category.ID,
+		Title:           p.Title,
+		Summary:         p.Summary,
+		Slug:            p.Slug,
+		Body:            body,
+		LinkCardMediaID: p.LinkCardMediaID,
 	}
 	if p.Header != nil {
 		save.Header = &HeaderEdit{
@@ -333,15 +310,12 @@ func (p Post) carrying(document []byte) PostSave {
 }
 
 type edition struct {
-	categoryID     uuid.UUID
-	title          string
-	summary        string
-	slug           string
-	document       []byte
-	releaseAppID   *uuid.UUID
-	releaseVersion string
-	releaseAddress string
-	pictures       placed
+	categoryID uuid.UUID
+	title      string
+	summary    string
+	slug       string
+	body       []byte
+	pictures   placed
 }
 
 func (s *Service) checkDraftedChanges(
@@ -353,11 +327,6 @@ func (s *Service) checkDraftedChanges(
 	category, err := s.category(ctx, in.CategoryID)
 	if err != nil {
 		return edition{}, err
-	}
-	if category.ID != current.Category.ID {
-		if err := s.mayWriteAs(ctx, editor, current.GrantID, category); err != nil {
-			return edition{}, err
-		}
 	}
 	title, err := checkTitle(in.Title)
 	if err != nil {
@@ -382,27 +351,21 @@ func (s *Service) checkDraftedChanges(
 			return edition{}, err
 		}
 	}
-	body, err := postbody.Read(in.Document)
+	read, err := postbody.Read(in.Body)
 	if err != nil {
-		return edition{}, documentRefusal(err)
+		return edition{}, bodyRefusal(err)
 	}
-	document, err := json.Marshal(body)
+	body, err := json.Marshal(read)
 	if err != nil {
 		return edition{}, fmt.Errorf("write the post body: %w", err)
 	}
-	release, err := s.checkRelease(ctx, current, category, in.Release)
-	if err != nil {
-		return edition{}, err
-	}
-	pictures, err := s.checkPlacement(ctx, current.ID, body, in)
+	pictures, err := s.checkPlacement(ctx, current.ID, read, in)
 	if err != nil {
 		return edition{}, err
 	}
 	return edition{
 		categoryID: category.ID, title: title, summary: summary, slug: slug,
-		document: document, releaseAppID: release.appID,
-		releaseVersion: release.version, releaseAddress: release.address,
-		pictures: pictures,
+		body: body, pictures: pictures,
 	}, nil
 }
 
@@ -417,100 +380,25 @@ func (s *Service) refuseTakenAddress(ctx context.Context, postID uuid.UUID, slug
 	return nil
 }
 
-type releaseFields struct {
-	appID   *uuid.UUID
-	version string
-	address string
-}
-
-func (s *Service) checkRelease(
-	ctx context.Context,
-	current Post,
-	category Category,
-	in *ReleaseEdit,
-) (releaseFields, error) {
-	if in == nil {
-		if category.Slug == ReleaseCategory {
-			return releaseFields{}, FieldError{
-				Field:   "release",
-				Message: "A release names the project it belongs to and its version.",
-			}
-		}
-		return releaseFields{}, nil
-	}
-	app, err := s.app(ctx, in.AppID)
-	if err != nil {
-		return releaseFields{}, err
-	}
-	if current.App != nil && app.ID != current.App.ID {
-		return releaseFields{}, FieldError{
-			Field:   "release.appId",
-			Message: "Your approval covers " + current.App.Name + " only.",
-		}
-	}
-	version := strings.TrimSpace(in.Version)
-	if version == "" || len(version) > releaseVersionLimit {
-		return releaseFields{}, FieldError{
-			Field:   "release.version",
-			Message: fmt.Sprintf("Give the release a version of up to %d characters.", releaseVersionLimit),
-		}
-	}
-	address := strings.TrimSpace(in.Address)
-	if address != "" && (!strings.HasPrefix(address, "https://") || len(address) > addressLimit) {
-		return releaseFields{}, FieldError{
-			Field:   "release.address",
-			Message: "A release address is an https address.",
-		}
-	}
-	return releaseFields{appID: &app.ID, version: version, address: address}, nil
-}
-
-func (s *Service) mayWriteAs(
-	ctx context.Context,
-	editor Editor,
-	grantID *uuid.UUID,
-	category Category,
-) error {
-	if grantID == nil {
-		if editor.Admin {
-			return nil
-		}
-		return ErrNotPostEditor
-	}
-	held, err := s.grant(ctx, *grantID)
-	if err != nil {
-		return err
-	}
-	if held.Holder.ID != editor.ID || !held.Active {
-		return ErrNotPostEditor
-	}
-	for _, allowed := range held.Categories {
-		if allowed.ID == category.ID {
-			return nil
-		}
-	}
-	return FieldError{
-		Field:   "categoryId",
-		Message: "Your approval does not cover " + category.Label + " publication.",
-		Cause:   ErrCategoryRefused,
-	}
-}
-
-func (s *Service) mayManage(ctx context.Context, editor Editor, found Post) error {
+func (s *Service) mayWrite(ctx context.Context, editor Editor) error {
 	if editor.Admin {
 		return nil
 	}
-	if found.GrantID == nil {
-		return ErrNotPostEditor
-	}
-	held, err := s.grant(ctx, *found.GrantID)
+	writer, err := s.IsWriter(ctx, editor.ID)
 	if err != nil {
 		return err
 	}
-	if held.Holder.ID != editor.ID || !held.Active {
+	if !writer {
 		return ErrNotPostEditor
 	}
 	return nil
+}
+
+func (s *Service) mayManage(ctx context.Context, editor Editor, found Post) error {
+	if !editor.Admin && found.Author.ID != editor.ID {
+		return ErrNotPostEditor
+	}
+	return s.mayWrite(ctx, editor)
 }
 
 func checkTitle(candidate string) (string, error) {
@@ -524,7 +412,7 @@ func checkTitle(candidate string) (string, error) {
 	return title, nil
 }
 
-func documentRefusal(err error) error {
+func bodyRefusal(err error) error {
 	var problem postbody.Problem
 	if errors.As(err, &problem) {
 		return FieldError{Field: problem.Path, Message: problem.Message}
@@ -642,30 +530,30 @@ func (s *Service) postsWhere(ctx context.Context, clause string, args ...any) ([
 	if err := s.attachSchedules(ctx, found); err != nil {
 		return nil, err
 	}
-	if err := s.attachWithdrawals(ctx, found); err != nil {
+	if err := s.attachUnpublishings(ctx, found); err != nil {
 		return nil, err
 	}
 	return found, nil
 }
 
-func (s *Service) attachWithdrawals(ctx context.Context, posts []Post) error {
+func (s *Service) attachUnpublishings(ctx context.Context, posts []Post) error {
 	ids := make([]uuid.UUID, 0, len(posts))
 	for index := range posts {
-		if posts[index].Status == StatusWithdrawn {
+		if posts[index].Status == StatusUnpublished {
 			ids = append(ids, posts[index].ID)
 		}
 	}
 	if len(ids) == 0 {
 		return nil
 	}
-	latest, err := s.withdrawalsFor(ctx, ids)
+	latest, err := s.unpublishingsFor(ctx, ids)
 	if err != nil {
 		return err
 	}
 	for index := range posts {
 		if found, held := latest[posts[index].ID]; held {
-			withdrawal := found
-			posts[index].Withdrawal = &withdrawal
+			unpublishing := found
+			posts[index].Unpublishing = &unpublishing
 		}
 	}
 	return nil
@@ -772,56 +660,36 @@ func (s *Service) attachWorkingMedia(ctx context.Context, posts []Post) error {
 }
 
 const selectPosts = `
-	select post.id, author.id, author.username, post.grant_id,
-	       app.id, app.slug, app.name, app.home_url, app.position,
-	       app.retired_at is not null,
+	select post.id, author.id, author.username,
 	       category.id, category.slug, category.label, category.position,
 	       category.retired_at is not null,
 	       post.status, post.slug, post.title, post.summary,
-	       post.document, post.document_version,
-	       release_app.id, release_app.slug, release_app.name, release_app.home_url,
-	       release_app.position, release_app.retired_at is not null,
-	       post.release_version, post.release_url,
+	       post.body, post.body_version,
 	       post.header_media_id, post.header_alt, post.header_caption,
-	       post.social_media_id, post.public_revision_id,
+	       post.link_card_media_id, post.public_revision_id,
 	       post.working_version, post.published_at, post.updated_public_at,
 	       post.deleted_at, post.recoverable_until, remover.username,
 	       post.created_at, post.updated_at
 	  from posts post
 	  join users author on author.id = post.author_id
 	  left join users remover on remover.id = post.deleted_by
-	  join publication_categories category on category.id = post.category_id
-	  left join publication_grants grant_row on grant_row.id = post.grant_id
-	  left join publication_apps app on app.id = grant_row.app_id
-	  left join publication_apps release_app on release_app.id = post.release_app_id
+	  join blog_categories category on category.id = post.category_id
 	`
 
 func scanPost(rows pgx.Rows) (Post, error) {
 	var one Post
-	var app App
-	var appID, releaseID *uuid.UUID
-	var appSlug, appName, appHome *string
-	var appPosition *int
-	var appRetired *bool
-	var release App
-	var releaseSlug, releaseName, releaseHome, releaseVersion, releaseAddress, slug *string
+	var slug *string
 	var headerID *uuid.UUID
 	var headerAltText, headerCaptionText *string
-	var releasePosition *int
-	var releaseRetired *bool
 	var deletedAt, recoverableUntil *time.Time
 	var remover *string
 	err := rows.Scan(
-		&one.ID, &one.Author.ID, &one.Author.Handle, &one.GrantID,
-		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,
+		&one.ID, &one.Author.ID, &one.Author.Handle,
 		&one.Category.ID, &one.Category.Slug, &one.Category.Label,
 		&one.Category.Position, &one.Category.Retired,
 		&one.Status, &slug, &one.Title, &one.Summary,
-		&one.Document, &one.DocumentVersion,
-		&releaseID, &releaseSlug, &releaseName, &releaseHome,
-		&releasePosition, &releaseRetired,
-		&releaseVersion, &releaseAddress,
-		&headerID, &headerAltText, &headerCaptionText, &one.SocialMediaID,
+		&one.Body, &one.BodyVersion,
+		&headerID, &headerAltText, &headerCaptionText, &one.LinkCardMediaID,
 		&one.PublicRevision,
 		&one.Version, &one.PublishedAt, &one.UpdatedPublicAt,
 		&deletedAt, &recoverableUntil, &remover,
@@ -835,39 +703,19 @@ func scanPost(rows pgx.Rows) (Post, error) {
 	}
 	one.Deletion = scanDeletion(deletedAt, recoverableUntil, remover)
 	one.Header = scanHeader(headerID, headerAltText, headerCaptionText)
-	if appID != nil {
-		app = App{
-			ID: *appID, Slug: *appSlug, Name: *appName, Home: *appHome,
-			Position: *appPosition, Retired: *appRetired,
-		}
-		one.App = &app
-	}
-	if releaseID != nil {
-		release = App{
-			ID: *releaseID, Slug: *releaseSlug, Name: *releaseName, Home: *releaseHome,
-			Position: *releasePosition, Retired: *releaseRetired,
-		}
-		one.Release = &Release{App: release}
-		if releaseVersion != nil {
-			one.Release.Version = *releaseVersion
-		}
-		if releaseAddress != nil {
-			one.Release.Address = *releaseAddress
-		}
-	}
 	return one, nil
 }
 
 const (
 	PurposeHeader   = "header"
-	PurposeDocument = "document"
-	PurposeSocial   = "social"
+	PurposeBody     = "body"
+	PurposeLinkCard = "link_card"
 )
 
 const (
-	shownVariant   = "detail"
-	galleryVariant = "grid"
-	socialVariant  = "og"
+	shownVariant    = "detail"
+	galleryVariant  = "grid"
+	linkCardVariant = "og"
 )
 
 var ErrPostMediaNotFound = errors.New("no such post media")
@@ -888,8 +736,8 @@ type Header struct {
 
 func PostMediaURL(mediaID uuid.UUID, purpose string, version uint32) string {
 	variant := shownVariant
-	if purpose == PurposeSocial {
-		variant = socialVariant
+	if purpose == PurposeLinkCard {
+		variant = linkCardVariant
 	}
 	return fmt.Sprintf("/media/%s/%s/%d", mediaID, variant, version)
 }
@@ -919,10 +767,10 @@ func (s *Service) AddPostMedia(
 	if current.Deletion != nil {
 		return PostMedia{}, ErrPostDeleted
 	}
-	if purpose != PurposeHeader && purpose != PurposeDocument && purpose != PurposeSocial {
+	if purpose != PurposeHeader && purpose != PurposeBody && purpose != PurposeLinkCard {
 		return PostMedia{}, FieldError{
 			Field:   "purpose",
-			Message: "A picture is uploaded as a header, a document picture or a social image.",
+			Message: "A picture is uploaded as a header, a body picture or a link card.",
 		}
 	}
 	stored, prepared, err := s.media.Accept(ctx, file)
@@ -951,7 +799,7 @@ func (s *Service) PostMediaVariant(
 	expires, signature string,
 ) (string, string, bool, error) {
 	_, ordinary := mediaproc.VariantByName(variant)
-	_, composed := mediaproc.SocialPreviewByName(variant)
+	_, composed := mediaproc.LinkCardByName(variant)
 	if (!ordinary && !composed) || version != mediaproc.DerivativeVersion {
 		return "", "", false, ErrPostMediaNotFound
 	}
@@ -967,7 +815,7 @@ func (s *Service) PostMediaVariant(
 		  from post_media media
 		  join blobs blob on blob.id = media.blob_id
 		 where media.id = $1
-	`, mediaID, RevisionPublication).Scan(&blobID, &digestBytes, &published)
+	`, mediaID, RevisionPublish).Scan(&blobID, &digestBytes, &published)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", "", false, ErrPostMediaNotFound
 	}
@@ -1014,7 +862,7 @@ func (s *Service) checkPlacement(
 		if err != nil {
 			return placed{}, fmt.Errorf("read a placed picture: %w", err)
 		}
-		if err := belongs(owned, id, PurposeDocument, "document"); err != nil {
+		if err := belongs(owned, id, PurposeBody, "body"); err != nil {
 			return placed{}, err
 		}
 		chosen.ordered = append(chosen.ordered, id)
@@ -1040,12 +888,12 @@ func (s *Service) checkPlacement(
 		chosen.header = &Header{MediaID: in.Header.MediaID, Alt: alt, Caption: caption}
 		chosen.ordered = append(chosen.ordered, in.Header.MediaID)
 	}
-	if in.SocialMediaID != nil {
-		if err := belongs(owned, *in.SocialMediaID, PurposeSocial, "socialMediaId"); err != nil {
+	if in.LinkCardMediaID != nil {
+		if err := belongs(owned, *in.LinkCardMediaID, PurposeLinkCard, "linkCardMediaId"); err != nil {
 			return placed{}, err
 		}
-		chosen.social = in.SocialMediaID
-		chosen.ordered = append(chosen.ordered, *in.SocialMediaID)
+		chosen.social = in.LinkCardMediaID
+		chosen.ordered = append(chosen.ordered, *in.LinkCardMediaID)
 	}
 	return chosen, nil
 }

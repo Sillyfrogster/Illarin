@@ -13,16 +13,16 @@ import (
 )
 
 type postRevision struct {
-	ID          string              `json:"id"`
-	Number      int                 `json:"number"`
-	Title       string              `json:"title"`
-	Summary     string              `json:"summary"`
-	Slug        string              `json:"slug"`
-	Category    publicationCategory `json:"category"`
-	CapturedFor string              `json:"capturedFor"`
-	CapturedBy  string              `json:"capturedBy"`
-	CapturedAt  time.Time           `json:"capturedAt"`
-	Public      bool                `json:"public"`
+	ID          string       `json:"id"`
+	Number      int          `json:"number"`
+	Title       string       `json:"title"`
+	Summary     string       `json:"summary"`
+	Slug        string       `json:"slug"`
+	Category    blogCategory `json:"category"`
+	CapturedFor string       `json:"capturedFor"`
+	CapturedBy  string       `json:"capturedBy"`
+	CapturedAt  time.Time    `json:"capturedAt"`
+	Public      bool         `json:"public"`
 }
 
 type postAction struct {
@@ -36,7 +36,7 @@ type postAction struct {
 	At         time.Time `json:"at"`
 }
 
-func (s publicationStack) checkpoint(
+func (s blogStack) checkpoint(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -44,12 +44,12 @@ func (s publicationStack) checkpoint(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+id+"/revisions",
+		http.MethodPost, "/v1/blog/posts/"+id+"/revisions",
 		fmt.Sprintf(`{"version":%d}`, version),
 	), session))
 }
 
-func (s publicationStack) checkpointed(
+func (s blogStack) checkpointed(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -67,7 +67,7 @@ func (s publicationStack) checkpointed(
 	return kept
 }
 
-func (s publicationStack) restore(
+func (s blogStack) restore(
 	t *testing.T,
 	session *http.Cookie,
 	id, revisionID string,
@@ -76,12 +76,12 @@ func (s publicationStack) restore(
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost,
-		"/v1/publication/posts/"+id+"/revisions/"+revisionID+"/restore",
+		"/v1/blog/posts/"+id+"/revisions/"+revisionID+"/restore",
 		fmt.Sprintf(`{"version":%d}`, version),
 	), session))
 }
 
-func (s publicationStack) restored(
+func (s blogStack) restored(
 	t *testing.T,
 	session *http.Cookie,
 	id, revisionID string,
@@ -95,14 +95,14 @@ func (s publicationStack) restored(
 	return decodePost(t, response)
 }
 
-func (s publicationStack) revisions(
+func (s blogStack) revisions(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
 ) []postRevision {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+id+"/revisions", nil,
+		http.MethodGet, "/v1/blog/posts/"+id+"/revisions", nil,
 	), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("revisions status = %d: %s", response.Code, response.Body.String())
@@ -116,14 +116,14 @@ func (s publicationStack) revisions(
 	return listed.Revisions
 }
 
-func (s publicationStack) history(
+func (s blogStack) history(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
 ) ([]postAction, string) {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+id+"/history", nil,
+		http.MethodGet, "/v1/blog/posts/"+id+"/history", nil,
 	), session))
 	if response.Code != http.StatusOK {
 		t.Fatalf("history status = %d: %s", response.Code, response.Body.String())
@@ -147,8 +147,8 @@ func taken(done []postAction) []string {
 
 func TestACheckpointKeepsTheEditionAndPublishesNothing(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "keeper@example.com", "illarin.keeper")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "keeper@example.com", "illarin.keeper")
 	draft := stack.illarinDraft(t, session, "The week in Illarin")
 	written := stack.saved(t, session, draft.ID, finished(draft, nil))
 
@@ -174,22 +174,22 @@ func TestACheckpointKeepsTheEditionAndPublishesNothing(t *testing.T) {
 
 func TestEditingAPublishedPostLeavesReadersOnTheEditionTheyHave(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.quiet")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.quiet")
 	draft := stack.illarinDraft(t, session, "Illarin ships weekly")
 	stack.saved(t, session, draft.ID, finished(draft, nil))
 	live := stack.published(t, session, draft.ID)
 
 	edited := stack.saved(t, session, draft.ID, finished(live, map[string]any{
-		"version":  live.Version,
-		"title":    "Illarin ships weekly, and here is the rest of it",
-		"document": json.RawMessage(paragraph("An unfinished thought.")),
+		"version": live.Version,
+		"title":   "Illarin ships weekly, and here is the rest of it",
+		"body":    json.RawMessage(paragraph("An unfinished thought.")),
 	}))
 	reading := stack.reader(t, draft.Slug)
 	if reading.Title != "Illarin ships weekly" {
 		t.Fatalf("readers were given %q while the drafted changes were edited", reading.Title)
 	}
-	if strings.Contains(string(mustEncode(t, reading.Document)), "unfinished") {
+	if strings.Contains(string(mustEncode(t, reading.Body)), "unfinished") {
 		t.Error("an unpublished edit reached a reader")
 	}
 
@@ -207,20 +207,20 @@ func TestEditingAPublishedPostLeavesReadersOnTheEditionTheyHave(t *testing.T) {
 
 func TestRestoringAnEditionCopiesItForwardAndLeavesHistoryAlone(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "restore@example.com", "illarin.restore")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "restore@example.com", "illarin.restore")
 	draft := stack.illarinDraft(t, session, "The first shape of it")
 	first := stack.saved(t, session, draft.ID, finished(draft, nil))
 	live := stack.published(t, session, draft.ID)
 
 	second := stack.saved(t, session, draft.ID, finished(live, map[string]any{
-		"version":  live.Version,
-		"title":    "A shape I liked less",
-		"summary":  "A summary I liked less.",
-		"document": json.RawMessage(paragraph("A sentence I liked less.")),
+		"version": live.Version,
+		"title":   "A shape I liked less",
+		"summary": "A summary I liked less.",
+		"body":    json.RawMessage(paragraph("A sentence I liked less.")),
 	}))
 	before := stack.revisions(t, session, draft.ID)
-	if len(before) != 1 || before[0].CapturedFor != "publication" || !before[0].Public {
+	if len(before) != 1 || before[0].CapturedFor != "publish" || !before[0].Public {
 		t.Fatalf("kept editions = %+v, want one published edition", before)
 	}
 
@@ -250,8 +250,8 @@ func TestRestoringAnEditionCopiesItForwardAndLeavesHistoryAlone(t *testing.T) {
 
 func TestARestoredEditionBecomesTheNextPublishedOne(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "forward@example.com", "illarin.forward")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "forward@example.com", "illarin.forward")
 	draft := stack.illarinDraft(t, session, "Take two")
 	stack.saved(t, session, draft.ID, finished(draft, nil))
 	first := stack.published(t, session, draft.ID)
@@ -263,7 +263,7 @@ func TestARestoredEditionBecomesTheNextPublishedOne(t *testing.T) {
 	live := stack.publishedAt(t, session, draft.ID, second.Version)
 	kept := stack.revisions(t, session, draft.ID)
 	if len(kept) != 2 {
-		t.Fatalf("kept editions = %d, want two publications", len(kept))
+		t.Fatalf("kept editions = %d, want two posts", len(kept))
 	}
 
 	back := stack.restored(t, session, draft.ID, kept[1].ID, live.Version)
@@ -281,8 +281,8 @@ func TestARestoredEditionBecomesTheNextPublishedOne(t *testing.T) {
 
 func TestStaleCheckpointRestoreAndPublishChangeNothing(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "stale@example.com", "illarin.stale")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "stale@example.com", "illarin.stale")
 	draft := stack.illarinDraft(t, session, "Two people, one post")
 	stack.saved(t, session, draft.ID, finished(draft, nil))
 	live := stack.published(t, session, draft.ID)
@@ -318,8 +318,8 @@ func TestStaleCheckpointRestoreAndPublishChangeNothing(t *testing.T) {
 
 func TestTheHistoryNamesWhatHappenedAndNeverTheWriting(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "history@example.com", "illarin.history")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "history@example.com", "illarin.history")
 	draft := stack.illarinDraft(t, session, "A post with a past")
 	written := stack.saved(t, session, draft.ID, finished(draft, nil))
 	stack.checkpointed(t, session, draft.ID, written.Version)
@@ -355,27 +355,25 @@ func TestTheHistoryNamesWhatHappenedAndNeverTheWriting(t *testing.T) {
 
 func TestOneContributorNeverReachesAnothersEditions(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	mine := stack.contributor(t, "mine@example.com", "mine.dev")
-	sillytavern := stack.configureApp(t, "sillytavern", "SillyTavern", "https://sillytavern.example")
 	announcement := stack.categoryBySlug(t, "announcement")
-	theirs := stack.member(t, "theirs@example.com", "theirs.dev")
-	stack.approved(t, "theirs.dev", sillytavern.ID, []string{announcement.ID}, announcement.ID)
+	theirs := stack.contributor(t, "theirs@example.com", "theirs.dev").session
 
 	draft := stack.started(t, mine.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Mine alone"}`, mine.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"Mine alone"}`, announcement.ID,
 	))
 	written := stack.saved(t, mine.session, draft.ID, finished(draft, nil))
 	kept := stack.checkpointed(t, mine.session, draft.ID, written.Version)
 
 	listing := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+draft.ID+"/revisions", nil,
+		http.MethodGet, "/v1/blog/posts/"+draft.ID+"/revisions", nil,
 	), theirs))
 	if listing.Code != http.StatusForbidden {
 		t.Errorf("another contributor listed the editions: %d", listing.Code)
 	}
 	reading := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+draft.ID+"/history", nil,
+		http.MethodGet, "/v1/blog/posts/"+draft.ID+"/history", nil,
 	), theirs))
 	if reading.Code != http.StatusForbidden {
 		t.Errorf("another contributor read the history: %d", reading.Code)
@@ -388,7 +386,7 @@ func TestOneContributorNeverReachesAnothersEditions(t *testing.T) {
 		t.Errorf("another contributor restored an edition: %d", code)
 	}
 
-	admin := stack.admin(t, "over@example.com", "illarin.over")
+	admin := stack.siteAdmin(t, "over@example.com", "illarin.over")
 	if len(stack.revisions(t, admin, draft.ID)) != 1 {
 		t.Error("an admin could not read the editions of a contributor's post")
 	}
@@ -396,8 +394,8 @@ func TestOneContributorNeverReachesAnothersEditions(t *testing.T) {
 
 func TestAnEditionOfAnotherPostIsNotRestorable(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "elsewhere@example.com", "illarin.elsewhere")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "elsewhere@example.com", "illarin.elsewhere")
 	first := stack.illarinDraft(t, session, "The post with the edition")
 	firstWritten := stack.saved(t, session, first.ID, finished(first, nil))
 	kept := stack.checkpointed(t, session, first.ID, firstWritten.Version)
@@ -416,12 +414,12 @@ func TestAnEditionOfAnotherPostIsNotRestorable(t *testing.T) {
 
 func TestACheckpointedPictureStaysBehindItsSignature(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "signed@example.com", "illarin.signed")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "signed@example.com", "illarin.signed")
 	draft := stack.illarinDraft(t, session, "A draft with a picture in it")
-	picture := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 800, 400))
+	picture := stack.uploaded(t, session, draft.ID, "body", apitest.PNG(t, 800, 400))
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
-		"document": bodyWithPicture(picture.ID, "A picture nobody has seen"),
+		"body": bodyWithPicture(picture.ID, "A picture nobody has seen"),
 	}))
 	stack.checkpointed(t, session, draft.ID, written.Version)
 
@@ -433,12 +431,12 @@ func TestACheckpointedPictureStaysBehindItsSignature(t *testing.T) {
 
 func TestRestoringBringsBackThePicturesTheEditionUsed(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "pictured@example.com", "illarin.pictured")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "pictured@example.com", "illarin.pictured")
 	draft := stack.illarinDraft(t, session, "The post that had a picture")
-	picture := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 900, 500))
+	picture := stack.uploaded(t, session, draft.ID, "body", apitest.PNG(t, 900, 500))
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
-		"document": bodyWithPicture(picture.ID, "The workspace as it stood"),
+		"body": bodyWithPicture(picture.ID, "The workspace as it stood"),
 	}))
 	kept := stack.checkpointed(t, session, draft.ID, written.Version)
 

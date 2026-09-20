@@ -10,25 +10,25 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *Handlers) WithdrawPost(c *gin.Context) {
+func (h *Handlers) UnpublishPost(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	editor, ok := h.postEditor(c, "withdrawing a post")
+	editor, ok := h.postEditor(c, "unpublishing a post")
 	if !ok {
 		return
 	}
-	var request WithdrawPostRequest
+	var request UnpublishPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the withdrawal as JSON.")
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Send the unpublishing as JSON.")
 		return
 	}
 	explanation := ""
 	if request.Explanation != nil {
 		explanation = *request.Explanation
 	}
-	withdrawn, err := h.publications.WithdrawPost(
+	unpublished, err := h.blog.UnpublishPost(
 		c.Request.Context(), editor, id, request.Version, request.Reason, explanation,
 		announcementOf(request.IntegrationIds, nil, request.Note),
 	)
@@ -36,7 +36,7 @@ func (h *Handlers) WithdrawPost(c *gin.Context) {
 		h.postError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, h.toAPIPost(withdrawn))
+	c.JSON(http.StatusOK, h.toAPIPost(unpublished))
 }
 
 func (h *Handlers) RepublishPost(c *gin.Context) {
@@ -50,10 +50,10 @@ func (h *Handlers) RepublishPost(c *gin.Context) {
 	}
 	var request RepublishPostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Choose a revision to republish.", "revisionId")
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Choose a revision to republish.", "revisionId")
 		return
 	}
-	back, err := h.publications.RepublishPost(
+	back, err := h.blog.RepublishPost(
 		c.Request.Context(), editor, id, request.RevisionId, request.Version,
 		announcementOf(request.IntegrationIds, nil, request.Note),
 	)
@@ -64,8 +64,8 @@ func (h *Handlers) RepublishPost(c *gin.Context) {
 	c.JSON(http.StatusOK, h.toAPIPost(back))
 }
 
-func (h *Handlers) withdrawnPost(c *gin.Context, slug string) bool {
-	found, err := h.publications.WithdrawnPost(c.Request.Context(), slug)
+func (h *Handlers) unpublishedPost(c *gin.Context, slug string) bool {
+	found, err := h.blog.UnpublishedPost(c.Request.Context(), slug)
 	if errors.Is(err, ErrPostNotFound) {
 		return false
 	}
@@ -73,15 +73,15 @@ func (h *Handlers) withdrawnPost(c *gin.Context, slug string) bool {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the address.")
 		return true
 	}
-	c.JSON(http.StatusGone, WithdrawnPost{Slug: found.Slug, Explanation: found.Explanation})
+	c.JSON(http.StatusGone, UnpublishedPost{Slug: found.Slug, Explanation: found.Explanation})
 	return true
 }
 
-func toAPIWithdrawal(found *Withdrawal) *PostWithdrawal {
+func toAPIUnpublishing(found *Unpublishing) *PostUnpublishing {
 	if found == nil {
 		return nil
 	}
-	return &PostWithdrawal{
+	return &PostUnpublishing{
 		Reason:      found.Reason,
 		Explanation: found.Explanation,
 		By:          found.By,
@@ -89,7 +89,7 @@ func toAPIWithdrawal(found *Withdrawal) *PostWithdrawal {
 	}
 }
 
-type PostWithdrawal struct {
+type PostUnpublishing struct {
 	At          time.Time `json:"at"`
 	By          string    `json:"by"`
 	Explanation string    `json:"explanation"`
@@ -103,7 +103,7 @@ type RepublishPostRequest struct {
 	Version        int          `json:"version"`
 }
 
-type WithdrawPostRequest struct {
+type UnpublishPostRequest struct {
 	IntegrationIds *[]uuid.UUID `json:"integrationIds,omitempty"`
 	Explanation    *string      `json:"explanation,omitempty"`
 	Note           *string      `json:"note,omitempty"`
@@ -111,7 +111,7 @@ type WithdrawPostRequest struct {
 	Version        int          `json:"version"`
 }
 
-type WithdrawnPost struct {
+type UnpublishedPost struct {
 	Explanation string `json:"explanation"`
 	Slug        string `json:"slug"`
 }

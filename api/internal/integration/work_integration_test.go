@@ -50,7 +50,7 @@ func TestWorkUpdateDestinationsBelongOnlyToTheirCreator(t *testing.T) {
 	if !strings.HasPrefix(made.Secret, "whsec_") || made.Integration.State != "unverified" {
 		t.Fatal("a new webhook needs its own signing secret and verification")
 	}
-	for _, session := range []*http.Cookie{creator, stack.authority, stack.editor} {
+	for _, session := range []*http.Cookie{creator, stack.admin, stack.editor} {
 		response := stack.integrationRequest(t, session, http.MethodGet, integrationsPath, "")
 		var list integrationList
 		if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &list) != nil {
@@ -75,7 +75,7 @@ func TestWorkUpdateDestinationsBelongOnlyToTheirCreator(t *testing.T) {
 			t.Errorf("inspect integration = %d, want %d", inspection.Code, wantStatus)
 		}
 	}
-	if len(stack.integrations(t, stack.authority).Integrations) != 0 {
+	if len(stack.integrations(t, stack.admin).Integrations) != 0 {
 		t.Error("creator integrations appeared in blog configuration")
 	}
 	denied := stack.add(t, creator, "Blog integration", stack.to.address())
@@ -133,7 +133,7 @@ func TestWorkUpdateDestinationChangesStayWithTheOwner(t *testing.T) {
 		{http.MethodPost, "/secret", ""},
 		{http.MethodDelete, "", ""},
 	} {
-		for _, stranger := range []*http.Cookie{stack.authority, stack.editor} {
+		for _, stranger := range []*http.Cookie{stack.admin, stack.editor} {
 			got := stack.integrationRequest(t, stranger, change.method, path+change.suffix, change.body)
 			if got.Code != http.StatusNotFound {
 				t.Errorf("another account's %s %s = %d", change.method, change.suffix, got.Code)
@@ -237,7 +237,7 @@ func TestWorkUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *t
 	second := apitest.StartCharacter(t, stack.router, stack.editor)
 	webhook := stack.addUpdateDestination(t, stack.editor, "webhook", stack.to.address())
 	channel := stack.addUpdateDestination(t, stack.editor, "discord", discordCapability())
-	foreign := stack.addUpdateDestination(t, stack.authority, "discord", discordCapability())
+	foreign := stack.addUpdateDestination(t, stack.admin, "discord", discordCapability())
 	path := "/v1/works/" + first.ID + "/integrations"
 	for _, refusedID := range []string{webhook.Integration.ID, foreign.Integration.ID} {
 		got := stack.integrationRequest(t, stack.editor, http.MethodPut, path, fmt.Sprintf(`{"integrationIds":[%q]}`, refusedID))
@@ -262,7 +262,7 @@ func TestWorkUpdateDestinationDefaultsRememberOnlyEligibleOwnedDestinations(t *t
 			t.Error("selection exposed configuration")
 		}
 	}
-	for _, stranger := range []*http.Cookie{stack.authority, nil} {
+	for _, stranger := range []*http.Cookie{stack.admin, nil} {
 		got := stack.integrationRequest(t, stranger, http.MethodGet, path, "")
 		if got.Code != http.StatusNotFound && got.Code != http.StatusUnauthorized {
 			t.Errorf("stranger read choices: %d", got.Code)

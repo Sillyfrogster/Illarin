@@ -42,9 +42,9 @@ func Register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
 	routes.Handle(http.MethodGet, "/protocol", d.JSON, protocolDocument)
 
 	downloads := download.NewHandlers(s.Downloads, s.Accounts)
-	posts := blog.NewHandlers(s.Publications, s.Accounts, s.MaxUploadBytes)
+	posts := blog.NewHandlers(s.Blog, s.Accounts, s.MaxUploadBytes)
 
-	account.Register(routes, account.NewHandlers(s.Accounts, s.Apps, s.Publications))
+	account.Register(routes, account.NewHandlers(s.Accounts, s.Apps, s.Blog))
 	profile.Register(routes, profile.NewHandlers(s.Accounts, s.MaxUploadBytes))
 	notify.Register(routes, notify.NewHandlers(s.Notifications, s.Sends))
 	page.Register(routes, page.NewHandlers(s.Pages, s.Accounts, s.Sends, s.Notifications))
@@ -52,12 +52,12 @@ func Register(r *gin.Engine, s apitest.Services, d api.Deadlines) error {
 	version.Register(routes, version.NewHandlers(s.Versions, s.Accounts))
 	upload.Register(routes, upload.NewHandlers(s.Uploads, s.Pages, s.MaxUploadBytes))
 	download.Register(routes, downloads)
-	image.Register(routes, image.NewHandlers(s.Works, s.Accounts, s.Publications, s.MaxUploadBytes))
+	image.Register(routes, image.NewHandlers(s.Works, s.Accounts, s.Blog, s.MaxUploadBytes))
 	private.Register(routes, private.NewHandlers(private.NewService(s.Works.Pool())))
 	connect.Register(routes, connect.NewHandlers(s.Apps, s.Sends, downloads))
 	blog.Register(routes, posts)
 	integration.Register(routes, integration.NewHandlers(
-		s.Publications, s.Integrations, posts.IntegrationAccess()))
+		s.Blog, s.Integrations, posts.IntegrationAccess()))
 	staff.Register(routes, staff.NewHandlers(staff.NewService(s.Works.Pool())))
 	return nil
 }

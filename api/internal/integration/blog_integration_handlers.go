@@ -18,7 +18,7 @@ func (h *Handlers) ListBlogIntegrations(c *gin.Context) {
 	if _, ok := h.access.Authority(c, "reading publication integrations"); !ok {
 		return
 	}
-	configured, err := h.publications.Integrations(c.Request.Context())
+	configured, err := h.blog.Integrations(c.Request.Context())
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -35,11 +35,11 @@ func (h *Handlers) AddBlogIntegration(c *gin.Context) {
 	}
 	var request AddBlogIntegrationRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"Send the integration's name and address.", "address")
 		return
 	}
-	added, err := h.publications.AddIntegration(
+	added, err := h.blog.AddIntegration(
 		c.Request.Context(), authority.ID,
 		blog.IntegrationEdit{
 			Name: request.Name, Address: request.Address, Announcements: readAnnouncementTypes(request.Announcements),
@@ -64,7 +64,7 @@ func (h *Handlers) AddBlogChannel(c *gin.Context) {
 	if !ok {
 		return
 	}
-	added, err := h.publications.AddChannel(c.Request.Context(), authority.ID, edit)
+	added, err := h.blog.AddChannel(c.Request.Context(), authority.ID, edit)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -85,7 +85,7 @@ func (h *Handlers) UpdateBlogChannel(c *gin.Context) {
 	if !ok {
 		return
 	}
-	updated, err := h.publications.UpdateChannel(
+	updated, err := h.blog.UpdateChannel(
 		c.Request.Context(), authority.ID, id, edit,
 	)
 	if err != nil {
@@ -98,7 +98,7 @@ func (h *Handlers) UpdateBlogChannel(c *gin.Context) {
 func readChannel(c *gin.Context) (blog.ChannelEdit, bool) {
 	var request BlogChannelRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"Send the channel's name and address.", "address")
 		return blog.ChannelEdit{}, false
 	}
@@ -126,11 +126,11 @@ func (h *Handlers) UpdateBlogIntegration(c *gin.Context) {
 	}
 	var request UpdateBlogIntegrationRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"Send the change as JSON.", "address")
 		return
 	}
-	updated, err := h.publications.UpdateIntegration(
+	updated, err := h.blog.UpdateIntegration(
 		c.Request.Context(), authority.ID, id,
 		blog.IntegrationUpdate{
 			Name: request.Name, Address: request.Address, Announcements: readAnnouncementTypes(request.Announcements),
@@ -152,7 +152,7 @@ func (h *Handlers) RemoveBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	err := h.publications.RemoveIntegration(c.Request.Context(), authority.ID, id)
+	err := h.blog.RemoveIntegration(c.Request.Context(), authority.ID, id)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -169,7 +169,7 @@ func (h *Handlers) VerifyBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	verified, err := h.publications.VerifyIntegration(
+	verified, err := h.blog.VerifyIntegration(
 		c.Request.Context(), authority.ID, id,
 	)
 	if err != nil {
@@ -188,7 +188,7 @@ func (h *Handlers) DisableBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	disabled, err := h.publications.DisableIntegration(
+	disabled, err := h.blog.DisableIntegration(
 		c.Request.Context(), authority.ID, id,
 	)
 	if err != nil {
@@ -207,7 +207,7 @@ func (h *Handlers) RotateBlogIntegrationSecret(c *gin.Context) {
 	if !ok {
 		return
 	}
-	rotated, err := h.publications.RotateSecret(c.Request.Context(), authority.ID, id)
+	rotated, err := h.blog.RotateSecret(c.Request.Context(), authority.ID, id)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -239,7 +239,7 @@ func (h *Handlers) ListBlogAnnouncementAttempts(c *gin.Context) {
 	if params.Limit != nil {
 		limit = *params.Limit
 	}
-	sent, err := h.publications.Attempts(c.Request.Context(), state, limit)
+	sent, err := h.blog.Attempts(c.Request.Context(), state, limit)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -255,7 +255,7 @@ func (h *Handlers) ListBlogAnnouncementTries(c *gin.Context) {
 	if _, ok := h.access.Authority(c, "reading what a attempt tried"); !ok {
 		return
 	}
-	made, err := h.publications.Tries(c.Request.Context(), id)
+	made, err := h.blog.Tries(c.Request.Context(), id)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -272,7 +272,7 @@ func (h *Handlers) ReplayBlogAnnouncementAttempt(c *gin.Context) {
 	if !ok {
 		return
 	}
-	queued, err := h.publications.ReplayAttempt(c.Request.Context(), authority.ID, id)
+	queued, err := h.blog.ReplayAttempt(c.Request.Context(), authority.ID, id)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -291,39 +291,12 @@ func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context) {
 	}
 	var body blog.DiscordRepair
 	if err := c.ShouldBindJSON(&body); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send the repair as JSON.", "repair")
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Send the repair as JSON.", "repair")
 		return
 	}
-	result, err := h.publications.RepairDiscord(c.Request.Context(), authority.ID, id, body)
+	result, err := h.blog.RepairDiscord(c.Request.Context(), authority.ID, id, body)
 	if err != nil {
 		h.blogIntegrationError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, result)
-}
-
-func (h *Handlers) SetBlogGrantIntegrations(c *gin.Context) {
-	id, ok := api.PathID(c, "id")
-	if !ok {
-		return
-	}
-	authority, ok := h.access.Authority(c, "setting a contributor's integrations")
-	if !ok {
-		return
-	}
-	policy, ok := readIntegrationPolicy(c)
-	if !ok {
-		return
-	}
-	err := h.publications.SetGrantIntegrations(
-		c.Request.Context(), authority.ID, id, policy,
-	)
-	if err != nil {
-		h.blogIntegrationError(c, err)
-		return
-	}
-	result, err := h.access.Grant(c, id)
-	if err != nil {
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -338,7 +311,7 @@ func (h *Handlers) ListPostIntegrations(c *gin.Context) {
 	if !ok {
 		return
 	}
-	found, err := h.publications.PostIntegrations(c.Request.Context(), editor, id)
+	found, err := h.blog.PostIntegrations(c.Request.Context(), editor, id)
 	if err != nil {
 		h.access.PostError(c, err)
 		return
@@ -355,7 +328,7 @@ func (h *Handlers) ListPostAnnouncementAttempts(c *gin.Context) {
 	if !ok {
 		return
 	}
-	sent, err := h.publications.PostAttempts(c.Request.Context(), editor, id)
+	sent, err := h.blog.PostAttempts(c.Request.Context(), editor, id)
 	if err != nil {
 		h.access.PostError(c, err)
 		return
@@ -374,21 +347,6 @@ func readAnnouncementTypes(named *[]BlogAnnouncementType) *[]string {
 	return &announced
 }
 
-func readIntegrationPolicy(c *gin.Context) (blog.IntegrationPolicy, bool) {
-	var request IntegrationPolicyRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
-			"Send the integrations as JSON.", "integrationIds")
-		return blog.IntegrationPolicy{}, false
-	}
-	policy := blog.IntegrationPolicy{Defaults: readIDs(request.DefaultIntegrationIds)}
-	if request.IntegrationIds != nil {
-		allowed := readIDs(request.IntegrationIds)
-		policy.Allowed = &allowed
-	}
-	return policy, true
-}
-
 func readIDs(listed *[]uuid.UUID) []uuid.UUID {
 	if listed == nil {
 		return nil
@@ -403,29 +361,29 @@ func readIDs(listed *[]uuid.UUID) []uuid.UUID {
 func (h *Handlers) blogIntegrationError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, blog.ErrIntegrationNotFound):
-		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such integration.")
+		refuseBlog(c, http.StatusNotFound, BlogErrorCodeNotFound, "No such integration.")
 	case errors.Is(err, blog.ErrIntegrationRefused):
-		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
+		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
 			"This post may not send to that integration.")
 	case errors.Is(err, blog.ErrRoleRefused):
-		refusePublication(c, http.StatusForbidden, PublicationErrorCodeForbidden,
+		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
 			"This post may not mention that integration's role.")
 	case errors.Is(err, blog.ErrNotDiscord):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"That integration is a generic webhook.")
 	case errors.Is(err, blog.ErrNotWebhook):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"That integration is a Discord channel.")
 	case errors.Is(err, blog.ErrAttemptNotFound):
-		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound, "No such attempt.")
+		refuseBlog(c, http.StatusNotFound, BlogErrorCodeNotFound, "No such attempt.")
 	case errors.Is(err, blog.ErrAttemptUnsettled):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"This attempt is still trying on its own.")
 	case errors.Is(err, blog.ErrAttemptUnsendable):
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"There is nowhere left to send this attempt.")
 	default:
-		h.access.PublicationError(c, err)
+		h.access.BlogError(c, err)
 	}
 }
 
@@ -545,7 +503,7 @@ const (
 )
 
 const (
-	BlogAnnouncementTypePublicationPostPublishedV1 = announcements.BlogAnnouncementTypePublicationPostPublishedV1
-	BlogAnnouncementTypePublicationPostUpdatedV1   = announcements.BlogAnnouncementTypePublicationPostUpdatedV1
-	BlogAnnouncementTypePublicationPostWithdrawnV1 = announcements.BlogAnnouncementTypePublicationPostWithdrawnV1
+	BlogAnnouncementTypePostPublished   = announcements.BlogAnnouncementTypePostPublished
+	BlogAnnouncementTypePostUpdated     = announcements.BlogAnnouncementTypePostUpdated
+	BlogAnnouncementTypePostUnpublished = announcements.BlogAnnouncementTypePostUnpublished
 )

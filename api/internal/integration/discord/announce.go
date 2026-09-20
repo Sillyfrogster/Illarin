@@ -22,7 +22,6 @@ const (
 
 const (
 	CategoryHeading = "Category"
-	VersionHeading  = "Version"
 	UpdateHeading   = "Update"
 )
 
@@ -40,7 +39,6 @@ type Announcement struct {
 	Image    string
 	Category string
 	Update   string
-	Version  string
 	Note     string
 	Role     string
 	Author   Author
@@ -98,11 +96,6 @@ func (a Announcement) embed() embed {
 	if a.Update != "" {
 		shown.Fields = append(shown.Fields, field{
 			Name: UpdateHeading, Value: cut(a.Update, FieldLimit), Inline: true,
-		})
-	}
-	if a.Version != "" {
-		shown.Fields = append(shown.Fields, field{
-			Name: VersionHeading, Value: cut(a.Version, FieldLimit), Inline: true,
 		})
 	}
 	if a.Author.Name != "" {

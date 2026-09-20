@@ -19,23 +19,20 @@ const ArchivePageSize = 12
 const relatedLimit = 3
 
 type PostSummary struct {
-	ID             uuid.UUID
-	Slug           string
-	OriginalSlug   string
-	Title          string
-	Summary        string
-	Category       Category
-	App            *App
-	ReleaseVersion string
-	Byline         Byline
-	PublishedAt    time.Time
-	UpdatedAt      *time.Time
+	ID           uuid.UUID
+	Slug         string
+	OriginalSlug string
+	Title        string
+	Summary      string
+	Category     Category
+	Byline       Byline
+	PublishedAt  time.Time
+	UpdatedAt    *time.Time
 }
 
 type ArchiveQuery struct {
 	Page     int
 	Category string
-	App      string
 }
 
 type Archive struct {
@@ -44,30 +41,21 @@ type Archive struct {
 	Pages    int
 	Total    int
 	Category *Category
-	App      *App
 }
 
 const selectSummaries = `
 	select post.id, post.slug, ` + firstAddress + `, revision.title, revision.summary,
 	       category.id, category.slug, category.label, category.position,
 	       category.retired_at is not null,
-	       app.id, app.slug, app.name, app.home_url, app.position,
-	       app.retired_at is not null,
-	       revision.release_version,
 	       post.published_at, post.updated_public_at
 	  from posts post
 	  join post_revisions revision on revision.id = post.public_revision_id
-	  join publication_categories category on category.id = revision.category_id
-	  left join post_bylines byline on byline.post_id = post.id
-	  left join publication_apps app
-	         on app.id = coalesce(revision.release_app_id, byline.app_id)
+	  join blog_categories category on category.id = revision.category_id
 	 where post.status = 'published'
 	`
 
 const narrowArchive = `
 		   and ($1::uuid is null or revision.category_id = $1)
-		   and ($2::uuid is null
-		        or coalesce(revision.release_app_id, byline.app_id) = $2)
 	`
 
 func (s *Service) ReadableCategories(ctx context.Context) ([]Category, error) {
@@ -87,28 +75,9 @@ func (s *Service) ReadableCategories(ctx context.Context) ([]Category, error) {
 	return collectCategories(rows)
 }
 
-func (s *Service) ReadableApps(ctx context.Context) ([]App, error) {
-	rows, err := s.pool.Query(ctx, selectApps+`
-		 where exists (
-		       select 1
-		         from posts post
-		         join post_revisions revision on revision.id = post.public_revision_id
-		         left join post_bylines byline on byline.post_id = post.id
-		        where post.status = 'published'
-		          and coalesce(revision.release_app_id, byline.app_id) = app.id
-		 )
-		 order by app.position, app.created_at
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("read the apps a reader can browse: %w", err)
-	}
-	defer rows.Close()
-	return collectApps(rows)
-}
-
 func (s *Service) Archive(ctx context.Context, asked ArchiveQuery) (Archive, error) {
 	found := Archive{Page: asked.Page, Posts: []PostSummary{}}
-	var categoryID, appID *uuid.UUID
+	var categoryID *uuid.UUID
 	if asked.Category != "" {
 		category, err := s.categoryBySlug(ctx, asked.Category)
 		if err != nil {
@@ -116,28 +85,20 @@ func (s *Service) Archive(ctx context.Context, asked ArchiveQuery) (Archive, err
 		}
 		found.Category, categoryID = &category, &category.ID
 	}
-	if asked.App != "" {
-		app, err := s.appBySlug(ctx, asked.App)
-		if err != nil {
-			return Archive{}, err
-		}
-		found.App, appID = &app, &app.ID
-	}
 	if err := s.pool.QueryRow(ctx, `
 		select count(*)
 		  from posts post
 		  join post_revisions revision on revision.id = post.public_revision_id
-		  left join post_bylines byline on byline.post_id = post.id
 		 where post.status = 'published'
-	`+narrowArchive, categoryID, appID).Scan(&found.Total); err != nil {
+	`+narrowArchive, categoryID).Scan(&found.Total); err != nil {
 		return Archive{}, fmt.Errorf("count the published archive: %w", err)
 	}
 	found.Pages = (found.Total + ArchivePageSize - 1) / ArchivePageSize
 	rows, err := s.pool.Query(ctx, selectSummaries+narrowArchive+`
 		 order by greatest(post.published_at, post.updated_public_at) desc,
 		          post.id desc
-		 limit $3 offset $4
-	`, categoryID, appID, ArchivePageSize, (asked.Page-1)*ArchivePageSize)
+		 limit $2 offset $3
+	`, categoryID, ArchivePageSize, (asked.Page-1)*ArchivePageSize)
 	if err != nil {
 		return Archive{}, fmt.Errorf("read the published archive: %w", err)
 	}
@@ -151,18 +112,14 @@ func (s *Service) RelatedPosts(
 	ctx context.Context,
 	postID uuid.UUID,
 	category uuid.UUID,
-	app *uuid.UUID,
 ) ([]PostSummary, error) {
 	rows, err := s.pool.Query(ctx, selectSummaries+`
 		   and post.id <> $1
-		 order by ($2::uuid is not null
-		           and coalesce(revision.release_app_id, byline.app_id)
-		               is not distinct from $2::uuid) desc,
-		          revision.category_id = $3 desc,
+		 order by revision.category_id = $2 desc,
 		          greatest(post.published_at, post.updated_public_at) desc,
 		          post.id desc
-		 limit $4
-	`, postID, app, category, relatedLimit)
+		 limit $3
+	`, postID, category, relatedLimit)
 	if err != nil {
 		return nil, fmt.Errorf("read the further reading an article offers: %w", err)
 	}
@@ -205,30 +162,14 @@ func (s *Service) attachBylines(ctx context.Context, listed []PostSummary) ([]Po
 
 func scanSummary(row rowScanner) (PostSummary, error) {
 	var one PostSummary
-	var appID *uuid.UUID
-	var appSlug, appName, appHome *string
-	var appPosition *int
-	var appRetired *bool
-	var version *string
 	err := row.Scan(
 		&one.ID, &one.Slug, &one.OriginalSlug, &one.Title, &one.Summary,
 		&one.Category.ID, &one.Category.Slug, &one.Category.Label,
 		&one.Category.Position, &one.Category.Retired,
-		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,
-		&version,
 		&one.PublishedAt, &one.UpdatedAt,
 	)
 	if err != nil {
 		return PostSummary{}, fmt.Errorf("read a published archive entry: %w", err)
-	}
-	if appID != nil {
-		one.App = &App{
-			ID: *appID, Slug: *appSlug, Name: *appName, Home: *appHome,
-			Position: *appPosition, Retired: *appRetired,
-		}
-	}
-	if version != nil {
-		one.ReleaseVersion = *version
 	}
 	return one, nil
 }
@@ -241,22 +182,7 @@ func (s *Service) categoryBySlug(ctx context.Context, slug string) (Category, er
 		return Category{}, ErrCategoryNotFound
 	}
 	if err != nil {
-		return Category{}, fmt.Errorf("read a publication category: %w", err)
-	}
-	return found, nil
-}
-
-func (s *Service) appBySlug(ctx context.Context, slug string) (App, error) {
-	var found App
-	err := s.pool.QueryRow(ctx, selectApps+` where app.slug = $1`, slug).Scan(
-		&found.ID, &found.Slug, &found.Name, &found.Home, &found.Position,
-		&found.Retired,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return App{}, ErrAppNotFound
-	}
-	if err != nil {
-		return App{}, fmt.Errorf("read a publication app: %w", err)
+		return Category{}, fmt.Errorf("read a blog category: %w", err)
 	}
 	return found, nil
 }
@@ -267,7 +193,6 @@ type Byline struct {
 	DisplayName  string
 	ContactEmail string
 	Avatar       *Portrait
-	App          *App
 }
 
 type Portrait struct {
@@ -283,16 +208,12 @@ type snapshot struct {
 	DisplayName  string
 	ContactEmail string
 	AvatarID     *uuid.UUID
-	AppID        *uuid.UUID
-	AppSlug      *string
-	AppName      *string
 }
 
 func takeSnapshot(
 	ctx context.Context,
 	tx pgx.Tx,
 	accountID uuid.UUID,
-	grantID *uuid.UUID,
 ) (snapshot, error) {
 	taken := snapshot{AccountID: accountID}
 	var restricted bool
@@ -318,10 +239,6 @@ func takeSnapshot(
 	if restricted {
 		taken.DisplayName, taken.ContactEmail, taken.AvatarID = "", "", nil
 	}
-	taken.AppID, taken.AppSlug, taken.AppName, err = grantApp(ctx, tx, grantID)
-	if err != nil {
-		return snapshot{}, err
-	}
 	return taken, nil
 }
 
@@ -329,9 +246,8 @@ func captureByline(
 	ctx context.Context,
 	tx pgx.Tx,
 	postID, authorID uuid.UUID,
-	grantID *uuid.UUID,
 ) error {
-	taken, err := takeSnapshot(ctx, tx, authorID, grantID)
+	taken, err := takeSnapshot(ctx, tx, authorID)
 	if err != nil {
 		return err
 	}
@@ -342,9 +258,8 @@ func replaceByline(
 	ctx context.Context,
 	tx pgx.Tx,
 	postID, accountID uuid.UUID,
-	grantID *uuid.UUID,
 ) error {
-	taken, err := takeSnapshot(ctx, tx, accountID, grantID)
+	taken, err := takeSnapshot(ctx, tx, accountID)
 	if err != nil {
 		return err
 	}
@@ -352,9 +267,7 @@ func replaceByline(
 		on conflict (post_id) do update
 		   set account_id = excluded.account_id, handle = excluded.handle,
 		       display_name = excluded.display_name, contact_email = excluded.contact_email,
-		       avatar_media_id = excluded.avatar_media_id, app_id = excluded.app_id,
-		       app_slug = excluded.app_slug, app_name = excluded.app_name,
-		       captured_at = now()`)
+		       avatar_media_id = excluded.avatar_media_id, captured_at = now()`)
 }
 
 func writeByline(
@@ -366,48 +279,23 @@ func writeByline(
 ) error {
 	_, err := tx.Exec(ctx, `
 		insert into post_bylines (post_id, account_id, handle, display_name, contact_email,
-		                          avatar_media_id, app_id, app_slug, app_name)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		                          avatar_media_id)
+		values ($1, $2, $3, $4, $5, $6)
 	`+whenHeld,
 		postID, taken.AccountID, taken.Handle, taken.DisplayName, taken.ContactEmail,
-		taken.AvatarID, taken.AppID, taken.AppSlug, taken.AppName)
+		taken.AvatarID)
 	if err != nil {
 		return fmt.Errorf("record the post byline: %w", err)
 	}
 	return nil
 }
 
-func grantApp(
-	ctx context.Context,
-	tx pgx.Tx,
-	grantID *uuid.UUID,
-) (*uuid.UUID, *string, *string, error) {
-	if grantID == nil {
-		return nil, nil, nil, nil
-	}
-	var id uuid.UUID
-	var slug, name string
-	err := tx.QueryRow(ctx, `
-		select app.id, app.slug, app.name
-		  from publication_grants grant_row
-		  join publication_apps app on app.id = grant_row.app_id
-		 where grant_row.id = $1
-	`, *grantID).Scan(&id, &slug, &name)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("read the app a post publishes for: %w", err)
-	}
-	return &id, &slug, &name, nil
-}
-
 const selectBylines = `
 	select byline.post_id, byline.account_id, byline.handle, byline.display_name,
-	       byline.contact_email, avatar.id, avatar.width, avatar.height,
-	       app.id, app.slug, app.name, app.home_url, app.position,
-	       app.retired_at is not null
+	       byline.contact_email, avatar.id, avatar.width, avatar.height
 	  from post_bylines byline
 	  left join profile_media avatar
 	         on avatar.id = byline.avatar_media_id and avatar.blob_id is not null
-	  left join publication_apps app on app.id = byline.app_id
 	`
 
 func readByline(ctx context.Context, pool queryRower, postID uuid.UUID) (Byline, error) {
@@ -445,25 +333,14 @@ func scanByline(row rowScanner) (uuid.UUID, Byline, error) {
 	var found Byline
 	var avatarID *uuid.UUID
 	var width, height *int
-	var appID *uuid.UUID
-	var appSlug, appName, appHome *string
-	var appPosition *int
-	var appRetired *bool
 	err := row.Scan(
 		&postID, &found.AccountID, &found.Handle, &found.DisplayName, &found.ContactEmail,
 		&avatarID, &width, &height,
-		&appID, &appSlug, &appName, &appHome, &appPosition, &appRetired,
 	)
 	if err != nil {
 		return uuid.Nil, Byline{}, fmt.Errorf("read the post byline: %w", err)
 	}
 	found.Avatar = scanPortrait(avatarID, width, height)
-	if appID != nil {
-		found.App = &App{
-			ID: *appID, Slug: *appSlug, Name: *appName, Home: *appHome,
-			Position: *appPosition, Retired: *appRetired,
-		}
-	}
 	return postID, found, nil
 }
 
@@ -496,8 +373,8 @@ type rowScanner interface {
 }
 
 var (
-	ErrNotPostAdmin    = errors.New("only an Illarin admin may correct a published post")
-	ErrPostUnpublished = errors.New("the post has not been published")
+	ErrNotPostAdmin     = errors.New("only an Illarin admin may correct a published post")
+	ErrPostNotPublished = errors.New("the post has not been published")
 )
 
 func (s *Service) CorrectAddress(
@@ -523,7 +400,7 @@ func (s *Service) CorrectAddress(
 		return Post{}, err
 	}
 	if locked.Status != StatusPublished {
-		return Post{}, ErrPostUnpublished
+		return Post{}, ErrPostNotPublished
 	}
 	if slug == locked.Slug {
 		return Post{}, FieldError{Field: "slug", Message: "The post already lives at that address."}
@@ -545,9 +422,8 @@ func (s *Service) CorrectAddress(
 	if err != nil {
 		return Post{}, fmt.Errorf("move the post to its corrected address: %w", err)
 	}
-	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Action: "post.address.corrected", GrantID: locked.GrantID,
-		PostID: &id, Before: StatusPublished, After: StatusPublished,
+	err = recordActivity(ctx, tx, change{
+		Actor: editor.ID, Action: "post.address.corrected", PostID: &id, Before: StatusPublished, After: StatusPublished,
 	})
 	if err != nil {
 		return Post{}, err
@@ -581,14 +457,13 @@ func (s *Service) CorrectByline(
 		return Post{}, err
 	}
 	if locked.Status != StatusPublished {
-		return Post{}, ErrPostUnpublished
+		return Post{}, ErrPostNotPublished
 	}
-	if err := replaceByline(ctx, tx, id, accountID, locked.GrantID); err != nil {
+	if err := replaceByline(ctx, tx, id, accountID); err != nil {
 		return Post{}, err
 	}
-	err = recordPublicationAudit(ctx, tx, change{
-		Actor: editor.ID, Action: "post.byline.corrected", GrantID: locked.GrantID,
-		PostID: &id, SubjectID: &accountID, Before: StatusPublished, After: StatusPublished,
+	err = recordActivity(ctx, tx, change{
+		Actor: editor.ID, Action: "post.byline.corrected", PostID: &id, SubjectID: &accountID, Before: StatusPublished, After: StatusPublished,
 	})
 	if err != nil {
 		return Post{}, err
@@ -609,27 +484,27 @@ const firstAddress = `coalesce((
 	               ), post.slug)`
 
 var reservedSlugs = map[string]bool{
-	"admin":     true,
-	"api":       true,
-	"app":       true,
-	"apps":      true,
-	"archive":   true,
-	"atom":      true,
-	"blog":      true,
-	"category":  true,
-	"feed":      true,
-	"feed-json": true,
-	"feed-xml":  true,
-	"feeds":     true,
-	"media":     true,
-	"page":      true,
-	"preview":   true,
-	"robots":    true,
-	"rss":       true,
-	"sitemap":   true,
-	"tag":       true,
-	"tags":      true,
-	"withdrawn": true,
+	"admin":       true,
+	"api":         true,
+	"app":         true,
+	"apps":        true,
+	"archive":     true,
+	"atom":        true,
+	"blog":        true,
+	"category":    true,
+	"feed":        true,
+	"feed-json":   true,
+	"feed-xml":    true,
+	"feeds":       true,
+	"media":       true,
+	"page":        true,
+	"preview":     true,
+	"robots":      true,
+	"rss":         true,
+	"sitemap":     true,
+	"tag":         true,
+	"tags":        true,
+	"unpublished": true,
 }
 
 func normalizeSlug(candidate string) string {

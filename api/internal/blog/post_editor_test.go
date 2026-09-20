@@ -21,7 +21,7 @@ type publicationRefusal struct {
 	Version *int   `json:"version"`
 }
 
-func (s publicationStack) sent(
+func (s blogStack) sent(
 	t *testing.T,
 	who contributor,
 	request *http.Request,
@@ -30,24 +30,15 @@ func (s publicationStack) sent(
 	return apitest.Send(t, s.router, apitest.Authorized(request, who.session))
 }
 
-func (s publicationStack) startedBy(t *testing.T, who contributor, body string) blogPost {
+func (s blogStack) startedBy(t *testing.T, who contributor, body string) blogPost {
 	t.Helper()
-	var fields map[string]any
-	if err := json.Unmarshal([]byte(body), &fields); err != nil {
-		t.Fatalf("decode start body: %v", err)
-	}
-	fields["grantId"] = who.grant.ID
-	named, err := json.Marshal(fields)
-	if err != nil {
-		t.Fatalf("encode start body: %v", err)
-	}
-	return s.started(t, who.session, string(named))
+	return s.started(t, who.session, body)
 }
 
-func (s publicationStack) postsOf(t *testing.T, who contributor) []blogPost {
+func (s blogStack) postsOf(t *testing.T, who contributor) []blogPost {
 	t.Helper()
 	response := s.sent(t, who, httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts", nil,
+		http.MethodGet, "/v1/blog/posts", nil,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("list posts status = %d: %s", response.Code, response.Body.String())
@@ -70,7 +61,7 @@ func refusalOf(t *testing.T, response *httptest.ResponseRecorder) publicationRef
 
 func TestSavingDraftedChangesIsNeverAPublicTransition(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -88,14 +79,14 @@ func TestSavingDraftedChangesIsNeverAPublicTransition(t *testing.T) {
 		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	saved := stack.sent(t, writer, jsonRequest(t,
-		http.MethodPut, "/v1/publication/posts/"+draft.ID, string(body),
+		http.MethodPut, "/v1/blog/posts/"+draft.ID, string(body),
 	))
 	if saved.Code != http.StatusBadRequest && saved.Code != http.StatusOK {
 		t.Fatalf("save status = %d: %s", saved.Code, saved.Body.String())
 	}
 
 	after := stack.sent(t, writer, httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+draft.ID, nil,
+		http.MethodGet, "/v1/blog/posts/"+draft.ID, nil,
 	))
 	held := decodePost(t, after)
 	if held.Status != "draft" || held.PublishedAt != nil {
@@ -106,9 +97,9 @@ func TestSavingDraftedChangesIsNeverAPublicTransition(t *testing.T) {
 	}
 }
 
-func TestAContributorReachesOnlyThePostsUnderTheirOwnGrant(t *testing.T) {
+func TestAWriterReachesOnlyTheirOwnPosts(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	mine := stack.contributor(t, "writer@example.com", "publication.writer")
 	theirs := stack.contributor(t, "another@example.com", "publication.another")
 	announcement := stack.categoryBySlug(t, "announcement")
@@ -117,8 +108,7 @@ func TestAContributorReachesOnlyThePostsUnderTheirOwnGrant(t *testing.T) {
 		`{"categoryId":%q,"title":"Mine alone"}`, announcement.ID,
 	))
 	hidden := stack.started(t, theirs.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Theirs alone"}`,
-		theirs.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"Theirs alone"}`, announcement.ID,
 	))
 
 	listed := stack.postsOf(t, mine)
@@ -126,9 +116,9 @@ func TestAContributorReachesOnlyThePostsUnderTheirOwnGrant(t *testing.T) {
 		t.Fatalf("a contributor listed %d posts: %+v", len(listed), listed)
 	}
 	for _, address := range []string{
-		"/v1/publication/posts/" + hidden.ID,
-		"/v1/publication/posts/" + hidden.ID + "/revisions",
-		"/v1/publication/posts/" + hidden.ID + "/history",
+		"/v1/blog/posts/" + hidden.ID,
+		"/v1/blog/posts/" + hidden.ID + "/revisions",
+		"/v1/blog/posts/" + hidden.ID + "/history",
 	} {
 		response := stack.sent(t, mine, httptest.NewRequest(http.MethodGet, address, nil))
 		if response.Code != http.StatusForbidden {
@@ -143,7 +133,7 @@ func TestAContributorReachesOnlyThePostsUnderTheirOwnGrant(t *testing.T) {
 
 func TestAStaleDraftedChangesConflictsWithEnoughToReload(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
@@ -157,13 +147,13 @@ func TestAStaleDraftedChangesConflictsWithEnoughToReload(t *testing.T) {
 		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	stale := stack.sent(t, writer, jsonRequest(t,
-		http.MethodPut, "/v1/publication/posts/"+draft.ID, string(body),
+		http.MethodPut, "/v1/blog/posts/"+draft.ID, string(body),
 	))
 	if stale.Code != http.StatusConflict {
 		t.Fatalf("a stale save answered %d: %s", stale.Code, stale.Body.String())
 	}
 	refused := refusalOf(t, stale)
-	if refused.Code != string(blog.PublicationErrorCodeStaleVersion) || refused.Version == nil {
+	if refused.Code != string(blog.BlogErrorCodeStaleVersion) || refused.Version == nil {
 		t.Fatalf("a stale save said %+v", refused)
 	}
 	if *refused.Version != stack.working(t, writer.session, draft.ID).Version {
@@ -173,32 +163,32 @@ func TestAStaleDraftedChangesConflictsWithEnoughToReload(t *testing.T) {
 
 func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 
 	draft := stack.startedBy(t, writer, fmt.Sprintf(
 		`{"categoryId":%q,"title":"One vocabulary"}`, announcement.ID,
 	))
-	picture := stack.uploaded(t, writer.session, draft.ID, "document", apitest.PNG(t, 800, 400))
+	picture := stack.uploaded(t, writer.session, draft.ID, "body", apitest.PNG(t, 800, 400))
 	sent := bodyWithPicture(picture.ID, "The workspace")
-	body, err := json.Marshal(finished(draft, map[string]any{"document": sent}))
+	body, err := json.Marshal(finished(draft, map[string]any{"body": sent}))
 	if err != nil {
 		t.Fatalf("encode the drafted changes: %v", err)
 	}
 	saved := stack.sent(t, writer, jsonRequest(t,
-		http.MethodPut, "/v1/publication/posts/"+draft.ID, string(body),
+		http.MethodPut, "/v1/blog/posts/"+draft.ID, string(body),
 	))
 	held := decodePost(t, saved)
-	if held.DocumentVersion == 0 || len(held.Document.Content) != 2 {
-		t.Fatalf("the saved document reads %+v", held.Document)
+	if held.BodyVersion == 0 || len(held.Body.Content) != 2 {
+		t.Fatalf("the saved document reads %+v", held.Body)
 	}
-	if held.Document.Content[1]["mediaId"] != picture.ID {
-		t.Fatalf("the document lost the picture it placed: %+v", held.Document.Content[1])
+	if held.Body.Content[1]["mediaId"] != picture.ID {
+		t.Fatalf("the document lost the picture it placed: %+v", held.Body.Content[1])
 	}
 
 	kept := stack.sent(t, writer, jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/revisions",
+		http.MethodPost, "/v1/blog/posts/"+draft.ID+"/revisions",
 		fmt.Sprintf(`{"version":%d}`, held.Version),
 	))
 	var checkpoint postRevision
@@ -207,13 +197,13 @@ func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
 	}
 
 	published := stack.sent(t, writer, jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+draft.ID+"/publish",
+		http.MethodPost, "/v1/blog/posts/"+draft.ID+"/publish",
 		fmt.Sprintf(`{"version":%d}`, held.Version),
 	))
 	public := decodePost(t, published)
 
 	editions := stack.sent(t, writer, httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+draft.ID+"/revisions", nil,
+		http.MethodGet, "/v1/blog/posts/"+draft.ID+"/revisions", nil,
 	))
 	var listed struct {
 		Revisions []postRevision `json:"revisions"`
@@ -234,7 +224,7 @@ func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
 	}
 
 	again := decodePost(t, stack.sent(t, writer, httptest.NewRequest(
-		http.MethodGet, "/v1/publication/posts/"+draft.ID, nil,
+		http.MethodGet, "/v1/blog/posts/"+draft.ID, nil,
 	)))
 	if again.ID != draft.ID || again.PublicRevision != public.PublicRevision ||
 		len(again.Media) != 1 || again.Media[0].ID != picture.ID {
@@ -244,23 +234,23 @@ func TestTheAPISpeaksInCanonicalDocumentsAndStableIdentifiers(t *testing.T) {
 
 func TestAMalformedBodyRefusesWithAStableCode(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "publication.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
 	post := stack.startedBy(t, writer, fmt.Sprintf(
 		`{"categoryId":%q,"title":"Notes"}`, announcement.ID,
 	))
-	at := "/v1/publication/posts/" + post.ID
+	at := "/v1/blog/posts/" + post.ID
 
 	malformed := []struct {
 		method string
 		path   string
 	}{
-		{http.MethodPost, "/v1/publication/posts"},
+		{http.MethodPost, "/v1/blog/posts"},
 		{http.MethodPut, at},
 		{http.MethodPost, at + "/revisions"},
 		{http.MethodPost, at + "/publish"},
-		{http.MethodPost, at + "/withdraw"},
+		{http.MethodPost, at + "/unpublish"},
 		{http.MethodPost, at + "/republish"},
 		{http.MethodPost, at + "/delete"},
 		{http.MethodPost, at + "/recover"},
@@ -274,15 +264,15 @@ func TestAMalformedBodyRefusesWithAStableCode(t *testing.T) {
 			t.Errorf("%s %s answered %d: %s", call.method, call.path, response.Code, response.Body.String())
 			continue
 		}
-		if code := refusalOf(t, response).Code; code != string(blog.PublicationErrorCodeInvalid) {
-			t.Errorf("%s %s said %q, want %q", call.method, call.path, code, blog.PublicationErrorCodeInvalid)
+		if code := refusalOf(t, response).Code; code != string(blog.BlogErrorCodeInvalid) {
+			t.Errorf("%s %s said %q, want %q", call.method, call.path, code, blog.BlogErrorCodeInvalid)
 		}
 	}
 
 	picture := stack.sent(t, writer, httptest.NewRequest(
 		http.MethodPost, at+"/media", strings.NewReader("not a form"),
 	))
-	if picture.Code != http.StatusBadRequest || refusalOf(t, picture).Code != string(blog.PublicationErrorCodeInvalid) {
+	if picture.Code != http.StatusBadRequest || refusalOf(t, picture).Code != string(blog.BlogErrorCodeInvalid) {
 		t.Errorf("a formless upload answered %d: %s", picture.Code, picture.Body.String())
 	}
 }

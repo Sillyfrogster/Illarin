@@ -1,5 +1,5 @@
 {
   "note": "HTML is not content",
-  "path": "document.content.0.type",
+  "path": "body.content.0.type",
   "document": {"version": 2, "content": [{"type": "html", "html": "<b>no</b>"}]}
 }

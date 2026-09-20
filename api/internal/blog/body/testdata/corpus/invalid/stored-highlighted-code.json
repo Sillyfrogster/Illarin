@@ -1,6 +1,6 @@
 {
   "note": "Highlighted markup is not stored beside the code",
-  "path": "document.content.0.highlighted",
+  "path": "body.content.0.highlighted",
   "document": {
     "version": 2,
     "content": [

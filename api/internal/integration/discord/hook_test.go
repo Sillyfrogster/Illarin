@@ -175,7 +175,6 @@ func aRelease() Announcement {
 		URL:      "https://blog.illarin.test/illarin-2-1",
 		Image:    "https://blog.illarin.test/illarin-2-1/card.png",
 		Category: "Release",
-		Version:  "2.1.0",
 		Author:   Author{Name: "Aaron", URL: "https://illarin.test/@aaron"},
 		At:       time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC),
 	}
@@ -210,25 +209,18 @@ func TestTheAnnouncementCarriesWhatIllarinDecidedToSay(t *testing.T) {
 	if embed.Footer.Text != Publication {
 		t.Errorf("footer = %q", embed.Footer.Text)
 	}
-	if len(embed.Fields) != 2 {
-		t.Fatalf("fields = %d, want a category and a version", len(embed.Fields))
-	}
-	if embed.Fields[0].Value != "Release" || embed.Fields[1].Value != "2.1.0" {
-		t.Errorf("fields = %+v", embed.Fields)
+	if len(embed.Fields) != 1 || embed.Fields[0].Value != "Release" {
+		t.Errorf("fields = %+v, want the category alone", embed.Fields)
 	}
 }
 
-func TestAnAnnouncementWithoutAVersionOrPictureLeavesThemOut(t *testing.T) {
+func TestAnAnnouncementWithoutAPictureLeavesItOut(t *testing.T) {
 	t.Parallel()
 	one := aRelease()
-	one.Version = ""
 	one.Image = ""
 
 	read := announced(t, one)
 
-	if len(read.Embeds[0].Fields) != 1 {
-		t.Errorf("fields = %+v, want the category alone", read.Embeds[0].Fields)
-	}
 	if read.Embeds[0].Image.URL != "" {
 		t.Errorf("image = %q", read.Embeds[0].Image.URL)
 	}
@@ -296,7 +288,6 @@ func TestAnAnnouncementIsCutToWhatDiscordAccepts(t *testing.T) {
 	one.Summary = strings.Repeat("s", DescriptionLimit+50)
 	one.Note = strings.Repeat("n", ContentLimit+50)
 	one.Category = strings.Repeat("c", FieldLimit+50)
-	one.Version = strings.Repeat("v", FieldLimit+50)
 	one.Update = strings.Repeat("u", FieldLimit+50)
 	one.Footer = strings.Repeat("f", FooterLimit+50)
 	one.Author.Name = strings.Repeat("🐦", TitleLimit)

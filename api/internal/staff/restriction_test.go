@@ -217,7 +217,7 @@ func TestOnlyAnAdminRestrictsOrRestoresAProfile(t *testing.T) {
 			t.Fatalf("%s restrict status = %d, want 403: %s", role, refused.Code, refused.Body.String())
 		}
 	}
-	if refused := stack.restrict(t, stack.authority, ownerHandle, "Because I say so."); refused.Code != http.StatusForbidden {
+	if refused := stack.restrict(t, stack.admin, ownerHandle, "Because I say so."); refused.Code != http.StatusForbidden {
 		t.Fatalf("authority restrict status = %d, want 403: %s", refused.Code, refused.Body.String())
 	}
 	if refused := stack.restrict(t, stack.owner, ownerHandle, "Hiding myself."); refused.Code != http.StatusForbidden {

@@ -598,7 +598,7 @@ func TestAnnouncementStatusIsTheOwnersAloneAndCarriesNoSecrets(t *testing.T) {
 	stack.answersWith(http.StatusTeapot)
 	stack.sendAnnouncementsAt(t, time.Now())
 
-	for _, session := range []*http.Cookie{stack.authority, nil} {
+	for _, session := range []*http.Cookie{stack.admin, nil} {
 		request := httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID+"/announcement-attempts", nil)
 		if session != nil {
 			request = apitest.Authorized(request, session)

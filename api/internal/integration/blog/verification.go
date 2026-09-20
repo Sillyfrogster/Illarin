@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const EventVerification = "publication.endpoint.verification.v1"
+const EventVerification = "blog.endpoint.verification.v1"
 
 var ErrNotProven = dispatch.ErrNotProven
 

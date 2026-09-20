@@ -20,86 +20,14 @@ type Announcement struct {
 
 var ErrRoleRefused = errors.New("the integration has no role this post may ping")
 
-type IntegrationPolicy struct {
-	Allowed  *[]uuid.UUID
-	Defaults []uuid.UUID
-}
-
-func (s *Service) AppChoices(ctx context.Context, appID uuid.UUID) ([]Choice, error) {
+// PostChoices lists every integration a post may announce to, each chosen unless the writer unticks it
+func (s *Service) PostChoices(ctx context.Context) ([]Choice, error) {
 	return choicesFrom(ctx, s.pool, `
 		select integration.id, integration.name, integration.type, integration.state,
-		       integration.announcements, integration.role_name, allowed.by_default
-		  from publication_app_integrations allowed
-		  join blog_integrations integration on integration.id = allowed.integration_id
-		 where allowed.app_id = $1
-		 order by integration.name, integration.created_at
-	`, appID)
-}
-
-func (s *Service) GrantChoices(ctx context.Context, grantID uuid.UUID) ([]Choice, error) {
-	var overridden bool
-	var appID uuid.UUID
-	err := s.pool.QueryRow(ctx, `
-		select integrations_overridden, app_id from publication_grants where id = $1
-	`, grantID).Scan(&overridden, &appID)
-	if err != nil {
-		return nil, fmt.Errorf("read the integration policy behind a grant: %w", err)
-	}
-	if !overridden {
-		return s.AppChoices(ctx, appID)
-	}
-	return choicesFrom(ctx, s.pool, `
-		select integration.id, integration.name, integration.type, integration.state,
-		       integration.announcements, integration.role_name, allowed.by_default
-		  from publication_grant_integrations allowed
-		  join blog_integrations integration on integration.id = allowed.integration_id
-		 where allowed.grant_id = $1
-		 order by integration.name, integration.created_at
-	`, grantID)
-}
-
-func (s *Service) PostChoices(ctx context.Context, grantID *uuid.UUID) ([]Choice, error) {
-	if grantID != nil {
-		return s.GrantChoices(ctx, *grantID)
-	}
-	return choicesFrom(ctx, s.pool, `
-		select integration.id, integration.name, integration.type, integration.state,
-		       integration.announcements, integration.role_name, false
+		       integration.announcements, integration.role_name, true
 		  from blog_integrations integration
 		 order by integration.name, integration.created_at
 	`)
-}
-
-func (s *Service) checkPolicy(
-	ctx context.Context,
-	in IntegrationPolicy,
-) (map[uuid.UUID]bool, error) {
-	allowed := make(map[uuid.UUID]bool)
-	if in.Allowed == nil {
-		if len(in.Defaults) > 0 {
-			return nil, FieldError{
-				Field:   "defaultIntegrationIds",
-				Message: "A default belongs to a set this policy names.",
-			}
-		}
-		return allowed, nil
-	}
-	for _, id := range *in.Allowed {
-		if _, err := s.Integration(ctx, id); err != nil {
-			return nil, err
-		}
-		allowed[id] = false
-	}
-	for _, id := range in.Defaults {
-		if _, held := allowed[id]; !held {
-			return nil, FieldError{
-				Field:   "defaultIntegrationIds",
-				Message: "A default has to be one of the allowed integrations.",
-			}
-		}
-		allowed[id] = true
-	}
-	return allowed, nil
 }
 
 type Sending struct {
@@ -109,7 +37,6 @@ type Sending struct {
 
 func (s *Service) Chosen(
 	ctx context.Context,
-	grantID *uuid.UUID,
 	in Announcement,
 ) ([]Sending, string, error) {
 	note := oneParagraph(in.Note)
@@ -119,7 +46,7 @@ func (s *Service) Chosen(
 			Message: fmt.Sprintf("Keep the announcement note under %d characters.", noteLimit),
 		}
 	}
-	allowed, err := s.PostChoices(ctx, grantID)
+	allowed, err := s.PostChoices(ctx)
 	if err != nil {
 		return nil, "", err
 	}
@@ -254,47 +181,4 @@ func collectChoices(rows pgx.Rows) ([]Choice, error) {
 		return nil, fmt.Errorf("read the integrations a post may send to: %w", err)
 	}
 	return found, nil
-}
-
-func (s *Service) SetGrantIntegrations(ctx context.Context, actor, grantID, appID, holderID uuid.UUID, in IntegrationPolicy) error {
-	allowed, err := s.checkPolicy(ctx, in)
-	if err != nil {
-		return err
-	}
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin grant integration policy: %w", err)
-	}
-	defer tx.Rollback(ctx)
-	if _, err := tx.Exec(ctx, `
-		delete from publication_grant_integrations where grant_id = $1
-	`, grantID); err != nil {
-		return fmt.Errorf("clear the grant integration policy: %w", err)
-	}
-	_, err = tx.Exec(ctx, `
-		update publication_grants set integrations_overridden = $2 where id = $1
-	`, grantID, in.Allowed != nil)
-	if err != nil {
-		return fmt.Errorf("record the grant integration override: %w", err)
-	}
-	for id, byDefault := range allowed {
-		_, err := tx.Exec(ctx, `
-			insert into publication_grant_integrations (grant_id, integration_id, by_default)
-			values ($1, $2, $3)
-		`, grantID, id, byDefault)
-		if err != nil {
-			return fmt.Errorf("allow a grant integration: %w", err)
-		}
-	}
-	err = s.Audit(ctx, tx, Change{
-		Actor: actor, Action: "grant.integrations.set",
-		AppID: &appID, GrantID: &grantID, SubjectID: &holderID,
-	})
-	if err != nil {
-		return err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit grant integration policy: %w", err)
-	}
-	return nil
 }

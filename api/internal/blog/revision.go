@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	RevisionCheckpoint  = "checkpoint"
-	RevisionPublication = "publication"
-	RevisionSchedule    = "schedule"
+	RevisionCheckpoint = "checkpoint"
+	RevisionPublish    = "publish"
+	RevisionSchedule   = "schedule"
 )
 
 var ErrRevisionNotFound = errors.New("no such revision of that post")
@@ -49,7 +49,7 @@ func (s *Service) Revisions(ctx context.Context, editor Editor, id uuid.UUID) ([
 		       revision.id = post.public_revision_id
 		  from post_revisions revision
 		  join posts post on post.id = revision.post_id
-		  join publication_categories category on category.id = revision.category_id
+		  join blog_categories category on category.id = revision.category_id
 		  left join users keeper on keeper.id = revision.captured_by
 		 where revision.post_id = $1
 		 order by revision.number desc
@@ -116,10 +116,9 @@ func (s *Service) Checkpoint(
 	if err := carryUsesForward(ctx, tx, id, revisionID); err != nil {
 		return Revision{}, err
 	}
-	err = recordPublicationAudit(ctx, tx, change{
+	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.checkpointed",
-		GrantID: locked.GrantID,
-		PostID:  &id, RevisionID: &revisionID, Before: locked.Status, After: locked.Status,
+		PostID: &id, RevisionID: &revisionID, Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {
 		return Revision{}, err
@@ -159,11 +158,11 @@ func (s *Service) RestoreRevision(
 	if err != nil {
 		return Post{}, err
 	}
-	body, err := postbody.Read(kept.Document)
+	read, err := postbody.Read(kept.Body)
 	if err != nil {
-		return Post{}, documentRefusal(err)
+		return Post{}, bodyRefusal(err)
 	}
-	document, err := json.Marshal(body)
+	body, err := json.Marshal(read)
 	if err != nil {
 		return Post{}, fmt.Errorf("write the restored post body: %w", err)
 	}
@@ -174,25 +173,23 @@ func (s *Service) RestoreRevision(
 	_, err = tx.Exec(ctx, `
 		update posts
 		   set category_id = $2, title = $3, summary = $4, slug = $5,
-		       document = $6, document_version = $7,
-		       release_app_id = $8, release_version = $9, release_url = $10,
-		       header_media_id = $11, header_alt = $12, header_caption = $13,
-		       social_media_id = $14,
+		       body = $6, body_version = $7,
+		       header_media_id = $8, header_alt = $9, header_caption = $10,
+		       link_card_media_id = $11,
 		       working_version = working_version + 1, updated_at = now()
 		 where id = $1
 	`, id, kept.CategoryID, kept.Title, kept.Summary, address,
-		document, postbody.Version, kept.ReleaseAppID, kept.ReleaseVersion, kept.ReleaseAddress,
-		kept.HeaderMediaID, kept.HeaderAlt, kept.HeaderCaption, kept.SocialMediaID)
+		body, postbody.Version,
+		kept.HeaderMediaID, kept.HeaderAlt, kept.HeaderCaption, kept.LinkCardMediaID)
 	if err != nil {
 		return Post{}, fmt.Errorf("restore the edition into the drafted changes: %w", err)
 	}
 	if err := carryUsesBack(ctx, tx, id, revisionID); err != nil {
 		return Post{}, err
 	}
-	err = recordPublicationAudit(ctx, tx, change{
+	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.revision.restored",
-		GrantID: locked.GrantID,
-		PostID:  &id, RevisionID: &revisionID, Before: locked.Status, After: locked.Status,
+		PostID: &id, RevisionID: &revisionID, Before: locked.Status, After: locked.Status,
 	})
 	if err != nil {
 		return Post{}, err
@@ -256,17 +253,15 @@ func captureRevision(
 	id := uuid.New()
 	_, err := tx.Exec(ctx, `
 		insert into post_revisions (id, post_id, number, title, summary, slug, category_id,
-		                            document, document_version, release_app_id,
-		                            release_version, release_url, header_media_id,
-		                            header_alt, header_caption, social_media_id,
+		                            body, body_version, header_media_id,
+		                            header_alt, header_caption, link_card_media_id,
 		                            captured_for, captured_by)
 		values ($1, $2,
 		        coalesce((select max(number) from post_revisions where post_id = $2), 0) + 1,
-		        $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		        $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`, id, locked.ID, locked.Title, locked.Summary, locked.Slug, locked.CategoryID,
-		locked.Document, postbody.Version, locked.ReleaseAppID,
-		locked.ReleaseVersion, locked.ReleaseAddress, locked.HeaderMediaID,
-		locked.HeaderAlt, locked.HeaderCaption, locked.SocialMediaID, reason, editor.ID)
+		locked.Body, postbody.Version, locked.HeaderMediaID,
+		locked.HeaderAlt, locked.HeaderCaption, locked.LinkCardMediaID, reason, editor.ID)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("capture the post revision: %w", err)
 	}
@@ -277,15 +272,14 @@ func lockedRevision(ctx context.Context, tx pgx.Tx, postID, id uuid.UUID) (worki
 	var kept working
 	err := tx.QueryRow(ctx, `
 		select revision.id, revision.category_id, revision.slug, revision.title, revision.summary,
-		       revision.document, revision.release_app_id, revision.release_version,
-		       revision.release_url, revision.header_media_id, revision.header_alt,
-		       revision.header_caption, revision.social_media_id
+		       revision.body, revision.header_media_id, revision.header_alt,
+		       revision.header_caption, revision.link_card_media_id
 		  from post_revisions revision
 		 where revision.id = $1 and revision.post_id = $2
 	`, id, postID).Scan(
 		&kept.ID, &kept.CategoryID, &kept.Slug, &kept.Title, &kept.Summary,
-		&kept.Document, &kept.ReleaseAppID, &kept.ReleaseVersion, &kept.ReleaseAddress,
-		&kept.HeaderMediaID, &kept.HeaderAlt, &kept.HeaderCaption, &kept.SocialMediaID,
+		&kept.Body,
+		&kept.HeaderMediaID, &kept.HeaderAlt, &kept.HeaderCaption, &kept.LinkCardMediaID,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return working{}, ErrRevisionNotFound
@@ -308,7 +302,7 @@ func (s *Service) revision(ctx context.Context, postID, id uuid.UUID) (Revision,
 		       revision.id = post.public_revision_id
 		  from post_revisions revision
 		  join posts post on post.id = revision.post_id
-		  join publication_categories category on category.id = revision.category_id
+		  join blog_categories category on category.id = revision.category_id
 		  left join users keeper on keeper.id = revision.captured_by
 		 where revision.id = $1 and revision.post_id = $2
 	`, id, postID).Scan(
@@ -352,7 +346,7 @@ func (s *Service) PostHistory(ctx context.Context, editor Editor, id uuid.UUID) 
 	rows, err := s.pool.Query(ctx, `
 		select audit.id, actor.username, audit.credential, audit.action, revision.number,
 		       audit.before_state, audit.after_state, audit.recorded_at
-		  from publication_audits audit
+		  from blog_activity_log audit
 		  left join users actor on actor.id = audit.actor_id
 		  left join post_revisions revision on revision.id = audit.revision_id
 		 where audit.post_id = $1

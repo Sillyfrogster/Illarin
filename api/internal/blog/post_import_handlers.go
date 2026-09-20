@@ -25,7 +25,7 @@ func (h *Handlers) ImportPostMarkdown(c *gin.Context) {
 	if !ok {
 		return
 	}
-	saved, notes, err := h.publications.ImportPost(c.Request.Context(), editor, id,
+	saved, notes, err := h.blog.ImportPost(c.Request.Context(), editor, id,
 		PostImport{Version: request.Version, Markdown: request.Markdown})
 	if err != nil {
 		h.importError(c, err)
@@ -38,7 +38,7 @@ func readImportRequest(c *gin.Context) (ImportPostMarkdownRequest, bool) {
 	var request ImportPostMarkdownRequest
 	mediaType, _, err := mime.ParseMediaType(c.GetHeader("Content-Type"))
 	if err != nil || mediaType != "application/json" {
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"Send JSON with the application/json content type.")
 		return request, false
 	}
@@ -46,11 +46,11 @@ func readImportRequest(c *gin.Context) (ImportPostMarkdownRequest, bool) {
 	if err := api.DecodeOneJSON(body, &request); err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			refuseField(c, http.StatusRequestEntityTooLarge, PublicationErrorCodeInvalid,
+			refuseField(c, http.StatusRequestEntityTooLarge, BlogErrorCodeInvalid,
 				"This import is too large.", "markdown")
 			return request, false
 		}
-		refusePublication(c, http.StatusBadRequest, PublicationErrorCodeInvalid, "Send one valid JSON object.")
+		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Send one valid JSON object.")
 		return request, false
 	}
 	return request, true
@@ -65,7 +65,7 @@ func (h *Handlers) importError(c *gin.Context, err error) {
 	lines := toAPINotes(refused.Notes)
 	c.AbortWithStatusJSON(http.StatusBadRequest, PostImportRefusal{
 		Error:    "This Markdown contains unsupported content. Review the reported lines.",
-		Code:     PublicationErrorCodeInvalid,
+		Code:     BlogErrorCodeInvalid,
 		Field:    pointer("markdown"),
 		Refusals: &lines,
 	})
@@ -95,8 +95,8 @@ type PostImportNote struct {
 }
 
 type PostImportRefusal struct {
-	Code     PublicationErrorCode `json:"code"`
-	Error    string               `json:"error"`
-	Field    *string              `json:"field,omitempty"`
-	Refusals *[]PostImportNote    `json:"refusals,omitempty"`
+	Code     BlogErrorCode     `json:"code"`
+	Error    string            `json:"error"`
+	Field    *string           `json:"field,omitempty"`
+	Refusals *[]PostImportNote `json:"refusals,omitempty"`
 }

@@ -15,7 +15,7 @@ import (
 type Renderer interface {
 	Prepare(context.Context, io.Reader) (Prepared, error)
 	Render(context.Context, io.Reader, string) (Derivative, error)
-	ComposeSocialPreview(context.Context, io.Reader, string) (Derivative, error)
+	ComposeLinkCard(context.Context, io.Reader, string) (Derivative, error)
 	DerivativeType() string
 }
 
@@ -123,8 +123,8 @@ func (l *Library) render(ctx context.Context, blobID uuid.UUID, id storage.Deriv
 	}
 	var derivative Derivative
 	var renderErr error
-	if _, composed := SocialPreviewByName(id.Variant); composed {
-		derivative, renderErr = l.renderer.ComposeSocialPreview(ctx, source, id.Variant)
+	if _, composed := LinkCardByName(id.Variant); composed {
+		derivative, renderErr = l.renderer.ComposeLinkCard(ctx, source, id.Variant)
 	} else {
 		derivative, renderErr = l.renderer.Render(ctx, source, id.Variant)
 	}

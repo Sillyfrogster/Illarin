@@ -263,21 +263,17 @@ func (s *Service) announceOnDiscord(
 }
 
 func announcementOf(said Event, role string) discord.Announcement {
-	one := discord.Announcement{
+	return discord.Announcement{
 		Title:    said.Post.Title,
 		Summary:  said.Post.Summary,
 		URL:      said.Post.URL,
-		Image:    said.Post.SocialImage,
+		Image:    said.Post.LinkCardImage,
 		Category: said.Post.Category.Label,
 		Note:     said.Note,
 		Role:     role,
 		Author:   discord.Author{Name: said.Post.Byline.Name, URL: said.Post.Byline.URL},
 		At:       said.Post.PublishedAt,
 	}
-	if said.Post.Release != nil {
-		one.Version = said.Post.Release.Version
-	}
-	return one
 }
 
 func (s *Service) channelOf(

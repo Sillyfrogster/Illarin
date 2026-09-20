@@ -41,7 +41,7 @@ type Services struct {
 	Accounts       *account.Service
 	Apps           *connect.Apps
 	Sends          *connect.Sends
-	Publications   *blog.Service
+	Blog           *blog.Service
 	Integrations   *integration.Service
 	Notifications  *notify.Service
 	MaxUploadBytes int64
@@ -152,7 +152,7 @@ func NewServicesWithSends(
 		Accounts:       accounts,
 		Apps:           apps,
 		Sends:          connect.NewSends(pool, works, apps, settings),
-		Publications:   blog.NewService(pool, MediaLibrary(blob), Publishing(to)),
+		Blog:           blog.NewService(pool, MediaLibrary(blob), Publishing(to)),
 		Integrations:   integrations,
 		Notifications:  NewNotifications(pool),
 		MaxUploadBytes: maxUploadBytes,
@@ -181,7 +181,7 @@ func NewServicesOver(
 		Accounts:       NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
 		Apps:           apps,
 		Sends:          NewSendsService(pool, works, apps),
-		Publications:   NewPublicationService(pool, blobs),
+		Blog:           NewBlogService(pool, blobs),
 		Integrations:   integrations,
 		Notifications:  NewNotifications(pool),
 		MaxUploadBytes: 1 << 20,

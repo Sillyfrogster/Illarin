@@ -273,7 +273,7 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsContent(t *testing.T) {
 		}
 		notes := "Current notes"
 		if number == 0 {
-			notes = "Private after withdrawal"
+			notes = "Private after unpublishing"
 		}
 		if got := apitest.PublishWorkVersion(t, r, session, started.ID,
 			`{"summary":"Version `+description+`","notes":"`+notes+`"}`); got.Code != http.StatusOK {
@@ -283,24 +283,24 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsContent(t *testing.T) {
 			restore := apitest.Authorized(httptest.NewRequest(http.MethodPost,
 				"/v1/works/"+started.ID+"/versions/1/restore", nil), session)
 			if got := apitest.Send(t, r, restore); got.Code != http.StatusNoContent {
-				t.Fatalf("restore without withdrawn picture = %d: %s", got.Code, got.Body.String())
+				t.Fatalf("restore without unpublished picture = %d: %s", got.Code, got.Body.String())
 			}
 		}
 	}
 
-	withdraw := apitest.AuthorizedJSONRequest(t, http.MethodPost,
-		"/v1/works/"+started.ID+"/versions/2/withdraw",
+	unpublish := apitest.AuthorizedJSONRequest(t, http.MethodPost,
+		"/v1/works/"+started.ID+"/versions/2/unpublish",
 		`{"explanation":"This version gave incorrect guidance."}`, session)
-	if got := apitest.Send(t, r, withdraw); got.Code != http.StatusNoContent {
-		t.Fatalf("withdraw = %d, want 204: %s", got.Code, got.Body.String())
+	if got := apitest.Send(t, r, unpublish); got.Code != http.StatusNoContent {
+		t.Fatalf("unpublish = %d, want 204: %s", got.Code, got.Body.String())
 	}
 
 	public := readUpdateHistory(t, r, started.ID, nil)
-	if strings.Contains(public.Body.String(), "Second secret history") || strings.Contains(public.Body.String(), "Private after withdrawal") {
-		t.Fatalf("public history exposed withdrawn snapshot: %s", public.Body.String())
+	if strings.Contains(public.Body.String(), "Second secret history") || strings.Contains(public.Body.String(), "Private after unpublishing") {
+		t.Fatalf("public history exposed unpublished snapshot: %s", public.Body.String())
 	}
 	if !strings.Contains(public.Body.String(), "This version gave incorrect guidance.") {
-		t.Fatalf("public history omitted withdrawal explanation: %s", public.Body.String())
+		t.Fatalf("public history omitted unpublishing explanation: %s", public.Body.String())
 	}
 	var publicHistory struct {
 		Items []struct {
@@ -313,35 +313,35 @@ func TestAnOlderVersionCanBeWithdrawnWithoutExposingItsContent(t *testing.T) {
 	if err := json.Unmarshal(public.Body.Bytes(), &publicHistory); err != nil {
 		t.Fatal(err)
 	}
-	withdrawn := publicHistory.Items[1]
-	if withdrawn.ID != uuid.Nil || withdrawn.Initial || withdrawn.VersionLabel != "" || withdrawn.WithdrawnAt != nil {
-		t.Fatalf("public withdrawal exposed private version metadata: %+v", withdrawn)
+	unpublished := publicHistory.Items[1]
+	if unpublished.ID != uuid.Nil || unpublished.Initial || unpublished.VersionLabel != "" || unpublished.WithdrawnAt != nil {
+		t.Fatalf("public unpublishing exposed private version metadata: %+v", unpublished)
 	}
 	owner := readUpdateHistory(t, r, started.ID, session)
 	if !strings.Contains(owner.Body.String(), "Second secret history") {
-		t.Fatalf("owner lost withdrawn snapshot: %s", owner.Body.String())
+		t.Fatalf("owner lost unpublished snapshot: %s", owner.Body.String())
 	}
 
 	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,
 		"/v1/works/"+started.ID+"/versions/2/downloads", nil))
 	if download.Code != http.StatusNotFound {
-		t.Fatalf("withdrawn download = %d, want 404: %s", download.Code, download.Body.String())
+		t.Fatalf("unpublished download = %d, want 404: %s", download.Code, download.Body.String())
 	}
 	directMedia := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,
 		"/media/"+withdrawnMedia+"/thumb/2", nil))
 	if directMedia.Code != http.StatusNotFound {
-		t.Fatalf("withdrawn media = %d, want 404", directMedia.Code)
+		t.Fatalf("unpublished media = %d, want 404", directMedia.Code)
 	}
 	comparison := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,
 		"/v1/works/"+started.ID+"/versions/comparison?from=1&to=2", nil))
-	if comparison.Code != http.StatusOK || !strings.Contains(comparison.Body.String(), "This version was withdrawn.") || strings.Contains(comparison.Body.String(), "Second secret history") {
-		t.Fatalf("withdrawn comparison was not blocked: %d %s", comparison.Code, comparison.Body.String())
+	if comparison.Code != http.StatusOK || !strings.Contains(comparison.Body.String(), "This version was unpublished.") || strings.Contains(comparison.Body.String(), "Second secret history") {
+		t.Fatalf("unpublished comparison was not blocked: %d %s", comparison.Code, comparison.Body.String())
 	}
 
 	current := apitest.AuthorizedJSONRequest(t, http.MethodPost,
-		"/v1/works/"+started.ID+"/versions/3/withdraw", `{"explanation":"Not alone."}`, session)
+		"/v1/works/"+started.ID+"/versions/3/unpublish", `{"explanation":"Not alone."}`, session)
 	if got := apitest.Send(t, r, current); got.Code != http.StatusConflict {
-		t.Fatalf("current withdrawal = %d, want 409: %s", got.Code, got.Body.String())
+		t.Fatalf("current unpublishing = %d, want 409: %s", got.Code, got.Body.String())
 	}
 }
 

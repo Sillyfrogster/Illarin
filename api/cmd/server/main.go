@@ -147,12 +147,12 @@ func run() error {
 	}
 	images := mediaproc.NewLibrary(blob, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
 	accounts := account.NewService(pool, verificationSender, discordProvider, images, cfg.SiteURL)
-	sealing, err := secrets.NewKey(cfg.PublicationSecretKey)
+	sealing, err := secrets.NewKey(cfg.IntegrationSecretKey)
 	if err != nil {
-		return fmt.Errorf("publication secret key: %w", err)
+		return fmt.Errorf("integration secret key: %w", err)
 	}
 	publishing := blog.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
-	publications := blog.NewService(pool, images, publishing)
+	posts := blog.NewService(pool, images, publishing)
 	integrations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	versions := version.NewService(pool, svc)
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
@@ -192,20 +192,20 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		publications.RunScheduler(runtimeContext, func(err error) {
-			log.Printf("publication scheduler: %v", err)
+		posts.RunScheduler(runtimeContext, func(err error) {
+			log.Printf("blog scheduler: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
-		publications.RunRecovery(runtimeContext, func(err error) {
-			log.Printf("publication recovery: %v", err)
+		posts.RunRecovery(runtimeContext, func(err error) {
+			log.Printf("blog recovery: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
-		publications.RunAttempts(runtimeContext, func(err error) {
-			log.Printf("publication delivery: %v", err)
+		posts.RunAttempts(runtimeContext, func(err error) {
+			log.Printf("blog announcements: %v", err)
 		})
 	}()
 
@@ -221,7 +221,7 @@ func run() error {
 		Accounts:       accounts,
 		Apps:           apps,
 		Sends:          sends,
-		Publications:   publications,
+		Blog:           posts,
 		Integrations:   integrations,
 		Notifications:  notifications,
 		MaxUploadBytes: cfg.MaxUploadBytes,

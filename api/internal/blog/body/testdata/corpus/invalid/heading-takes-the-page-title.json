@@ -1,6 +1,6 @@
 {
   "note": "A body heading cannot be the page heading",
-  "path": "document.content.0.level",
+  "path": "body.content.0.level",
   "document": {
     "version": 2,
     "content": [{"type": "heading", "level": 1, "content": [{"type": "text", "text": "Title"}]}]

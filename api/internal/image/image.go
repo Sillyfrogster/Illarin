@@ -13,20 +13,20 @@ import (
 type Handlers struct {
 	works          *work.Service
 	accounts       *account.Service
-	publications   *blog.Service
+	posts          *blog.Service
 	maxUploadBytes int64
 }
 
 func NewHandlers(
 	works *work.Service,
 	accounts *account.Service,
-	publications *blog.Service,
+	posts *blog.Service,
 	maxUploadBytes int64,
 ) *Handlers {
 	return &Handlers{
 		works:          works,
 		accounts:       accounts,
-		publications:   publications,
+		posts:          posts,
 		maxUploadBytes: maxUploadBytes,
 	}
 }

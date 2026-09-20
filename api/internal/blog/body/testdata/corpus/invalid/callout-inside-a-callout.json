@@ -1,6 +1,6 @@
 {
   "note": "Callouts do not nest",
-  "path": "document.content.0.content.0.type",
+  "path": "body.content.0.content.0.type",
   "document": {
     "version": 2,
     "content": [

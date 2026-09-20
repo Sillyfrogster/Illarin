@@ -1,6 +1,6 @@
 {
   "note": "A table whose rows hold different numbers of cells",
-  "path": "document.content.0.content.1",
+  "path": "body.content.0.content.1",
   "document": {
     "version": 2,
     "content": [

@@ -21,7 +21,7 @@ func (h *Handlers) DeletePost(c *gin.Context) {
 	if !ok {
 		return
 	}
-	deleted, err := h.publications.DeletePost(
+	deleted, err := h.blog.DeletePost(
 		c.Request.Context(), editor, id, version,
 	)
 	if err != nil {
@@ -44,7 +44,7 @@ func (h *Handlers) RecoverPost(c *gin.Context) {
 	if !ok {
 		return
 	}
-	recovered, err := h.publications.RecoverPost(
+	recovered, err := h.blog.RecoverPost(
 		c.Request.Context(), editor, id, version,
 	)
 	if err != nil {

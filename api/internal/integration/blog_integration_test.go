@@ -283,7 +283,7 @@ func (t throughLoopback) send(
 }
 
 type integrationStack struct {
-	publicationStack
+	blogStack
 	to      *receiver
 	discord *discordServer
 	editor  *http.Cookie
@@ -308,16 +308,16 @@ func newDestinationStackThrough(
 		throughLoopback{receiver: to.server.URL, discord: discord.server.URL, resolves: resolves},
 	)
 	router := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
-	session := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
-	apitest.HoldsAuthority(t, pool, "publication.authority")
+	session := apitest.VerifiedSignUp(t, router, outbox, "admin@example.com", "blog.admin")
+	apitest.HoldsAuthority(t, pool, "blog.admin")
 	stack := integrationStack{
-		publicationStack: publicationStack{
-			router: router, pool: pool, handlers: handlers, outbox: outbox, authority: session,
+		blogStack: blogStack{
+			router: router, pool: pool, handlers: handlers, outbox: outbox, admin: session,
 		},
 		to:      to,
 		discord: discord,
 	}
-	stack.editor = stack.admin(t, "editor@example.com", "illarin.editor")
+	stack.editor = stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	return stack
 }
 
@@ -335,7 +335,7 @@ func (s integrationStack) add(
 
 func (s integrationStack) added(t *testing.T, name, address string) addedIntegration {
 	t.Helper()
-	response := s.add(t, s.authority, name, address)
+	response := s.add(t, s.admin, name, address)
 	if response.Code != http.StatusCreated {
 		t.Fatalf("add integration status = %d: %s", response.Code, response.Body.String())
 	}
@@ -361,7 +361,7 @@ func (s integrationStack) active(t *testing.T, name string) addedIntegration {
 	t.Helper()
 	s.to.answers(echoesTheChallenge)
 	made := s.added(t, name, s.to.address())
-	response := s.verify(t, s.authority, made.Integration.ID)
+	response := s.verify(t, s.admin, made.Integration.ID)
 	if response.Code != http.StatusOK {
 		t.Fatalf("verify status = %d: %s", response.Code, response.Body.String())
 	}
@@ -383,17 +383,6 @@ func (s integrationStack) integrations(t *testing.T, session *http.Cookie) integ
 		t.Fatalf("decode integrations: %v", err)
 	}
 	return listed
-}
-
-func (s integrationStack) allowOnApp(t *testing.T, appID, integrationID string) {
-	t.Helper()
-	_, err := s.pool.Exec(context.Background(), `
-		insert into publication_app_integrations (app_id, integration_id, by_default)
-		values ($1, $2, true)
-	`, appID, integrationID)
-	if err != nil {
-		t.Fatalf("allow on app: %v", err)
-	}
 }
 
 func (s integrationStack) postChoices(
@@ -443,7 +432,7 @@ func (s integrationStack) publishTo(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+id+"/publish", body,
+		http.MethodPost, "/v1/blog/posts/"+id+"/publish", body,
 	), session))
 }
 
@@ -454,7 +443,7 @@ func (s integrationStack) sendQueued(t *testing.T) int {
 
 func (s integrationStack) sendQueuedAt(t *testing.T, at time.Time) int {
 	t.Helper()
-	made, err := s.handlers.Publications.SendDueAttempts(t.Context(), at)
+	made, err := s.handlers.Blog.SendDueAttempts(t.Context(), at)
 	if err != nil {
 		t.Fatalf("send queued attempts: %v", err)
 	}
@@ -499,7 +488,7 @@ func TestAnEndpointOutsideTheAddressPolicyIsRefused(t *testing.T) {
 		response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 			http.MethodPost, "/v1/blog/integrations",
 			fmt.Sprintf(`{"name":"Somewhere","address":%q}`, address),
-		), stack.authority))
+		), stack.admin))
 		if response.Code != http.StatusBadRequest {
 			t.Errorf("add %s status = %d, want 400", address, response.Code)
 		}
@@ -515,7 +504,7 @@ func TestASigningSecretIsShownOnceAndNeverAgain(t *testing.T) {
 	if !strings.HasPrefix(made.Secret, dispatch.Prefix) {
 		t.Errorf("secret = %q, want the %s mark", made.Secret, dispatch.Prefix)
 	}
-	listed := stack.integrations(t, stack.authority)
+	listed := stack.integrations(t, stack.admin)
 	if len(listed.Integrations) != 1 {
 		t.Fatalf("listed %d integrations, want 1", len(listed.Integrations))
 	}
@@ -562,22 +551,22 @@ func TestAnEndpointIsActiveOnlyAfterItReturnsTheChallenge(t *testing.T) {
 	made := stack.added(t, "Release feed", stack.to.address())
 
 	stack.to.answers(func(arrived) (int, string) { return http.StatusOK, "something else" })
-	refused := stack.verify(t, stack.authority, made.Integration.ID)
+	refused := stack.verify(t, stack.admin, made.Integration.ID)
 
 	if refused.Code != http.StatusBadRequest {
 		t.Fatalf("verify status = %d, want 400: %s", refused.Code, refused.Body.String())
 	}
-	if stack.integrations(t, stack.authority).Integrations[0].State != "unverified" {
+	if stack.integrations(t, stack.admin).Integrations[0].State != "unverified" {
 		t.Error("a wrong answer activated the integration")
 	}
 
 	stack.to.answers(echoesTheChallenge)
-	accepted := stack.verify(t, stack.authority, made.Integration.ID)
+	accepted := stack.verify(t, stack.admin, made.Integration.ID)
 
 	if accepted.Code != http.StatusOK {
 		t.Fatalf("verify status = %d, want 200: %s", accepted.Code, accepted.Body.String())
 	}
-	if stack.integrations(t, stack.authority).Integrations[0].State != "active" {
+	if stack.integrations(t, stack.admin).Integrations[0].State != "active" {
 		t.Error("the integration did not become active")
 	}
 }
@@ -588,7 +577,7 @@ func TestTheVerificationRequestIsSigned(t *testing.T) {
 	stack.to.answers(echoesTheChallenge)
 	made := stack.added(t, "Release feed", stack.to.address())
 
-	if response := stack.verify(t, stack.authority, made.Integration.ID); response.Code != 200 {
+	if response := stack.verify(t, stack.admin, made.Integration.ID); response.Code != 200 {
 		t.Fatalf("verify status = %d: %s", response.Code, response.Body.String())
 	}
 
@@ -627,7 +616,7 @@ func TestAPublishedPostReachesTheChosenEndpoint(t *testing.T) {
 	checkSignature(t, arrivals[0], made.Secret)
 	body := string(arrivals[0].Body)
 	for _, want := range []string{
-		`"type":"publication.post.published.v1"`,
+		`"type":"blog.post.published.v1"`,
 		`"title":"Illarin keeps its own writing now"`,
 		`"summary":"What Illarin changed this week."`,
 		`"note":"Read it in ten minutes."`,
@@ -764,60 +753,54 @@ func TestADeliveryRecordCarriesNoSecretOrAddress(t *testing.T) {
 	}
 }
 
-func TestAContributorSeesSafeDestinationIdentitiesOnly(t *testing.T) {
+func TestAWriterSeesSafeIntegrationIdentitiesOnly(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
-	writer := stack.member(t, "writer@example.com", "outside.writer")
-	app := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
+	writer := stack.contributor(t, "writer@example.com", "outside.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
-	grant := stack.approved(t, "outside.writer", app.ID, []string{announcement.ID}, announcement.ID)
-	stack.allowOnApp(t, app.ID, made.Integration.ID)
-	draft := stack.started(t, writer, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse 2.0 is out"}`,
-		grant.ID, announcement.ID,
+	draft := stack.started(t, writer.session, fmt.Sprintf(
+		`{"categoryId":%q,"title":"Lumiverse 2.0 is out"}`, announcement.ID,
 	))
 
-	choices := stack.postChoices(t, writer, draft.ID)
+	choices := stack.postChoices(t, writer.session, draft.ID)
 
 	if len(choices.Integrations) != 1 {
-		t.Fatalf("the contributor sees %d integrations, want 1", len(choices.Integrations))
+		t.Fatalf("the writer sees %d integrations, want 1", len(choices.Integrations))
 	}
 	if choices.Integrations[0].Name != "Release feed" {
 		t.Errorf("name = %q, want the safe identity", choices.Integrations[0].Name)
 	}
 	if !choices.Integrations[0].ByDefault {
-		t.Error("the app default did not reach the contributor")
+		t.Error("an integration is not chosen by default")
 	}
 	body, _ := json.Marshal(choices)
 	for _, hidden := range []string{made.Secret, stack.to.address(), stack.to.server.URL} {
 		if strings.Contains(string(body), hidden) {
-			t.Errorf("the contributor was shown %q", hidden)
+			t.Errorf("the writer was shown %q", hidden)
 		}
 	}
 	listing := apitest.Send(t, stack.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodGet, "/v1/blog/integrations", nil), writer,
+		httptest.NewRequest(http.MethodGet, "/v1/blog/integrations", nil), writer.session,
 	))
 	if listing.Code != http.StatusForbidden {
-		t.Errorf("the contributor read the configuration: %d", listing.Code)
+		t.Errorf("the writer read the configuration: %d", listing.Code)
 	}
 }
 
-func TestAContributorCannotSendOutsideWhatTheGrantAllows(t *testing.T) {
+func TestAWriterCannotSendToAnIntegrationTheBlogDoesNotHave(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
-	made := stack.active(t, "Release feed")
-	writer := stack.member(t, "writer@example.com", "outside.writer")
-	app := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
+	stack.active(t, "Release feed")
+	writer := stack.contributor(t, "writer@example.com", "outside.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
-	grant := stack.approved(t, "outside.writer", app.ID, []string{announcement.ID}, announcement.ID)
-	draft := stack.started(t, writer, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse 2.0 is out"}`, grant.ID, announcement.ID,
+	draft := stack.started(t, writer.session, fmt.Sprintf(
+		`{"categoryId":%q,"title":"Lumiverse 2.0 is out"}`, announcement.ID,
 	))
-	ready := stack.saved(t, writer, draft.ID, finished(draft, nil))
+	ready := stack.saved(t, writer.session, draft.ID, finished(draft, nil))
 
-	response := stack.publishTo(t, writer, ready.ID, ready.Version, fmt.Sprintf(
-		`{"version":%d,"integrationIds":[%q]}`, ready.Version, made.Integration.ID,
+	response := stack.publishTo(t, writer.session, ready.ID, ready.Version, fmt.Sprintf(
+		`{"version":%d,"integrationIds":[%q]}`, ready.Version, "00000000-0000-0000-0000-000000000001",
 	))
 
 	if response.Code != http.StatusForbidden {
@@ -832,7 +815,7 @@ func TestADisabledEndpointStopsReceiving(t *testing.T) {
 	response := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodDelete,
 		"/v1/blog/integrations/"+made.Integration.ID+"/verification", nil,
-	), stack.authority))
+	), stack.admin))
 	if response.Code != http.StatusOK {
 		t.Fatalf("disable status = %d: %s", response.Code, response.Body.String())
 	}
@@ -861,12 +844,12 @@ func TestANewAddressTakesTheEndpointBackToUnverified(t *testing.T) {
 	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPatch, "/v1/blog/integrations/"+made.Integration.ID,
 		`{"address":"https://hooks.example.com/elsewhere"}`,
-	), stack.authority))
+	), stack.admin))
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("update status = %d: %s", response.Code, response.Body.String())
 	}
-	shown := stack.integrations(t, stack.authority).Integrations[0]
+	shown := stack.integrations(t, stack.admin).Integrations[0]
 	if shown.State != "unverified" {
 		t.Errorf("state = %q, want unverified", shown.State)
 	}
@@ -948,7 +931,7 @@ func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
 	at := time.Now().Add(time.Hour)
 
 	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+ready.ID+"/schedule", fmt.Sprintf(
+		http.MethodPost, "/v1/blog/posts/"+ready.ID+"/schedule", fmt.Sprintf(
 			`{"version":%d,"at":%q,"integrationIds":[%q],"note":"Out at noon."}`,
 			ready.Version, at.Format(time.RFC3339), made.Integration.ID,
 		),
@@ -957,7 +940,7 @@ func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
 	if response.Code != http.StatusCreated {
 		t.Fatalf("schedule status = %d: %s", response.Code, response.Body.String())
 	}
-	settled, err := stack.handlers.Publications.PublishDueSchedules(t.Context(), at.Add(time.Minute))
+	settled, err := stack.handlers.Blog.PublishDueSchedules(t.Context(), at.Add(time.Minute))
 	if err != nil {
 		t.Fatalf("publish due schedules: %v", err)
 	}
@@ -976,28 +959,25 @@ func TestAScheduledPublicationKeepsTheChoiceItWasGiven(t *testing.T) {
 	}
 }
 
-func TestAPublicationWithNoChoiceTakesTheDefaults(t *testing.T) {
+func TestPublishingWithNoChoiceAnnouncesToEveryIntegration(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
-	made := stack.active(t, "Release feed")
-	writer := stack.member(t, "writer@example.com", "outside.writer")
-	app := stack.configureApp(t, "lumiverse", "Lumiverse", "https://lumiverse.example")
+	stack.active(t, "Release feed")
+	writer := stack.contributor(t, "writer@example.com", "outside.writer")
 	announcement := stack.categoryBySlug(t, "announcement")
-	grant := stack.approved(t, "outside.writer", app.ID, []string{announcement.ID}, announcement.ID)
-	stack.allowOnApp(t, app.ID, made.Integration.ID)
-	draft := stack.started(t, writer, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Lumiverse 2.0 is out"}`, grant.ID, announcement.ID,
+	draft := stack.started(t, writer.session, fmt.Sprintf(
+		`{"categoryId":%q,"title":"Lumiverse 2.0 is out"}`, announcement.ID,
 	))
-	ready := stack.saved(t, writer, draft.ID, finished(draft, nil))
+	ready := stack.saved(t, writer.session, draft.ID, finished(draft, nil))
 
-	response := stack.publishTo(t, writer, ready.ID, ready.Version,
+	response := stack.publishTo(t, writer.session, ready.ID, ready.Version,
 		fmt.Sprintf(`{"version":%d}`, ready.Version))
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("publish status = %d: %s", response.Code, response.Body.String())
 	}
 	if sent := stack.sendQueued(t); sent != 1 {
-		t.Errorf("the worker settled %d attempts, want the app default", sent)
+		t.Errorf("the worker settled %d attempts, want one per integration", sent)
 	}
 }
 

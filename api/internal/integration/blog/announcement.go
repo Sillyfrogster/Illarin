@@ -18,17 +18,16 @@ type Event struct {
 }
 
 type AnnouncementPost struct {
-	ID          uuid.UUID            `json:"id"`
-	RevisionID  uuid.UUID            `json:"revisionId"`
-	Title       string               `json:"title"`
-	Summary     string               `json:"summary"`
-	Category    AnnouncementCategory `json:"category"`
-	URL         string               `json:"url"`
-	SocialImage string               `json:"socialImageUrl,omitempty"`
-	PublishedAt time.Time            `json:"publishedAt"`
-	UpdatedAt   *time.Time           `json:"updatedAt"`
-	Release     *AnnouncementRelease `json:"release,omitempty"`
-	Byline      AnnouncementByline   `json:"byline"`
+	ID            uuid.UUID            `json:"id"`
+	RevisionID    uuid.UUID            `json:"revisionId"`
+	Title         string               `json:"title"`
+	Summary       string               `json:"summary"`
+	Category      AnnouncementCategory `json:"category"`
+	URL           string               `json:"url"`
+	LinkCardImage string               `json:"linkCardImageUrl,omitempty"`
+	PublishedAt   time.Time            `json:"publishedAt"`
+	UpdatedAt     *time.Time           `json:"updatedAt"`
+	Byline        AnnouncementByline   `json:"byline"`
 }
 
 type AnnouncementCategory struct {
@@ -36,23 +35,10 @@ type AnnouncementCategory struct {
 	Label string `json:"label"`
 }
 
-type AnnouncementApp struct {
-	Slug string `json:"slug"`
-	Name string `json:"name"`
-	URL  string `json:"url"`
-}
-
-type AnnouncementRelease struct {
-	App     AnnouncementApp `json:"app"`
-	Version string          `json:"version"`
-	URL     string          `json:"url,omitempty"`
-}
-
 type AnnouncementByline struct {
-	Handle string           `json:"handle"`
-	Name   string           `json:"name"`
-	URL    string           `json:"url"`
-	App    *AnnouncementApp `json:"app,omitempty"`
+	Handle string `json:"handle"`
+	Name   string `json:"name"`
+	URL    string `json:"url"`
 }
 
 func (s *Service) announcementBody(ctx context.Context, eventID uuid.UUID) ([]byte, error) {

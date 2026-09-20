@@ -19,11 +19,6 @@ type AddedBlogIntegration struct {
 	Secret      string          `json:"secret"`
 }
 
-type IntegrationPolicyRequest struct {
-	DefaultIntegrationIds *[]uuid.UUID `json:"defaultIntegrationIds,omitempty"`
-	IntegrationIds        *[]uuid.UUID `json:"integrationIds,omitempty"`
-}
-
 type BlogAnnouncementAttempt struct {
 	Tries            int                                   `json:"tries"`
 	Integration      string                                `json:"integration"`
@@ -183,12 +178,12 @@ type BlogAnnouncementPost struct {
 		Url     *string             `json:"url,omitempty"`
 		Version string              `json:"version"`
 	} `json:"release,omitempty"`
-	RevisionId     uuid.UUID  `json:"revisionId"`
-	SocialImageUrl *string    `json:"socialImageUrl,omitempty"`
-	Summary        string     `json:"summary"`
-	Title          string     `json:"title"`
-	UpdatedAt      *time.Time `json:"updatedAt,omitempty"`
-	Url            string     `json:"url"`
+	RevisionId       uuid.UUID  `json:"revisionId"`
+	LinkCardImageUrl *string    `json:"linkCardImageUrl,omitempty"`
+	Summary          string     `json:"summary"`
+	Title            string     `json:"title"`
+	UpdatedAt        *time.Time `json:"updatedAt,omitempty"`
+	Url              string     `json:"url"`
 }
 
 type RotatedBlogSecret struct {

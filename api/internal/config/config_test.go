@@ -9,13 +9,13 @@ import (
 
 const (
 	linkingKey     = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-	publicationKey = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+	integrationKey = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
 )
 
 func setLinkingKey(t *testing.T) {
 	t.Helper()
 	t.Setenv("LINKING_HMAC_KEY", linkingKey)
-	t.Setenv("PUBLICATION_SECRET_KEY", publicationKey)
+	t.Setenv("INTEGRATION_SECRET_KEY", integrationKey)
 }
 
 func setBlogURL(t *testing.T) {
@@ -56,7 +56,7 @@ func TestLoadRequiresTheBlogOrigin(t *testing.T) {
 	}
 }
 
-func TestLoadRequiresAnExactUnpaddedPublicationSecretKey(t *testing.T) {
+func TestLoadRequiresAnExactUnpaddedIntegrationSecretKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
 	setBlogURL(t)
@@ -67,28 +67,28 @@ func TestLoadRequiresAnExactUnpaddedPublicationSecretKey(t *testing.T) {
 		"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB==",
 		"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
 	} {
-		t.Setenv("PUBLICATION_SECRET_KEY", key)
+		t.Setenv("INTEGRATION_SECRET_KEY", key)
 		if _, err := Load(); err == nil {
 			t.Errorf("Load accepted publication secret key %q", key)
 		}
 	}
 
-	t.Setenv("PUBLICATION_SECRET_KEY", publicationKey)
+	t.Setenv("INTEGRATION_SECRET_KEY", integrationKey)
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load with a 32-byte key: %v", err)
 	}
-	if len(cfg.PublicationSecretKey) != 32 {
-		t.Errorf("PublicationSecretKey is %d bytes, want 32", len(cfg.PublicationSecretKey))
+	if len(cfg.IntegrationSecretKey) != 32 {
+		t.Errorf("IntegrationSecretKey is %d bytes, want 32", len(cfg.IntegrationSecretKey))
 	}
 }
 
-func TestThePublicationSecretKeyCannotBeTheLinkingKey(t *testing.T) {
+func TestTheIntegrationSecretKeyCannotBeTheLinkingKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
 	setBlogURL(t)
 	t.Setenv("LINKING_HMAC_KEY", linkingKey)
-	t.Setenv("PUBLICATION_SECRET_KEY", linkingKey)
+	t.Setenv("INTEGRATION_SECRET_KEY", linkingKey)
 
 	if _, err := Load(); err == nil {
 		t.Error("Load accepted one key doing two jobs")
@@ -127,7 +127,7 @@ func TestLoadRequiresAnExactUnpaddedLinkingKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
 	setBlogURL(t)
-	t.Setenv("PUBLICATION_SECRET_KEY", publicationKey)
+	t.Setenv("INTEGRATION_SECRET_KEY", integrationKey)
 
 	for _, key := range []string{
 		"",

@@ -1,6 +1,6 @@
 {
   "note": "A task that does not say whether it is done",
-  "path": "document.content.0.content.0.done",
+  "path": "body.content.0.content.0.done",
   "document": {
     "version": 2,
     "content": [

@@ -335,7 +335,7 @@ func MediaIngestFailure(err error) format.FailureReason {
 
 func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownload, error) {
 	_, ordinary := mediaproc.VariantByName(in.Variant)
-	_, composed := mediaproc.SocialPreviewByName(in.Variant)
+	_, composed := mediaproc.LinkCardByName(in.Variant)
 	if (!ordinary && !composed) || in.Version != mediaproc.DerivativeVersion {
 		return MediaDownload{}, ErrMediaNotFound
 	}

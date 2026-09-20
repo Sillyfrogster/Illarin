@@ -26,7 +26,7 @@ type postSchedule struct {
 	CreatedAt      time.Time `json:"createdAt"`
 }
 
-func (s publicationStack) schedule(
+func (s blogStack) schedule(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -35,12 +35,12 @@ func (s publicationStack) schedule(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+id+"/schedule",
+		http.MethodPost, "/v1/blog/posts/"+id+"/schedule",
 		fmt.Sprintf(`{"version":%d,"at":%q}`, version, at.Format(time.RFC3339Nano)),
 	), session))
 }
 
-func (s publicationStack) scheduled(
+func (s blogStack) scheduled(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
@@ -55,7 +55,7 @@ func (s publicationStack) scheduled(
 	return decodePost(t, response)
 }
 
-func (s publicationStack) replaceSchedule(
+func (s blogStack) replaceSchedule(
 	t *testing.T,
 	session *http.Cookie,
 	id, revisionID string,
@@ -63,32 +63,32 @@ func (s publicationStack) replaceSchedule(
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPut, "/v1/publication/posts/"+id+"/schedule",
+		http.MethodPut, "/v1/blog/posts/"+id+"/schedule",
 		fmt.Sprintf(`{"revisionId":%q,"at":%q}`, revisionID, at.Format(time.RFC3339Nano)),
 	), session))
 }
 
-func (s publicationStack) cancelSchedule(
+func (s blogStack) cancelSchedule(
 	t *testing.T,
 	session *http.Cookie,
 	id string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/publication/posts/"+id+"/schedule", nil,
+		http.MethodDelete, "/v1/blog/posts/"+id+"/schedule", nil,
 	), session))
 }
 
-func (s publicationStack) runSchedules(t *testing.T, at time.Time) int {
+func (s blogStack) runSchedules(t *testing.T, at time.Time) int {
 	t.Helper()
-	settled, err := s.handlers.Publications.PublishDueSchedules(t.Context(), at)
+	settled, err := s.handlers.Blog.PublishDueSchedules(t.Context(), at)
 	if err != nil {
 		t.Fatalf("run the scheduler: %v", err)
 	}
 	return settled
 }
 
-func (s publicationStack) scheduledDraft(
+func (s blogStack) scheduledDraft(
 	t *testing.T,
 	session *http.Cookie,
 	title, text string,
@@ -96,7 +96,7 @@ func (s publicationStack) scheduledDraft(
 	t.Helper()
 	draft := s.illarinDraft(t, session, title)
 	written := s.saved(t, session, draft.ID, finished(draft, map[string]any{
-		"document": json.RawMessage(paragraph(text)),
+		"body": json.RawMessage(paragraph(text)),
 	}))
 	due := time.Now().Add(time.Hour).Truncate(time.Second)
 	return s.scheduled(t, session, written.ID, written.Version, due), due
@@ -104,8 +104,8 @@ func (s publicationStack) scheduledDraft(
 
 func TestASchedulePublishesTheEditionItNamedAndNotALaterOne(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Illarin ships on Tuesday", "The first words.")
 	if waiting.Status != "draft" || waiting.Schedule == nil {
@@ -125,8 +125,8 @@ func TestASchedulePublishesTheEditionItNamedAndNotALaterOne(t *testing.T) {
 	}
 
 	edited := stack.saved(t, session, waiting.ID, finished(waiting, map[string]any{
-		"version":  waiting.Version,
-		"document": json.RawMessage(paragraph("Words written after the schedule was made.")),
+		"version": waiting.Version,
+		"body":    json.RawMessage(paragraph("Words written after the schedule was made.")),
 	}))
 	stack.checkpointed(t, session, edited.ID, edited.Version)
 
@@ -134,8 +134,8 @@ func TestASchedulePublishesTheEditionItNamedAndNotALaterOne(t *testing.T) {
 		t.Fatalf("the worker settled %d editions, want 1", settled)
 	}
 	found := stack.reader(t, waiting.Slug)
-	if !strings.Contains(firstWords(found.Document), "The first words.") {
-		t.Fatalf("readers got %s, want the edition that was scheduled", found.Document.Content[0])
+	if !strings.Contains(firstWords(found.Body), "The first words.") {
+		t.Fatalf("readers got %s, want the edition that was scheduled", found.Body.Content[0])
 	}
 	after := stack.working(t, session, waiting.ID)
 	if after.Status != "published" || after.PublicRevision != waiting.Schedule.RevisionID {
@@ -148,18 +148,18 @@ func TestASchedulePublishesTheEditionItNamedAndNotALaterOne(t *testing.T) {
 
 func TestAPublishedPostKeepsItsPublicEditionWhileAnotherIsScheduled(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Release notes")
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
-		"document": json.RawMessage(paragraph("What readers can see today.")),
+		"body": json.RawMessage(paragraph("What readers can see today.")),
 	}))
 	live := stack.publishedAt(t, session, written.ID, written.Version)
 
 	updated := stack.saved(t, session, live.ID, finished(live, map[string]any{
-		"version":  live.Version,
-		"document": json.RawMessage(paragraph("What readers get on Tuesday.")),
+		"version": live.Version,
+		"body":    json.RawMessage(paragraph("What readers get on Tuesday.")),
 	}))
 	due := time.Now().Add(time.Hour).Truncate(time.Second)
 	waiting := stack.scheduled(t, session, updated.ID, updated.Version, due)
@@ -170,8 +170,8 @@ func TestAPublishedPostKeepsItsPublicEditionWhileAnotherIsScheduled(t *testing.T
 		t.Fatal("scheduling an update changed what readers see")
 	}
 	before := stack.reader(t, live.Slug)
-	if !strings.Contains(firstWords(before.Document), "today") {
-		t.Fatalf("readers already got the scheduled edition: %s", before.Document.Content[0])
+	if !strings.Contains(firstWords(before.Body), "today") {
+		t.Fatalf("readers already got the scheduled edition: %s", before.Body.Content[0])
 	}
 	if before.UpdatedAt != nil {
 		t.Error("scheduling recorded a public update date")
@@ -180,8 +180,8 @@ func TestAPublishedPostKeepsItsPublicEditionWhileAnotherIsScheduled(t *testing.T
 	stack.runSchedules(t, due.Add(time.Second))
 
 	found := stack.reader(t, live.Slug)
-	if !strings.Contains(firstWords(found.Document), "Tuesday") {
-		t.Fatalf("readers got %s after the schedule ran", found.Document.Content[0])
+	if !strings.Contains(firstWords(found.Body), "Tuesday") {
+		t.Fatalf("readers got %s after the schedule ran", found.Body.Content[0])
 	}
 	if found.UpdatedAt == nil || !found.PublishedAt.Equal(before.PublishedAt) {
 		t.Errorf("dates after a scheduled update = %v / %v", found.PublishedAt, found.UpdatedAt)
@@ -190,15 +190,15 @@ func TestAPublishedPostKeepsItsPublicEditionWhileAnotherIsScheduled(t *testing.T
 
 func TestReplacingAScheduleNamesAnotherKeptEditionAndLeavesTheOldOneWhole(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "A correction is coming", "The first attempt.")
 	first := waiting.Schedule.RevisionID
 
 	corrected := stack.saved(t, session, waiting.ID, finished(waiting, map[string]any{
-		"version":  waiting.Version,
-		"document": json.RawMessage(paragraph("The corrected words.")),
+		"version": waiting.Version,
+		"body":    json.RawMessage(paragraph("The corrected words.")),
 	}))
 	second := stack.checkpointed(t, session, corrected.ID, corrected.Version)
 
@@ -226,8 +226,8 @@ func TestReplacingAScheduleNamesAnotherKeptEditionAndLeavesTheOldOneWhole(t *tes
 	}
 	stack.runSchedules(t, later.Add(time.Second))
 	found := stack.reader(t, waiting.Slug)
-	if !strings.Contains(firstWords(found.Document), "corrected") {
-		t.Fatalf("readers got %s, want the replacement", found.Document.Content[0])
+	if !strings.Contains(firstWords(found.Body), "corrected") {
+		t.Fatalf("readers got %s, want the replacement", found.Body.Content[0])
 	}
 
 	done, _ := stack.history(t, session, waiting.ID)
@@ -238,8 +238,8 @@ func TestReplacingAScheduleNamesAnotherKeptEditionAndLeavesTheOldOneWhole(t *tes
 
 func TestCancellingAScheduleStopsItAndAskingTwiceIsHarmless(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Not this week after all", "Held back.")
 
@@ -271,8 +271,8 @@ func TestCancellingAScheduleStopsItAndAskingTwiceIsHarmless(t *testing.T) {
 
 func TestASecondScheduleIsRefusedRatherThanQueuedBehindTheFirst(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Only one at a time", "The words.")
 
@@ -287,8 +287,8 @@ func TestASecondScheduleIsRefusedRatherThanQueuedBehindTheFirst(t *testing.T) {
 
 func TestAScheduleWillNotPointAtAnInstantThatHasPassed(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Yesterday")
 	written := stack.saved(t, session, draft.ID, finished(draft, nil))
@@ -299,7 +299,7 @@ func TestAScheduleWillNotPointAtAnInstantThatHasPassed(t *testing.T) {
 	}
 
 	local := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+written.ID+"/schedule",
+		http.MethodPost, "/v1/blog/posts/"+written.ID+"/schedule",
 		fmt.Sprintf(`{"version":%d,"at":"2030-01-01T09:00:00"}`, written.Version),
 	), session))
 	if local.Code != http.StatusBadRequest {
@@ -307,49 +307,48 @@ func TestAScheduleWillNotPointAtAnInstantThatHasPassed(t *testing.T) {
 	}
 }
 
-func TestRevokedApprovalCannotPublishThroughAScheduleItLeftBehind(t *testing.T) {
+func TestAFormerWriterCannotPublishThroughAScheduleTheyLeftBehind(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 	announcement := stack.categoryBySlug(t, "announcement")
 
 	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"grantId":%q,"categoryId":%q,"title":"Written under approval"}`,
-		writer.grant.ID, announcement.ID,
+		`{"categoryId":%q,"title":"Written as a writer"}`, announcement.ID,
 	))
 	written := stack.saved(t, writer.session, draft.ID, finished(draft, nil))
 	due := time.Now().Add(time.Hour).Truncate(time.Second)
 	waiting := stack.scheduled(t, writer.session, written.ID, written.Version, due)
 
 	revoked := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/publication/grants/"+writer.grant.ID, nil,
-	), stack.authority))
+		http.MethodDelete, "/v1/blog/writers/"+writer.writer.AccountID, nil,
+	), stack.admin))
 	if revoked.Code != http.StatusNoContent {
 		t.Fatalf("revoke status = %d: %s", revoked.Code, revoked.Body.String())
 	}
 
 	if settled := stack.runSchedules(t, due.Add(time.Second)); settled != 0 {
-		t.Fatalf("a revoked approval published %d editions", settled)
+		t.Fatalf("a former writer published %d editions", settled)
 	}
 	if stack.read(t, waiting.Slug).Code != http.StatusNotFound {
-		t.Fatal("a revoked approval put its post in public view")
+		t.Fatal("a former writer put their post in public view")
 	}
 	if state := scheduleState(t, stack, waiting.Schedule.ID); state != "stopped" {
-		t.Errorf("schedule under a revoked approval is %q, want stopped", state)
+		t.Errorf("schedule of a former writer is %q, want stopped", state)
 	}
 }
 
-func TestAnAdminOwnedScheduleStillPublishesWhileOtherApprovalsAreRevoked(t *testing.T) {
+func TestAnAdminOwnedScheduleStillPublishesWhileOtherWritersAreSwitchedOff(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
 
 	waiting, due := stack.scheduledDraft(t, session, "Illarin speaks for itself", "Still going.")
 
 	revoked := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/publication/grants/"+writer.grant.ID, nil,
-	), stack.authority))
+		http.MethodDelete, "/v1/blog/writers/"+writer.writer.AccountID, nil,
+	), stack.admin))
 	if revoked.Code != http.StatusNoContent {
 		t.Fatalf("revoke status = %d", revoked.Code)
 	}
@@ -364,8 +363,8 @@ func TestAnAdminOwnedScheduleStillPublishesWhileOtherApprovalsAreRevoked(t *test
 
 func TestAnInterruptedWorkerLeavesTheEditionRecoverableAndNotHalfPublic(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Survives a restart", "The words that go live.")
 
@@ -386,15 +385,15 @@ func TestAnInterruptedWorkerLeavesTheEditionRecoverableAndNotHalfPublic(t *testi
 		t.Fatalf("the worker recovered %d abandoned editions, want 1", settled)
 	}
 	found := stack.reader(t, waiting.Slug)
-	if !strings.Contains(firstWords(found.Document), "go live") {
-		t.Fatalf("the recovered edition reads %s", found.Document.Content[0])
+	if !strings.Contains(firstWords(found.Body), "go live") {
+		t.Fatalf("the recovered edition reads %s", found.Body.Content[0])
 	}
 }
 
 func TestAWorkerThatKeepsFailingStopsTheScheduleInsteadOfRetryingForever(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Never quite made it", "The words.")
 
@@ -421,20 +420,20 @@ func TestAWorkerThatKeepsFailingStopsTheScheduleInsteadOfRetryingForever(t *test
 
 func TestAScheduledEditionKeepsItsPicturesAfterTheDraftedChangesDropsThem(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "An article with a picture")
-	picture := stack.uploaded(t, session, draft.ID, "document", apitest.PNG(t, 800, 400))
+	picture := stack.uploaded(t, session, draft.ID, "body", apitest.PNG(t, 800, 400))
 	written := stack.saved(t, session, draft.ID, finished(draft, map[string]any{
-		"document": bodyWithPicture(picture.ID, "The workspace"),
+		"body": bodyWithPicture(picture.ID, "The workspace"),
 	}))
 	due := time.Now().Add(time.Hour).Truncate(time.Second)
 	waiting := stack.scheduled(t, session, written.ID, written.Version, due)
 
 	stack.saved(t, session, waiting.ID, finished(waiting, map[string]any{
-		"version":  waiting.Version,
-		"document": json.RawMessage(paragraph("No picture any more.")),
+		"version": waiting.Version,
+		"body":    json.RawMessage(paragraph("No picture any more.")),
 	}))
 
 	var held int
@@ -463,8 +462,8 @@ func TestAScheduledEditionKeepsItsPicturesAfterTheDraftedChangesDropsThem(t *tes
 
 func TestSchedulingRecordsWhatHappenedWithoutCopyingTheArticle(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	secret := "Words that belong only in the article."
 	waiting, due := stack.scheduledDraft(t, session, "Accountable", secret)
@@ -502,7 +501,7 @@ func actionOf(done []postAction, named string) *postAction {
 	return nil
 }
 
-func scheduleState(t *testing.T, stack publicationStack, id string) string {
+func scheduleState(t *testing.T, stack blogStack, id string) string {
 	t.Helper()
 	var state string
 	err := stack.pool.QueryRow(t.Context(),
@@ -513,7 +512,7 @@ func scheduleState(t *testing.T, stack publicationStack, id string) string {
 	return state
 }
 
-func firstWords(document postDocument) string {
+func firstWords(document postBody) string {
 	if len(document.Content) == 0 {
 		return ""
 	}
@@ -526,14 +525,14 @@ func firstWords(document postDocument) string {
 
 func TestSchedulingRefusesDraftedChangesSomeoneElseHasMovedPast(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	draft := stack.illarinDraft(t, session, "Two people at one desk")
 	written := stack.saved(t, session, draft.ID, finished(draft, nil))
 	stack.saved(t, session, written.ID, finished(written, map[string]any{
-		"version":  written.Version,
-		"document": json.RawMessage(paragraph("Someone else got here first.")),
+		"version": written.Version,
+		"body":    json.RawMessage(paragraph("Someone else got here first.")),
 	}))
 
 	stale := stack.schedule(t, session, written.ID, written.Version,
@@ -549,7 +548,7 @@ func TestSchedulingRefusesDraftedChangesSomeoneElseHasMovedPast(t *testing.T) {
 	}
 }
 
-func scheduleCount(t *testing.T, stack publicationStack, postID string) int {
+func scheduleCount(t *testing.T, stack blogStack, postID string) int {
 	t.Helper()
 	var held int
 	err := stack.pool.QueryRow(t.Context(),
@@ -562,14 +561,14 @@ func scheduleCount(t *testing.T, stack publicationStack, postID string) int {
 
 func TestPublishingNowStopsTheScheduleItOvertook(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
-	session := stack.admin(t, "editor@example.com", "illarin.editor")
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
 
 	waiting, due := stack.scheduledDraft(t, session, "Out early", "The scheduled words.")
 
 	edited := stack.saved(t, session, waiting.ID, finished(waiting, map[string]any{
-		"version":  waiting.Version,
-		"document": json.RawMessage(paragraph("The words the author sent out early.")),
+		"version": waiting.Version,
+		"body":    json.RawMessage(paragraph("The words the author sent out early.")),
 	}))
 	live := stack.publishedAt(t, session, edited.ID, edited.Version)
 	if live.Schedule == nil || live.Schedule.State != "cancelled" {
@@ -580,8 +579,8 @@ func TestPublishingNowStopsTheScheduleItOvertook(t *testing.T) {
 		t.Fatalf("an overtaken schedule published %d editions", settled)
 	}
 	found := stack.reader(t, waiting.Slug)
-	if !strings.Contains(firstWords(found.Document), "early") {
-		t.Fatalf("readers were sent back to %s", firstWords(found.Document))
+	if !strings.Contains(firstWords(found.Body), "early") {
+		t.Fatalf("readers were sent back to %s", firstWords(found.Body))
 	}
 	done, _ := stack.history(t, session, waiting.ID)
 	if !hasAction(done, "post.schedule.cancelled") {
@@ -591,13 +590,13 @@ func TestPublishingNowStopsTheScheduleItOvertook(t *testing.T) {
 
 func TestTheSchedulerStopsWithTheProcessItRunsIn(t *testing.T) {
 	t.Parallel()
-	stack := newPublicationStack(t)
+	stack := newBlogStack(t)
 	ctx, stop := context.WithCancel(t.Context())
 	stopped := make(chan struct{})
 
 	go func() {
 		defer close(stopped)
-		stack.handlers.Publications.RunScheduler(ctx, func(error) {})
+		stack.handlers.Blog.RunScheduler(ctx, func(error) {})
 	}()
 	stop()
 

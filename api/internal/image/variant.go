@@ -86,7 +86,7 @@ func (h *Handlers) sharedImageVariant(
 			return redirect, mediaType, false, err
 		},
 		func() (string, string, bool, error) {
-			return h.publications.PostMediaVariant(ctx, mediaID, variant, version,
+			return h.posts.PostMediaVariant(ctx, mediaID, variant, version,
 				valueOrEmpty(params.Expires), valueOrEmpty(params.Signature))
 		},
 	}

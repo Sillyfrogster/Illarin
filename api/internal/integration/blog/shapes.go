@@ -30,9 +30,9 @@ const (
 type BlogAnnouncementType string
 
 const (
-	BlogAnnouncementTypePublicationPostPublishedV1 BlogAnnouncementType = "publication.post.published.v1"
-	BlogAnnouncementTypePublicationPostUpdatedV1   BlogAnnouncementType = "publication.post.updated.v1"
-	BlogAnnouncementTypePublicationPostWithdrawnV1 BlogAnnouncementType = "publication.post.withdrawn.v1"
+	BlogAnnouncementTypePostPublished   BlogAnnouncementType = "blog.post.published.v1"
+	BlogAnnouncementTypePostUpdated     BlogAnnouncementType = "blog.post.updated.v1"
+	BlogAnnouncementTypePostUnpublished BlogAnnouncementType = "blog.post.unpublished.v1"
 )
 
 func ChoiceRows(held []Choice) []BlogIntegrationChoice {

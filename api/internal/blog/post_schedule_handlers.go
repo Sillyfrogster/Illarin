@@ -21,11 +21,11 @@ func (h *Handlers) SchedulePost(c *gin.Context) {
 	}
 	var request SchedulePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"Send the version and the time it goes live, with an explicit offset.", "at")
 		return
 	}
-	scheduled, err := h.publications.SchedulePost(
+	scheduled, err := h.blog.SchedulePost(
 		c.Request.Context(), editor, id, request.Version, request.At,
 		announcementOf(request.IntegrationIds, request.RoleIntegrationIds, request.Note),
 	)
@@ -47,11 +47,11 @@ func (h *Handlers) ReplacePostSchedule(c *gin.Context) {
 	}
 	var request ReplacePostScheduleRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"Name the edition and the time it goes live, with an explicit offset.", "at")
 		return
 	}
-	replaced, err := h.publications.ReplaceSchedule(
+	replaced, err := h.blog.ReplaceSchedule(
 		c.Request.Context(), editor, id, request.RevisionId, request.At,
 		announcementOf(request.IntegrationIds, request.RoleIntegrationIds, request.Note),
 	)
@@ -71,7 +71,7 @@ func (h *Handlers) CancelPostSchedule(c *gin.Context) {
 	if !ok {
 		return
 	}
-	cancelled, err := h.publications.CancelSchedule(c.Request.Context(), editor, id)
+	cancelled, err := h.blog.CancelSchedule(c.Request.Context(), editor, id)
 	if err != nil {
 		h.scheduleError(c, err)
 		return
@@ -82,12 +82,12 @@ func (h *Handlers) CancelPostSchedule(c *gin.Context) {
 func (h *Handlers) scheduleError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrScheduleNotFound):
-		refusePublication(c, http.StatusNotFound, PublicationErrorCodeNotFound,
+		refuseBlog(c, http.StatusNotFound, BlogErrorCodeNotFound,
 			"This post has nothing waiting to publish.")
 	case errors.Is(err, ErrAlreadyScheduled):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error: "This post already has a scheduled revision. Change that revision instead.",
-			Code:  PublicationErrorCodeAlreadyScheduled,
+			Code:  BlogErrorCodeAlreadyScheduled,
 		})
 	default:
 		h.postError(c, err)

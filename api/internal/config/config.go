@@ -35,7 +35,7 @@ type Config struct {
 	StorageFreeSpaceReserveBytes int64
 	AccountStorageCapBytes       int64
 	LinkingHMACKey               []byte
-	PublicationSecretKey         []byte
+	IntegrationSecretKey         []byte
 	ProbeLimits                  format.Limits
 	IngestWorkers                int
 	Server                       ServerTimeouts
@@ -135,20 +135,22 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("LINKING_HMAC_KEY must be 32 bytes encoded as unpadded base64url")
 	}
 	cfg.LinkingHMACKey = linkingKey
-	publicationKey, err := base64.RawURLEncoding.DecodeString(get("PUBLICATION_SECRET_KEY", ""))
-	if err != nil || len(publicationKey) != secrets.KeyBytes {
+	// PUBLICATION_SECRET_KEY is the name this key had before 18 November 2026
+	integrationKey, err := base64.RawURLEncoding.DecodeString(
+		get("INTEGRATION_SECRET_KEY", get("PUBLICATION_SECRET_KEY", "")))
+	if err != nil || len(integrationKey) != secrets.KeyBytes {
 		return Config{}, fmt.Errorf(
-			"PUBLICATION_SECRET_KEY must be %d bytes encoded as unpadded base64url",
+			"INTEGRATION_SECRET_KEY must be %d bytes encoded as unpadded base64url",
 			secrets.KeyBytes,
 		)
 	}
-	if bytes.Equal(publicationKey, linkingKey) {
-		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY must differ from LINKING_HMAC_KEY")
+	if bytes.Equal(integrationKey, linkingKey) {
+		return Config{}, fmt.Errorf("INTEGRATION_SECRET_KEY must differ from LINKING_HMAC_KEY")
 	}
-	if _, err := secrets.NewKey(publicationKey); err != nil {
-		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY: %w", err)
+	if _, err := secrets.NewKey(integrationKey); err != nil {
+		return Config{}, fmt.Errorf("INTEGRATION_SECRET_KEY: %w", err)
 	}
-	cfg.PublicationSecretKey = publicationKey
+	cfg.IntegrationSecretKey = integrationKey
 	limits := format.DefaultLimits()
 	entries, err := intOrDefault("MAX_ARCHIVE_ENTRIES", limits.MaxArchiveEntries)
 	if err != nil {

@@ -1,6 +1,6 @@
 {
   "note": "An address where an uploaded image belongs",
-  "path": "document.content.0.mediaId",
+  "path": "body.content.0.mediaId",
   "document": {
     "version": 2,
     "content": [

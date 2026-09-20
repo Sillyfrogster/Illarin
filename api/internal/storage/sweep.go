@@ -350,8 +350,6 @@ func liveBlobReferenceExpression(blobID, at string) string {
 		union all
 		select 1 from profile_media media where media.blob_id = ` + blobID + `
 		union all
-		select 1 from publication_media media where media.blob_id = ` + blobID + `
-		union all
 		select 1 from post_media media
 		  join post_media_uses use on use.media_id = media.id
 		 where media.blob_id = ` + blobID + `

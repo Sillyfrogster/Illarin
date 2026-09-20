@@ -18,7 +18,7 @@ func (h *Handlers) ListPostRevisions(c *gin.Context) {
 	if !ok {
 		return
 	}
-	kept, err := h.publications.Revisions(c.Request.Context(), editor, id)
+	kept, err := h.blog.Revisions(c.Request.Context(), editor, id)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -39,7 +39,7 @@ func (h *Handlers) CheckpointPost(c *gin.Context) {
 	if !ok {
 		return
 	}
-	kept, err := h.publications.Checkpoint(c.Request.Context(), editor, id, version)
+	kept, err := h.blog.Checkpoint(c.Request.Context(), editor, id, version)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -64,7 +64,7 @@ func (h *Handlers) RestorePostRevision(c *gin.Context) {
 	if !ok {
 		return
 	}
-	restored, err := h.publications.RestoreRevision(
+	restored, err := h.blog.RestoreRevision(
 		c.Request.Context(), editor, id, revisionID, version,
 	)
 	if err != nil {
@@ -83,7 +83,7 @@ func (h *Handlers) ReadPostHistory(c *gin.Context) {
 	if !ok {
 		return
 	}
-	done, err := h.publications.PostHistory(c.Request.Context(), editor, id)
+	done, err := h.blog.PostHistory(c.Request.Context(), editor, id)
 	if err != nil {
 		h.postError(c, err)
 		return
@@ -94,7 +94,7 @@ func (h *Handlers) ReadPostHistory(c *gin.Context) {
 func (h *Handlers) workingVersion(c *gin.Context) (int, bool) {
 	var request PostVersionRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		refuseField(c, http.StatusBadRequest, PublicationErrorCodeInvalid,
+		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"Include the current drafted changes version.", "version")
 		return 0, false
 	}
@@ -162,16 +162,16 @@ type PostActionList struct {
 }
 
 type PostRevision struct {
-	CapturedAt  time.Time           `json:"capturedAt"`
-	CapturedBy  string              `json:"capturedBy"`
-	CapturedFor PostRevisionReason  `json:"capturedFor"`
-	Category    PublicationCategory `json:"category"`
-	Id          uuid.UUID           `json:"id"`
-	Number      int                 `json:"number"`
-	Public      bool                `json:"public"`
-	Slug        string              `json:"slug"`
-	Summary     string              `json:"summary"`
-	Title       string              `json:"title"`
+	CapturedAt  time.Time          `json:"capturedAt"`
+	CapturedBy  string             `json:"capturedBy"`
+	CapturedFor PostRevisionReason `json:"capturedFor"`
+	Category    BlogCategory       `json:"category"`
+	Id          uuid.UUID          `json:"id"`
+	Number      int                `json:"number"`
+	Public      bool               `json:"public"`
+	Slug        string             `json:"slug"`
+	Summary     string             `json:"summary"`
+	Title       string             `json:"title"`
 }
 
 type PostRevisionList struct {
@@ -181,9 +181,9 @@ type PostRevisionList struct {
 type PostRevisionReason string
 
 const (
-	PostRevisionReasonCheckpoint  PostRevisionReason = "checkpoint"
-	PostRevisionReasonPublication PostRevisionReason = "publication"
-	PostRevisionReasonSchedule    PostRevisionReason = "schedule"
+	PostRevisionReasonCheckpoint PostRevisionReason = "checkpoint"
+	PostRevisionReasonPublish    PostRevisionReason = "publish"
+	PostRevisionReasonSchedule   PostRevisionReason = "schedule"
 )
 
 type PostVersionRequest struct {

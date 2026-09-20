@@ -59,7 +59,7 @@ func (s integrationStack) quietlyPublished(t *testing.T, ready blogPost) blogPos
 func withdrawalsAmong(held []arrived) []arrived {
 	kept := make([]arrived, 0, len(held))
 	for _, one := range held {
-		if strings.Contains(string(one.Body), blog.PostWithdrawn) {
+		if strings.Contains(string(one.Body), blog.PostUnpublished) {
 			kept = append(kept, one)
 		}
 	}
@@ -72,7 +72,7 @@ func TestADestinationTakesPublishedEventsAndNothingElseByDefault(t *testing.T) {
 
 	made := stack.active(t, "Release feed")
 
-	shown := stack.integrations(t, stack.authority).Integrations[0]
+	shown := stack.integrations(t, stack.admin).Integrations[0]
 	if len(shown.Announcements) != 1 || shown.Announcements[0] != blog.PostPublished {
 		t.Errorf("events = %v, want the published event alone", shown.Announcements)
 	}
@@ -114,23 +114,23 @@ func TestWithdrawingAPostReachesOnlyWhoeverAsksForWithdrawals(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 	announcements := stack.active(t, "Announcements")
-	removals := stack.activeFor(t, "Takedowns", []string{blog.PostWithdrawn})
+	removals := stack.activeFor(t, "Takedowns", []string{blog.PostUnpublished})
 	ready := stack.readyPost(t)
 	live := stack.publishedTo(t, ready, announcements.Integration.ID, "")
 	stack.sendQueued(t)
 
-	gone := stack.withdraw(t, stack.editor, live.ID, fmt.Sprintf(
+	gone := stack.unpublish(t, stack.editor, live.ID, fmt.Sprintf(
 		`{"version":%d,"reason":"It named the wrong version.","integrationIds":[%q,%q],`+
 			`"note":"The release notes were wrong."}`,
 		live.Version, announcements.Integration.ID, removals.Integration.ID,
 	))
 
 	if gone.Code != http.StatusOK {
-		t.Fatalf("withdraw status = %d: %s", gone.Code, gone.Body.String())
+		t.Fatalf("unpublish status = %d: %s", gone.Code, gone.Body.String())
 	}
 	if got := stack.sentTo(t, ready.ID, "Takedowns"); len(got) != 1 ||
-		got[0] != blog.PostWithdrawn {
-		t.Fatalf("takedowns was queued %v, want the withdrawal alone", got)
+		got[0] != blog.PostUnpublished {
+		t.Fatalf("takedowns was queued %v, want the unpublishing alone", got)
 	}
 	if got := stack.sentTo(t, ready.ID, "Announcements"); len(got) != 1 {
 		t.Errorf("announcements was queued %v, want the publication alone", got)
@@ -140,11 +140,11 @@ func TestWithdrawingAPostReachesOnlyWhoeverAsksForWithdrawals(t *testing.T) {
 
 	arrivals := withdrawalsAmong(stack.to.arrivals())
 	if len(arrivals) != 1 {
-		t.Fatalf("the receiver was sent %d requests, want the withdrawal", len(arrivals))
+		t.Fatalf("the receiver was sent %d requests, want the unpublishing", len(arrivals))
 	}
 	body := string(arrivals[0].Body)
 	for _, want := range []string{
-		`"type":"publication.post.withdrawn.v1"`,
+		`"type":"blog.post.unpublished.v1"`,
 		`"note":"The release notes were wrong."`,
 	} {
 		if !strings.Contains(body, want) {
@@ -156,19 +156,19 @@ func TestWithdrawingAPostReachesOnlyWhoeverAsksForWithdrawals(t *testing.T) {
 func TestAWithdrawalCanSendNothing(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
-	removals := stack.activeFor(t, "Takedowns", []string{blog.PostWithdrawn})
+	removals := stack.activeFor(t, "Takedowns", []string{blog.PostUnpublished})
 	ready := stack.readyPost(t)
 	live := stack.publishedTo(t, ready, removals.Integration.ID, "")
 
-	gone := stack.withdraw(t, stack.editor, live.ID, fmt.Sprintf(
+	gone := stack.unpublish(t, stack.editor, live.ID, fmt.Sprintf(
 		`{"version":%d,"reason":"It named the wrong version.","integrationIds":[]}`, live.Version,
 	))
 
 	if gone.Code != http.StatusOK {
-		t.Fatalf("withdraw status = %d: %s", gone.Code, gone.Body.String())
+		t.Fatalf("unpublish status = %d: %s", gone.Code, gone.Body.String())
 	}
 	if got := stack.sentTo(t, ready.ID, "Takedowns"); len(got) != 0 {
-		t.Errorf("a quiet withdrawal queued %v", got)
+		t.Errorf("a quiet unpublishing queued %v", got)
 	}
 }
 
@@ -178,7 +178,7 @@ func TestARepublicationCarriesItsOwnChoice(t *testing.T) {
 	made := stack.active(t, "Release feed")
 	ready := stack.readyPost(t)
 	live := stack.publishedTo(t, ready, made.Integration.ID, "")
-	gone := stack.withdrawn(t, stack.editor, live.ID, live.Version, "It went out early.", "")
+	gone := stack.unpublished(t, stack.editor, live.ID, live.Version, "It went out early.", "")
 
 	back := stack.republish(t, stack.editor, gone.ID, fmt.Sprintf(
 		`{"version":%d,"revisionId":%q,"integrationIds":[%q],"note":"It is back."}`,
@@ -189,7 +189,7 @@ func TestARepublicationCarriesItsOwnChoice(t *testing.T) {
 		t.Fatalf("republish status = %d: %s", back.Code, back.Body.String())
 	}
 	if got := stack.sentTo(t, ready.ID, "Release feed"); len(got) != 2 {
-		t.Fatalf("the release feed was queued %v, want both publications", got)
+		t.Fatalf("the release feed was queued %v, want both posts", got)
 	}
 	stack.to.forget()
 	stack.sendQueued(t)
@@ -209,16 +209,16 @@ func TestTheEventNamesAreExactlyTheThreeIllarinPromises(t *testing.T) {
 	ready := stack.readyPost(t)
 	live := stack.quietlyPublished(t, ready)
 	changed := stack.quietlyPublished(t, live)
-	gone := stack.withdrawn(t, stack.editor, changed.ID, changed.Version, "It went out early.", "")
+	gone := stack.unpublished(t, stack.editor, changed.ID, changed.Version, "It went out early.", "")
 	stack.republished(t, stack.editor, gone.ID, gone.Version, gone.PublicRevision)
 
 	held := stack.eventNames(t, ready.ID)
 
 	want := []string{
-		"publication.post.published.v1",
-		"publication.post.updated.v1",
-		"publication.post.withdrawn.v1",
-		"publication.post.published.v1",
+		"blog.post.published.v1",
+		"blog.post.updated.v1",
+		"blog.post.unpublished.v1",
+		"blog.post.published.v1",
 	}
 	if len(held) != len(want) {
 		t.Fatalf("the post recorded %v, want %v", held, want)
@@ -234,7 +234,7 @@ func TestEditorialWorkOutsidePublicViewSendsNothing(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 	made := stack.activeFor(t, "Everything", []string{
-		blog.PostPublished, blog.PostUpdated, blog.PostWithdrawn,
+		blog.PostPublished, blog.PostUpdated, blog.PostUnpublished,
 	})
 	draft := stack.illarinDraft(t, stack.editor, "Illarin keeps its own writing now")
 	ready := stack.saved(t, stack.editor, draft.ID, finished(draft, nil))
@@ -243,14 +243,14 @@ func TestEditorialWorkOutsidePublicViewSendsNothing(t *testing.T) {
 		"version": ready.Version, "title": "A better title",
 	}))
 	removed := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+kept.ID+"/delete",
+		http.MethodPost, "/v1/blog/posts/"+kept.ID+"/delete",
 		fmt.Sprintf(`{"version":%d}`, kept.Version),
 	), stack.editor))
 	if removed.Code != http.StatusOK {
 		t.Fatalf("delete status = %d: %s", removed.Code, removed.Body.String())
 	}
 	recovered := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPost, "/v1/publication/posts/"+kept.ID+"/recover",
+		http.MethodPost, "/v1/blog/posts/"+kept.ID+"/recover",
 		fmt.Sprintf(`{"version":%d}`, kept.Version),
 	), stack.editor))
 	if recovered.Code != http.StatusOK {
@@ -303,10 +303,10 @@ func TestASubscriptionIsRefusedForAnEventIllarinDoesNotSend(t *testing.T) {
 
 	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPost, "/v1/blog/integrations", fmt.Sprintf(
-			`{"name":"Release feed","address":%q,"events":["publication.post.read.v1"]}`,
+			`{"name":"Release feed","address":%q,"events":["blog.post.read.v1"]}`,
 			stack.to.address(),
 		),
-	), stack.authority))
+	), stack.admin))
 
 	if response.Code != http.StatusBadRequest {
 		t.Errorf("add status = %d, want 400: %s", response.Code, response.Body.String())
@@ -320,14 +320,14 @@ func TestASubscriptionCanBeNarrowedAfterwards(t *testing.T) {
 
 	response := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
 		http.MethodPatch, "/v1/blog/integrations/"+made.Integration.ID,
-		`{"events":["publication.post.withdrawn.v1","publication.post.published.v1"]}`,
-	), stack.authority))
+		`{"events":["blog.post.unpublished.v1","blog.post.published.v1"]}`,
+	), stack.admin))
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("update status = %d: %s", response.Code, response.Body.String())
 	}
-	shown := stack.integrations(t, stack.authority).Integrations[0]
-	want := []string{blog.PostPublished, blog.PostWithdrawn}
+	shown := stack.integrations(t, stack.admin).Integrations[0]
+	want := []string{blog.PostPublished, blog.PostUnpublished}
 	if len(shown.Announcements) != len(want) {
 		t.Fatalf("events = %v, want %v", shown.Announcements, want)
 	}

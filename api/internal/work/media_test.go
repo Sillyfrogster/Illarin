@@ -468,7 +468,7 @@ func (p *blockingMediaProcessor) Render(
 	return mediaproc.Derivative{Variant: "grid", Bytes: []byte("rendered")}, nil
 }
 
-func (p *blockingMediaProcessor) ComposeSocialPreview(
+func (p *blockingMediaProcessor) ComposeLinkCard(
 	context.Context,
 	io.Reader,
 	string,

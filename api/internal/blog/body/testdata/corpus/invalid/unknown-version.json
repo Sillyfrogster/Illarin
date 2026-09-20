@@ -1,5 +1,5 @@
 {
   "note": "A version this build does not write",
-  "path": "document.version",
+  "path": "body.version",
   "document": {"version": 3, "content": []}
 }
