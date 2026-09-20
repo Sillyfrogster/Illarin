@@ -36,7 +36,7 @@ select a.id, a.type, original.format, a.original_format,
   left join work_original_files original on original.id = a.original_file_id
  where a.lifecycle = 'published'
    and a.visibility = 'listed'
-   and a.withheld_at is null
+   and a.taken_down_at is null
    and a.deleted_at is null
    and ($1 = '' or a.type = $1)
    and (not $2::boolean or original.format is not distinct from $3)
@@ -51,7 +51,7 @@ select a.id, a.type, original.format, a.original_format,
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        a.type, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.visibility, a.withheld_at, a.withheld_reason
+       a.visibility, a.taken_down_at, a.taken_down_reason
   from works a
   left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
@@ -66,11 +66,11 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
    and a.deleted_at is null
    and (
        (sqlc.narg('creator_id')::uuid is null
-        and a.visibility = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.taken_down_at is null)
        or
        (a.owner_id = sqlc.narg('creator_id')::uuid
         and (sqlc.arg('own_profile')::boolean
-             or (a.visibility = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
    and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
    and (sqlc.arg('own_profile')::boolean
@@ -122,11 +122,11 @@ select count(*)
    and a.deleted_at is null
    and (
        (sqlc.narg('creator_id')::uuid is null
-        and a.visibility = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.taken_down_at is null)
        or
        (a.owner_id = sqlc.narg('creator_id')::uuid
         and (sqlc.arg('own_profile')::boolean
-             or (a.visibility = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
    and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
    and (sqlc.arg('own_profile')::boolean
@@ -169,7 +169,7 @@ select count(*)
   left join users owner on owner.id = a.owner_id
  where a.lifecycle = 'published'
    and a.visibility = 'listed'
-   and a.withheld_at is null
+   and a.taken_down_at is null
    and a.deleted_at is null
    and (sqlc.narg('creator_id')::uuid is null or a.owner_id = sqlc.narg('creator_id')::uuid)
    and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
@@ -213,14 +213,14 @@ select a.id, a.type, a.name, a.blurb, a.tags, a.is_nsfw, a.visibility,
        coalesce(original.identifier, '')::text as identifier,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = sqlc.narg('viewer_id')::uuid, false)::boolean as is_owner,
-       a.withheld_reason, a.withheld_at
+       a.taken_down_reason, a.taken_down_at
   from works a
   left join users owner on owner.id = a.owner_id
   left join work_original_files original on original.id = a.original_file_id
  where a.id = $1
    and a.deleted_at is null
    and (a.lifecycle = 'published' or a.owner_id = sqlc.narg('viewer_id')::uuid)
-   and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
+   and (a.taken_down_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
 -- name: WorkPageMedia :many
 select media.id, media.role, media.width, media.height, blob.byte_size,
@@ -254,7 +254,7 @@ select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, a.own
    and r.blob_id is not null
    and a.lifecycle = 'published'
    and a.deleted_at is null
-   and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
+   and (a.taken_down_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
 -- name: WorkByID :one
 select a.id, a.type, original.format, a.original_format,
@@ -270,37 +270,37 @@ select a.id, a.type, original.format, a.original_format,
 update works
    set visibility = $3, updated_at = now()
  where id = $1 and owner_id = $2 and lifecycle = 'published'
-   and withheld_at is null and deleted_at is null;
+   and taken_down_at is null and deleted_at is null;
 
 -- name: WorkStateForOwner :one
-select withheld_at, lifecycle
+select taken_down_at, lifecycle
   from works
  where id = $1 and owner_id = $2 and deleted_at is null;
 
--- name: WithholdWork :one
-with withheld as (
+-- name: TakeDownWork :one
+with taken_down as (
     update works as work
-       set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
+       set taken_down_at = now(), taken_down_by = $2, taken_down_reason = $3,
            updated_at = now()
      where work.id = $1 and work.lifecycle = 'published'
-       and work.withheld_at is null and work.deleted_at is null
+       and work.taken_down_at is null and work.deleted_at is null
     returning work.id, work.owner_id, work.name, work.published_version_id
 ), stopped as (
     update sends as send
        set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
-     where send.work_id in (select withheld.id from withheld)
+     where send.work_id in (select taken_down.id from taken_down)
        and send.state = 'queued'
 )
-select withheld.owner_id, coalesce(version.payload ->> 'name', withheld.name)::text as public_name
-  from withheld
-  left join work_versions version on version.id = withheld.published_version_id;
+select taken_down.owner_id, coalesce(version.payload ->> 'name', taken_down.name)::text as public_name
+  from taken_down
+  left join work_versions version on version.id = taken_down.published_version_id;
 
--- name: ClearWorkWithhold :one
+-- name: LiftTakedown :one
 with cleared as (
     update works as work
-       set withheld_at = null, withheld_by = null, withheld_reason = null,
+       set taken_down_at = null, taken_down_by = null, taken_down_reason = null,
            updated_at = now()
-     where work.id = $1 and work.withheld_at is not null and work.deleted_at is null
+     where work.id = $1 and work.taken_down_at is not null and work.deleted_at is null
     returning work.id, work.owner_id, work.name, work.published_version_id
 )
 select cleared.owner_id, coalesce(version.payload ->> 'name', cleared.name)::text as public_name
@@ -308,7 +308,7 @@ select cleared.owner_id, coalesce(version.payload ->> 'name', cleared.name)::tex
   left join work_versions version on version.id = cleared.published_version_id;
 
 -- name: WorkDeletionState :one
-select withheld_at, deleted_at
+select taken_down_at, deleted_at
   from works
  where id = $1 and owner_id = $2;
 
@@ -316,7 +316,7 @@ select withheld_at, deleted_at
 update works
    set deleted_at = $3, recoverable_until = $4, updated_at = $3
  where id = $1 and owner_id = $2
-   and withheld_at is null and deleted_at is null;
+   and taken_down_at is null and deleted_at is null;
 
 -- name: RestoreWork :execrows
 update works
@@ -1092,7 +1092,7 @@ select version.number
   join work_versions version on version.id = work.published_version_id
  where work.id = sqlc.arg('work_id')
    and deleted_at is null
-   and withheld_at is null
+   and taken_down_at is null
    and lifecycle = 'published';
 
 -- name: WorkConnectedAppStates :many
@@ -1136,7 +1136,7 @@ select entry.connected_app_id,
  where app.user_id = sqlc.arg('user_id')
    and app.revoked_at is null
    and work.deleted_at is null
-   and work.withheld_at is null
+   and work.taken_down_at is null
    and work.lifecycle = 'published'
  group by entry.connected_app_id;
 
@@ -1168,17 +1168,17 @@ delete from app_library_entries
  where connected_app_id = sqlc.arg('connected_app_id')
    and not (work_id = any(sqlc.arg('work_ids')::uuid[]));
 
--- name: TakeWithheldNotices :many
+-- name: TakeTakedownNotices :many
 update app_library_entries as entry
-   set notified_withheld_at = work.withheld_at
+   set notified_taken_down_at = work.taken_down_at
   from work_public.works as work
  where entry.connected_app_id = sqlc.arg('connected_app_id')
    and work.id = entry.work_id
    and work.type = any(sqlc.arg('types')::text[])
-   and work.withheld_at is not null
+   and work.taken_down_at is not null
    and work.deleted_at is null
-   and entry.notified_withheld_at is distinct from work.withheld_at
-returning entry.work_id, work.name::text as name, work.withheld_at;
+   and entry.notified_taken_down_at is distinct from work.taken_down_at
+returning entry.work_id, work.name::text as name, work.taken_down_at;
 
 -- name: RecordLibraryAppVersion :exec
 update connected_apps

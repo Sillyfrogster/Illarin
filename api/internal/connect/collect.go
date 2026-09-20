@@ -51,7 +51,7 @@ func (s *Sends) Collect(
 		if err != nil {
 			return Collected{}, err
 		}
-		if len(collected.Work) > 0 || len(collected.Withheld) > 0 {
+		if len(collected.Work) > 0 || len(collected.Takedowns) > 0 {
 			return collected, nil
 		}
 		select {
@@ -118,14 +118,14 @@ func (s *Sends) claim(ctx context.Context, app ConnectedApp) (Collected, error) 
 			work = append(work, *released)
 		}
 	}
-	withheld, err := takeWithheldNotices(ctx, queries, app.ID)
+	takedowns, err := takeTakedownNotices(ctx, queries, app.ID)
 	if err != nil {
 		return Collected{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return Collected{}, fmt.Errorf("commit a send claim: %w", err)
 	}
-	return Collected{Work: work, Withheld: withheld}, nil
+	return Collected{Work: work, Takedowns: takedowns}, nil
 }
 
 func (s *Sends) release(

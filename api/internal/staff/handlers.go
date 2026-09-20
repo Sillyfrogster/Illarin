@@ -19,25 +19,25 @@ func NewHandlers(staff *Service) *Handlers {
 
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
-	routes.Handle(http.MethodDelete, "/v1/profiles/:handle/restriction", d.JSON, h.RestoreProfile)
-	routes.Handle(http.MethodGet, "/v1/profiles/:handle/restriction", d.JSON, h.GetProfileRestriction)
-	routes.Handle(http.MethodPut, "/v1/profiles/:handle/restriction", d.JSON, h.RestrictProfile)
-	routes.Handle(http.MethodDelete, "/v1/works/:id/withhold", d.JSON, h.ClearWorkWithhold)
-	routes.Handle(http.MethodPut, "/v1/works/:id/withhold", d.JSON, h.WithholdWork)
+	routes.Handle(http.MethodDelete, "/v1/profiles/:handle/restricted", d.JSON, h.RestoreProfile)
+	routes.Handle(http.MethodGet, "/v1/profiles/:handle/restricted", d.JSON, h.GetRestrictedProfile)
+	routes.Handle(http.MethodPut, "/v1/profiles/:handle/restricted", d.JSON, h.RestrictProfile)
+	routes.Handle(http.MethodDelete, "/v1/works/:id/takedown", d.JSON, h.LiftTakedown)
+	routes.Handle(http.MethodPut, "/v1/works/:id/takedown", d.JSON, h.TakeDownWork)
 	registerAliases(routes, h)
 }
 
-func (h *Handlers) GetProfileRestriction(c *gin.Context) {
+func (h *Handlers) GetRestrictedProfile(c *gin.Context) {
 	handle := c.Param("handle")
-	if _, ok := api.Admin(c, "read a restriction reason"); !ok {
+	if _, ok := api.Admin(c, "read why a profile is restricted"); !ok {
 		return
 	}
-	found, err := h.staff.ProfileRestriction(c.Request.Context(), handle)
+	found, err := h.staff.RestrictedProfile(c.Request.Context(), handle)
 	if err != nil {
-		restrictionError(c, err)
+		restrictedProfileError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIRestriction(found))
+	c.JSON(http.StatusOK, toAPIRestrictedProfile(found))
 }
 
 func (h *Handlers) RestrictProfile(c *gin.Context) {
@@ -51,12 +51,12 @@ func (h *Handlers) RestrictProfile(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "Send the audit reason as JSON.")
 		return
 	}
-	restriction, err := h.staff.RestrictProfile(c.Request.Context(), admin, handle, request.Reason)
+	restricted, err := h.staff.RestrictProfile(c.Request.Context(), admin, handle, request.Reason)
 	if err != nil {
-		restrictionError(c, err)
+		restrictedProfileError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIRestriction(restriction))
+	c.JSON(http.StatusOK, toAPIRestrictedProfile(restricted))
 }
 
 func (h *Handlers) RestoreProfile(c *gin.Context) {
@@ -66,77 +66,77 @@ func (h *Handlers) RestoreProfile(c *gin.Context) {
 		return
 	}
 	if err := h.staff.RestoreProfile(c.Request.Context(), admin, handle); err != nil {
-		restrictionError(c, err)
+		restrictedProfileError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handlers) WithholdWork(c *gin.Context) {
+func (h *Handlers) TakeDownWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	admin, ok := api.Admin(c, "manage withholds")
+	admin, ok := api.Admin(c, "take down works")
 	if !ok {
 		return
 	}
-	var request WithholdWorkRequest
+	var request TakeDownWorkRequest
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
-		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the work.")
+		api.Refuse(c, http.StatusBadRequest, "Give a reason for taking down the work.")
 		return
 	}
-	err := h.staff.Withhold(c.Request.Context(), id, admin.ID, request.Reason)
+	err := h.staff.TakeDown(c.Request.Context(), id, admin.ID, request.Reason)
 	switch {
-	case errors.Is(err, ErrInvalidWithholdReason):
-		api.Refuse(c, http.StatusBadRequest, "Give a reason for withholding the work.")
+	case errors.Is(err, ErrInvalidTakedownReason):
+		api.Refuse(c, http.StatusBadRequest, "Give a reason for taking down the work.")
 	case errors.Is(err, ErrWorkNotFound):
 		api.Refuse(c, http.StatusNotFound, "no such work")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not withhold the work.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not take down the work.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
-func (h *Handlers) ClearWorkWithhold(c *gin.Context) {
+func (h *Handlers) LiftTakedown(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
 	}
-	if _, ok := api.Admin(c, "manage withholds"); !ok {
+	if _, ok := api.Admin(c, "take down works"); !ok {
 		return
 	}
-	err := h.staff.ClearWithhold(c.Request.Context(), id)
+	err := h.staff.LiftTakedown(c.Request.Context(), id)
 	switch {
 	case errors.Is(err, ErrWorkNotFound):
 		api.Refuse(c, http.StatusNotFound, "no such work")
 	case err != nil:
-		api.Refuse(c, http.StatusInternalServerError, "Could not clear the withhold.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not lift the takedown.")
 	default:
 		c.Status(http.StatusNoContent)
 	}
 }
 
-func restrictionError(c *gin.Context, err error) {
+func restrictedProfileError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrInvalidReason):
 		api.RefuseField(c, http.StatusBadRequest, "reason",
-			fmt.Sprintf("Give a reason of up to %d characters.", restrictionReasonLimit))
+			fmt.Sprintf("Give a reason of up to %d characters.", restrictedReasonLimit))
 	case errors.Is(err, ErrProfileNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such profile.")
 	case errors.Is(err, ErrNotRestricted):
 		api.Refuse(c, http.StatusNotFound, "That profile is not restricted.")
 	default:
-		api.Refuse(c, http.StatusInternalServerError, "Could not change the restriction.")
+		api.Refuse(c, http.StatusInternalServerError, "Could not change whether the profile is restricted.")
 	}
 }
 
-func toAPIRestriction(found Restriction) ProfileRestriction {
-	restriction := ProfileRestriction{Reason: found.Reason, RestrictedAt: found.RestrictedAt}
+func toAPIRestrictedProfile(found Restricted) RestrictedProfile {
+	restricted := RestrictedProfile{Reason: found.Reason, RestrictedAt: found.RestrictedAt}
 	if found.RestrictedBy != "" {
 		actor := found.RestrictedBy
-		restriction.RestrictedBy = &actor
+		restricted.RestrictedBy = &actor
 	}
-	return restriction
+	return restricted
 }

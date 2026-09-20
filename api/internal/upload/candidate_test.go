@@ -39,7 +39,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(context.Background())
-	if _, err := tx.Exec(context.Background(), `update works set withheld_at = now(), withheld_by = owner_id, withheld_reason = 'Review' where id = $1`, id); err != nil {
+	if _, err := tx.Exec(context.Background(), `update works set taken_down_at = now(), taken_down_by = owner_id, taken_down_reason = 'Review' where id = $1`, id); err != nil {
 		t.Fatal(err)
 	}
 	if err := writer.Close(); err != nil {
@@ -51,7 +51,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	if err := <-done; !errors.Is(err, work.ErrWorkFrozen) {
 		t.Fatalf("revoked acceptance = %v, want frozen", err)
 	}
-	if err := staff.NewService(pool).ClearWithhold(context.Background(), id); err != nil {
+	if err := staff.NewService(pool).LiftTakedown(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
 	_, err = svc.AcceptOriginalFile(context.Background(), OriginalFileInput{

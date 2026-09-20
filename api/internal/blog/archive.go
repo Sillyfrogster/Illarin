@@ -196,10 +196,10 @@ type Byline struct {
 }
 
 type Portrait struct {
-	MediaID           uuid.UUID
-	Width             int
-	Height            int
-	DerivativeVersion uint32
+	MediaID          uuid.UUID
+	Width            int
+	Height           int
+	ImageSizeVersion uint32
 }
 
 type snapshot struct {
@@ -218,11 +218,11 @@ func takeSnapshot(
 	taken := snapshot{AccountID: accountID}
 	var restricted bool
 	err := tx.QueryRow(ctx, `
-		select account.username, restriction.user_id is not null,
+		select account.username, restricted.user_id is not null,
 		       coalesce(profile.display_name, ''), coalesce(profile.contact_email, ''),
 		       avatar.id
 		  from users account
-		  left join profile_restrictions restriction on restriction.user_id = account.id
+		  left join restricted_profiles restricted on restricted.user_id = account.id
 		  left join public_profiles profile on profile.user_id = account.id
 		  left join profile_media avatar
 		         on avatar.id = profile.avatar_media_id and avatar.blob_id is not null
@@ -349,10 +349,10 @@ func scanPortrait(mediaID *uuid.UUID, width, height *int) *Portrait {
 		return nil
 	}
 	return &Portrait{
-		MediaID:           *mediaID,
-		Width:             *width,
-		Height:            *height,
-		DerivativeVersion: mediaproc.DerivativeVersion,
+		MediaID:          *mediaID,
+		Width:            *width,
+		Height:           *height,
+		ImageSizeVersion: mediaproc.ImageSizeVersion,
 	}
 }
 

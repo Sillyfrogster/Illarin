@@ -88,7 +88,7 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 	}
 }
 
-func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
+func TestAPublicSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
@@ -101,15 +101,15 @@ func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	}
 
 	var originalFileID, currentOriginalFileID uuid.UUID
-	var formatID, authorizationClass, visibility string
+	var formatID, access, visibility string
 	var handedOffAt time.Time
 	err := pool.QueryRow(context.Background(), `
-		select original_file_id, format, handed_off_at, authorization_class, visibility
-		  from download_events
+		select original_file_id, format, handed_off_at, access, visibility
+		  from download_records
 		 where work_id = $1
-	`, workID).Scan(&originalFileID, &formatID, &handedOffAt, &authorizationClass, &visibility)
+	`, workID).Scan(&originalFileID, &formatID, &handedOffAt, &access, &visibility)
 	if err != nil {
-		t.Fatalf("read download event: %v", err)
+		t.Fatalf("read download record: %v", err)
 	}
 	if err := pool.QueryRow(context.Background(), `
 		select original_file_id from works where id = $1
@@ -117,23 +117,23 @@ func TestAnonymousSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 		t.Fatalf("read the original file: %v", err)
 	}
 	if originalFileID != currentOriginalFileID || formatID != "raw" ||
-		authorizationClass != "anonymous" || visibility != "listed" {
+		access != "public" || visibility != "listed" {
 		t.Fatalf(
-			"download event = original file %s, format %q, class %q, visibility %q",
-			originalFileID, formatID, authorizationClass, visibility,
+			"download record = original file %s, format %q, access %q, visibility %q",
+			originalFileID, formatID, access, visibility,
 		)
 	}
 	if handedOffAt.Before(before) || handedOffAt.After(after) {
 		t.Fatalf("handoff time %s is outside request interval %s to %s", handedOffAt, before, after)
 	}
-	var eventCount int
+	var recorded int
 	if err := pool.QueryRow(context.Background(), `
-		select count(*) from download_events where work_id = $1
-	`, workID).Scan(&eventCount); err != nil {
-		t.Fatalf("count download events: %v", err)
+		select count(*) from download_records where work_id = $1
+	`, workID).Scan(&recorded); err != nil {
+		t.Fatalf("count download records: %v", err)
 	}
-	if eventCount != 1 {
-		t.Fatalf("one handoff wrote %d download events", eventCount)
+	if recorded != 1 {
+		t.Fatalf("one handoff wrote %d download records", recorded)
 	}
 }
 
@@ -154,17 +154,17 @@ func TestExportFromAnWorkMadeInIllarinRecordsTheHandoff(t *testing.T) {
 	}
 
 	var originalFileMissing bool
-	var formatID, authorizationClass string
+	var formatID, access string
 	if err := pool.QueryRow(context.Background(), `
-		select original_file_id is null, format, authorization_class
-		  from download_events
+		select original_file_id is null, format, access
+		  from download_records
 		 where work_id = $1
-	`, started.ID).Scan(&originalFileMissing, &formatID, &authorizationClass); err != nil {
-		t.Fatalf("read download event: %v", err)
+	`, started.ID).Scan(&originalFileMissing, &formatID, &access); err != nil {
+		t.Fatalf("read download record: %v", err)
 	}
-	if !originalFileMissing || formatID != "chara_card_v3" || authorizationClass != "anonymous" {
-		t.Fatalf("event = original file missing %t, format %q, class %q",
-			originalFileMissing, formatID, authorizationClass)
+	if !originalFileMissing || formatID != "chara_card_v3" || access != "public" {
+		t.Fatalf("record = original file missing %t, format %q, access %q",
+			originalFileMissing, formatID, access)
 	}
 }
 
@@ -223,9 +223,9 @@ func TestDownloadSnapshotsVisibilityAtHandoff(t *testing.T) {
 
 	var visibility string
 	if err := pool.QueryRow(context.Background(), `
-		select visibility from download_events where work_id = $1
+		select visibility from download_records where work_id = $1
 	`, workID).Scan(&visibility); err != nil {
-		t.Fatalf("read download event: %v", err)
+		t.Fatalf("read download record: %v", err)
 	}
 	if visibility != "unlisted" {
 		t.Fatalf("visibility at handoff = %q, want unlisted", visibility)
@@ -255,9 +255,9 @@ func TestExportDownloadRecordsTheFormatItHandedOver(t *testing.T) {
 
 	var formatID string
 	if err := pool.QueryRow(context.Background(), `
-		select format from download_events where work_id = $1
+		select format from download_records where work_id = $1
 	`, workID).Scan(&formatID); err != nil {
-		t.Fatalf("read download event: %v", err)
+		t.Fatalf("read download record: %v", err)
 	}
 	if formatID != "test_opaque" {
 		t.Fatalf("recorded format = %q, want the format handed over", formatID)
@@ -277,7 +277,7 @@ func TestAFormatTheWorkIsNotOfferedInIs404(t *testing.T) {
 	}
 }
 
-func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
+func TestADownloadRecordsOneExclusiveAccess(t *testing.T) {
 	t.Parallel()
 	router, ownerSession, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, ownerSession, works, work.VisibilityListed)
@@ -295,55 +295,55 @@ func TestDownloadRecordsOneExclusiveBrowserAuthorizationClass(t *testing.T) {
 	}
 
 	rows, err := pool.Query(context.Background(), `
-		select authorization_class from download_events order by id
+		select access from download_records order by id
 	`)
 	if err != nil {
-		t.Fatalf("read authorization classes: %v", err)
+		t.Fatalf("read access values: %v", err)
 	}
 	defer rows.Close()
-	var classes []string
+	var accesses []string
 	for rows.Next() {
-		var class string
-		if err := rows.Scan(&class); err != nil {
-			t.Fatalf("scan authorization class: %v", err)
+		var access string
+		if err := rows.Scan(&access); err != nil {
+			t.Fatalf("scan access: %v", err)
 		}
-		classes = append(classes, class)
+		accesses = append(accesses, access)
 	}
 	if err := rows.Err(); err != nil {
-		t.Fatalf("read authorization classes: %v", err)
+		t.Fatalf("read access values: %v", err)
 	}
-	if want := []string{"anonymous", "owner", "signed_in"}; !slices.Equal(classes, want) {
-		t.Fatalf("authorization classes = %v, want %v", classes, want)
+	if want := []string{"public", "owner", "public"}; !slices.Equal(accesses, want) {
+		t.Fatalf("access values = %v, want %v", accesses, want)
 	}
 }
 
-func TestDownloadSnapshotsUnlistedAndOwnerWithheldWorks(t *testing.T) {
+func TestDownloadSnapshotsUnlistedAndOwnerTakenDownWorks(t *testing.T) {
 	t.Parallel()
 	router, ownerSession, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	unlistedID := apitest.UploadVisibilityTestWork(
 		t, router, ownerSession, works, work.VisibilityUnlisted,
 	)
-	withheldID := apitest.UploadVisibilityTestWork(
+	takenDownID := apitest.UploadVisibilityTestWork(
 		t, router, ownerSession, works, work.VisibilityListed,
 	)
 	if _, err := pool.Exec(context.Background(), `
 		update works work
-		   set withheld_at = now(), withheld_by = owner.id, withheld_reason = 'review'
+		   set taken_down_at = now(), taken_down_by = owner.id, taken_down_reason = 'review'
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
-	`, withheldID); err != nil {
-		t.Fatalf("withhold work: %v", err)
+	`, takenDownID); err != nil {
+		t.Fatalf("take down work: %v", err)
 	}
 
 	unlisted := apitest.Send(t, router, httptest.NewRequest(
 		http.MethodGet, "/download/"+unlistedID, nil,
 	))
-	withheldRequest := apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/download/"+withheldID, nil,
+	takenDownRequest := apitest.Authorized(httptest.NewRequest(
+		http.MethodGet, "/download/"+takenDownID, nil,
 	), ownerSession)
-	withheld := apitest.Send(t, router, withheldRequest)
-	if unlisted.Code != http.StatusOK || withheld.Code != http.StatusOK {
-		t.Fatalf("download statuses = unlisted %d, withheld owner %d", unlisted.Code, withheld.Code)
+	takenDown := apitest.Send(t, router, takenDownRequest)
+	if unlisted.Code != http.StatusOK || takenDown.Code != http.StatusOK {
+		t.Fatalf("download statuses = unlisted %d, taken down owner %d", unlisted.Code, takenDown.Code)
 	}
 
 	for _, want := range []struct {
@@ -351,20 +351,20 @@ func TestDownloadSnapshotsUnlistedAndOwnerWithheldWorks(t *testing.T) {
 		visibility    string
 		authorization string
 	}{
-		{workID: unlistedID, visibility: "unlisted", authorization: "anonymous"},
-		{workID: withheldID, visibility: "listed", authorization: "owner"},
+		{workID: unlistedID, visibility: "unlisted", authorization: "public"},
+		{workID: takenDownID, visibility: "listed", authorization: "owner"},
 	} {
 		var visibility, authorization string
 		if err := pool.QueryRow(context.Background(), `
-			select visibility, authorization_class
-			  from download_events
+			select visibility, access
+			  from download_records
 			 where work_id = $1
 		`, want.workID).Scan(&visibility, &authorization); err != nil {
-			t.Fatalf("read download event for %s: %v", want.workID, err)
+			t.Fatalf("read download record for %s: %v", want.workID, err)
 		}
 		if visibility != want.visibility || authorization != want.authorization {
 			t.Fatalf(
-				"event for %s = visibility %q, class %q; want %q, %q",
+				"record for %s = visibility %q, access %q; want %q, %q",
 				want.workID, visibility, authorization, want.visibility, want.authorization,
 			)
 		}
@@ -383,12 +383,12 @@ func TestDownloadUnknownWorkIs404(t *testing.T) {
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
 	}
-	var eventCount int
-	if err := pool.QueryRow(context.Background(), `select count(*) from download_events`).Scan(&eventCount); err != nil {
-		t.Fatalf("count download events: %v", err)
+	var recorded int
+	if err := pool.QueryRow(context.Background(), `select count(*) from download_records`).Scan(&recorded); err != nil {
+		t.Fatalf("count download records: %v", err)
 	}
-	if eventCount != 0 {
-		t.Fatalf("rejected request wrote %d download events", eventCount)
+	if recorded != 0 {
+		t.Fatalf("rejected request wrote %d download records", recorded)
 	}
 }
 

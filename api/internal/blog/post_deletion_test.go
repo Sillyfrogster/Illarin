@@ -116,10 +116,10 @@ func markedBlob(t *testing.T, stack blogStack, blobID string) bool {
 	t.Helper()
 	var sighted bool
 	err := stack.pool.QueryRow(t.Context(),
-		`select exists (select 1 from blob_sweep_marks where blob_id = $1)`,
+		`select exists (select 1 from blob_cleanup_marks where blob_id = $1)`,
 		blobID).Scan(&sighted)
 	if err != nil {
-		t.Fatalf("read whether bytes are marked for sweeping: %v", err)
+		t.Fatalf("read whether bytes are marked for cleanup: %v", err)
 	}
 	return sighted
 }
@@ -316,11 +316,11 @@ func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
 	if removed := stack.clearOut(t, gone.Deletion.Until.Add(-time.Minute)); removed != 0 {
 		t.Fatalf("the worker removed %d posts before the deadline", removed)
 	}
-	if _, err := sweeper(stack.handlers.Works).Sweep(t.Context()); err != nil {
-		t.Fatalf("sweep: %v", err)
+	if _, err := cleanup(stack.handlers.Works).Cleanup(t.Context()); err != nil {
+		t.Fatalf("cleanup: %v", err)
 	}
 	if markedBlob(t, stack, bytes) {
-		t.Error("a recoverable post's picture was marked for sweeping")
+		t.Error("a recoverable post's picture was marked for cleanup")
 	}
 	if len(stack.listing(t, session, true)) != 1 {
 		t.Error("a recoverable post left the deleted listing early")
@@ -338,11 +338,11 @@ func TestRecoveryEndsOnTheDeadlineAndTakesThePicturesWithIt(t *testing.T) {
 	if response.Code != http.StatusNotFound {
 		t.Errorf("a removed post still reads as %d", response.Code)
 	}
-	if _, err := sweeper(stack.handlers.Works).Sweep(t.Context()); err != nil {
-		t.Fatalf("sweep: %v", err)
+	if _, err := cleanup(stack.handlers.Works).Cleanup(t.Context()); err != nil {
+		t.Fatalf("cleanup: %v", err)
 	}
 	if !markedBlob(t, stack, bytes) {
-		t.Error("a removed post's picture is still held out of the sweeper's reach")
+		t.Error("a removed post's picture is still held out of the cleanup's reach")
 	}
 }
 
@@ -373,8 +373,8 @@ func TestCleanupLeavesBytesAnotherPostStillNeeds(t *testing.T) {
 	if stack.clearOut(t, gone.Deletion.Until) != 1 {
 		t.Fatal("the worker left the post behind")
 	}
-	if _, err := sweeper(stack.handlers.Works).Sweep(t.Context()); err != nil {
-		t.Fatalf("sweep: %v", err)
+	if _, err := cleanup(stack.handlers.Works).Cleanup(t.Context()); err != nil {
+		t.Fatalf("cleanup: %v", err)
 	}
 	if markedBlob(t, stack, bytes) {
 		t.Error("cleanup marked bytes another post still refers to")

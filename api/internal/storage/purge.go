@@ -14,7 +14,7 @@ import (
 
 var ErrInvalidPurgeReason = errors.New("invalid purge reason")
 
-func (s *Sweeper) Purge(
+func (s *Cleanup) Purge(
 	ctx context.Context,
 	digest [sha256.Size]byte,
 	reasonCode string,
@@ -31,7 +31,7 @@ func (s *Sweeper) Purge(
 	return s.deletePurgedBlob(ctx, blobID, digest)
 }
 
-func (s *Sweeper) preparePurge(
+func (s *Cleanup) preparePurge(
 	ctx context.Context,
 	digest [sha256.Size]byte,
 	reasonCode string,
@@ -84,7 +84,7 @@ func (s *Sweeper) preparePurge(
 	return blobID, nil
 }
 
-func (s *Sweeper) deletePurgedBlob(
+func (s *Cleanup) deletePurgedBlob(
 	ctx context.Context,
 	blobID uuid.UUID,
 	digest [sha256.Size]byte,
@@ -111,8 +111,8 @@ func (s *Sweeper) deletePurgedBlob(
 	if err := postgres.LockBlobDeletionAgainstBackup(ctx, tx); err != nil {
 		return fmt.Errorf("lock physical blob deletion against backup: %w", err)
 	}
-	if err := s.store.DeleteDerivatives(ctx, digest); err != nil {
-		return fmt.Errorf("delete purged derivatives: %w", err)
+	if err := s.store.DeleteImageSizes(ctx, digest); err != nil {
+		return fmt.Errorf("delete the purged blob's image sizes: %w", err)
 	}
 	if err := s.store.Delete(ctx, blobID); err != nil && !errors.Is(err, ErrBlobNotFound) {
 		return fmt.Errorf("delete purged bytes: %w", err)

@@ -84,8 +84,8 @@ func TestAStoppedVerdictNamesItsReason(t *testing.T) {
 	if said.Reason != Disabled || said.Outcome != OutcomeRefused || said.Detail == "" || said.Retry {
 		t.Errorf("Stopped(disabled) = %+v", said)
 	}
-	own := Cancelled("withheld", "The asset is withheld.")
-	if own.Reason != "withheld" || own.Detail != "The asset is withheld." || own.Retry {
+	own := Cancelled("taken_down", "The work is takenDown.")
+	if own.Reason != "taken_down" || own.Detail != "The work is takenDown." || own.Retry {
 		t.Errorf("Cancelled = %+v", own)
 	}
 }

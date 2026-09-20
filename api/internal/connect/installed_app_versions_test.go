@@ -58,7 +58,7 @@ func TestRevokingAnInstallationLeavesNoAppVersionOrNoticeBehind(t *testing.T) {
 	for _, install := range installs {
 		apitest.ReportLibrary(t, r, install.AccessToken, "1.2.0", workID)
 	}
-	withholdAsAdmin(t, r, pool, session, "verified.creator", workID)
+	takeDownAsAdmin(t, r, pool, session, "verified.creator", workID)
 	revokedID := installs[0].ConnectedApp.ID
 
 	revoked := apitest.Send(t, r, apitest.BrowserRequest(t, http.MethodDelete, "/v1/connected-apps/"+revokedID, nil, session))

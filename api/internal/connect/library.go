@@ -74,7 +74,7 @@ func (s *Sends) Sync(
 	if err != nil {
 		return LibraryResult{}, fmt.Errorf("remove library entries: %w", err)
 	}
-	withheld, err := takeWithheldNotices(ctx, queries, app.ID)
+	takedowns, err := takeTakedownNotices(ctx, queries, app.ID)
 	if err != nil {
 		return LibraryResult{}, err
 	}
@@ -83,7 +83,7 @@ func (s *Sends) Sync(
 	}
 	return LibraryResult{
 		Accepted: int(accepted), Removed: int(dropped),
-		Ignored: len(entries) - int(accepted), Withheld: withheld,
+		Ignored: len(entries) - int(accepted), Takedowns: takedowns,
 	}, nil
 }
 

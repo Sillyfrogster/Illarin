@@ -1,4 +1,4 @@
-// Package staff holds what staff do to accounts and works, restricting profiles and withholding works
+// Package staff holds what staff do to accounts and works, restricting profiles and taking down works
 package staff
 
 import (
@@ -12,9 +12,9 @@ import (
 var (
 	ErrProfileNotFound       = errors.New("profile does not exist")
 	ErrNotRestricted         = errors.New("profile is not restricted")
-	ErrInvalidReason         = errors.New("invalid restriction reason")
+	ErrInvalidReason         = errors.New("invalid restricted reason")
 	ErrWorkNotFound          = errors.New("work not found")
-	ErrInvalidWithholdReason = errors.New("invalid withhold reason")
+	ErrInvalidTakedownReason = errors.New("invalid takedown reason")
 )
 
 type Service struct {

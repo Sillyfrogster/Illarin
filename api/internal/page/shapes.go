@@ -85,7 +85,7 @@ type WorkDetail struct {
 	UnpublishedChanges    *bool                    `json:"unpublishedChanges,omitempty"`
 	NSFWPreference        WorkDetailNSFWPreference `json:"nsfwPreference"`
 	Follow                *notify.WorkFollow       `json:"follow,omitempty"`
-	Withhold              *WorkWithhold            `json:"withhold,omitempty"`
+	Takedown              *WorkTakedown            `json:"takedown,omitempty"`
 	DraftedChangesVersion *int64                   `json:"draftedChangesVersion,omitempty"`
 }
 
@@ -188,7 +188,7 @@ type WorkTag struct {
 	Value string `json:"value"`
 }
 
-type WorkWithhold struct {
+type WorkTakedown struct {
 	At     time.Time `json:"at"`
 	Reason string    `json:"reason"`
 }
@@ -201,7 +201,7 @@ type BrowseWork struct {
 	Type       BrowseWorkType        `json:"type"`
 	Name       string                `json:"name"`
 	OwnerState *BrowseWorkOwnerState `json:"ownerState,omitempty"`
-	Withhold   *WorkWithhold         `json:"withhold,omitempty"`
+	Takedown   *WorkTakedown         `json:"takedown,omitempty"`
 }
 
 type BrowseWorkType string
@@ -218,9 +218,9 @@ const (
 type BrowseWorkOwnerState string
 
 const (
-	BrowseWorkOwnerStateDraft    BrowseWorkOwnerState = "draft"
-	BrowseWorkOwnerStateUnlisted BrowseWorkOwnerState = "unlisted"
-	BrowseWorkOwnerStateWithheld BrowseWorkOwnerState = "withheld"
+	BrowseWorkOwnerStateDraft     BrowseWorkOwnerState = "draft"
+	BrowseWorkOwnerStateUnlisted  BrowseWorkOwnerState = "unlisted"
+	BrowseWorkOwnerStateTakenDown BrowseWorkOwnerState = "taken_down"
 )
 
 type BrowseCover struct {

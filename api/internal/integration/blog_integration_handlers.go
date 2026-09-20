@@ -15,7 +15,7 @@ import (
 const defaultAttemptListing = 50
 
 func (h *Handlers) ListBlogIntegrations(c *gin.Context) {
-	if _, ok := h.access.Authority(c, "reading blog integrations"); !ok {
+	if _, ok := h.access.Admin(c, "reading blog integrations"); !ok {
 		return
 	}
 	configured, err := h.blog.Integrations(c.Request.Context())
@@ -29,7 +29,7 @@ func (h *Handlers) ListBlogIntegrations(c *gin.Context) {
 }
 
 func (h *Handlers) AddBlogIntegration(c *gin.Context) {
-	authority, ok := h.access.Authority(c, "configuring a blog integration")
+	admin, ok := h.access.Admin(c, "configuring a blog integration")
 	if !ok {
 		return
 	}
@@ -40,7 +40,7 @@ func (h *Handlers) AddBlogIntegration(c *gin.Context) {
 		return
 	}
 	added, err := h.blog.AddIntegration(
-		c.Request.Context(), authority.ID,
+		c.Request.Context(), admin.ID,
 		blog.IntegrationEdit{
 			Name: request.Name, Address: request.Address, Announcements: readAnnouncementTypes(request.Announcements),
 		},
@@ -56,7 +56,7 @@ func (h *Handlers) AddBlogIntegration(c *gin.Context) {
 }
 
 func (h *Handlers) AddBlogChannel(c *gin.Context) {
-	authority, ok := h.access.Authority(c, "configuring a Discord integration")
+	admin, ok := h.access.Admin(c, "configuring a Discord integration")
 	if !ok {
 		return
 	}
@@ -64,7 +64,7 @@ func (h *Handlers) AddBlogChannel(c *gin.Context) {
 	if !ok {
 		return
 	}
-	added, err := h.blog.AddChannel(c.Request.Context(), authority.ID, edit)
+	added, err := h.blog.AddChannel(c.Request.Context(), admin.ID, edit)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -77,7 +77,7 @@ func (h *Handlers) UpdateBlogChannel(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "changing a Discord integration")
+	admin, ok := h.access.Admin(c, "changing a Discord integration")
 	if !ok {
 		return
 	}
@@ -86,7 +86,7 @@ func (h *Handlers) UpdateBlogChannel(c *gin.Context) {
 		return
 	}
 	updated, err := h.blog.UpdateChannel(
-		c.Request.Context(), authority.ID, id, edit,
+		c.Request.Context(), admin.ID, id, edit,
 	)
 	if err != nil {
 		h.blogIntegrationError(c, err)
@@ -120,7 +120,7 @@ func (h *Handlers) UpdateBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "changing a blog integration")
+	admin, ok := h.access.Admin(c, "changing a blog integration")
 	if !ok {
 		return
 	}
@@ -131,7 +131,7 @@ func (h *Handlers) UpdateBlogIntegration(c *gin.Context) {
 		return
 	}
 	updated, err := h.blog.UpdateIntegration(
-		c.Request.Context(), authority.ID, id,
+		c.Request.Context(), admin.ID, id,
 		blog.IntegrationUpdate{
 			Name: request.Name, Address: request.Address, Announcements: readAnnouncementTypes(request.Announcements),
 		},
@@ -148,11 +148,11 @@ func (h *Handlers) RemoveBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "removing a blog integration")
+	admin, ok := h.access.Admin(c, "removing a blog integration")
 	if !ok {
 		return
 	}
-	err := h.blog.RemoveIntegration(c.Request.Context(), authority.ID, id)
+	err := h.blog.RemoveIntegration(c.Request.Context(), admin.ID, id)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -165,12 +165,12 @@ func (h *Handlers) VerifyBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "verifying a blog integration")
+	admin, ok := h.access.Admin(c, "verifying a blog integration")
 	if !ok {
 		return
 	}
 	verified, err := h.blog.VerifyIntegration(
-		c.Request.Context(), authority.ID, id,
+		c.Request.Context(), admin.ID, id,
 	)
 	if err != nil {
 		h.blogIntegrationError(c, err)
@@ -184,12 +184,12 @@ func (h *Handlers) DisableBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "disabling a blog integration")
+	admin, ok := h.access.Admin(c, "disabling a blog integration")
 	if !ok {
 		return
 	}
 	disabled, err := h.blog.DisableIntegration(
-		c.Request.Context(), authority.ID, id,
+		c.Request.Context(), admin.ID, id,
 	)
 	if err != nil {
 		h.blogIntegrationError(c, err)
@@ -203,11 +203,11 @@ func (h *Handlers) RotateBlogIntegrationSecret(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "rotating an integration's signing secret")
+	admin, ok := h.access.Admin(c, "rotating an integration's signing secret")
 	if !ok {
 		return
 	}
-	rotated, err := h.blog.RotateSecret(c.Request.Context(), authority.ID, id)
+	rotated, err := h.blog.RotateSecret(c.Request.Context(), admin.ID, id)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -228,7 +228,7 @@ func (h *Handlers) ListBlogAnnouncementAttempts(c *gin.Context) {
 	if q.Refused(c) {
 		return
 	}
-	if _, ok := h.access.Authority(c, "reading blog announcement attempts"); !ok {
+	if _, ok := h.access.Admin(c, "reading blog announcement attempts"); !ok {
 		return
 	}
 	state := ""
@@ -252,7 +252,7 @@ func (h *Handlers) ListBlogAnnouncementTries(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if _, ok := h.access.Authority(c, "reading what an announcement attempt tried"); !ok {
+	if _, ok := h.access.Admin(c, "reading what an announcement attempt tried"); !ok {
 		return
 	}
 	made, err := h.blog.Tries(c.Request.Context(), id)
@@ -268,11 +268,11 @@ func (h *Handlers) ReplayBlogAnnouncementAttempt(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "replaying a blog announcement attempt")
+	admin, ok := h.access.Admin(c, "replaying a blog announcement attempt")
 	if !ok {
 		return
 	}
-	queued, err := h.blog.ReplayAttempt(c.Request.Context(), authority.ID, id)
+	queued, err := h.blog.ReplayAttempt(c.Request.Context(), admin.ID, id)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return
@@ -285,7 +285,7 @@ func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "repairing a Discord announcement")
+	admin, ok := h.access.Admin(c, "repairing a Discord announcement")
 	if !ok {
 		return
 	}
@@ -294,7 +294,7 @@ func (h *Handlers) RepairDiscordAnnouncement(c *gin.Context) {
 		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Send the repair as JSON.", "repair")
 		return
 	}
-	result, err := h.blog.RepairDiscord(c.Request.Context(), authority.ID, id, body)
+	result, err := h.blog.RepairDiscord(c.Request.Context(), admin.ID, id, body)
 	if err != nil {
 		h.blogIntegrationError(c, err)
 		return

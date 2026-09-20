@@ -713,9 +713,9 @@ const (
 )
 
 const (
-	shownVariant    = "detail"
-	galleryVariant  = "grid"
-	linkCardVariant = "og"
+	shownSize    = "detail"
+	gallerySize  = "grid"
+	linkCardSize = "og"
 )
 
 var ErrPostMediaNotFound = errors.New("no such post media")
@@ -735,15 +735,15 @@ type Header struct {
 }
 
 func PostMediaURL(mediaID uuid.UUID, purpose string, version uint32) string {
-	variant := shownVariant
+	size := shownSize
 	if purpose == PurposeLinkCard {
-		variant = linkCardVariant
+		size = linkCardSize
 	}
-	return fmt.Sprintf("/media/%s/%s/%d", mediaID, variant, version)
+	return fmt.Sprintf("/media/%s/%s/%d", mediaID, size, version)
 }
 
 func PostMediaThumbURL(mediaID uuid.UUID, version uint32) string {
-	return fmt.Sprintf("/media/%s/%s/%d", mediaID, galleryVariant, version)
+	return fmt.Sprintf("/media/%s/%s/%d", mediaID, gallerySize, version)
 }
 
 func (s *Service) SignPrivate(path string) string {
@@ -791,16 +791,16 @@ func (s *Service) AddPostMedia(
 	return added, nil
 }
 
-func (s *Service) PostMediaVariant(
+func (s *Service) PostImageSize(
 	ctx context.Context,
 	mediaID uuid.UUID,
-	variant string,
+	size string,
 	version uint32,
 	expires, signature string,
 ) (string, string, bool, error) {
-	_, ordinary := mediaproc.VariantByName(variant)
-	_, composed := mediaproc.LinkCardByName(variant)
-	if (!ordinary && !composed) || version != mediaproc.DerivativeVersion {
+	_, ordinary := mediaproc.ImageSizeByName(size)
+	_, composed := mediaproc.LinkCardByName(size)
+	if (!ordinary && !composed) || version != mediaproc.ImageSizeVersion {
 		return "", "", false, ErrPostMediaNotFound
 	}
 	var blobID uuid.UUID
@@ -823,7 +823,7 @@ func (s *Service) PostMediaVariant(
 		return "", "", false, fmt.Errorf("find post media: %w", err)
 	}
 	if !published {
-		path := fmt.Sprintf("/media/%s/%s/%d", mediaID, variant, version)
+		path := fmt.Sprintf("/media/%s/%s/%d", mediaID, size, version)
 		if !s.signer.Valid(path, expires, signature, s.now()) {
 			return "", "", false, ErrPostMediaNotFound
 		}
@@ -833,11 +833,11 @@ func (s *Service) PostMediaVariant(
 	}
 	var digest [sha256.Size]byte
 	copy(digest[:], digestBytes)
-	redirect, err := s.media.Serve(ctx, blobID, digest, variant, version)
+	redirect, err := s.media.Serve(ctx, blobID, digest, size, version)
 	if err != nil {
 		return "", "", false, err
 	}
-	return redirect, s.media.DerivativeType(), !published, nil
+	return redirect, s.media.ImageSizeMediaType(), !published, nil
 }
 
 type placed struct {

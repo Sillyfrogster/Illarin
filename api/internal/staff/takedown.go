@@ -13,50 +13,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *Service) Withhold(ctx context.Context, id, actorID uuid.UUID, reason string) error {
+func (s *Service) TakeDown(ctx context.Context, id, actorID uuid.UUID, reason string) error {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
-		return ErrInvalidWithholdReason
+		return ErrInvalidTakedownReason
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin withholding a work: %w", err)
+		return fmt.Errorf("begin taking down a work: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	withheld, err := db.New(tx).WithholdWork(ctx, db.WithholdWorkParams{
-		ID:             uuidToPgtype(id),
-		WithheldBy:     uuidToPgtype(actorID),
-		WithheldReason: textToPgtype(reason),
+	takenDown, err := db.New(tx).TakeDownWork(ctx, db.TakeDownWorkParams{
+		ID:              uuidToPgtype(id),
+		TakenDownBy:     uuidToPgtype(actorID),
+		TakenDownReason: textToPgtype(reason),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrWorkNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("withhold work: %w", err)
+		return fmt.Errorf("take down work: %w", err)
 	}
-	if err := tellOwner(ctx, tx, id, withheld.OwnerID, notify.WorkWithheld, notify.Words{
-		WorkName: withheld.PublicName, Reason: reason,
+	if err := tellOwner(ctx, tx, id, takenDown.OwnerID, notify.WorkTakenDown, notify.Words{
+		WorkName: takenDown.PublicName, Reason: reason,
 	}); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit the withhold: %w", err)
+		return fmt.Errorf("commit the takedown: %w", err)
 	}
 	return nil
 }
 
-func (s *Service) ClearWithhold(ctx context.Context, id uuid.UUID) error {
+func (s *Service) LiftTakedown(ctx context.Context, id uuid.UUID) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin clearing a withhold: %w", err)
+		return fmt.Errorf("begin lifting a takedown: %w", err)
 	}
 	defer tx.Rollback(ctx)
-	cleared, err := db.New(tx).ClearWorkWithhold(ctx, uuidToPgtype(id))
+	cleared, err := db.New(tx).LiftTakedown(ctx, uuidToPgtype(id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrWorkNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("clear work withhold: %w", err)
+		return fmt.Errorf("lift takedown: %w", err)
 	}
 	if err := tellOwner(ctx, tx, id, cleared.OwnerID, notify.WorkRestored, notify.Words{
 		WorkName: cleared.PublicName,
@@ -64,7 +64,7 @@ func (s *Service) ClearWithhold(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit clearing the withhold: %w", err)
+		return fmt.Errorf("commit lifting the takedown: %w", err)
 	}
 	return nil
 }

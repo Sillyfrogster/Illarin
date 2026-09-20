@@ -158,16 +158,16 @@ func ConnectApp(
 }
 
 type LibraryResult struct {
-	Accepted int              `json:"accepted"`
-	Removed  int              `json:"removed"`
-	Ignored  int              `json:"ignored"`
-	Withheld []WithheldNotice `json:"withheld"`
+	Accepted  int              `json:"accepted"`
+	Removed   int              `json:"removed"`
+	Ignored   int              `json:"ignored"`
+	Takedowns []TakedownNotice `json:"takedowns"`
 }
 
-type WithheldNotice struct {
-	WorkID     string    `json:"workId"`
-	Name       string    `json:"name"`
-	WithheldAt time.Time `json:"withheldAt"`
+type TakedownNotice struct {
+	WorkID      string    `json:"workId"`
+	Name        string    `json:"name"`
+	TakenDownAt time.Time `json:"takenDownAt"`
 }
 
 func ReportLibrary(t *testing.T, r http.Handler, token, appVersion string, workIDs ...string) LibraryResult {

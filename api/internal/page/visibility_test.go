@@ -71,7 +71,7 @@ func TestChangingVisibilityRequiresTheCreator(t *testing.T) {
 	}
 }
 
-func TestWithheldWorkVisibilityIsFrozen(t *testing.T) {
+func TestTakenDownWorkVisibilityIsFrozen(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, work.VisibilityListed)
@@ -83,10 +83,10 @@ func TestWithheldWorkVisibilityIsFrozen(t *testing.T) {
 	}
 	if _, err := pool.Exec(context.Background(), `
 		update works
-		   set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
+		   set taken_down_at = now(), taken_down_by = $2, taken_down_reason = 'testing'
 		 where id = $1
 	`, workID, ownerID); err != nil {
-		t.Fatalf("withhold work: %v", err)
+		t.Fatalf("take down work: %v", err)
 	}
 
 	changed := apitest.Send(t, router, apitest.AuthorizedJSONRequest(

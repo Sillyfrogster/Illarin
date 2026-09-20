@@ -10,11 +10,11 @@ import (
 )
 
 var (
-	ErrBlobNotFound       = errors.New("blob not found")
-	ErrTombstoned         = errors.New("blob digest is tombstoned")
-	ErrInvalidRange       = errors.New("invalid blob range")
-	ErrDerivativeNotFound = errors.New("derivative not found")
-	ErrInsufficientSpace  = errors.New("storage reserve would be crossed")
+	ErrBlobNotFound      = errors.New("blob not found")
+	ErrTombstoned        = errors.New("blob digest is tombstoned")
+	ErrInvalidRange      = errors.New("invalid blob range")
+	ErrImageSizeNotFound = errors.New("rendered not found")
+	ErrInsufficientSpace = errors.New("storage reserve would be crossed")
 )
 
 type Capacity struct {
@@ -28,9 +28,9 @@ type StoredBlob struct {
 	ByteSize int64
 }
 
-type DerivativeID struct {
+type ImageSizeID struct {
 	SourceDigest [sha256.Size]byte
-	Variant      string
+	Size         string
 	Version      uint32
 }
 
@@ -41,9 +41,9 @@ type Store interface {
 	ReadRange(ctx context.Context, id uuid.UUID, offset, length int64) (io.ReadCloser, error)
 	InternalRedirect(ctx context.Context, id uuid.UUID) (string, error)
 	Delete(ctx context.Context, id uuid.UUID) error
-	DeleteDerivatives(ctx context.Context, digest [sha256.Size]byte) error
-	PutDerivative(ctx context.Context, id DerivativeID, body []byte) error
-	OpenDerivative(ctx context.Context, id DerivativeID) (io.ReadCloser, error)
-	InternalDerivativeRedirect(ctx context.Context, id DerivativeID) (string, error)
-	ClearDerivatives(ctx context.Context) error
+	DeleteImageSizes(ctx context.Context, digest [sha256.Size]byte) error
+	PutImageSize(ctx context.Context, id ImageSizeID, body []byte) error
+	OpenImageSize(ctx context.Context, id ImageSizeID) (io.ReadCloser, error)
+	InternalImageSizeRedirect(ctx context.Context, id ImageSizeID) (string, error)
+	ClearImageCache(ctx context.Context) error
 }

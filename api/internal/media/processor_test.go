@@ -14,25 +14,25 @@ import (
 	"testing"
 )
 
-func TestNamedVariantsAreTheRelaunchSet(t *testing.T) {
+func TestNamedImageSizesAreTheRelaunchSet(t *testing.T) {
 	t.Parallel()
 	want := []string{
 		"grid", "grid_blurred",
 		"detail", "detail_blurred",
 		"thumb", "thumb_blurred",
 	}
-	if got := VariantNames(); !slices.Equal(got, want) {
-		t.Fatalf("variants = %v, want %v", got, want)
+	if got := ImageSizeNames(); !slices.Equal(got, want) {
+		t.Fatalf("imageSizes = %v, want %v", got, want)
 	}
-	if _, ok := VariantByName("og"); ok {
-		t.Fatal("og was accepted as an ordinary media variant")
+	if _, ok := ImageSizeByName("og"); ok {
+		t.Fatal("og was accepted as an ordinary media size")
 	}
-	if DerivativeVersion != 2 {
-		t.Fatal("the smooth blur must not reuse the mosaic derivative cache")
+	if ImageSizeVersion != 2 {
+		t.Fatal("the smooth blur must not reuse the mosaic rendered cache")
 	}
 }
 
-func TestVariantBoundsWithoutCroppingOrUpscaling(t *testing.T) {
+func TestAnImageSizeBoundsWithoutCroppingOrUpscaling(t *testing.T) {
 	t.Parallel()
 	source := image.NewRGBA(image.Rect(0, 0, 1200, 600))
 	encoded := encodePNG(t, source)
@@ -47,10 +47,10 @@ func TestVariantBoundsWithoutCroppingOrUpscaling(t *testing.T) {
 		t.Fatalf("native dimensions = %dx%d, want 1200x600", prepared.Width, prepared.Height)
 	}
 
-	grid := derivativeNamed(t, prepared.Derivatives, "grid")
+	grid := sizeNamed(t, prepared.Sizes, "grid")
 	decoded, err := png.Decode(bytes.NewReader(grid.Bytes))
 	if err != nil {
-		t.Fatalf("decode grid derivative: %v", err)
+		t.Fatalf("decode grid rendered: %v", err)
 	}
 	if got := decoded.Bounds().Size(); got.X != 640 || got.Y != 320 {
 		t.Fatalf("grid dimensions = %dx%d, want 640x320", got.X, got.Y)
@@ -63,10 +63,10 @@ func TestVariantBoundsWithoutCroppingOrUpscaling(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Prepare small image: %v", err)
 	}
-	thumb := derivativeNamed(t, prepared.Derivatives, "thumb")
+	thumb := sizeNamed(t, prepared.Sizes, "thumb")
 	decoded, err = png.Decode(bytes.NewReader(thumb.Bytes))
 	if err != nil {
-		t.Fatalf("decode thumb derivative: %v", err)
+		t.Fatalf("decode thumb rendered: %v", err)
 	}
 	if got := decoded.Bounds().Size(); got.X != 80 || got.Y != 40 {
 		t.Fatalf("small thumb dimensions = %dx%d, want native 80x40", got.X, got.Y)
@@ -102,14 +102,14 @@ func TestBlurredCounterpartDoesNotCarryClearPixels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
-	clear := derivativeNamed(t, prepared.Derivatives, "grid")
-	blurred := derivativeNamed(t, prepared.Derivatives, "grid_blurred")
+	clear := sizeNamed(t, prepared.Sizes, "grid")
+	blurred := sizeNamed(t, prepared.Sizes, "grid_blurred")
 	if bytes.Equal(clear.Bytes, blurred.Bytes) {
-		t.Fatal("blurred derivative is byte-identical to the clear derivative")
+		t.Fatal("blurred rendered is byte-identical to the clear rendered")
 	}
 	decoded, err := png.Decode(bytes.NewReader(blurred.Bytes))
 	if err != nil {
-		t.Fatalf("decode blurred derivative: %v", err)
+		t.Fatalf("decode blurred rendered: %v", err)
 	}
 	levels := make(map[uint32]struct{})
 	for x := 240; x < 400; x++ {
@@ -131,16 +131,16 @@ func TestEncoderCanBeReplaced(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
-	if encoder.calls != len(VariantNames()) {
-		t.Fatalf("encoder calls = %d, want %d", encoder.calls, len(VariantNames()))
+	if encoder.calls != len(ImageSizeNames()) {
+		t.Fatalf("encoder calls = %d, want %d", encoder.calls, len(ImageSizeNames()))
 	}
-	for _, derivative := range prepared.Derivatives {
-		if string(derivative.Bytes) != "replacement encoding" {
-			t.Fatalf("%s bytes = %q", derivative.Variant, derivative.Bytes)
+	for _, rendered := range prepared.Sizes {
+		if string(rendered.Bytes) != "replacement encoding" {
+			t.Fatalf("%s bytes = %q", rendered.Size, rendered.Bytes)
 		}
 	}
-	if processor.DerivativeType() != "image/example" {
-		t.Fatalf("derivative type = %q", processor.DerivativeType())
+	if processor.ImageSizeMediaType() != "image/example" {
+		t.Fatalf("rendered type = %q", processor.ImageSizeMediaType())
 	}
 }
 
@@ -159,8 +159,8 @@ func TestOGIsASeparateComposedPreview(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ComposeLinkCard: %v", err)
 	}
-	if preview.Variant != "og" {
-		t.Fatalf("preview variant = %q, want og", preview.Variant)
+	if preview.Size != "og" {
+		t.Fatalf("preview size = %q, want og", preview.Size)
 	}
 	decoded, err := png.Decode(bytes.NewReader(preview.Bytes))
 	if err != nil {
@@ -172,8 +172,8 @@ func TestOGIsASeparateComposedPreview(t *testing.T) {
 	if got := color.RGBAModel.Convert(decoded.At(0, 0)).(color.RGBA); got != previewField {
 		t.Fatalf("preview corner = %#v, want the carbon field", got)
 	}
-	if _, ordinary := VariantByName("og"); ordinary {
-		t.Fatal("composed og preview entered the ordinary variant set")
+	if _, ordinary := ImageSizeByName("og"); ordinary {
+		t.Fatal("composed og preview entered the ordinary size set")
 	}
 }
 
@@ -189,15 +189,15 @@ func (e *recordingEncoder) Encode(w io.Writer, _ image.Image) error {
 	return err
 }
 
-func derivativeNamed(t *testing.T, derivatives []Derivative, name string) Derivative {
+func sizeNamed(t *testing.T, sizes []Rendered, name string) Rendered {
 	t.Helper()
-	for _, derivative := range derivatives {
-		if derivative.Variant == name {
-			return derivative
+	for _, rendered := range sizes {
+		if rendered.Size == name {
+			return rendered
 		}
 	}
-	t.Fatalf("derivative %q is missing", name)
-	return Derivative{}
+	t.Fatalf("rendered %q is missing", name)
+	return Rendered{}
 }
 
 func encodePNG(t *testing.T, source image.Image) []byte {
@@ -260,8 +260,8 @@ func TestSocialPreviewOfFlaggedWorkIsBlurred(t *testing.T) {
 		t.Fatalf("compose og_blurred: %v", err)
 	}
 
-	if blurred.Variant != "og_blurred" {
-		t.Fatalf("preview variant = %q, want og_blurred", blurred.Variant)
+	if blurred.Size != "og_blurred" {
+		t.Fatalf("preview size = %q, want og_blurred", blurred.Size)
 	}
 	if bytes.Equal(clear.Bytes, blurred.Bytes) {
 		t.Fatal("the blurred social preview is byte-identical to the clear one")
@@ -273,10 +273,10 @@ func TestSocialPreviewOfFlaggedWorkIsBlurred(t *testing.T) {
 	if got := decoded.Bounds().Size(); got.X != 1200 || got.Y != 630 {
 		t.Fatalf("preview dimensions = %dx%d, want 1200x630", got.X, got.Y)
 	}
-	if _, ordinary := VariantByName("og_blurred"); ordinary {
-		t.Fatal("the blurred composed preview entered the ordinary variant set")
+	if _, ordinary := ImageSizeByName("og_blurred"); ordinary {
+		t.Fatal("the blurred composed preview entered the ordinary size set")
 	}
 	if _, ok := LinkCardByName("grid"); ok {
-		t.Fatal("an ordinary variant was accepted as a social preview")
+		t.Fatal("an ordinary size was accepted as a social preview")
 	}
 }

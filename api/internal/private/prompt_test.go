@@ -204,12 +204,12 @@ func TestWorksWithPrivatePromptsRefuseEveryOrdinaryExportWithoutRecordingAHandof
 
 	var events int
 	if err := pool.QueryRow(t.Context(),
-		`select count(*) from download_events where work_id = $1`, started.ID,
+		`select count(*) from download_records where work_id = $1`, started.ID,
 	).Scan(&events); err != nil {
-		t.Fatalf("count refused download events: %v", err)
+		t.Fatalf("count refused download records: %v", err)
 	}
 	if events != 0 {
-		t.Fatalf("refused ordinary exports recorded %d download events", events)
+		t.Fatalf("refused ordinary exports recorded %d download records", events)
 	}
 }
 
@@ -249,8 +249,8 @@ func TestAnOriginalUploadWithPrivatePromptsIsRecoveryAccessForItsOwnerAlone(t *t
 	var events int
 	var class string
 	if err := pool.QueryRow(t.Context(), `
-		select count(*), coalesce(max(authorization_class), '')
-		  from download_events where work_id = $1
+		select count(*), coalesce(max(access), '')
+		  from download_records where work_id = $1
 	`, workID).Scan(&events, &class); err != nil {
 		t.Fatalf("read private prompt source events: %v", err)
 	}

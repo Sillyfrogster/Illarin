@@ -60,11 +60,11 @@ const (
 )
 
 type VersionComparison struct {
-	From            page.RecordedVersion `json:"from"`
-	Groups          []VersionChangeGroup `json:"groups"`
-	PromptsWithheld bool                 `json:"promptsWithheld"`
-	To              page.RecordedVersion `json:"to"`
-	Unavailable     *string              `json:"unavailable,omitempty"`
+	From          page.RecordedVersion `json:"from"`
+	Groups        []VersionChangeGroup `json:"groups"`
+	PromptsHidden bool                 `json:"promptsHidden"`
+	To            page.RecordedVersion `json:"to"`
+	Unavailable   *string              `json:"unavailable,omitempty"`
 }
 
 type CompareWorkVersionsParams struct {

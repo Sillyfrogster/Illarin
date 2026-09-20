@@ -83,7 +83,7 @@ func (stack preservedStack) preserve(t *testing.T, version, key, content string)
 func TestAnOwnerExportsEveryPreservedPromptTheirPresetHolds(t *testing.T) {
 	t.Parallel()
 	stack := newPreservedStack(t)
-	stack.preserve(t, "1.0.0", "jailbreak", "The withheld one.")
+	stack.preserve(t, "1.0.0", "jailbreak", "The taken down one.")
 	stack.preserve(t, "1.0.0", "authors_note", "The other one.")
 	stack.preserve(t, "0.9.0", "jailbreak", "An older take.")
 
@@ -137,7 +137,7 @@ func TestAnOwnerExportsEveryPreservedPromptTheirPresetHolds(t *testing.T) {
 func TestPreservedPromptsAnswerNobodyButTheirOwner(t *testing.T) {
 	t.Parallel()
 	stack := newPreservedStack(t)
-	stack.preserve(t, "1.0.0", "jailbreak", "The withheld one.")
+	stack.preserve(t, "1.0.0", "jailbreak", "The taken down one.")
 
 	signedOut := apitest.Send(t, stack.router, httptest.NewRequest(
 		http.MethodGet, "/v1/works/"+stack.workID+"/preserved-prompts", nil,
@@ -152,7 +152,7 @@ func TestPreservedPromptsAnswerNobodyButTheirOwner(t *testing.T) {
 	if stranger.Code != http.StatusNotFound {
 		t.Errorf("another creator asked for preserved prompts and got %d, want 404", stranger.Code)
 	}
-	if strings.Contains(stranger.Body.String(), "The withheld one.") {
+	if strings.Contains(stranger.Body.String(), "The taken down one.") {
 		t.Error("the refusal carried the preserved prompts")
 	}
 }
@@ -173,7 +173,7 @@ func TestAWorkHoldingNoPreservedPromptsHasNoExport(t *testing.T) {
 func TestThePreservedPromptCountStandsOnlyForTheOwner(t *testing.T) {
 	t.Parallel()
 	stack := newPreservedStack(t)
-	stack.preserve(t, "1.0.0", "jailbreak", "The withheld one.")
+	stack.preserve(t, "1.0.0", "jailbreak", "The taken down one.")
 
 	owner := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/works/"+stack.workID, nil,
@@ -187,7 +187,7 @@ func TestThePreservedPromptCountStandsOnlyForTheOwner(t *testing.T) {
 	if page.PreservedPrompts == nil || *page.PreservedPrompts != 1 {
 		t.Errorf("the owner's page counts %v preserved prompts, want 1", page.PreservedPrompts)
 	}
-	if strings.Contains(owner.Body.String(), "The withheld one.") {
+	if strings.Contains(owner.Body.String(), "The taken down one.") {
 		t.Error("the page rendered preserved prompts")
 	}
 
@@ -195,6 +195,6 @@ func TestThePreservedPromptCountStandsOnlyForTheOwner(t *testing.T) {
 		http.MethodGet, "/v1/works/"+stack.workID, nil,
 	), stack.stranger))
 	if strings.Contains(stranger.Body.String(), "preservedPrompts") {
-		t.Error("a stranger's page says the work is withholding something")
+		t.Error("a stranger's page says the work is hiding something")
 	}
 }

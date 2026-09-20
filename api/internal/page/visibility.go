@@ -50,7 +50,7 @@ func (s *Service) SetVisibility(
 	if err != nil {
 		return fmt.Errorf("check work visibility: %w", err)
 	}
-	if state.WithheldAt.Valid {
+	if state.TakenDownAt.Valid {
 		return work.ErrWorkFrozen
 	}
 	if work.Lifecycle(state.Lifecycle) == work.LifecycleDraft {

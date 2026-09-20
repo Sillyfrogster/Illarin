@@ -159,7 +159,7 @@ func (s *Service) ForgetOldSecrets(ctx context.Context, now time.Time) (int64, e
 	return result.RowsAffected(), err
 }
 
-func (s *Service) RunSweeper(ctx context.Context, report func(error)) {
+func (s *Service) RunCleanup(ctx context.Context, report func(error)) {
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 	for {

@@ -29,7 +29,7 @@ func (h *Handlers) CollectSends(c *gin.Context) {
 		h.sendError(c, err)
 		return
 	}
-	if len(collected.Work) == 0 && len(collected.Withheld) == 0 {
+	if len(collected.Work) == 0 && len(collected.Takedowns) == 0 {
 		c.Status(http.StatusNoContent)
 		return
 	}
@@ -38,7 +38,7 @@ func (h *Handlers) CollectSends(c *gin.Context) {
 		items = append(items, toAPICollectedSend(released))
 	}
 	c.JSON(http.StatusOK, CollectedSends{
-		Sends: items, Withheld: toAPIWithheldNotices(collected.Withheld),
+		Sends: items, Takedowns: toAPITakedownNotices(collected.Takedowns),
 	})
 }
 
@@ -59,7 +59,7 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, LibraryReportResult{
 		Accepted: result.Accepted, Removed: result.Removed, Ignored: result.Ignored,
-		Withheld: toAPIWithheldNotices(result.Withheld),
+		Takedowns: toAPITakedownNotices(result.Takedowns),
 	})
 }
 
@@ -270,11 +270,11 @@ func toAPIWorkConnectedApp(state AppState) WorkConnectedApp {
 	return item
 }
 
-func toAPIWithheldNotices(notices []WithheldWork) []WithheldNotice {
-	items := make([]WithheldNotice, 0, len(notices))
+func toAPITakedownNotices(notices []TakenDownWork) []TakedownNotice {
+	items := make([]TakedownNotice, 0, len(notices))
 	for _, notice := range notices {
-		items = append(items, WithheldNotice{
-			WorkId: notice.WorkID, Name: notice.Name, WithheldAt: notice.WithheldAt,
+		items = append(items, TakedownNotice{
+			WorkId: notice.WorkID, Name: notice.Name, TakenDownAt: notice.TakenDownAt,
 		})
 	}
 	return items

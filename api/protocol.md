@@ -35,6 +35,7 @@ where it said export target, and send where it said delivery. On the wire:
 | poll `status: linked` | poll `status: connected` |
 | `deliveries` in a collect response | `sends` |
 | the `X-Illarin-Export-Target` header on a file | `X-Illarin-Format` |
+| `withheld` in a collect response or a library report result, and each notice's `withheldAt` | `takedowns`, and `takenDownAt` |
 
 For now the old names still answer beside the new ones: every `/api/v1/assets`
 path still works at its `/api/v1/works` address, and every old path above still
@@ -426,7 +427,7 @@ Content-Type: application/json
 ```
 
 Illarin holds the request for 25 to 30 seconds. It answers `200` as soon as
-there is work or a withheld notice, and `204` when the wait ends with neither.
+there is work or a takedown notice, and `204` when the wait ends with neither.
 Send `"acknowledge": []` when there is nothing to confirm; the field is required.
 
 This is a durable queue read, not authorization polling, and the two never share
@@ -435,7 +436,7 @@ work's own visibility again at the moment it is released, so a work
 withdrawn after it was queued never arrives.
 
 A `200` carries one entry per released send, and the
-[withheld notices](#withheld-notices) waiting for this installation:
+[takedown notices](#takedown-notices) waiting for this installation:
 
 ```json
 {
@@ -457,7 +458,7 @@ A `200` carries one entry per released send, and the
       ]
     }
   ],
-  "withheld": []
+  "takedowns": []
 }
 ```
 
@@ -501,7 +502,7 @@ The install rules the capability commits you to are in the
 disabled and ask for its permissions before first run, keep an update enabled and
 ask only about permissions the new manifest adds, refuse a send that would
 replace an extension installed from another source, and show the owner a
-[withheld notice](#withheld-notices). Report the extension in your library once it
+[takedown notice](#takedown-notices). Report the extension in your library once it
 is installed.
 
 ## Report your library
@@ -553,31 +554,31 @@ change and a full snapshot occasionally, so a missed update repairs itself.
 The response counts what was recorded:
 
 ```json
-{"accepted": 142, "removed": 3, "ignored": 1, "withheld": []}
+{"accepted": 142, "removed": 3, "ignored": 1, "takedowns": []}
 ```
 
 `ignored` counts entries naming a work Illarin cannot offer, such as one that
 has since been deleted.
 
-### Withheld notices
+### Takedown notices
 
-When Illarin withholds an extension this installation reports installed, the
+When Illarin takes down an extension this installation reports installed, the
 next library report or send wait carries a notice naming it, whichever comes
 first:
 
 ```json
 {"accepted": 0, "removed": 0, "ignored": 0,
- "withheld": [{"workId": "…", "name": "Quiet Toolbox",
-               "withheldAt": "2026-09-14T06:00:00Z"}]}
+ "takedowns": [{"workId": "…", "name": "Quiet Toolbox",
+                "takenDownAt": "2026-09-14T06:00:00Z"}]}
 ```
 
-Each withhold is carried once, so keep the notice when it arrives and show the
+Each takedown is carried once, so keep the notice when it arrives and show the
 owner which extension it names. Whether to switch the extension off is the
 owner's call. Illarin never contacts the installation to tell it: the notice
 only rides on a request the installation makes. A send of that extension
 still waiting to be collected stops as `withdrawn`.
 
-An extension withheld again after its withhold was cleared carries a new notice.
+An extension taken down again after its takedown was lifted carries a new notice.
 Only an extension carries one, because every other type is content an app reads
 rather than code it runs.
 
@@ -586,7 +587,7 @@ rather than code it runs.
 The account settings page lists and revokes connected apps independently.
 Revoking one invalidates both of its credential classes immediately, wipes its
 capabilities and the app version it reported, and deletes its pending sends,
-its library mirror and any withheld notice it has not yet collected. Another
+its library mirror and any takedown notice it has not yet collected. Another
 connected app on the same account keeps all of them.
 
 Your app should provide a local disconnect action too. Until a public remote
@@ -663,6 +664,6 @@ Reporting:
 - Each extension is reported in the library when it is installed, updated or
   removed.
 - Every library report carries the app's `appVersion`.
-- A withheld notice from a library report or a send wait is stored and shown
+- A takedown notice from a library report or a send wait is stored and shown
   to the owner, naming the extension.
-- A withheld extension stays as it is until the owner decides what to do with it.
+- A taken-down extension stays as it is until the owner decides what to do with it.

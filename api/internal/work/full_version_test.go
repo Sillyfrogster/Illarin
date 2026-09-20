@@ -54,12 +54,12 @@ func TestVersionMediaBelongsToItsWorkAndKeepsItsBytes(t *testing.T) {
 		t.Fatal("historical media reference changed ownership")
 	}
 	now := time.Now().Add(48 * time.Hour)
-	sweeper := apitest.SweeperAt(svc, func() time.Time { return now })
-	if _, err := sweeper.Sweep(ctx); err != nil {
+	cleanup := apitest.CleanupAt(svc, func() time.Time { return now })
+	if _, err := cleanup.Cleanup(ctx); err != nil {
 		t.Fatal(err)
 	}
 	now = now.Add(48 * time.Hour)
-	if _, err := sweeper.Sweep(ctx); err != nil {
+	if _, err := cleanup.Cleanup(ctx); err != nil {
 		t.Fatal(err)
 	}
 	var retained bool
@@ -129,7 +129,7 @@ func TestVersionHistoryEndsWithExpiredDeletion(t *testing.T) {
 	versionExec(t, pool, `select record_initial_work_version($1, true)`, id)
 	versionExec(t, pool, `update works set deleted_at = now() - interval '40 days',
 		recoverable_until = now() - interval '10 days' where id = $1`, id)
-	if _, err := apitest.Sweeper(svc).Sweep(context.Background()); err != nil {
+	if _, err := apitest.Cleanup(svc).Cleanup(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	var count int
@@ -152,7 +152,7 @@ func TestVersionMediaStillObeysPurgeAndWorkDeletion(t *testing.T) {
 	versionExec(t, pool, `insert into work_media (id, work_id, role, width, height, blob_id)
 		values ($1, $2, 'avatar', 1, 1, $3)`, mediaID, id, stored.ID)
 	versionExec(t, pool, `select record_initial_work_version($1, true)`, id)
-	if err := apitest.Sweeper(svc).Purge(ctx, sha256.Sum256([]byte(content)), "test_purge", uuid.New()); err != nil {
+	if err := apitest.Cleanup(svc).Purge(ctx, sha256.Sum256([]byte(content)), "test_purge", uuid.New()); err != nil {
 		t.Fatal(err)
 	}
 	var removed bool

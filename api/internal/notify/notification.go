@@ -13,7 +13,7 @@ import (
 type Type string
 
 const (
-	WorkWithheld      Type = "work_withheld"
+	WorkTakenDown     Type = "work_taken_down"
 	WorkRestored      Type = "work_restored"
 	WorkUpdated       Type = "work_updated"
 	ProfileRestricted Type = "profile_restricted"

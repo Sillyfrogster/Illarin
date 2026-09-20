@@ -45,7 +45,7 @@ func TestMediaURLsUseTheSmoothBlurCacheVersion(t *testing.T) {
 	}
 }
 
-func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testing.T) {
+func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesImageSizes(t *testing.T) {
 	t.Parallel()
 	svc, pool := apitest.Works(t)
 	ownerID := uuid.New()
@@ -74,8 +74,8 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 	if added.Width != 1200 || added.Height != 600 {
 		t.Fatalf("dimensions = %dx%d, want native 1200x600", added.Width, added.Height)
 	}
-	if added.DerivativeVersion != mediaproc.DerivativeVersion {
-		t.Fatalf("derivative version = %d, want %d", added.DerivativeVersion, mediaproc.DerivativeVersion)
+	if added.ImageSizeVersion != mediaproc.ImageSizeVersion {
+		t.Fatalf("image size version = %d, want %d", added.ImageSizeVersion, mediaproc.ImageSizeVersion)
 	}
 
 	var blobID uuid.UUID
@@ -95,12 +95,12 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 	}
 	var digest [sha256.Size]byte
 	copy(digest[:], digestBytes)
-	for _, variant := range mediaproc.VariantNames() {
-		opened, err := svc.Store().OpenDerivative(context.Background(), storage.DerivativeID{
-			SourceDigest: digest, Variant: variant, Version: mediaproc.DerivativeVersion,
+	for _, size := range mediaproc.ImageSizeNames() {
+		opened, err := svc.Store().OpenImageSize(context.Background(), storage.ImageSizeID{
+			SourceDigest: digest, Size: size, Version: mediaproc.ImageSizeVersion,
 		})
 		if err != nil {
-			t.Fatalf("open pre-generated %s derivative: %v", variant, err)
+			t.Fatalf("open pre-generated %s size: %v", size, err)
 		}
 		opened.Close()
 	}
@@ -115,7 +115,7 @@ func TestCreatorAddedMediaKeepsNativeDimensionsAndPreGeneratesVariants(t *testin
 	}
 	canonical.Close()
 	if !bytes.Equal(canonicalBytes.Bytes(), source) {
-		t.Fatal("canonical media was changed while making variants")
+		t.Fatal("canonical media was changed while making imageSizes")
 	}
 }
 
@@ -259,7 +259,7 @@ func TestAlternateAvatarCoversUntilAPrimaryTakesItsPlace(t *testing.T) {
 	}
 }
 
-func TestMediaVariantRegeneratesABoundedCacheMiss(t *testing.T) {
+func TestAnImageSizeRegeneratesABoundedCacheMiss(t *testing.T) {
 	t.Parallel()
 	svc, _ := apitest.Works(t)
 	ownerID := uuid.New()
@@ -277,35 +277,35 @@ func TestMediaVariantRegeneratesABoundedCacheMiss(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AddMedia: %v", err)
 	}
-	if err := svc.Store().ClearDerivatives(context.Background()); err != nil {
-		t.Fatalf("clear derivative cache: %v", err)
+	if err := svc.Store().ClearImageCache(context.Background()); err != nil {
+		t.Fatalf("clear the image cache: %v", err)
 	}
 
-	download, err := svc.MediaVariant(context.Background(), work.MediaRequest{
-		MediaID: added.ID, Variant: "grid", Version: mediaproc.DerivativeVersion,
+	download, err := svc.ImageSize(context.Background(), work.MediaRequest{
+		MediaID: added.ID, Size: "grid", Version: mediaproc.ImageSizeVersion,
 		ViewerID: &ownerID, Expires: privateMediaQuery(svc, added.ID, "expires"),
 		Signature: privateMediaQuery(svc, added.ID, "signature"),
 	})
 	if err != nil {
-		t.Fatalf("MediaVariant cache miss: %v", err)
+		t.Fatalf("ImageSize cache miss: %v", err)
 	}
-	if download.InternalRedirect == "" || download.MediaType != mediaproc.DerivativeType {
+	if download.InternalRedirect == "" || download.MediaType != mediaproc.ImageSizeMediaType {
 		t.Fatalf("download = %+v", download)
 	}
 
 	for _, request := range []struct {
-		variant string
+		size    string
 		version uint32
 	}{
-		{variant: "1200x630", version: mediaproc.DerivativeVersion},
-		{variant: "grid", version: mediaproc.DerivativeVersion + 1},
+		{size: "1200x630", version: mediaproc.ImageSizeVersion},
+		{size: "grid", version: mediaproc.ImageSizeVersion + 1},
 	} {
-		_, err := svc.MediaVariant(context.Background(), work.MediaRequest{
-			MediaID: added.ID, Variant: request.variant, Version: request.version,
+		_, err := svc.ImageSize(context.Background(), work.MediaRequest{
+			MediaID: added.ID, Size: request.size, Version: request.version,
 		})
 		if !errors.Is(err, work.ErrMediaNotFound) {
-			t.Fatalf("MediaVariant(%q, %d) error = %v, want ErrMediaNotFound",
-				request.variant, request.version, err)
+			t.Fatalf("ImageSize(%q, %d) error = %v, want ErrMediaNotFound",
+				request.size, request.version, err)
 		}
 	}
 }
@@ -420,8 +420,8 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 		go func() {
 			ready.Done()
 			<-start
-			_, err := svc.MediaVariant(context.Background(), work.MediaRequest{
-				MediaID: added.ID, Variant: "grid", Version: mediaproc.DerivativeVersion,
+			_, err := svc.ImageSize(context.Background(), work.MediaRequest{
+				MediaID: added.ID, Size: "grid", Version: mediaproc.ImageSizeVersion,
 				ViewerID: &ownerID, Expires: privateMediaQuery(svc, added.ID, "expires"),
 				Signature: privateMediaQuery(svc, added.ID, "signature"),
 			})
@@ -433,12 +433,12 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 	select {
 	case <-processor.renderStarted:
 	case err := <-errors:
-		t.Fatalf("MediaVariant returned before any render started: %v", err)
+		t.Fatalf("ImageSize returned before any render started: %v", err)
 	}
 	close(processor.releaseRender)
 	for range requests {
 		if err := <-errors; err != nil {
-			t.Fatalf("MediaVariant: %v", err)
+			t.Fatalf("ImageSize: %v", err)
 		}
 	}
 	if calls := processor.renderCalls.Load(); calls != 1 {
@@ -461,22 +461,22 @@ func (p *blockingMediaProcessor) Render(
 	context.Context,
 	io.Reader,
 	string,
-) (mediaproc.Derivative, error) {
+) (mediaproc.Rendered, error) {
 	p.renderCalls.Add(1)
 	p.startedOnce.Do(func() { close(p.renderStarted) })
 	<-p.releaseRender
-	return mediaproc.Derivative{Variant: "grid", Bytes: []byte("rendered")}, nil
+	return mediaproc.Rendered{Size: "grid", Bytes: []byte("rendered")}, nil
 }
 
 func (p *blockingMediaProcessor) ComposeLinkCard(
 	context.Context,
 	io.Reader,
 	string,
-) (mediaproc.Derivative, error) {
-	return mediaproc.Derivative{}, errors.New("unexpected social preview")
+) (mediaproc.Rendered, error) {
+	return mediaproc.Rendered{}, errors.New("unexpected social preview")
 }
 
-func (p *blockingMediaProcessor) DerivativeType() string { return "image/png" }
+func (p *blockingMediaProcessor) ImageSizeMediaType() string { return "image/png" }
 
 func testPNG(t *testing.T, width, height int, fill color.Color) []byte {
 	t.Helper()

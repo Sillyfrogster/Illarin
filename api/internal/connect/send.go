@@ -114,21 +114,21 @@ type ReportedEntry struct {
 }
 
 type LibraryResult struct {
-	Accepted int
-	Removed  int
-	Ignored  int
-	Withheld []WithheldWork
+	Accepted  int
+	Removed   int
+	Ignored   int
+	Takedowns []TakenDownWork
 }
 
-type WithheldWork struct {
-	WorkID     uuid.UUID
-	Name       string
-	WithheldAt time.Time
+type TakenDownWork struct {
+	WorkID      uuid.UUID
+	Name        string
+	TakenDownAt time.Time
 }
 
 type Collected struct {
-	Work     []Work
-	Withheld []WithheldWork
+	Work      []Work
+	Takedowns []TakenDownWork
 }
 
 func chooseFormat(accepted []string, offered []SendFormat, hasOriginal bool) (string, string, bool) {

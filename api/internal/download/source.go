@@ -17,7 +17,7 @@ type Source struct {
 	InternalRedirect string
 	MediaType        string
 	Inline           bool
-	Event            Event
+	Record           Record
 }
 
 // Source hands over the main file of a work
@@ -60,7 +60,7 @@ func (s *Service) Source(
 	return Source{
 		InternalRedirect: redirect, MediaType: location.MediaType,
 		Inline: format.IsInlineMediaType(location.MediaType),
-		Event: newEvent(
+		Record: newRecord(
 			location.WorkID, &originalFileID, format.Raw,
 			location.OwnerID, viewerID,
 		),
@@ -72,6 +72,6 @@ func (s *Service) SourceForSend(ctx context.Context, workID uuid.UUID) (Source, 
 	if err != nil {
 		return Source{}, err
 	}
-	download.Event.AuthorizationClass = AuthorizationLinkedInstance
+	download.Record.Access = AccessApp
 	return download, nil
 }

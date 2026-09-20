@@ -55,7 +55,7 @@ func Register(routes api.Routes, h *Handlers) {
 
 func (h *Handlers) IntegrationAccess() IntegrationAccess {
 	return IntegrationAccess{
-		Authority: func(c *gin.Context, action string) (accountIdentity, bool) {
+		Admin: func(c *gin.Context, action string) (accountIdentity, bool) {
 			current, ok := h.blogAdmin(c, action)
 			return accountIdentity{ID: current.ID, Handle: current.Handle}, ok
 		},
@@ -64,7 +64,7 @@ func (h *Handlers) IntegrationAccess() IntegrationAccess {
 }
 
 type IntegrationAccess struct {
-	Authority func(*gin.Context, string) (accountIdentity, bool)
+	Admin     func(*gin.Context, string) (accountIdentity, bool)
 	Editor    func(*gin.Context, string) (Editor, bool)
 	BlogError func(*gin.Context, error)
 	PostError func(*gin.Context, error)

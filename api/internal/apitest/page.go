@@ -34,10 +34,10 @@ type WorkPageResponse struct {
 	} `json:"media"`
 	Preview        *string `json:"preview"`
 	NSFWPreference string  `json:"nsfwPreference"`
-	Withhold       *struct {
+	Takedown       *struct {
 		Reason string    `json:"reason"`
 		At     time.Time `json:"at"`
-	} `json:"withhold"`
+	} `json:"takedown"`
 }
 
 func FetchWorkPage(t *testing.T, r http.Handler, path string) WorkPageResponse {

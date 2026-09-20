@@ -139,14 +139,14 @@ func SaveGreeting(t *testing.T, works *work.Service, owner, draft uuid.UUID, tex
 	}
 }
 
-// Sweeper cleans up blobs the way the server's background sweeper does
-func Sweeper(works *work.Service) *storage.Sweeper {
-	return storage.NewSweeper(works.Pool(), works.Store())
+// Cleanup cleans up blobs the way the server's background job does
+func Cleanup(works *work.Service) *storage.Cleanup {
+	return storage.NewCleanup(works.Pool(), works.Store())
 }
 
-// SweeperAt cleans up on a clock the test moves
-func SweeperAt(works *work.Service, now func() time.Time) *storage.Sweeper {
-	return storage.NewSweeperWithClock(works.Pool(), works.Store(), now)
+// CleanupAt cleans up on a clock the test moves
+func CleanupAt(works *work.Service, now func() time.Time) *storage.Cleanup {
+	return storage.NewCleanupWithClock(works.Pool(), works.Store(), now)
 }
 
 // Owner makes an account that can own a work

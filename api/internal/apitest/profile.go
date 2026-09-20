@@ -63,10 +63,10 @@ type ProfileListingResponse struct {
 		Name       string  `json:"name"`
 		IsNsfw     *bool   `json:"isNsfw"`
 		OwnerState *string `json:"ownerState"`
-		Withhold   *struct {
+		Takedown   *struct {
 			Reason string    `json:"reason"`
 			At     time.Time `json:"at"`
-		} `json:"withhold"`
+		} `json:"takedown"`
 	} `json:"items"`
 	Total      int `json:"total"`
 	Suppressed int `json:"suppressed"`

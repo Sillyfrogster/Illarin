@@ -42,8 +42,8 @@ type Cover struct {
 	Height int
 }
 
-// Withhold is what the owner of a withheld work reads, which never names the staff member who acted
-type Withhold struct {
+// Takedown is what the owner of a taken-down work reads, which never names the staff member who acted
+type Takedown struct {
 	Reason string
 	At     time.Time
 }
@@ -56,7 +56,7 @@ type BrowseItem struct {
 	IsNSFW     *bool
 	OwnerState string
 	Cover      *Cover
-	Withhold   *Withhold
+	Takedown   *Takedown
 }
 
 type BrowsePage struct {
@@ -143,11 +143,11 @@ func (s *Service) Browse(
 			switch {
 			case draft:
 				item.OwnerState = "draft"
-			case row.WithheldAt.Valid:
-				item.OwnerState = "withheld"
-				item.Withhold = &Withhold{
-					Reason: row.WithheldReason.String,
-					At:     row.WithheldAt.Time,
+			case row.TakenDownAt.Valid:
+				item.OwnerState = "taken_down"
+				item.Takedown = &Takedown{
+					Reason: row.TakenDownReason.String,
+					At:     row.TakenDownAt.Time,
 				}
 			case row.Visibility == "unlisted":
 				item.OwnerState = "unlisted"

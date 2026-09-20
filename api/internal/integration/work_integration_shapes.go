@@ -73,7 +73,7 @@ const (
 	WorkAnnouncementAttemptSettledReasonUnconfirmed WorkAnnouncementAttemptSettledReason = "unconfirmed"
 	WorkAnnouncementAttemptSettledReasonUnlisted    WorkAnnouncementAttemptSettledReason = "unlisted"
 	WorkAnnouncementAttemptSettledReasonWithdrawn   WorkAnnouncementAttemptSettledReason = "withdrawn"
-	WorkAnnouncementAttemptSettledReasonWithheld    WorkAnnouncementAttemptSettledReason = "withheld"
+	WorkAnnouncementAttemptSettledReasonTakenDown   WorkAnnouncementAttemptSettledReason = "taken_down"
 )
 
 type WorkAnnouncementAttemptState string

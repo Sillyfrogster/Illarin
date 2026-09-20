@@ -22,41 +22,38 @@ type restrictedProfile struct {
 	Restricted bool `json:"restricted"`
 }
 
-type profileRestriction struct {
+type restrictedRecord struct {
 	Reason       string    `json:"reason"`
 	RestrictedBy *string   `json:"restrictedBy"`
 	RestrictedAt time.Time `json:"restrictedAt"`
 }
 
-type restrictionStack struct {
-	router    *gin.Engine
-	pool      *pgxpool.Pool
-	outbox    *apitest.VerificationOutbox
-	authority *http.Cookie
-	works     *work.Service
-	admin     *http.Cookie
-	owner     *http.Cookie
-	ownerID   uuid.UUID
+type restrictedStack struct {
+	router  *gin.Engine
+	pool    *pgxpool.Pool
+	outbox  *apitest.VerificationOutbox
+	works   *work.Service
+	admin   *http.Cookie
+	owner   *http.Cookie
+	ownerID uuid.UUID
 }
 
-func (s restrictionStack) member(t *testing.T, email, handle string) *http.Cookie {
+func (s restrictedStack) member(t *testing.T, email, handle string) *http.Cookie {
 	t.Helper()
 	return apitest.VerifiedSignUp(t, s.router, s.outbox, email, handle)
 }
 
 const ownerHandle = "shown.creator"
 
-func newRestrictionStack(t *testing.T) restrictionStack {
+func newRestrictedStack(t *testing.T) restrictedStack {
 	t.Helper()
 	outbox := &apitest.VerificationOutbox{}
 	router, pool, handlers := harness.NewRouterWithSenderPoolAndServices(t, 1<<20, api.DefaultDeadlines(), outbox)
-	authority := apitest.VerifiedSignUp(t, router, outbox, "authority@example.com", "publication.authority")
-	apitest.HoldsAuthority(t, pool, "publication.authority")
 	admin := apitest.VerifiedSignUp(t, router, outbox, "admin@example.com", "site.admin")
 	apitest.SetRole(t, pool, "site.admin", "admin")
 	owner := apitest.VerifiedSignUp(t, router, outbox, "owner@example.com", ownerHandle)
-	return restrictionStack{
-		router: router, pool: pool, outbox: outbox, authority: authority,
+	return restrictedStack{
+		router: router, pool: pool, outbox: outbox,
 		works:   handlers.Works,
 		admin:   admin,
 		owner:   owner,
@@ -75,7 +72,7 @@ func accountID(t *testing.T, pool *pgxpool.Pool, handle string) uuid.UUID {
 	return id
 }
 
-func (s restrictionStack) fillProfile(t *testing.T) {
+func (s restrictedStack) fillProfile(t *testing.T) {
 	t.Helper()
 	saved := apitest.SaveProfile(t, s.router, s.owner, `{
 		"displayName":"Wren Ashdown",
@@ -94,7 +91,7 @@ func (s restrictionStack) fillProfile(t *testing.T) {
 	}
 }
 
-func (s restrictionStack) restrict(
+func (s restrictedStack) restrict(
 	t *testing.T,
 	session *http.Cookie,
 	handle, reason string,
@@ -105,35 +102,35 @@ func (s restrictionStack) restrict(
 		t.Fatalf("encode reason: %v", err)
 	}
 	request := httptest.NewRequest(
-		http.MethodPut, "/v1/profiles/"+handle+"/restriction", strings.NewReader(string(body)),
+		http.MethodPut, "/v1/profiles/"+handle+"/restricted", strings.NewReader(string(body)),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	return apitest.Send(t, s.router, apitest.Authorized(request, session))
 }
 
-func (s restrictionStack) restore(
+func (s restrictedStack) restore(
 	t *testing.T,
 	session *http.Cookie,
 	handle string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodDelete, "/v1/profiles/"+handle+"/restriction", nil,
+		http.MethodDelete, "/v1/profiles/"+handle+"/restricted", nil,
 	), session))
 }
 
-func (s restrictionStack) readRestriction(
+func (s restrictedStack) readRestricted(
 	t *testing.T,
 	session *http.Cookie,
 	handle string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/profiles/"+handle+"/restriction", nil,
+		http.MethodGet, "/v1/profiles/"+handle+"/restricted", nil,
 	), session))
 }
 
-func (s restrictionStack) publicProfile(t *testing.T, handle string) restrictedProfile {
+func (s restrictedStack) publicProfile(t *testing.T, handle string) restrictedProfile {
 	t.Helper()
 	response := apitest.Send(t, s.router, httptest.NewRequest(http.MethodGet, "/v1/profiles/"+handle, nil))
 	if response.Code != http.StatusOK {
@@ -148,7 +145,7 @@ func (s restrictionStack) publicProfile(t *testing.T, handle string) restrictedP
 
 func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 	t.Parallel()
-	stack := newRestrictionStack(t)
+	stack := newRestrictedStack(t)
 	stack.fillProfile(t)
 	apitest.CreateProfileWork(t, stack.works, stack.ownerID, "Fen weather", false, work.VisibilityListed)
 
@@ -181,14 +178,14 @@ func TestRestrictingAProfileLeavesOnlyItsHandleAndItsWork(t *testing.T) {
 	if listed.Total != 1 || len(listed.Items) != 1 || listed.Items[0].Name != "Fen weather" {
 		t.Fatalf("listing = %+v, want the restricted creator's published work", listed)
 	}
-	if listed.Items[0].Withhold != nil {
-		t.Fatalf("restriction withheld a work: %+v", listed.Items[0].Withhold)
+	if listed.Items[0].Takedown != nil {
+		t.Fatalf("restricting took down a work: %+v", listed.Items[0].Takedown)
 	}
 }
 
 func TestTheCompletePublicResponseOfARestrictedProfileHidesNothingInIt(t *testing.T) {
 	t.Parallel()
-	stack := newRestrictionStack(t)
+	stack := newRestrictedStack(t)
 	stack.fillProfile(t)
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 
@@ -207,7 +204,7 @@ func TestTheCompletePublicResponseOfARestrictedProfileHidesNothingInIt(t *testin
 
 func TestOnlyAnAdminRestrictsOrRestoresAProfile(t *testing.T) {
 	t.Parallel()
-	stack := newRestrictionStack(t)
+	stack := newRestrictedStack(t)
 	outsider := stack.member(t, "outsider@example.com", "ordinary.member")
 
 	for _, role := range []string{"user", "moderator"} {
@@ -216,9 +213,6 @@ func TestOnlyAnAdminRestrictsOrRestoresAProfile(t *testing.T) {
 		if refused.Code != http.StatusForbidden {
 			t.Fatalf("%s restrict status = %d, want 403: %s", role, refused.Code, refused.Body.String())
 		}
-	}
-	if refused := stack.restrict(t, stack.authority, ownerHandle, "Because I say so."); refused.Code != http.StatusForbidden {
-		t.Fatalf("authority restrict status = %d, want 403: %s", refused.Code, refused.Body.String())
 	}
 	if refused := stack.restrict(t, stack.owner, ownerHandle, "Hiding myself."); refused.Code != http.StatusForbidden {
 		t.Fatalf("owner restrict status = %d, want 403: %s", refused.Code, refused.Body.String())
@@ -235,9 +229,9 @@ func TestOnlyAnAdminRestrictsOrRestoresAProfile(t *testing.T) {
 	}
 }
 
-func TestARestrictionNeedsAReasonAndOnlyAnAdminReadsItsRecord(t *testing.T) {
+func TestRestrictingNeedsAReasonAndOnlyAnAdminReadsItsRecord(t *testing.T) {
 	t.Parallel()
-	stack := newRestrictionStack(t)
+	stack := newRestrictedStack(t)
 
 	if blank := stack.restrict(t, stack.admin, ownerHandle, "   "); blank.Code != http.StatusBadRequest {
 		t.Fatalf("blank reason status = %d, want 400: %s", blank.Code, blank.Body.String())
@@ -247,13 +241,13 @@ func TestARestrictionNeedsAReasonAndOnlyAnAdminReadsItsRecord(t *testing.T) {
 	}
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 
-	read := stack.readRestriction(t, stack.admin, ownerHandle)
+	read := stack.readRestricted(t, stack.admin, ownerHandle)
 	if read.Code != http.StatusOK {
 		t.Fatalf("admin read status = %d, want 200: %s", read.Code, read.Body.String())
 	}
-	var found profileRestriction
+	var found restrictedRecord
 	if err := json.Unmarshal(read.Body.Bytes(), &found); err != nil {
-		t.Fatalf("decode restriction: %v", err)
+		t.Fatalf("decode restricted profile: %v", err)
 	}
 	if found.Reason != "Impersonating another creator." {
 		t.Fatalf("reason = %q", found.Reason)
@@ -262,11 +256,11 @@ func TestARestrictionNeedsAReasonAndOnlyAnAdminReadsItsRecord(t *testing.T) {
 		t.Fatalf("restrictedBy = %v, want the acting admin", found.RestrictedBy)
 	}
 
-	if hidden := stack.readRestriction(t, stack.owner, ownerHandle); hidden.Code != http.StatusForbidden {
+	if hidden := stack.readRestricted(t, stack.owner, ownerHandle); hidden.Code != http.StatusForbidden {
 		t.Fatalf("owner reason status = %d, want 403: %s", hidden.Code, hidden.Body.String())
 	}
 	anonymous := apitest.Send(t, stack.router, httptest.NewRequest(
-		http.MethodGet, "/v1/profiles/"+ownerHandle+"/restriction", nil,
+		http.MethodGet, "/v1/profiles/"+ownerHandle+"/restricted", nil,
 	))
 	if anonymous.Code != http.StatusUnauthorized {
 		t.Fatalf("visitor reason status = %d, want 401", anonymous.Code)
@@ -275,7 +269,7 @@ func TestARestrictionNeedsAReasonAndOnlyAnAdminReadsItsRecord(t *testing.T) {
 
 func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 	t.Parallel()
-	stack := newRestrictionStack(t)
+	stack := newRestrictedStack(t)
 	stack.fillProfile(t)
 	published := apitest.CreateProfileWork(
 		t, stack.works, stack.ownerID, "Fen weather", false, work.VisibilityListed,
@@ -290,7 +284,7 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 		t.Fatalf("restricted save status = %d, want 403: %s", blocked.Code, blocked.Body.String())
 	}
 	if strings.Contains(blocked.Body.String(), "Impersonating") {
-		t.Fatalf("the refused save repeats the restriction reason: %s", blocked.Body.String())
+		t.Fatalf("the refused save repeats the reason for restricting: %s", blocked.Body.String())
 	}
 	replaced := apitest.Send(t, stack.router, apitest.Authorized(
 		apitest.AvatarUploadRequest(t, apitest.PNG(t, 200, 200)), stack.owner,
@@ -307,10 +301,10 @@ func TestARestrictedOwnerKeepsItsAccountAndLosesOnlyProfileEdits(t *testing.T) {
 
 	after := accountFactsOf(apitest.SessionState(t, stack.router, stack.owner))
 	if after != before {
-		t.Fatalf("restriction changed the account: %+v became %+v", before, after)
+		t.Fatalf("restricting changed the account: %+v became %+v", before, after)
 	}
 	if role := stack.role(t); role != "user" {
-		t.Fatalf("restriction changed the account role to %q", role)
+		t.Fatalf("restricting changed the account role to %q", role)
 	}
 	stack.expectWorkUntouched(t, published)
 	if apitest.CreateProfileWork(
@@ -341,7 +335,7 @@ func accountFactsOf(state apitest.AccountState) accountFacts {
 	return facts
 }
 
-func (s restrictionStack) role(t *testing.T) string {
+func (s restrictedStack) role(t *testing.T) string {
 	t.Helper()
 	var role string
 	err := s.pool.QueryRow(context.Background(),
@@ -352,26 +346,26 @@ func (s restrictionStack) role(t *testing.T) string {
 	return role
 }
 
-func (s restrictionStack) expectWorkUntouched(t *testing.T, workID uuid.UUID) {
+func (s restrictedStack) expectWorkUntouched(t *testing.T, workID uuid.UUID) {
 	t.Helper()
 	var owner uuid.UUID
 	var visibility string
-	var withheld bool
+	var takenDown bool
 	err := s.pool.QueryRow(context.Background(), `
-		select owner_id, visibility, withheld_at is not null from works where id = $1
-	`, workID).Scan(&owner, &visibility, &withheld)
+		select owner_id, visibility, taken_down_at is not null from works where id = $1
+	`, workID).Scan(&owner, &visibility, &takenDown)
 	if err != nil {
 		t.Fatalf("read work state: %v", err)
 	}
-	if owner != s.ownerID || visibility != "listed" || withheld {
-		t.Fatalf("restriction changed the work: owner %s, visibility %q, withheld %v",
-			owner, visibility, withheld)
+	if owner != s.ownerID || visibility != "listed" || takenDown {
+		t.Fatalf("restricting changed the work: owner %s, visibility %q, taken down %v",
+			owner, visibility, takenDown)
 	}
 }
 
 func TestRestoringGivesBackEveryRetainedField(t *testing.T) {
 	t.Parallel()
-	stack := newRestrictionStack(t)
+	stack := newRestrictedStack(t)
 	stack.fillProfile(t)
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 	if lifted := stack.restore(t, stack.admin, ownerHandle); lifted.Code != http.StatusNoContent {
@@ -398,21 +392,21 @@ func TestRestoringGivesBackEveryRetainedField(t *testing.T) {
 	if saved.Code != http.StatusOK {
 		t.Fatalf("restored save status = %d, want 200: %s", saved.Code, saved.Body.String())
 	}
-	if again := stack.readRestriction(t, stack.admin, ownerHandle); again.Code != http.StatusNotFound {
-		t.Fatalf("restriction survived restoration: %d", again.Code)
+	if again := stack.readRestricted(t, stack.admin, ownerHandle); again.Code != http.StatusNotFound {
+		t.Fatalf("restricted survived restoration: %d", again.Code)
 	}
 }
 
-func TestRestrictionAndRestorationBothLeaveAnAuditRecord(t *testing.T) {
+func TestRestrictingAndRestoringBothLeaveAnAuditRecord(t *testing.T) {
 	t.Parallel()
-	stack := newRestrictionStack(t)
+	stack := newRestrictedStack(t)
 	stack.restrict(t, stack.admin, ownerHandle, "Impersonating another creator.")
 	stack.restore(t, stack.admin, ownerHandle)
 	stack.restrict(t, stack.admin, ownerHandle, "Doing it again.")
 
 	rows, err := stack.pool.Query(context.Background(), `
 		select actor.username, audit.subject_id, audit.action, audit.recorded_at
-		  from profile_restriction_audits audit
+		  from restricted_profile_audits audit
 		  join users actor on actor.id = audit.actor_id
 		 order by audit.recorded_at, audit.action
 	`)

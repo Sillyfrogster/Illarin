@@ -76,10 +76,10 @@ func TestSendingAWorkReleasesItInTheFormatTheConnectedAppAccepts(t *testing.T) {
 	var originalFileMissing bool
 	if err := pool.QueryRow(context.Background(), `
 		select original_file_id is null
-		  from download_events
-		 where work_id = $1 and authorization_class = 'linked_instance'
+		  from download_records
+		 where work_id = $1 and access = 'app'
 	`, workID).Scan(&originalFileMissing); err != nil {
-		t.Fatalf("read connected-app downloads event: %v", err)
+		t.Fatalf("read connected-app download record: %v", err)
 	}
 	if !originalFileMissing {
 		t.Fatal("work made in Illarin recorded an original file")
@@ -96,8 +96,8 @@ func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *tes
 	if queued := apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
-	if before := apitest.DownloadEventCount(t, pool, "linked_instance"); before != 0 {
-		t.Fatalf("queueing wrote %d download events, want 0", before)
+	if before := apitest.DownloadRecordCount(t, pool, "app"); before != 0 {
+		t.Fatalf("queueing wrote %d download records, want 0", before)
 	}
 
 	rec := apitest.Collect(t, router, credentials.AccessToken, nil)
@@ -113,7 +113,7 @@ func TestQueueingRecordsNoDownloadAndFetchingTheCreatorsOwnFileRecordsOne(t *tes
 	if fetched.Code != http.StatusOK || fetched.Header().Get("X-Accel-Redirect") == "" {
 		t.Fatalf("fetch = %d, headers %v", fetched.Code, fetched.Header())
 	}
-	if got := apitest.DownloadEventCount(t, pool, "linked_instance"); got != 1 {
+	if got := apitest.DownloadRecordCount(t, pool, "app"); got != 1 {
 		t.Fatalf("recorded %d connected-app downloads, want 1", got)
 	}
 }
@@ -209,11 +209,11 @@ func TestAnWorkWithdrawnAfterQueueingIsRefusedAtCollection(t *testing.T) {
 	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
 	if _, err := pool.Exec(context.Background(), `
 		update works work
-		   set withheld_at = now(), withheld_by = work.owner_id,
-		       withheld_reason = 'Copyright report under review'
+		   set taken_down_at = now(), taken_down_by = work.owner_id,
+		       taken_down_reason = 'Copyright report under review'
 		 where work.id = $1
 	`, workID); err != nil {
-		t.Fatalf("withhold the work: %v", err)
+		t.Fatalf("takedown the work: %v", err)
 	}
 
 	rec := apitest.Collect(t, router, credentials.AccessToken, nil)
@@ -492,7 +492,7 @@ func TestASendTakenTooManyTimesWithoutAcknowledgementStops(t *testing.T) {
 	}
 }
 
-func TestAnExpiredSendIsSweptAway(t *testing.T) {
+func TestAnExpiredSendIsCleanedUpAway(t *testing.T) {
 	t.Parallel()
 	settings := apitest.SendSettings()
 	settings.Retention = 250 * time.Millisecond
@@ -508,23 +508,23 @@ func TestAnExpiredSendIsSweptAway(t *testing.T) {
 	if rec := apitest.Collect(t, router, credentials.AccessToken, nil); rec.Code != http.StatusNoContent {
 		t.Fatalf("collect an expired send status = %d, want 204: %s", rec.Code, rec.Body.String())
 	}
-	swept := sweepSends(t, pool)
+	deleted := cleanupSends(t, pool)
 
-	if swept != 1 {
-		t.Fatalf("swept %d sends, want 1", swept)
+	if deleted != 1 {
+		t.Fatalf("cleaned up %d sends, want 1", deleted)
 	}
 }
 
-func sweepSends(t *testing.T, pool *pgxpool.Pool) int64 {
+func cleanupSends(t *testing.T, pool *pgxpool.Pool) int64 {
 	t.Helper()
 	settings := apitest.SendSettings()
 	apps := apitest.NewAppsService(pool)
 	service := connect.NewSends(pool, nil, apps, settings)
-	swept, err := service.Sweep(context.Background())
+	deleted, err := service.Cleanup(context.Background())
 	if err != nil {
-		t.Fatalf("sweep sends: %v", err)
+		t.Fatalf("cleanup sends: %v", err)
 	}
-	return swept
+	return deleted
 }
 
 func changeTheWork(t *testing.T, r *gin.Engine, session *http.Cookie, workID string) {

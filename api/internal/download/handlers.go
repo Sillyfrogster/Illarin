@@ -129,8 +129,8 @@ const (
 )
 
 func (h *Handlers) HandOffExport(c *gin.Context, download Export) {
-	if download.Event != nil {
-		if err := h.downloads.Record(c.Request.Context(), *download.Event); err != nil {
+	if download.Record != nil {
+		if err := h.downloads.Record(c.Request.Context(), *download.Record); err != nil {
 			Refuse(c, err)
 			return
 		}
@@ -143,7 +143,7 @@ func (h *Handlers) HandOffExport(c *gin.Context, download Export) {
 }
 
 func (h *Handlers) HandOffSource(c *gin.Context, download Source) {
-	if err := h.downloads.Record(c.Request.Context(), download.Event); err != nil {
+	if err := h.downloads.Record(c.Request.Context(), download.Record); err != nil {
 		Refuse(c, err)
 		return
 	}

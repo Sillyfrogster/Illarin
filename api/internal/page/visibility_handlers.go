@@ -30,7 +30,7 @@ func (h *Handlers) SetWorkVisibility(c *gin.Context) {
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "no such work")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "A withheld work cannot be changed.")
+		api.Refuse(c, http.StatusConflict, "A taken-down work cannot be changed.")
 	case errors.Is(err, work.ErrWorkIsDraft):
 		api.Refuse(c, http.StatusConflict, "Visibility applies once the work is published.")
 	case err != nil:

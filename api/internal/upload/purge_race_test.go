@@ -65,7 +65,7 @@ func TestPurgeAndUploadFinalizationSerializeOnTheDigest(t *testing.T) {
 	}()
 	go func() {
 		<-start
-		purged <- sweeper(service.works).Purge(ctx, digest, "legal_order", actorID)
+		purged <- cleanup(service.works).Purge(ctx, digest, "legal_order", actorID)
 	}()
 	close(start)
 	if err := <-purged; err != nil {
@@ -96,7 +96,7 @@ func TestPurgeAndUploadFinalizationSerializeOnTheDigest(t *testing.T) {
 	}
 }
 
-// sweeper cleans up blobs the way the server's background sweeper does
-func sweeper(works *work.Service) *storage.Sweeper {
-	return storage.NewSweeper(works.Pool(), works.Store())
+// cleanup cleans up blobs the way the server's background cleanup does
+func cleanup(works *work.Service) *storage.Cleanup {
+	return storage.NewCleanup(works.Pool(), works.Store())
 }

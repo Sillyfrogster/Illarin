@@ -47,7 +47,7 @@ Features, one per thing the product has:
 - `notify` — the inbox and what a person follows.
 - `blog` — posts, versions, schedule, writers, categories, feeds, link cards,
   import; `blog/body` is the post body format.
-- `staff` — reports, takedowns, restrictions, cases, strikes, appeals.
+- `staff` — reports, taking down works, restricting profiles, cases, strikes, appeals.
 
 Everything else is plumbing a feature reaches for:
 
@@ -69,4 +69,4 @@ Everything else is plumbing a feature reaches for:
 - `apitest`, `apitest/full`, `testdb` — test helpers, as above.
 
 `cmd/` holds three programs: `server` serves the API, `backup` writes and
-restores a dump, and `publication-authority` records which account may publish.
+restores a dump, and `make-admin` makes an existing account an admin.

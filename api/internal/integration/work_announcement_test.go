@@ -484,11 +484,11 @@ func TestEveryAttemptRechecksTheWorkAndTheDestination(t *testing.T) {
 		reason string
 		act    revoke
 	}{
-		"withheld": {"withheld", func(t *testing.T, stack integrationStack, started apitest.StartedWork, _ addedIntegration) {
-			withheld := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
-				"/v1/works/"+started.ID+"/withhold", `{"reason":"Under review"}`, stack.editor))
-			if withheld.Code != http.StatusNoContent {
-				t.Fatalf("withhold = %d: %s", withheld.Code, withheld.Body.String())
+		"taken down": {"taken_down", func(t *testing.T, stack integrationStack, started apitest.StartedWork, _ addedIntegration) {
+			takenDown := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
+				"/v1/works/"+started.ID+"/takedown", `{"reason":"Under review"}`, stack.admin))
+			if takenDown.Code != http.StatusNoContent {
+				t.Fatalf("takedown = %d: %s", takenDown.Code, takenDown.Body.String())
 			}
 		}},
 		"unlisted": {"unlisted", func(t *testing.T, stack integrationStack, started apitest.StartedWork, _ addedIntegration) {

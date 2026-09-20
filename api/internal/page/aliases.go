@@ -12,9 +12,10 @@ var (
 		"type": "kind", "visibility": "discovery", "follow": "watch",
 		"draftedChangesVersion": "workingCopyVersion", "latestVersion": "latestUpdate",
 		"appFormats": "appTargets", "hasPrivatePrompts": "linkedInstallOnly", "preservedPrompts": "sealedBlocks",
+		"takedown": "withhold",
 	}
 	workListAliases          = map[string]string{"nsfwPreference": "visibility", "apps": "platforms"}
-	browseWorkAliases        = map[string]string{"type": "kind"}
+	browseWorkAliases        = map[string]string{"type": "kind", "takedown": "withhold"}
 	deletedWorkAliases       = map[string]string{"type": "kind"}
 	dependencyAliases        = map[string]string{"works": "assets"}
 	visibilityRequestAliases = map[string]string{"visibility": "discovery"}

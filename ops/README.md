@@ -27,8 +27,8 @@ Illarin answers on two hostnames that both reach the same gateway: the site at
 `SITE_URL` and the blog at `BLOG_URL`. The gateway tells them apart by name. A
 hostname beginning with `blog.` gets the blog, which serves blog pages and
 media and nothing else: no API, no sign-in, no uploads. Every other hostname
-gets the site, including the catalog, accounts, the blog's editor and the
-Publication API. The site's old `/blog` addresses redirect to the blog.
+gets the site, including browse, accounts and the blog's editor. The site's old
+`/blog` addresses redirect to the blog.
 
 Umami counts page views and referrers without cookies. Both the site and the
 blog load its tracker from `/stats/script.js` on their own hostname and send
@@ -82,7 +82,7 @@ Set `SITE_URL` to the site's address and `BLOG_URL` to the blog's. The blog
 hostname must begin with `blog.`, because that prefix is how the gateway
 recognizes it. The stack refuses to start without `BLOG_URL`.
 
-Generate `LINKING_HMAC_KEY` and `PUBLICATION_SECRET_KEY` as 32 random bytes each,
+Generate `LINKING_HMAC_KEY` and `INTEGRATION_SECRET_KEY` as 32 random bytes each,
 encoded as unpadded base64url. They are separate keys and never share a value.
 Use a separate, randomly generated PostgreSQL password and update both
 `POSTGRES_PASSWORD` and `DATABASE_URL` with the same value.
@@ -146,12 +146,26 @@ make prod-restart SERVICE=api
 make prod-rollback
 ```
 
+## Make an account admin
+
+Only the command line makes an admin. Sign up on the site first, then run:
+
+```bash
+make prod-make-admin HANDLE=<your handle>
+```
+
+The same command on a development machine is `make make-admin HANDLE=<handle>`.
+An admin is staff: they take down works, restrict profiles, switch writers on
+and off, and configure the blog's integrations. Nothing on the site makes or
+removes an admin, and the command does not remove one; set the account's
+`role` back to `user` in the database to do that.
+
 ## Backups and recovery
 
 The backup job writes a PostgreSQL dump first, then uploads that dump and the
 immutable blob directory to restic while blob deletion is locked. Uploaded post
-media and avatars are blobs, so they travel with it. Derivatives are disposable
-and are not backed up, and the blog's social cards are composed on request
+media and avatars are blobs, so they travel with it. The image cache is
+disposable and is not backed up, and the blog's social cards are composed on request
 rather than stored, so a restore has nothing to rebuild. Retention defaults to
 30 daily snapshots.
 

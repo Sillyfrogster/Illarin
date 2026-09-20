@@ -17,16 +17,16 @@ type MediaList struct {
 	Items []Media `json:"items"`
 }
 
-type GetMediaVariantParams struct {
+type GetImageSizeParams struct {
 	Expires   *string `json:"expires,omitempty"`
 	Signature *string `json:"signature,omitempty"`
 }
 
 type Media struct {
-	WorkId            uuid.UUID `json:"workId"`
-	DerivativeVersion int       `json:"derivativeVersion"`
-	Height            int       `json:"height"`
-	Id                uuid.UUID `json:"id"`
-	Role              MediaRole `json:"role"`
-	Width             int       `json:"width"`
+	WorkId           uuid.UUID `json:"workId"`
+	ImageSizeVersion int       `json:"imageSizeVersion"`
+	Height           int       `json:"height"`
+	Id               uuid.UUID `json:"id"`
+	Role             MediaRole `json:"role"`
+	Width            int       `json:"width"`
 }

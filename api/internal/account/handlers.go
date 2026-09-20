@@ -187,18 +187,13 @@ func (h *Handlers) GetSession(c *gin.Context) {
 		c.JSON(http.StatusOK, SessionState{User: nil})
 		return
 	}
-	authority, err := h.blog.HoldsAuthority(c.Request.Context(), current.ID)
-	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
-		return
-	}
 	writer, err := h.blog.IsWriter(c.Request.Context(), current.ID)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
 		return
 	}
 	user := toAPIAccount(*current)
-	c.JSON(http.StatusOK, SessionState{User: &user, PublicationAuthority: authority, Writer: writer})
+	c.JSON(http.StatusOK, SessionState{User: &user, Writer: writer})
 }
 
 func (h *Handlers) VerifyEmail(c *gin.Context) {

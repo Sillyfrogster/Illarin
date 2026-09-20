@@ -209,17 +209,17 @@ func TestAFoldedEntrysNinetyDaysRunFromTheUpdateItLastAbsorbed(t *testing.T) {
 	if waited <= 0 {
 		t.Fatalf("the folded entry still reads as arriving at %s", arrived)
 	}
-	s.sweep(t, arrived.Add(notify.Retention).Add(waited/2))
+	s.cleanup(t, arrived.Add(notify.Retention).Add(waited/2))
 	if kept := s.inbox(t, follower, ""); len(kept.Items) != 1 {
-		t.Fatalf("the sweeper counted the folded entry from the update it replaced")
+		t.Fatalf("the cleanup counted the folded entry from the update it replaced")
 	}
-	s.sweep(t, absorbed.Add(notify.Retention).Add(waited))
-	if swept := s.inbox(t, follower, ""); len(swept.Items) != 0 {
-		t.Fatalf("the folded entry outlived its ninety days: %+v", swept.Items)
+	s.cleanup(t, absorbed.Add(notify.Retention).Add(waited))
+	if emptied := s.inbox(t, follower, ""); len(emptied.Items) != 0 {
+		t.Fatalf("the folded entry outlived its ninety days: %+v", emptied.Items)
 	}
 }
 
-func TestAnEntryAboutAWithheldOrDeletedWorkLeavesEveryInboxButTheOwners(t *testing.T) {
+func TestAnEntryAboutATakenDownOrDeletedWorkLeavesEveryInboxButTheOwners(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
 	follower := s.reader(t, "follower@example.com", "moon.follower")
@@ -228,20 +228,20 @@ func TestAnEntryAboutAWithheldOrDeletedWorkLeavesEveryInboxButTheOwners(t *testi
 	s.publishUpdate(t, `{"summary":"A change everyone should hear about"}`)
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 1 {
-		t.Fatalf("the follower has %d entries before the withhold, want one", len(page.Items))
+		t.Fatalf("the follower has %d entries before the takeDown, want one", len(page.Items))
 	}
 
-	s.withhold(t, s.workID, "Copyright report under review")
+	s.takeDown(t, s.workID, "Copyright report under review")
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 0 {
-		t.Fatalf("a withheld work left %+v in the follower's inbox", page.Items)
+		t.Fatalf("a taken down work left %+v in the follower's inbox", page.Items)
 	}
 	if got := s.unread(t, follower); got != 0 {
-		t.Fatalf("a withheld work counts %d unread for the follower, want 0", got)
+		t.Fatalf("a taken down work counts %d unread for the follower, want 0", got)
 	}
 	owner := s.inbox(t, s.creator, "")
-	if len(owner.Items) != 1 || owner.Items[0].Type != "work_withheld" {
-		t.Fatalf("the owner's inbox = %+v, want the withheld entry", owner.Items)
+	if len(owner.Items) != 1 || owner.Items[0].Type != "work_taken_down" {
+		t.Fatalf("the owner's inbox = %+v, want the taken down entry", owner.Items)
 	}
 
 	s.restore(t, s.workID)

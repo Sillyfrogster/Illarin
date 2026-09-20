@@ -165,21 +165,21 @@ func TestAnOlderVersionsPicturesOutliveTheirReplacement(t *testing.T) {
 	started, firstCover, _ := publishTwoCoveredVersions(t, r, session)
 
 	for range 2 {
-		if _, err := sweeper(works).Sweep(t.Context()); err != nil {
-			t.Fatalf("sweep: %v", err)
+		if _, err := cleanup(works).Cleanup(t.Context()); err != nil {
+			t.Fatalf("cleanup: %v", err)
 		}
 		if _, err := pool.Exec(t.Context(),
-			`update blob_sweep_marks set marked_at = marked_at - interval '2 days'`); err != nil {
-			t.Fatalf("age the sweep marks: %v", err)
+			`update blob_cleanup_marks set marked_at = marked_at - interval '2 days'`); err != nil {
+			t.Fatalf("age the cleanup marks: %v", err)
 		}
 	}
 
 	older := downloadVersion(t, r, nil, started.ID, "charx", "?version=1")
 	if older.Code != http.StatusOK {
-		t.Fatalf("download version 1 after the sweep: %d %s", older.Code, older.Body.String())
+		t.Fatalf("download version 1 after the cleanup: %d %s", older.Code, older.Body.String())
 	}
 	if !bytes.Equal(archivedIcon(t, older.Body.Bytes()), firstCover) {
-		t.Error("the sweep took the cover version 1 recorded")
+		t.Error("the cleanup took the cover version 1 recorded")
 	}
 }
 
@@ -391,9 +391,9 @@ func TestAVersionIsOfferedTheFormatsItsOwnRecordedOriginEarns(t *testing.T) {
 	}
 
 	var originals int
-	if err := pool.QueryRow(t.Context(), `select count(distinct original_file_id) from download_events
+	if err := pool.QueryRow(t.Context(), `select count(distinct original_file_id) from download_records
 		where work_id = $1 and original_file_id is not null`, workID).Scan(&originals); err != nil || originals != 2 {
-		t.Fatalf("original files the download events name = %d, error = %v; want each version's own", originals, err)
+		t.Fatalf("original files the download records name = %d, error = %v; want each version's own", originals, err)
 	}
 }
 
@@ -481,7 +481,7 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatalf("version 1 after recovery = %d, want it whole again", recovered.Code)
 	}
 
-	if err := sweeper(works).Purge(t.Context(), sha256.Sum256(firstCover), "test_purge", uuid.New()); err != nil {
+	if err := cleanup(works).Purge(t.Context(), sha256.Sum256(firstCover), "test_purge", uuid.New()); err != nil {
 		t.Fatalf("purge the first cover: %v", err)
 	}
 	purged := downloadVersion(t, r, nil, started.ID, "charx", "?version=1")
@@ -501,12 +501,12 @@ func TestHistoryFollowsTheWorkThroughDeletionRecoveryAndPurge(t *testing.T) {
 		t.Fatalf("expire the recovery window: %v", err)
 	}
 	for range 2 {
-		if _, err := sweeper(works).Sweep(t.Context()); err != nil {
-			t.Fatalf("sweep: %v", err)
+		if _, err := cleanup(works).Cleanup(t.Context()); err != nil {
+			t.Fatalf("cleanup: %v", err)
 		}
 		if _, err := pool.Exec(t.Context(),
-			`update blob_sweep_marks set marked_at = marked_at - interval '2 days'`); err != nil {
-			t.Fatalf("age the sweep marks: %v", err)
+			`update blob_cleanup_marks set marked_at = marked_at - interval '2 days'`); err != nil {
+			t.Fatalf("age the cleanup marks: %v", err)
 		}
 	}
 	if got := downloadVersion(t, r, session, started.ID, "charx", "?version=2"); got.Code != http.StatusNotFound {
@@ -625,9 +625,9 @@ func TestAVersionWithPrivatePromptsOffersNoFileAndSaysWhy(t *testing.T) {
 	}
 
 	other := apitest.SignUp(t, setupRouter, "onlooker@example.com", "onlooker.reader")
-	withheld := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/works/"+started.ID, nil), session))
-	if withheld.Code != http.StatusNoContent {
-		t.Fatalf("delete: %d %s", withheld.Code, withheld.Body.String())
+	takenDown := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodDelete, "/v1/works/"+started.ID, nil), session))
+	if takenDown.Code != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", takenDown.Code, takenDown.Body.String())
 	}
 	if got := readVersionDownloads(t, router, other, started.ID, 1); got.Code != http.StatusNotFound {
 		t.Fatalf("a deleted work answered a stranger: %d", got.Code)
@@ -656,7 +656,7 @@ func TestAVersionListsThePicturesItRecorded(t *testing.T) {
 	}
 }
 
-// sweeper cleans up blobs the way the server's background sweeper does
-func sweeper(works *work.Service) *storage.Sweeper {
-	return storage.NewSweeper(works.Pool(), works.Store())
+// cleanup cleans up blobs the way the server's background cleanup does
+func cleanup(works *work.Service) *storage.Cleanup {
+	return storage.NewCleanup(works.Pool(), works.Store())
 }

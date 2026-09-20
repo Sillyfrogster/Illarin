@@ -50,7 +50,7 @@ type Detail struct {
 	AllowedApps           []string
 	EligibleApps          []string
 	InstallCapabilities   []string
-	Withhold              *Withhold
+	Takedown              *Takedown
 }
 
 func (s *Service) Detail(
@@ -150,10 +150,10 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 			return Detail{}, err
 		}
 	}
-	if row.WithheldAt.Valid {
-		found.Withhold = &Withhold{
-			Reason: row.WithheldReason.String,
-			At:     row.WithheldAt.Time,
+	if row.TakenDownAt.Valid {
+		found.Takedown = &Takedown{
+			Reason: row.TakenDownReason.String,
+			At:     row.TakenDownAt.Time,
 		}
 	}
 

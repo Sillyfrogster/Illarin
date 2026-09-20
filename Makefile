@@ -103,10 +103,10 @@ prod-smoke: ## Check the production gateway, API and site
 prod-config-check: ## Validate the production Compose configuration
 	@ILLARIN_ENV_FILE="$(PROD_ENV)" ./ops/compose.sh config --quiet
 
-.PHONY: prod-publication-authority
-prod-publication-authority: ## Give an existing production account publication authority; set HANDLE
+.PHONY: prod-make-admin
+prod-make-admin: ## Make an existing production account an admin; set HANDLE
 	@test -n "$$HANDLE" || { echo "Set HANDLE to your existing account handle."; exit 1; }
-	@ILLARIN_ENV_FILE="$(PROD_ENV)" ./ops/compose.sh exec -T api /app/publication-authority -handle "$$HANDLE"
+	@ILLARIN_ENV_FILE="$(PROD_ENV)" ./ops/compose.sh exec -T api /app/make-admin -handle "$$HANDLE"
 
 .PHONY: prod-backup prod-backup-init prod-backup-check
 prod-backup: ## Run an off-box backup when backups are enabled
@@ -222,10 +222,10 @@ migrate-down: need-db ## Roll the dev database back one migration
 migrate-status: need-db ## Show which migrations have run
 	cd api && $(GOOSE) -dir migrations postgres "$(DATABASE_URL)" status
 
-.PHONY: publication-authority
-publication-authority: need-db ## Record which account holds publication authority; set HANDLE
-	@test -n "$(HANDLE)" || { echo "Set HANDLE to the account that holds publication authority."; exit 1; }
-	cd api && go run ./cmd/publication-authority -handle "$(HANDLE)"
+.PHONY: make-admin
+make-admin: need-db ## Make an existing account an admin; set HANDLE
+	@test -n "$(HANDLE)" || { echo "Set HANDLE to the account to make an admin."; exit 1; }
+	cd api && go run ./cmd/make-admin -handle "$(HANDLE)"
 
 # Generated code, never hand edited
 

@@ -2,7 +2,7 @@ package staff
 
 import "time"
 
-type ProfileRestriction struct {
+type RestrictedProfile struct {
 	Reason       string    `json:"reason"`
 	RestrictedAt time.Time `json:"restrictedAt"`
 	RestrictedBy *string   `json:"restrictedBy,omitempty"`
@@ -12,6 +12,6 @@ type RestrictProfileRequest struct {
 	Reason string `json:"reason"`
 }
 
-type WithholdWorkRequest struct {
+type TakeDownWorkRequest struct {
 	Reason string `json:"reason"`
 }

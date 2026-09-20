@@ -10,60 +10,61 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// SweepDelay is how long a marked blob waits before its bytes go
-const SweepDelay = 24 * time.Hour
-const sweepInterval = time.Hour
+// CleanupDelay is how long a marked blob waits before its bytes go
+const CleanupDelay = 24 * time.Hour
+const cleanupInterval = time.Hour
 
-type SweepResult struct {
+type CleanupResult struct {
 	Marked  int64
 	Deleted int
 }
 
-func (s *Sweeper) Sweep(ctx context.Context) (SweepResult, error) {
+func (s *Cleanup) Cleanup(ctx context.Context) (CleanupResult, error) {
 	now := s.now()
 	if err := s.deleteExpiredVersions(ctx); err != nil {
-		return SweepResult{}, err
+		return CleanupResult{}, err
 	}
 	if err := s.deleteExpiredPrivatePrompts(ctx, now); err != nil {
-		return SweepResult{}, err
+		return CleanupResult{}, err
 	}
 	if _, err := s.store.RecordOrphans(ctx); err != nil {
-		return SweepResult{}, fmt.Errorf("record filesystem orphans: %w", err)
+		return CleanupResult{}, fmt.Errorf("record filesystem orphans: %w", err)
 	}
 	if err := s.resumePurges(ctx); err != nil {
-		return SweepResult{}, err
+		return CleanupResult{}, err
 	}
 	marked, err := s.pool.Exec(ctx, `
-		insert into blob_sweep_marks (blob_id, marked_at)
+		insert into blob_cleanup_marks (blob_id, marked_at)
 		select blob.id, $1
 		  from blobs blob
-		 where not exists (select 1 from blob_sweep_marks mark where mark.blob_id = blob.id)
+		 where not exists (select 1 from blob_cleanup_marks mark where mark.blob_id = blob.id)
 		   and not `+liveBlobReferenceExpression("blob.id", "$1"), now)
 	if err != nil {
-		return SweepResult{}, fmt.Errorf("mark unreferenced blobs: %w", err)
+		return CleanupResult{}, fmt.Errorf("mark unreferenced blobs: %w", err)
 	}
-	result := SweepResult{Marked: marked.RowsAffected()}
+	result := CleanupResult{Marked: marked.RowsAffected()}
 
 	rows, err := s.pool.Query(ctx, `
-		select blob_id from blob_sweep_marks where marked_at <= $1 order by marked_at, blob_id
-	`, now.Add(-SweepDelay))
+		select blob_id from blob_cleanup_marks where marked_at <= $1 order by marked_at, blob_id
+	`, now.Add(-CleanupDelay))
 	if err != nil {
-		return SweepResult{}, fmt.Errorf("list marked blobs: %w", err)
+		return CleanupResult{}, fmt.Errorf("list marked blobs: %w", err)
 	}
 	var candidates []uuid.UUID
 	for rows.Next() {
 		var id uuid.UUID
 		if err := rows.Scan(&id); err != nil {
 			rows.Close()
-			return SweepResult{}, fmt.Errorf("read marked blob: %w", err)
+			return CleanupResult{}, fmt.Errorf("read marked blob: %w", err)
 		}
 		candidates = append(candidates, id)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return SweepResult{}, fmt.Errorf("list marked blobs: %w", err)
+		return CleanupResult{}, fmt.Errorf("list marked blobs: %w", err)
 	}
 	rows.Close()
 
@@ -79,7 +80,7 @@ func (s *Sweeper) Sweep(ctx context.Context) (SweepResult, error) {
 	return result, nil
 }
 
-func (s *Sweeper) deleteExpiredVersions(ctx context.Context) error {
+func (s *Cleanup) deleteExpiredVersions(ctx context.Context) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin expired history cleanup: %w", err)
@@ -99,7 +100,7 @@ func (s *Sweeper) deleteExpiredVersions(ctx context.Context) error {
 	return tx.Commit(ctx)
 }
 
-func (s *Sweeper) deleteExpiredPrivatePrompts(ctx context.Context, now time.Time) error {
+func (s *Cleanup) deleteExpiredPrivatePrompts(ctx context.Context, now time.Time) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin private prompt cleanup: %w", err)
@@ -145,7 +146,7 @@ func (s *Sweeper) deleteExpiredPrivatePrompts(ctx context.Context, now time.Time
 	return nil
 }
 
-func (s *Sweeper) resumePurges(ctx context.Context) error {
+func (s *Cleanup) resumePurges(ctx context.Context) error {
 	rows, err := s.pool.Query(ctx, `
 		select blob.id, blob.sha256
 		  from blobs blob
@@ -183,15 +184,15 @@ func (s *Sweeper) resumePurges(ctx context.Context) error {
 	return nil
 }
 
-func (s *Sweeper) RunSweeper(ctx context.Context, report func(error)) {
-	s.runSweeper(ctx, sweepInterval, report)
+func (s *Cleanup) RunCleanup(ctx context.Context, report func(error)) {
+	s.runCleanup(ctx, cleanupInterval, report)
 }
 
-func (s *Sweeper) runSweeper(ctx context.Context, interval time.Duration, report func(error)) {
+func (s *Cleanup) runCleanup(ctx context.Context, interval time.Duration, report func(error)) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
-		if _, err := s.Sweep(ctx); err != nil && !errors.Is(err, context.Canceled) && report != nil {
+		if _, err := s.Cleanup(ctx); err != nil && !errors.Is(err, context.Canceled) && report != nil {
 			report(err)
 		}
 		select {
@@ -202,7 +203,7 @@ func (s *Sweeper) runSweeper(ctx context.Context, interval time.Duration, report
 	}
 }
 
-func (s *Sweeper) deleteMarkedBlob(ctx context.Context, id uuid.UUID, now time.Time) (bool, error) {
+func (s *Cleanup) deleteMarkedBlob(ctx context.Context, id uuid.UUID, now time.Time) (bool, error) {
 	ready, err := s.prepareMarkedBlob(ctx, id, now)
 	if err != nil || !ready {
 		return false, err
@@ -210,7 +211,7 @@ func (s *Sweeper) deleteMarkedBlob(ctx context.Context, id uuid.UUID, now time.T
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return false, fmt.Errorf("begin blob sweep: %w", err)
+		return false, fmt.Errorf("begin blob cleanup: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	if err := LockBlobDigest(ctx, tx, id); err != nil {
@@ -222,13 +223,13 @@ func (s *Sweeper) deleteMarkedBlob(ctx context.Context, id uuid.UUID, now time.T
 
 	var marked pgtype.Timestamptz
 	if err := tx.QueryRow(ctx,
-		`select marked_at from blob_sweep_marks where blob_id = $1 for update`, id,
+		`select marked_at from blob_cleanup_marks where blob_id = $1 for update`, id,
 	).Scan(&marked); errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	} else if err != nil {
 		return false, fmt.Errorf("lock marked blob: %w", err)
 	}
-	if !marked.Valid || marked.Time.After(now.Add(-SweepDelay)) {
+	if !marked.Valid || marked.Time.After(now.Add(-CleanupDelay)) {
 		return false, nil
 	}
 
@@ -237,43 +238,43 @@ func (s *Sweeper) deleteMarkedBlob(ctx context.Context, id uuid.UUID, now time.T
 		return false, err
 	}
 	if referenced {
-		if _, err := tx.Exec(ctx, `delete from blob_sweep_marks where blob_id = $1`, id); err != nil {
-			return false, fmt.Errorf("clear blob sweep mark: %w", err)
+		if _, err := tx.Exec(ctx, `delete from blob_cleanup_marks where blob_id = $1`, id); err != nil {
+			return false, fmt.Errorf("clear blob cleanup mark: %w", err)
 		}
 		if err := tx.Commit(ctx); err != nil {
-			return false, fmt.Errorf("commit cancelled blob sweep: %w", err)
+			return false, fmt.Errorf("commit cancelled blob cleanup: %w", err)
 		}
 		return false, nil
 	}
 
 	var digestBytes []byte
 	if err := tx.QueryRow(ctx, `select sha256 from blobs where id = $1`, id).Scan(&digestBytes); err != nil {
-		return false, fmt.Errorf("read swept blob digest: %w", err)
+		return false, fmt.Errorf("read the cleaned-up blob digest: %w", err)
 	}
 	var digest [32]byte
 	copy(digest[:], digestBytes)
 	if err := postgres.LockBlobDeletionAgainstBackup(ctx, tx); err != nil {
 		return false, fmt.Errorf("lock physical blob deletion against backup: %w", err)
 	}
-	if err := s.store.DeleteDerivatives(ctx, digest); err != nil {
-		return false, fmt.Errorf("delete swept blob derivatives: %w", err)
+	if err := s.store.DeleteImageSizes(ctx, digest); err != nil {
+		return false, fmt.Errorf("delete the cleaned-up blob's image sizes: %w", err)
 	}
 	if err := s.store.Delete(ctx, id); err != nil && !errors.Is(err, ErrBlobNotFound) {
-		return false, fmt.Errorf("delete swept blob bytes: %w", err)
+		return false, fmt.Errorf("delete the cleaned-up blob bytes: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `delete from blobs where id = $1`, id); err != nil {
-		return false, fmt.Errorf("delete swept blob record: %w", err)
+		return false, fmt.Errorf("delete the cleaned-up blob record: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return false, fmt.Errorf("commit blob sweep: %w", err)
+		return false, fmt.Errorf("commit blob cleanup: %w", err)
 	}
 	return true, nil
 }
 
-func (s *Sweeper) prepareMarkedBlob(ctx context.Context, id uuid.UUID, now time.Time) (bool, error) {
+func (s *Cleanup) prepareMarkedBlob(ctx context.Context, id uuid.UUID, now time.Time) (bool, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return false, fmt.Errorf("begin blob sweep preparation: %w", err)
+		return false, fmt.Errorf("begin blob cleanup preparation: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	if err := LockBlobDigest(ctx, tx, id); err != nil {
@@ -284,13 +285,13 @@ func (s *Sweeper) prepareMarkedBlob(ctx context.Context, id uuid.UUID, now time.
 	}
 	var marked pgtype.Timestamptz
 	if err := tx.QueryRow(ctx,
-		`select marked_at from blob_sweep_marks where blob_id = $1 for update`, id,
+		`select marked_at from blob_cleanup_marks where blob_id = $1 for update`, id,
 	).Scan(&marked); errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	} else if err != nil {
 		return false, fmt.Errorf("lock marked blob for preparation: %w", err)
 	}
-	if !marked.Valid || marked.Time.After(now.Add(-SweepDelay)) {
+	if !marked.Valid || marked.Time.After(now.Add(-CleanupDelay)) {
 		return false, nil
 	}
 	referenced, err := blobHasLiveReference(ctx, tx, id, now)
@@ -298,11 +299,11 @@ func (s *Sweeper) prepareMarkedBlob(ctx context.Context, id uuid.UUID, now time.
 		return false, err
 	}
 	if referenced {
-		if _, err := tx.Exec(ctx, `delete from blob_sweep_marks where blob_id = $1`, id); err != nil {
-			return false, fmt.Errorf("clear blob sweep mark: %w", err)
+		if _, err := tx.Exec(ctx, `delete from blob_cleanup_marks where blob_id = $1`, id); err != nil {
+			return false, fmt.Errorf("clear blob cleanup mark: %w", err)
 		}
 		if err := tx.Commit(ctx); err != nil {
-			return false, fmt.Errorf("commit cancelled blob sweep: %w", err)
+			return false, fmt.Errorf("commit cancelled blob cleanup: %w", err)
 		}
 		return false, nil
 	}
@@ -310,7 +311,7 @@ func (s *Sweeper) prepareMarkedBlob(ctx context.Context, id uuid.UUID, now time.
 		return false, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return false, fmt.Errorf("commit blob sweep preparation: %w", err)
+		return false, fmt.Errorf("commit blob cleanup preparation: %w", err)
 	}
 	return true, nil
 }
@@ -381,4 +382,20 @@ func releaseExpiredReferences(ctx context.Context, tx pgx.Tx, id uuid.UUID, now 
 		return fmt.Errorf("release an unused post picture: %w", err)
 	}
 	return nil
+}
+
+// Cleanup deletes what nothing refers to any more and purges the blobs a decision removes
+type Cleanup struct {
+	pool  *pgxpool.Pool
+	store Store
+	now   func() time.Time
+}
+
+func NewCleanup(pool *pgxpool.Pool, store Store) *Cleanup {
+	return NewCleanupWithClock(pool, store, time.Now)
+}
+
+// NewCleanupWithClock reads the time from the given clock rather than the wall clock
+func NewCleanupWithClock(pool *pgxpool.Pool, store Store, now func() time.Time) *Cleanup {
+	return &Cleanup{pool: pool, store: store, now: now}
 }

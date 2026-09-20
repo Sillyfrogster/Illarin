@@ -106,15 +106,3 @@ func SetRole(t *testing.T, pool *pgxpool.Pool, handle, role string) {
 		t.Fatalf("set %s role: %v", handle, err)
 	}
 }
-
-// HoldsAuthority gives an account publication authority
-func HoldsAuthority(t *testing.T, pool *pgxpool.Pool, handle string) {
-	t.Helper()
-	_, err := pool.Exec(context.Background(), `
-		insert into publication_authorities (user_id)
-		select id from users where username = $1
-	`, handle)
-	if err != nil {
-		t.Fatalf("assign publication authority: %v", err)
-	}
-}

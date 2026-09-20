@@ -24,7 +24,7 @@ func (h *Handlers) DeleteWork(c *gin.Context) {
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "no such work")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "A withheld work cannot be deleted.")
+		api.Refuse(c, http.StatusConflict, "A taken-down work cannot be deleted.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not delete the work.")
 	default:

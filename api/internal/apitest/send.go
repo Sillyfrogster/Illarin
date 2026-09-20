@@ -37,8 +37,8 @@ type CollectedSend struct {
 }
 
 type CollectedSends struct {
-	Sends    []CollectedSend  `json:"sends"`
-	Withheld []WithheldNotice `json:"withheld"`
+	Sends     []CollectedSend  `json:"sends"`
+	Takedowns []TakedownNotice `json:"takedowns"`
 }
 
 type QueuedSend struct {
@@ -182,13 +182,13 @@ func FetchSigned(t *testing.T, r *gin.Engine, address string) *httptest.Response
 	return Send(t, r, httptest.NewRequest(http.MethodGet, parsed.RequestURI(), nil))
 }
 
-func DownloadEventCount(t *testing.T, pool *pgxpool.Pool, class string) int {
+func DownloadRecordCount(t *testing.T, pool *pgxpool.Pool, class string) int {
 	t.Helper()
 	var count int
 	if err := pool.QueryRow(context.Background(),
-		`select count(*) from download_events where authorization_class = $1`, class,
+		`select count(*) from download_records where access = $1`, class,
 	).Scan(&count); err != nil {
-		t.Fatalf("count download events: %v", err)
+		t.Fatalf("count download records: %v", err)
 	}
 	return count
 }

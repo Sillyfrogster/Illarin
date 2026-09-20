@@ -111,18 +111,18 @@ func TestVersionHistoryFollowsTheWorksCurrentAccess(t *testing.T) {
 		t.Fatalf("seed staff account: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(), `
-		update works set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
+		update works set taken_down_at = now(), taken_down_by = $2, taken_down_reason = 'testing'
 		 where id = $1
 	`, started.ID, staff); err != nil {
-		t.Fatalf("withhold work: %v", err)
+		t.Fatalf("take down work: %v", err)
 	}
 
 	if stranger := readUpdateHistory(t, r, started.ID, nil); stranger.Code != http.StatusNotFound {
-		t.Fatalf("a withheld work's history status = %d, want 404: %s",
+		t.Fatalf("a taken down work's history status = %d, want 404: %s",
 			stranger.Code, stranger.Body.String())
 	}
 	if owner := readUpdateHistory(t, r, started.ID, session); owner.Code != http.StatusOK {
-		t.Fatalf("the owner's withheld history status = %d, want 200: %s",
+		t.Fatalf("the owner's taken down history status = %d, want 200: %s",
 			owner.Code, owner.Body.String())
 	}
 }

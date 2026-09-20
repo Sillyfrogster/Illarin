@@ -43,7 +43,7 @@ type Export struct {
 	MediaType string
 	Filename  string
 	Format    string
-	Event     *Event
+	Record    *Record
 }
 
 type exportSubject struct {
@@ -122,8 +122,8 @@ func (subject exportSubject) export(
 		Filename: format.Filename(subject.name, subject.versionName(), label, written.Extension),
 	}
 	if subject.lifecycle == work.LifecyclePublished {
-		event := newEvent(subject.workID, subject.originalFileID, formatID, subject.ownerID, viewerID)
-		export.Event = &event
+		record := newRecord(subject.workID, subject.originalFileID, formatID, subject.ownerID, viewerID)
+		export.Record = &record
 	}
 	return export
 }
@@ -187,8 +187,8 @@ func (s *Service) OpenExportForSend(
 		return Export{}, fmt.Errorf("finish send export snapshot: %w", err)
 	}
 	export := subject.export(written, formatID, module.Declaration().Label, nil)
-	if export.Event != nil {
-		export.Event.AuthorizationClass = AuthorizationLinkedInstance
+	if export.Record != nil {
+		export.Record.Access = AccessApp
 	}
 	return export, nil
 }
@@ -315,7 +315,7 @@ func (s *Service) exportSubject(
 		  from works work
 		 where work.id = $1 and work.deleted_at is null
 		   and (work.lifecycle = 'published' or work.owner_id = $2)
-		   and (work.withheld_at is null or work.owner_id = $2)
+		   and (work.taken_down_at is null or work.owner_id = $2)
 	`, workID, viewerID).Scan(
 		&subject.workType, &subject.name, &subject.header.Blurb, &originalFormat, &subject.lifecycle,
 		&subject.header.WorkVersion, &subject.header.CreditedAuthor,

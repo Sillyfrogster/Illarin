@@ -44,7 +44,7 @@ type NotificationType string
 const (
 	NotificationTypeWorkRestored      NotificationType = "work_restored"
 	NotificationTypeWorkUpdated       NotificationType = "work_updated"
-	NotificationTypeWorkWithheld      NotificationType = "work_withheld"
+	NotificationTypeWorkTakenDown     NotificationType = "work_taken_down"
 	NotificationTypeProfileRestored   NotificationType = "profile_restored"
 	NotificationTypeProfileRestricted NotificationType = "profile_restricted"
 )

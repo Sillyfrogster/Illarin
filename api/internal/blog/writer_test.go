@@ -80,7 +80,7 @@ func newBlogStack(t *testing.T) blogStack {
 		t, 1<<20, api.DefaultDeadlines(), outbox,
 	)
 	session := apitest.VerifiedSignUp(t, router, outbox, "admin@example.com", "blog.admin")
-	apitest.HoldsAuthority(t, pool, "blog.admin")
+	apitest.SetRole(t, pool, "blog.admin", "admin")
 	return blogStack{router: router, pool: pool, handlers: handlers, outbox: outbox, admin: session}
 }
 
@@ -206,13 +206,13 @@ func TestTheThreeCategoriesAreSeeded(t *testing.T) {
 	}
 }
 
-func TestOnlyTheBlogAdminManagesCategoriesAndWriters(t *testing.T) {
+func TestOnlyAnAdminManagesCategoriesAndWriters(t *testing.T) {
 	t.Parallel()
 	stack := newBlogStack(t)
 	outsider := stack.member(t, "outsider@example.com", "blog.outsider")
 	announcement := stack.categoryBySlug(t, "announcement")
 
-	for _, role := range []string{"user", "moderator", "admin"} {
+	for _, role := range []string{"user", "moderator"} {
 		apitest.SetRole(t, stack.pool, "blog.outsider", role)
 		for _, path := range []string{"/v1/blog/categories", "/v1/blog/writers"} {
 			refused := apitest.Send(t, stack.router, apitest.Authorized(
@@ -462,7 +462,7 @@ func TestAWriterIsNamedTheWayTheirProfileIs(t *testing.T) {
 	admin := stack.member(t, "restrictor@example.com", "restricting.admin")
 	apitest.SetRole(t, stack.pool, "restricting.admin", "admin")
 	restricted := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPut, "/v1/profiles/named.writer/restriction",
+		http.MethodPut, "/v1/profiles/named.writer/restricted",
 		`{"reason":"Under review"}`,
 	), admin))
 	if restricted.Code != http.StatusOK && restricted.Code != http.StatusNoContent {

@@ -191,7 +191,7 @@ func choosing(post blogPost, choice string) string {
 	return fmt.Sprintf(`{"version":%d,%s}`, post.Version, choice)
 }
 
-func TestOnlyThePublicationAuthorityConfiguresADiscordChannel(t *testing.T) {
+func TestOnlyAnAdminConfiguresADiscordChannel(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 	member := stack.member(t, "writer@example.com", "outside.writer")
@@ -353,7 +353,7 @@ func TestAContributorSeesTheChannelNameAndItsRoleAndNothingElse(t *testing.T) {
 		t.Errorf("offered = %+v", one)
 	}
 	if one.Role != "Blog readers" {
-		t.Errorf("role = %q, want the name the authority approved", one.Role)
+		t.Errorf("role = %q, want the name the admin approved", one.Role)
 	}
 	body, _ := json.Marshal(offered)
 	for _, secret := range []string{discordToken, discordRoleID, discordChannelID} {
@@ -458,7 +458,7 @@ func TestChoosingTheRoleMentionsThatOneAndOnlyThatOne(t *testing.T) {
 	}
 }
 
-func TestARoleCannotBeChosenWhereTheAuthorityApprovedNone(t *testing.T) {
+func TestARoleCannotBeChosenWhereTheAdminApprovedNone(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 	made := stack.channelWithRole(t, "")

@@ -90,17 +90,18 @@ var (
 	}
 	capabilitiesAliases   = map[string]string{"appVersion": "applicationVersion", "acceptedFormats": "acceptedTargets"}
 	credentialsAliases    = map[string]string{"connectedApp": "instance"}
-	collectedSendsAliases = map[string]string{"sends": "deliveries"}
+	collectedSendsAliases = map[string]string{"sends": "deliveries", "takedowns": "withheld"}
 	sendFileAliases       = map[string]string{"type": "kind"}
 	collectedSendAliases  = map[string]string{
 		"workId": "assetId", "type": "kind", "versionNumber": "contentGeneration", "files": "artifacts",
 	}
-	libraryEntryAliases     = map[string]string{"workId": "assetId", "versionNumber": "contentGeneration"}
-	libraryReportAliases    = map[string]string{"appVersion": "applicationVersion"}
-	queuedSendAliases       = map[string]string{"workId": "assetId", "connectedAppId": "instanceId"}
-	sendWorkAliases         = map[string]string{"connectedAppId": "instanceId"}
-	withheldNoticeAliases   = map[string]string{"workId": "assetId"}
-	workConnectedAppAliases = map[string]string{
+	libraryEntryAliases        = map[string]string{"workId": "assetId", "versionNumber": "contentGeneration"}
+	libraryReportAliases       = map[string]string{"appVersion": "applicationVersion"}
+	queuedSendAliases          = map[string]string{"workId": "assetId", "connectedAppId": "instanceId"}
+	sendWorkAliases            = map[string]string{"connectedAppId": "instanceId"}
+	takedownNoticeAliases      = map[string]string{"workId": "assetId", "takenDownAt": "withheldAt"}
+	libraryReportResultAliases = map[string]string{"takedowns": "withheld"}
+	workConnectedAppAliases    = map[string]string{
 		"connectedAppId": "instanceId", "appName": "applicationName", "name": "instanceName",
 		"send": "delivery", "installedVersion": "installedGeneration",
 	}
@@ -174,6 +175,11 @@ func (f SendFile) MarshalJSON() ([]byte, error) {
 	return api.MarshalAliased(plain(f), sendFileAliases)
 }
 
+func (r LibraryReportResult) MarshalJSON() ([]byte, error) {
+	type plain LibraryReportResult
+	return api.MarshalAliased(plain(r), libraryReportResultAliases)
+}
+
 func (s CollectedSend) MarshalJSON() ([]byte, error) {
 	type plain CollectedSend
 	return api.MarshalAliased(plain(s), collectedSendAliases)
@@ -204,9 +210,9 @@ func (r *SendWorkRequest) UnmarshalJSON(data []byte) error {
 	return api.UnmarshalAliased(data, (*plain)(r), sendWorkAliases)
 }
 
-func (n WithheldNotice) MarshalJSON() ([]byte, error) {
-	type plain WithheldNotice
-	return api.MarshalAliased(plain(n), withheldNoticeAliases)
+func (n TakedownNotice) MarshalJSON() ([]byte, error) {
+	type plain TakedownNotice
+	return api.MarshalAliased(plain(n), takedownNoticeAliases)
 }
 
 func (a WorkConnectedApp) MarshalJSON() ([]byte, error) {

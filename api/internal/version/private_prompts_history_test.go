@@ -15,10 +15,10 @@ import (
 )
 
 type versionComparisonBody struct {
-	From            apitest.RecordedVersionBody `json:"from"`
-	To              apitest.RecordedVersionBody `json:"to"`
-	PromptsWithheld bool                        `json:"promptsWithheld"`
-	Groups          []struct {
+	From          apitest.RecordedVersionBody `json:"from"`
+	To            apitest.RecordedVersionBody `json:"to"`
+	PromptsHidden bool                        `json:"promptsHidden"`
+	Groups        []struct {
 		Subject string `json:"subject"`
 	} `json:"groups"`
 }
@@ -197,8 +197,8 @@ func TestChangedPromptIdsHoldRecordedPromptsUntilTheOwnerSettlesThem(t *testing.
 	if held.Code != http.StatusOK {
 		t.Fatalf("public comparison: %d %s", held.Code, held.Body.String())
 	}
-	if !apitest.DecodeResponse[versionComparisonBody](t, held).PromptsWithheld {
-		t.Fatal("a comparison over unmatched prompts did not say they were withheld")
+	if !apitest.DecodeResponse[versionComparisonBody](t, held).PromptsHidden {
+		t.Fatal("a comparison over unmatched prompts did not say they were hidden")
 	}
 
 	mismatches := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(

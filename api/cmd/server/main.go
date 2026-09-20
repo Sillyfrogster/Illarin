@@ -104,8 +104,8 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		storage.NewSweeper(pool, blob).RunSweeper(runtimeContext, func(err error) {
-			log.Printf("blob sweeper: %v", err)
+		storage.NewCleanup(pool, blob).RunCleanup(runtimeContext, func(err error) {
+			log.Printf("blob cleanup: %v", err)
 		})
 	}()
 	defer func() {
@@ -168,14 +168,14 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		notifications.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("notification sweeper: %v", err)
+		notifications.RunCleanup(runtimeContext, func(err error) {
+			log.Printf("notification cleanup: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
-		integrations.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("update integration sweeper: %v", err)
+		integrations.RunCleanup(runtimeContext, func(err error) {
+			log.Printf("integration cleanup: %v", err)
 		})
 	}()
 	go func() {
@@ -186,8 +186,8 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		sends.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("send sweeper: %v", err)
+		sends.RunCleanup(runtimeContext, func(err error) {
+			log.Printf("send cleanup: %v", err)
 		})
 	}()
 	go func() {
@@ -230,7 +230,7 @@ func run() error {
 		if err := pool.Ping(ctx); err != nil {
 			return err
 		}
-		for _, directory := range []string{"blobs", "derivatives"} {
+		for _, directory := range []string{"blobs", "image-cache"} {
 			info, err := os.Stat(filepath.Join(cfg.UploadsDir, directory))
 			if err != nil {
 				return err

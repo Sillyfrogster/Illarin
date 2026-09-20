@@ -9,7 +9,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 )
 
-func TestSweeperRunsWithoutAnExternalCaller(t *testing.T) {
+func TestCleanuperRunsWithoutAnExternalCaller(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -18,14 +18,14 @@ func TestSweeperRunsWithoutAnExternalCaller(t *testing.T) {
 	if err != nil {
 		t.Fatalf("storage: %v", err)
 	}
-	sweeper := NewSweeper(pool, store)
+	cleanup := NewCleanup(pool, store)
 	stored, err := store.Put(ctx, bytes.NewReader([]byte("background orphan")))
 	if err != nil {
 		t.Fatalf("put orphan: %v", err)
 	}
 	done := make(chan struct{})
 	go func() {
-		sweeper.runSweeper(ctx, time.Millisecond, nil)
+		cleanup.runCleanup(ctx, time.Millisecond, nil)
 		close(done)
 	}()
 
@@ -33,15 +33,15 @@ func TestSweeperRunsWithoutAnExternalCaller(t *testing.T) {
 	for {
 		var marked bool
 		if err := pool.QueryRow(ctx,
-			`select exists (select 1 from blob_sweep_marks where blob_id = $1)`, stored.ID,
+			`select exists (select 1 from blob_cleanup_marks where blob_id = $1)`, stored.ID,
 		).Scan(&marked); err != nil {
-			t.Fatalf("read sweep mark: %v", err)
+			t.Fatalf("read cleanup mark: %v", err)
 		}
 		if marked {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("background sweeper did not run")
+			t.Fatal("background cleanup did not run")
 		}
 		time.Sleep(time.Millisecond)
 	}

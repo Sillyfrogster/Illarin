@@ -56,8 +56,8 @@ type CollectedSend struct {
 }
 
 type CollectedSends struct {
-	Sends    []CollectedSend  `json:"sends"`
-	Withheld []WithheldNotice `json:"withheld"`
+	Sends     []CollectedSend  `json:"sends"`
+	Takedowns []TakedownNotice `json:"takedowns"`
 }
 
 type LibraryEntry struct {
@@ -73,10 +73,10 @@ type LibraryReport struct {
 }
 
 type LibraryReportResult struct {
-	Accepted int              `json:"accepted"`
-	Ignored  int              `json:"ignored"`
-	Removed  int              `json:"removed"`
-	Withheld []WithheldNotice `json:"withheld"`
+	Accepted  int              `json:"accepted"`
+	Ignored   int              `json:"ignored"`
+	Removed   int              `json:"removed"`
+	Takedowns []TakedownNotice `json:"takedowns"`
 }
 
 type QueuedSend struct {
@@ -112,10 +112,10 @@ type SendWorkRequest struct {
 	ConnectedAppId uuid.UUID `json:"connectedAppId"`
 }
 
-type WithheldNotice struct {
-	WorkId     uuid.UUID `json:"workId"`
-	Name       string    `json:"name"`
-	WithheldAt time.Time `json:"withheldAt"`
+type TakedownNotice struct {
+	WorkId      uuid.UUID `json:"workId"`
+	Name        string    `json:"name"`
+	TakenDownAt time.Time `json:"takenDownAt"`
 }
 
 type SendFileParams struct {

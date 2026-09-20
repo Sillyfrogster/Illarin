@@ -60,7 +60,7 @@ func TestMakingAPromptPrivateStopsAQueuedSendTheAppCanNoLongerReceive(t *testing
 	if state != "failed" || reason != "unsupported" {
 		t.Fatalf("send = %s/%s, want failed/unsupported", state, reason)
 	}
-	if got := apitest.DownloadEventCount(t, pool, "linked_instance"); got != 0 {
+	if got := apitest.DownloadRecordCount(t, pool, "app"); got != 0 {
 		t.Fatalf("a stopped send recorded %d downloads, want 0", got)
 	}
 }
@@ -93,7 +93,7 @@ func TestAFileAddressSignedBeforeAPromptWentPrivateHandsOverNoBytesAfterwards(t 
 	if fetched.Header().Get("X-Accel-Redirect") != "" {
 		t.Fatalf("a refused artifact still pointed at %q", fetched.Header().Get("X-Accel-Redirect"))
 	}
-	if got := apitest.DownloadEventCount(t, pool, "linked_instance"); got != 0 {
+	if got := apitest.DownloadRecordCount(t, pool, "app"); got != 0 {
 		t.Fatalf("a refused artifact recorded %d downloads, want 0", got)
 	}
 }
@@ -145,7 +145,7 @@ func TestAnyReadersAllowedConnectedAppReceivesTheCompletePrivatePromptPreset(t *
 	if queued := apitest.SendToApp(t, router, reader, workID, credentials.ConnectedApp.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("a reader could not queue the preset: %d %s", queued.Code, queued.Body.String())
 	}
-	if before := apitest.DownloadEventCount(t, pool, "linked_instance"); before != 0 {
+	if before := apitest.DownloadRecordCount(t, pool, "app"); before != 0 {
 		t.Fatalf("queueing recorded %d downloads, want 0", before)
 	}
 	work := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil)).Sends[0]
@@ -157,7 +157,7 @@ func TestAnyReadersAllowedConnectedAppReceivesTheCompletePrivatePromptPreset(t *
 	if !strings.Contains(artifact.Body.String(), "Exact private prompt.") {
 		t.Fatal("a reader's allowed connected app did not receive the complete preset")
 	}
-	if got := apitest.DownloadEventCount(t, pool, "linked_instance"); got != 1 {
+	if got := apitest.DownloadRecordCount(t, pool, "app"); got != 1 {
 		t.Fatalf("the handoff recorded %d downloads, want 1", got)
 	}
 	if got := apitest.Collect(t, router, credentials.AccessToken, []string{work.ID}); got.Code != http.StatusNoContent {

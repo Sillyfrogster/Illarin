@@ -14,14 +14,14 @@ import (
 )
 
 const (
-	SettledWithheld  = "withheld"
+	SettledTakenDown = "taken_down"
 	SettledWithdrawn = "withdrawn"
 	SettledUnlisted  = "unlisted"
 	SettledDeleted   = "deleted"
 )
 
 var whyCancelled = map[string]string{
-	SettledWithheld:  "The work is withheld.",
+	SettledTakenDown: "The work is taken down.",
 	SettledWithdrawn: "The update was withdrawn.",
 	SettledUnlisted:  "The work is unlisted and this update was not cleared to send its link.",
 	SettledDeleted:   "The work is no longer published.",
@@ -61,7 +61,7 @@ func (s *Service) SendDueAnnouncements(ctx context.Context, now time.Time) (int,
 
 type standing struct {
 	unpublished     bool
-	withheld        bool
+	takenDown       bool
 	unlisted        bool
 	withdrawn       bool
 	consent         bool
@@ -112,7 +112,7 @@ func (s *Service) recheck(ctx context.Context, held dispatch.Work) (standing, er
 	var sameOwner *bool
 	err := s.pool.QueryRow(ctx, `
 		select owned.deleted_at is not null or owned.lifecycle <> 'published',
-		       owned.withheld_at is not null, owned.visibility = 'unlisted',
+		       owned.taken_down_at is not null, owned.visibility = 'unlisted',
 		       version.withdrawn_at is not null, event.unlisted_consent, event.payload::text,
 		       integration.type, integration.state, integration.owner_id = owned.owner_id
 		  from work_announcements event
@@ -121,7 +121,7 @@ func (s *Service) recheck(ctx context.Context, held dispatch.Work) (standing, er
 		  left join work_integrations integration on integration.id = $2
 		 where event.id = $1
 	`, held.AnnouncementID, held.IntegrationID).Scan(
-		&found.unpublished, &found.withheld, &found.unlisted, &found.withdrawn, &found.consent,
+		&found.unpublished, &found.takenDown, &found.unlisted, &found.withdrawn, &found.consent,
 		&found.payload, &integrationType, &state, &sameOwner,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -141,8 +141,8 @@ func (f standing) cancels() (dispatch.Verdict, bool) {
 	switch {
 	case f.unpublished:
 		return cancelled(SettledDeleted), true
-	case f.withheld:
-		return cancelled(SettledWithheld), true
+	case f.takenDown:
+		return cancelled(SettledTakenDown), true
 	case f.withdrawn:
 		return cancelled(SettledWithdrawn), true
 	case f.unlisted && !f.consent:

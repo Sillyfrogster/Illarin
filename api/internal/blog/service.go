@@ -21,7 +21,6 @@ import (
 )
 
 var (
-	ErrNotAuthority      = errors.New("account does not hold publication authority")
 	ErrAccountNotFound   = errors.New("no such account")
 	ErrIncompleteOrder   = errors.New("order does not name every member exactly once")
 	ErrCategoryNotFound  = errors.New("no such blog category")
@@ -70,32 +69,6 @@ func NewService(
 		return recordActivity(ctx, tx, made)
 	})
 	return s
-}
-
-func (s *Service) HoldsAuthority(ctx context.Context, accountID uuid.UUID) (bool, error) {
-	var held bool
-	err := s.pool.QueryRow(ctx, `
-		select exists (select 1 from publication_authorities where user_id = $1)
-	`, accountID).Scan(&held)
-	if err != nil {
-		return false, fmt.Errorf("read publication authority: %w", err)
-	}
-	return held, nil
-}
-
-func (s *Service) AssignAuthority(ctx context.Context, handle string) (uuid.UUID, error) {
-	accountID, err := s.accountByHandle(ctx, handle)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	_, err = s.pool.Exec(ctx, `
-		insert into publication_authorities (user_id) values ($1)
-		on conflict (user_id) do nothing
-	`, accountID)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("assign publication authority: %w", err)
-	}
-	return accountID, nil
 }
 
 func (s *Service) accountByHandle(ctx context.Context, handle string) (uuid.UUID, error) {

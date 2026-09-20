@@ -90,7 +90,7 @@ func TestPublicContactIsNeverTakenFromASignInAddress(t *testing.T) {
 	}
 }
 
-func TestPublicProfileHidesEverySignInAndAuthorityField(t *testing.T) {
+func TestPublicProfileHidesEverySignInAndRoleField(t *testing.T) {
 	t.Parallel()
 	r, session := harness.NewVerifiedRouter(t)
 	apitest.SaveProfile(t, r, session, `{

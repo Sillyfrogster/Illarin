@@ -309,7 +309,7 @@ func newDestinationStackThrough(
 	)
 	router := harness.RegisterRouter(t, handlers, api.DefaultDeadlines())
 	session := apitest.VerifiedSignUp(t, router, outbox, "admin@example.com", "blog.admin")
-	apitest.HoldsAuthority(t, pool, "blog.admin")
+	apitest.SetRole(t, pool, "blog.admin", "admin")
 	stack := integrationStack{
 		blogStack: blogStack{
 			router: router, pool: pool, handlers: handlers, outbox: outbox, admin: session,
@@ -317,7 +317,7 @@ func newDestinationStackThrough(
 		to:      to,
 		discord: discord,
 	}
-	stack.editor = stack.siteAdmin(t, "editor@example.com", "illarin.editor")
+	stack.editor = stack.contributor(t, "editor@example.com", "illarin.editor").session
 	return stack
 }
 
@@ -456,7 +456,7 @@ func (s integrationStack) readyPost(t *testing.T) blogPost {
 	return s.saved(t, s.editor, draft.ID, finished(draft, nil))
 }
 
-func TestOnlyThePublicationAuthorityReachesDestinations(t *testing.T) {
+func TestOnlyAnAdminReachesTheBlogsIntegrations(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 	member := stack.member(t, "writer@example.com", "outside.writer")

@@ -106,7 +106,7 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 			Id: item.ID, Name: item.Name, Creator: item.Creator,
 			Type: BrowseWorkType(item.Type), IsNsfw: item.IsNSFW, Cover: cover,
 			OwnerState: ownerState,
-			Withhold:   toAPIWithhold(item.Withhold),
+			Takedown:   toAPITakedown(item.Takedown),
 		})
 	}
 	var next *BrowseCursor

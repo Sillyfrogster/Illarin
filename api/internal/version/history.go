@@ -78,7 +78,7 @@ func (s *Service) readerRole(
 		  from works
 		 where id = $1 and deleted_at is null
 		   and (lifecycle = 'published' or owner_id = $2)
-		   and (withheld_at is null or owner_id = $2)
+		   and (taken_down_at is null or owner_id = $2)
 	`, workID, viewerID).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, work.ErrNotFound

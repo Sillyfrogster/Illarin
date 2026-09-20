@@ -131,8 +131,8 @@ func TestPrivatePromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	`, started.ID); err != nil {
 		t.Fatalf("expire recovery window: %v", err)
 	}
-	if _, err := sweeper(works).Sweep(t.Context()); err != nil {
-		t.Fatalf("sweep expired work: %v", err)
+	if _, err := cleanup(works).Cleanup(t.Context()); err != nil {
+		t.Fatalf("cleanup expired work: %v", err)
 	}
 	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after recovery expired: %d payloads and %d policy rows, want none", payloads, policies)
@@ -164,7 +164,7 @@ func TestUploadRefusesBytesNamedByAPurgeTombstone(t *testing.T) {
 	); err != nil {
 		t.Fatalf("insert purge actor: %v", err)
 	}
-	if err := sweeper(works).Purge(context.Background(), contentDigest, "legal_order", actorID); err != nil {
+	if err := cleanup(works).Purge(context.Background(), contentDigest, "legal_order", actorID); err != nil {
 		t.Fatalf("purge: %v", err)
 	}
 
@@ -206,7 +206,7 @@ func TestDeletedListingBelongsOnlyToItsOwner(t *testing.T) {
 	}
 }
 
-// sweeper cleans up blobs the way the server's background sweeper does
-func sweeper(works *work.Service) *storage.Sweeper {
-	return storage.NewSweeper(works.Pool(), works.Store())
+// cleanup cleans up blobs the way the server's background cleanup does
+func cleanup(works *work.Service) *storage.Cleanup {
+	return storage.NewCleanup(works.Pool(), works.Store())
 }

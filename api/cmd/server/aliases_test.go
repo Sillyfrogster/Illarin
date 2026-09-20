@@ -144,8 +144,16 @@ var renamedPaths = []struct{ method, was, now string }{
 	{"PUT", "/v1/publication/posts/:id/schedule", "/v1/blog/posts/:id/schedule"},
 	{"PUT", "/v1/publication/posts/:id/address", "/v1/blog/posts/:id/address"},
 	{"PUT", "/v1/publication/posts/:id/byline", "/v1/blog/posts/:id/byline"},
-	{"PUT", "/v1/assets/:id/withhold", "/v1/works/:id/withhold"},
-	{"DELETE", "/v1/assets/:id/withhold", "/v1/works/:id/withhold"},
+	{"PUT", "/v1/assets/:id/withhold", "/v1/works/:id/takedown"},
+	{"DELETE", "/v1/assets/:id/withhold", "/v1/works/:id/takedown"},
+	{"PUT", "/v1/works/:id/withhold", "/v1/works/:id/takedown"},
+	{"DELETE", "/v1/works/:id/withhold", "/v1/works/:id/takedown"},
+	{"GET", "/v1/profiles/:handle/restriction", "/v1/profiles/:handle/restricted"},
+	{"PUT", "/v1/profiles/:handle/restriction", "/v1/profiles/:handle/restricted"},
+	{"DELETE", "/v1/profiles/:handle/restriction", "/v1/profiles/:handle/restricted"},
+	{"GET", "/v1/profiles/:handle/restricted", "/v1/profiles/:handle/restricted"},
+	{"PUT", "/v1/profiles/:handle/restricted", "/v1/profiles/:handle/restricted"},
+	{"DELETE", "/v1/profiles/:handle/restricted", "/v1/profiles/:handle/restricted"},
 	{"PUT", "/v1/account/nsfw-visibility", "/v1/account/nsfw-preference"},
 }
 

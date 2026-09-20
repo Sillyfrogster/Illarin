@@ -134,7 +134,7 @@ func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
 		AddableBlocks:         addable,
 		NSFWPreference:        WorkDetailNSFWPreference(preference),
 		LatestVersion:         toAPILatestVersion(found.LatestVersion),
-		Withhold:              toAPIWithhold(found.Withhold),
+		Takedown:              toAPITakedown(found.Takedown),
 	}, nil
 }
 
@@ -282,11 +282,11 @@ func toAPIAddableBlocks(workType string, isOwner bool) *[]AddableBlock {
 	return &addable
 }
 
-func toAPIWithhold(found *Withhold) *WorkWithhold {
+func toAPITakedown(found *Takedown) *WorkTakedown {
 	if found == nil {
 		return nil
 	}
-	return &WorkWithhold{Reason: found.Reason, At: found.At}
+	return &WorkTakedown{Reason: found.Reason, At: found.At}
 }
 
 func countOrAbsent(count int) *int {

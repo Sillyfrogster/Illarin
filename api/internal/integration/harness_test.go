@@ -74,7 +74,7 @@ func newBlogStack(t *testing.T) blogStack {
 		t, 1<<20, api.DefaultDeadlines(), outbox,
 	)
 	session := apitest.VerifiedSignUp(t, router, outbox, "admin@example.com", "blog.admin")
-	apitest.HoldsAuthority(t, pool, "blog.admin")
+	apitest.SetRole(t, pool, "blog.admin", "admin")
 	return blogStack{router: router, pool: pool, handlers: handlers, outbox: outbox, admin: session}
 }
 
@@ -352,13 +352,6 @@ func decodePost(t *testing.T, response *httptest.ResponseRecorder) blogPost {
 		t.Fatalf("decode post: %v", err)
 	}
 	return found
-}
-
-func (s blogStack) siteAdmin(t *testing.T, email, handle string) *http.Cookie {
-	t.Helper()
-	session := s.member(t, email, handle)
-	apitest.SetRole(t, s.pool, handle, "admin")
-	return session
 }
 
 func (s blogStack) illarinDraft(t *testing.T, session *http.Cookie, title string) blogPost {

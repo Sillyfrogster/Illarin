@@ -88,18 +88,18 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 	apitest.CreateProfileWork(t, works, creatorID, "Public garden", false, work.VisibilityListed)
 	apitest.CreateProfileWork(t, works, creatorID, "Adult garden", true, work.VisibilityListed)
 	apitest.CreateProfileWork(t, works, creatorID, "Unlisted garden", false, work.VisibilityUnlisted)
-	withheldID := apitest.CreateProfileWork(
-		t, works, creatorID, "Withheld garden", false, work.VisibilityListed,
+	takenDownID := apitest.CreateProfileWork(
+		t, works, creatorID, "TakenDown garden", false, work.VisibilityListed,
 	)
 	deletedID := apitest.CreateProfileWork(
 		t, works, creatorID, "Deleted garden", false, work.VisibilityListed,
 	)
 	if _, err := pool.Exec(context.Background(), `
 		update works
-		   set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
+		   set taken_down_at = now(), taken_down_by = $2, taken_down_reason = 'testing'
 		 where id = $1
-	`, withheldID, creatorID); err != nil {
-		t.Fatalf("withhold work: %v", err)
+	`, takenDownID, creatorID); err != nil {
+		t.Fatalf("take down work: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(),
 		`update works set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deletedID); err != nil {
@@ -131,13 +131,13 @@ func TestOwnerProfileAlwaysListsActiveWorkWithoutChangingBrowse(t *testing.T) {
 	}
 	if len(states) != 4 || states["Public garden"] != nil || states["Adult garden"] != nil ||
 		states["Unlisted garden"] == nil || *states["Unlisted garden"] != "unlisted" ||
-		states["Withheld garden"] == nil || *states["Withheld garden"] != "withheld" {
+		states["TakenDown garden"] == nil || *states["TakenDown garden"] != "taken_down" {
 		t.Fatalf("owner profile states = %#v", states)
 	}
 	for _, item := range owner.Items {
-		if item.Name == "Withheld garden" &&
-			(item.Withhold == nil || item.Withhold.Reason != "testing" || item.Withhold.At.IsZero()) {
-			t.Fatalf("owner profile withhold = %+v", item.Withhold)
+		if item.Name == "TakenDown garden" &&
+			(item.Takedown == nil || item.Takedown.Reason != "testing" || item.Takedown.At.IsZero()) {
+			t.Fatalf("owner profile takedown = %+v", item.Takedown)
 		}
 	}
 	if _, exists := states["Deleted garden"]; exists {

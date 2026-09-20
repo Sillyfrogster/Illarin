@@ -164,7 +164,7 @@ func (s *Service) recordedExportSubject(
 		  from public.works work
 		 where work.id = $1 and work.deleted_at is null
 		   and (work.lifecycle = 'published' or work.owner_id = $2)
-		   and (work.withheld_at is null or work.owner_id = $2)
+		   and (work.taken_down_at is null or work.owner_id = $2)
 	`, workID, viewerID).Scan(&ownerID, &subject.lifecycle)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return exportSubject{}, false, work.ErrNotFound

@@ -77,7 +77,7 @@ func (h *Handlers) workIntegrationError(c *gin.Context, err error) {
 	case errors.Is(err, ErrChanged):
 		api.Refuse(c, http.StatusConflict, "The integration changed. Check its configuration and try again.")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "This work is frozen while it is withheld.")
+		api.Refuse(c, http.StatusConflict, "This work is frozen while it is taken down.")
 	case errors.Is(err, version.ErrIntegrationIneligible):
 		refuseField(c, http.StatusBadRequest, BlogErrorCodeInvalid, "Choose only your own verified, active integrations.", "integrationIds")
 	case errors.As(err, &field):

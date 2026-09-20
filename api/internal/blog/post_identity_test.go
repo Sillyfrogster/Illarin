@@ -311,7 +311,7 @@ func TestOrdinaryPublicationNeverLeavesABylineWithoutAnAccount(t *testing.T) {
 	}
 }
 
-func TestNeitherAProfileRestrictionNorTheWriterSwitchRewritesAByline(t *testing.T) {
+func TestNeitherARestrictedProfileNorTheWriterSwitchRewritesAByline(t *testing.T) {
 	t.Parallel()
 	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
@@ -325,7 +325,7 @@ func TestNeitherAProfileRestrictionNorTheWriterSwitchRewritesAByline(t *testing.
 
 	admin := stack.siteAdmin(t, "the.admin@example.com", "the.admin")
 	restrict := apitest.Send(t, stack.router, apitest.Authorized(jsonRequest(t,
-		http.MethodPut, "/v1/profiles/writer.dev/restriction", `{"reason":"checking something"}`,
+		http.MethodPut, "/v1/profiles/writer.dev/restricted", `{"reason":"checking something"}`,
 	), admin))
 	if restrict.Code != http.StatusOK && restrict.Code != http.StatusNoContent {
 		t.Fatalf("restrict status = %d: %s", restrict.Code, restrict.Body.String())
@@ -339,7 +339,7 @@ func TestNeitherAProfileRestrictionNorTheWriterSwitchRewritesAByline(t *testing.
 
 	found := stack.reader(t, live.Slug)
 	if found.Byline.DisplayName != "The Writer" {
-		t.Errorf("byline name = %q after a restriction", found.Byline.DisplayName)
+		t.Errorf("byline name = %q after the profile is restricted", found.Byline.DisplayName)
 	}
 	if !found.PublishedAt.Equal(*live.PublishedAt) {
 		t.Errorf("the publication date moved to %v", found.PublishedAt)

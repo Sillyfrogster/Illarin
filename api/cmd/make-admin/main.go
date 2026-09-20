@@ -1,3 +1,4 @@
+// Command make-admin makes an existing account an admin
 package main
 
 import (
@@ -8,12 +9,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
-	handle := flag.String("handle", "", "the handle of the account that holds publication authority")
+	handle := flag.String("handle", "", "the handle of the account to make an admin")
 	flag.Parse()
 	if err := run(context.Background(), *handle); err != nil {
 		log.Fatal(err)
@@ -22,7 +22,7 @@ func main() {
 
 func run(ctx context.Context, handle string) error {
 	if handle == "" {
-		return errors.New("set -handle to the account that holds publication authority")
+		return errors.New("set -handle to the account to make an admin")
 	}
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
@@ -34,13 +34,13 @@ func run(ctx context.Context, handle string) error {
 	}
 	defer pool.Close()
 
-	accountID, err := blog.NewService(pool, nil, blog.Publishing{}).AssignAuthority(ctx, handle)
-	if errors.Is(err, blog.ErrAccountNotFound) {
+	made, err := pool.Exec(ctx, `update users set role = 'admin' where username = $1`, handle)
+	if err != nil {
+		return fmt.Errorf("make admin: %w", err)
+	}
+	if made.RowsAffected() == 0 {
 		return fmt.Errorf("no account uses the handle %q", handle)
 	}
-	if err != nil {
-		return err
-	}
-	fmt.Printf("account %s holds publication authority\n", accountID)
+	fmt.Printf("%s is an admin\n", handle)
 	return nil
 }

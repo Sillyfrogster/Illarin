@@ -50,11 +50,11 @@ type ChangeGroup struct {
 }
 
 type Comparison struct {
-	From            work.Version
-	To              work.Version
-	Groups          []ChangeGroup
-	Unavailable     string
-	PromptsWithheld bool
+	From          work.Version
+	To            work.Version
+	Groups        []ChangeGroup
+	Unavailable   string
+	PromptsHidden bool
 }
 
 type VersionAccess func(work.Version) string
@@ -164,11 +164,11 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 		}
 	}
 	for _, version := range []work.FullVersion{earlier, later} {
-		withheld, err := version.HoldPrompts(ctx, tx, in.WorkID, in.AsOwner)
+		hidden, err := version.HoldPrompts(ctx, tx, in.WorkID, in.AsOwner)
 		if err != nil {
 			return Comparison{}, err
 		}
-		compared.PromptsWithheld = compared.PromptsWithheld || withheld
+		compared.PromptsHidden = compared.PromptsHidden || hidden
 	}
 	compared.Groups = compareVersions(earlier, later)
 	if err := AddressPictures(ctx, tx, s.works, in, compared.Groups); err != nil {

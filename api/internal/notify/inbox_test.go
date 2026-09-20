@@ -15,11 +15,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestWithholdingAnWorkTellsItsOwnerWhyOnceTheFanOutRuns(t *testing.T) {
+func TestTakingDownAWorkTellsItsOwnerWhyOnceTheFanOutRuns(t *testing.T) {
 	t.Parallel()
 	s := newInboxStack(t)
 	workID := s.upload(t, "Moonlit Archive")
-	s.withhold(t, workID, "Copyright report under review")
+	s.takeDown(t, workID, "Copyright report under review")
 
 	if waiting := s.inbox(t, s.creator, ""); len(waiting.Items) != 0 {
 		t.Fatalf("recording put %d entries in the inbox before the fan-out ran", len(waiting.Items))
@@ -41,27 +41,27 @@ func TestWithholdingAnWorkTellsItsOwnerWhyOnceTheFanOutRuns(t *testing.T) {
 		t.Fatalf("inbox has %d entries, want 1: %s", len(page.Items), response.Body.String())
 	}
 	entry := page.Items[0]
-	if entry.Type != "work_withheld" || entry.Work == nil || entry.Work.ID != workID ||
+	if entry.Type != "work_taken_down" || entry.Work == nil || entry.Work.ID != workID ||
 		entry.Work.Name != "Moonlit Archive" || entry.Reason != "Copyright report under review" ||
 		entry.ReadAt != nil || entry.CreatedAt.IsZero() {
-		t.Fatalf("withheld entry = %+v", entry)
+		t.Fatalf("taken down entry = %+v", entry)
 	}
 	if staffInbox := s.inbox(t, s.staff, ""); len(staffInbox.Items) != 0 {
 		t.Fatalf("the staff member who acted has %d entries, want none", len(staffInbox.Items))
 	}
 }
 
-func TestRestoringAWithheldWorkTellsItsOwnerItIsBack(t *testing.T) {
+func TestRestoringATakenDownWorkTellsItsOwnerItIsBack(t *testing.T) {
 	t.Parallel()
 	s := newInboxStack(t)
 	workID := s.upload(t, "Moonlit Archive")
-	s.withhold(t, workID, "Copyright report under review")
+	s.takeDown(t, workID, "Copyright report under review")
 	s.restore(t, workID)
 	s.fanOut(t, time.Now())
 
 	page := s.inbox(t, s.creator, "")
-	if len(page.Items) != 2 || page.Items[0].Type != "work_restored" || page.Items[1].Type != "work_withheld" {
-		t.Fatalf("inbox = %+v, want the restore above the withhold", page.Items)
+	if len(page.Items) != 2 || page.Items[0].Type != "work_restored" || page.Items[1].Type != "work_taken_down" {
+		t.Fatalf("inbox = %+v, want the restore above the takedown", page.Items)
 	}
 	restored := page.Items[0]
 	if restored.Work == nil || restored.Work.ID != workID || restored.Work.Name != "Moonlit Archive" ||
@@ -111,7 +111,7 @@ func TestRestoringAProfileTellsItsOwnerItIsTheirsToEditAgain(t *testing.T) {
 
 	page := s.inbox(t, s.creator, "")
 	if len(page.Items) != 2 || page.Items[0].Type != "profile_restored" || page.Items[1].Type != "profile_restricted" {
-		t.Fatalf("inbox = %+v, want one restore above the restriction", page.Items)
+		t.Fatalf("inbox = %+v, want one restore above the restricted notice", page.Items)
 	}
 	if restored := page.Items[0]; restored.Work != nil || restored.Reason != "" {
 		t.Fatalf("restored entry = %+v", restored)
@@ -125,7 +125,7 @@ func TestNothingTheOwnerReadsNamesTheStaffMemberWhoActed(t *testing.T) {
 	t.Parallel()
 	s := newInboxStack(t)
 	workID := s.upload(t, "Moonlit Archive")
-	s.withhold(t, workID, "Copyright report under review")
+	s.takeDown(t, workID, "Copyright report under review")
 	s.restrictProfile(t, "Impersonating another creator")
 	s.fanOut(t, time.Now())
 
@@ -146,10 +146,10 @@ func TestNothingTheOwnerReadsNamesTheStaffMemberWhoActed(t *testing.T) {
 	}
 
 	record := apitest.Send(t, s.router, apitest.Authorized(httptest.NewRequest(
-		http.MethodGet, "/v1/profiles/"+apitest.CreatorHandle+"/restriction", nil,
+		http.MethodGet, "/v1/profiles/"+apitest.CreatorHandle+"/restricted", nil,
 	), s.staff))
 	if record.Code != http.StatusOK || !strings.Contains(record.Body.String(), `"restrictedBy":"`+staffHandle+`"`) {
-		t.Fatalf("the restriction record staff read = %d %s, want it to keep the actor", record.Code, record.Body.String())
+		t.Fatalf("the restricted record staff read = %d %s, want it to keep the actor", record.Code, record.Body.String())
 	}
 }
 
@@ -157,7 +157,7 @@ func TestAnEntryReadsAsItDidWhenTheChangeHappenedAfterARename(t *testing.T) {
 	t.Parallel()
 	s := newInboxStack(t)
 	workID := s.upload(t, "Moonlit Archive")
-	s.withhold(t, workID, "Copyright report under review")
+	s.takeDown(t, workID, "Copyright report under review")
 	s.restore(t, workID)
 	if got := apitest.SaveDetails(t, s.router, s.creator, workID,
 		`{"name":"Sunlit Archive","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
@@ -167,7 +167,7 @@ func TestAnEntryReadsAsItDidWhenTheChangeHappenedAfterARename(t *testing.T) {
 		t.Fatalf("publish the rename = %d, want 200: %s", got.Code, got.Body.String())
 	}
 	s.fanOut(t, time.Now())
-	s.withhold(t, workID, "A second report")
+	s.takeDown(t, workID, "A second report")
 	s.fanOut(t, time.Now())
 
 	page := s.inbox(t, s.creator, "")
@@ -176,7 +176,7 @@ func TestAnEntryReadsAsItDidWhenTheChangeHappenedAfterARename(t *testing.T) {
 		names = append(names, entry.Type+" "+entry.Work.Name)
 	}
 	want := []string{
-		"work_withheld Sunlit Archive", "work_restored Moonlit Archive", "work_withheld Moonlit Archive",
+		"work_taken_down Sunlit Archive", "work_restored Moonlit Archive", "work_taken_down Moonlit Archive",
 	}
 	if strings.Join(names, ", ") != strings.Join(want, ", ") {
 		t.Fatalf("inbox reads %q, want %q", names, want)
@@ -188,10 +188,10 @@ func TestTheInboxPagesNewestFirstByCursor(t *testing.T) {
 	s := newInboxStack(t)
 	workID := s.upload(t, "Moonlit Archive")
 	for round := range 2 {
-		s.withhold(t, workID, "Report "+string(rune('A'+round)))
+		s.takeDown(t, workID, "Report "+string(rune('A'+round)))
 		s.restore(t, workID)
 	}
-	s.withhold(t, workID, "Report C")
+	s.takeDown(t, workID, "Report C")
 	s.fanOut(t, time.Now())
 
 	var read []string
@@ -211,8 +211,8 @@ func TestTheInboxPagesNewestFirstByCursor(t *testing.T) {
 			"&beforeId=" + page.NextCursor.BeforeID
 	}
 	want := []string{
-		"work_withheld Report C", "work_restored ", "work_withheld Report B",
-		"work_restored ", "work_withheld Report A",
+		"work_taken_down Report C", "work_restored ", "work_taken_down Report B",
+		"work_restored ", "work_taken_down Report A",
 	}
 	if strings.Join(read, "|") != strings.Join(want, "|") {
 		t.Fatalf("paged inbox = %q, want %q", read, want)
@@ -230,7 +230,7 @@ func TestOpeningAnEntryOrMarkingAllReadClearsTheUnreadCount(t *testing.T) {
 	t.Parallel()
 	s := newInboxStack(t)
 	workID := s.upload(t, "Moonlit Archive")
-	s.withhold(t, workID, "Copyright report under review")
+	s.takeDown(t, workID, "Copyright report under review")
 	s.fanOut(t, time.Now())
 	entryID := s.inbox(t, s.creator, "").Items[0].ID
 
@@ -253,7 +253,7 @@ func TestOpeningAnEntryOrMarkingAllReadClearsTheUnreadCount(t *testing.T) {
 	}
 
 	s.restore(t, workID)
-	s.withhold(t, workID, "A second report")
+	s.takeDown(t, workID, "A second report")
 	s.fanOut(t, time.Now())
 	if got := s.unread(t, s.creator); got != 2 {
 		t.Fatalf("unread = %d, want 2", got)
@@ -271,9 +271,9 @@ func TestAnAccountRemovesOneEntryOrClearsItsWholeInbox(t *testing.T) {
 	t.Parallel()
 	s := newInboxStack(t)
 	workID := s.upload(t, "Moonlit Archive")
-	s.withhold(t, workID, "Copyright report under review")
+	s.takeDown(t, workID, "Copyright report under review")
 	s.restore(t, workID)
-	s.withhold(t, workID, "A second report")
+	s.takeDown(t, workID, "A second report")
 	s.fanOut(t, time.Now())
 	entries := s.inbox(t, s.creator, "").Items
 	if len(entries) != 3 {
@@ -310,21 +310,21 @@ func TestAnAccountRemovesOneEntryOrClearsItsWholeInbox(t *testing.T) {
 	}
 }
 
-func TestTheSweeperRemovesEntriesNinetyDaysAfterTheyArrived(t *testing.T) {
+func TestCleanupRemovesEntriesNinetyDaysAfterTheyArrived(t *testing.T) {
 	t.Parallel()
 	s := newInboxStack(t)
 	workID := s.upload(t, "Moonlit Archive")
-	s.withhold(t, workID, "Copyright report under review")
+	s.takeDown(t, workID, "Copyright report under review")
 	arrived := time.Now()
 	s.fanOut(t, arrived)
 
-	s.sweep(t, arrived.Add(89*24*time.Hour))
+	s.cleanup(t, arrived.Add(89*24*time.Hour))
 	if kept := s.inbox(t, s.creator, ""); len(kept.Items) != 1 {
 		t.Fatalf("after 89 days the inbox holds %d entries, want 1", len(kept.Items))
 	}
-	s.sweep(t, arrived.Add(91*24*time.Hour))
-	if swept := s.inbox(t, s.creator, ""); len(swept.Items) != 0 || s.unread(t, s.creator) != 0 {
-		t.Fatalf("after 91 days the inbox holds %d entries, want none", len(swept.Items))
+	s.cleanup(t, arrived.Add(91*24*time.Hour))
+	if emptied := s.inbox(t, s.creator, ""); len(emptied.Items) != 0 || s.unread(t, s.creator) != 0 {
+		t.Fatalf("after 91 days the inbox holds %d entries, want none", len(emptied.Items))
 	}
 }
 
@@ -415,24 +415,24 @@ func (s inboxStack) upload(t *testing.T, name string) string {
 	return apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, s.router, s.creator, s.works, metadata, []byte(name)))
 }
 
-func (s inboxStack) withhold(t *testing.T, workID, reason string) {
+func (s inboxStack) takeDown(t *testing.T, workID, reason string) {
 	t.Helper()
 	body, err := json.Marshal(map[string]string{"reason": reason})
 	if err != nil {
 		t.Fatal(err)
 	}
 	response := apitest.Send(t, s.router, apitest.AuthorizedJSONRequest(
-		t, http.MethodPut, "/v1/works/"+workID+"/withhold", string(body), s.staff,
+		t, http.MethodPut, "/v1/works/"+workID+"/takedown", string(body), s.staff,
 	))
 	if response.Code != http.StatusNoContent {
-		t.Fatalf("withhold status = %d, want 204: %s", response.Code, response.Body.String())
+		t.Fatalf("takedown status = %d, want 204: %s", response.Code, response.Body.String())
 	}
 }
 
 func (s inboxStack) restore(t *testing.T, workID string) {
 	t.Helper()
 	response := apitest.Send(t, s.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/withhold", nil), s.staff,
+		httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/takedown", nil), s.staff,
 	))
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("restore status = %d, want 204: %s", response.Code, response.Body.String())
@@ -446,7 +446,7 @@ func (s inboxStack) restrictProfile(t *testing.T, reason string) {
 		t.Fatal(err)
 	}
 	response := apitest.Send(t, s.router, apitest.AuthorizedJSONRequest(
-		t, http.MethodPut, "/v1/profiles/"+apitest.CreatorHandle+"/restriction", string(body), s.staff,
+		t, http.MethodPut, "/v1/profiles/"+apitest.CreatorHandle+"/restricted", string(body), s.staff,
 	))
 	if response.Code != http.StatusOK {
 		t.Fatalf("restrict status = %d, want 200: %s", response.Code, response.Body.String())
@@ -456,7 +456,7 @@ func (s inboxStack) restrictProfile(t *testing.T, reason string) {
 func (s inboxStack) restoreProfile(t *testing.T) int {
 	t.Helper()
 	return apitest.Send(t, s.router, apitest.Authorized(
-		httptest.NewRequest(http.MethodDelete, "/v1/profiles/"+apitest.CreatorHandle+"/restriction", nil), s.staff,
+		httptest.NewRequest(http.MethodDelete, "/v1/profiles/"+apitest.CreatorHandle+"/restricted", nil), s.staff,
 	)).Code
 }
 
@@ -496,10 +496,10 @@ func (s inboxStack) fanOut(t *testing.T, now time.Time) {
 	}
 }
 
-func (s inboxStack) sweep(t *testing.T, now time.Time) {
+func (s inboxStack) cleanup(t *testing.T, now time.Time) {
 	t.Helper()
-	if _, err := s.notifications.Sweep(t.Context(), now); err != nil {
-		t.Fatalf("sweep: %v", err)
+	if _, err := s.notifications.Cleanup(t.Context(), now); err != nil {
+		t.Fatalf("cleanup: %v", err)
 	}
 }
 

@@ -102,7 +102,7 @@ func TestComparisonNeedsAccessRulesAndExplainsAVersionItCannotOpen(t *testing.T)
 	if _, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{WorkID: id}); !errors.Is(err, version.ErrAccessRequired) {
 		t.Fatalf("comparison ran without access rules: %v", err)
 	}
-	withheld, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{WorkID: id, Access: func(version work.Version) string {
+	takenDown, err := version.NewService(svc.Pool(), svc).Compare(ctx, version.ComparisonRequest{WorkID: id, Access: func(version work.Version) string {
 		if version.Number == 1 {
 			return "That version was withdrawn."
 		}
@@ -111,8 +111,8 @@ func TestComparisonNeedsAccessRulesAndExplainsAVersionItCannotOpen(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if withheld.Unavailable != "That version was withdrawn." || len(withheld.Groups) != 0 {
-		t.Fatalf("withheld comparison = %+v", withheld)
+	if takenDown.Unavailable != "That version was withdrawn." || len(takenDown.Groups) != 0 {
+		t.Fatalf("taken down comparison = %+v", takenDown)
 	}
 }
 

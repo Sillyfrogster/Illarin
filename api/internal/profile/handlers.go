@@ -143,7 +143,7 @@ func toAPIProfile(found account.PublicProfile) Profile {
 	}
 	if found.Avatar != nil {
 		shown.Avatar = &ProfileAvatar{
-			Url:    account.AvatarURL(found.Avatar.MediaID, found.Avatar.DerivativeVersion),
+			Url:    account.AvatarURL(found.Avatar.MediaID, found.Avatar.ImageSizeVersion),
 			Width:  found.Avatar.Width,
 			Height: found.Avatar.Height,
 		}

@@ -13,29 +13,29 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const restrictionReasonLimit = 500
+const restrictedReasonLimit = 500
 
-type Restriction struct {
+type Restricted struct {
 	Reason       string
 	RestrictedBy string
 	RestrictedAt time.Time
 }
 
-func (s *Service) ProfileRestriction(ctx context.Context, handle string) (Restriction, error) {
-	var found Restriction
+func (s *Service) RestrictedProfile(ctx context.Context, handle string) (Restricted, error) {
+	var found Restricted
 	var actor *string
 	err := s.pool.QueryRow(ctx, `
-		select restriction.reason, restriction.restricted_at, actor.username
+		select restricted.reason, restricted.restricted_at, actor.username
 		  from users account
-		  join profile_restrictions restriction on restriction.user_id = account.id
-		  left join users actor on actor.id = restriction.restricted_by
+		  join restricted_profiles restricted on restricted.user_id = account.id
+		  left join users actor on actor.id = restricted.restricted_by
 		 where account.username = $1
 	`, handle).Scan(&found.Reason, &found.RestrictedAt, &actor)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Restriction{}, ErrNotRestricted
+		return Restricted{}, ErrNotRestricted
 	}
 	if err != nil {
-		return Restriction{}, fmt.Errorf("read profile restriction: %w", err)
+		return Restricted{}, fmt.Errorf("read restricted profile: %w", err)
 	}
 	if actor != nil {
 		found.RestrictedBy = *actor
@@ -47,22 +47,22 @@ func (s *Service) RestrictProfile(
 	ctx context.Context,
 	admin api.Account,
 	handle, rawReason string,
-) (Restriction, error) {
+) (Restricted, error) {
 	reason := strings.TrimSpace(rawReason)
-	if reason == "" || len([]rune(reason)) > restrictionReasonLimit {
-		return Restriction{}, ErrInvalidReason
+	if reason == "" || len([]rune(reason)) > restrictedReasonLimit {
+		return Restricted{}, ErrInvalidReason
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Restriction{}, fmt.Errorf("begin profile restriction: %w", err)
+		return Restricted{}, fmt.Errorf("begin restricting a profile: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	subject, err := lockAccountByHandle(ctx, tx, handle)
 	if err != nil {
-		return Restriction{}, err
+		return Restricted{}, err
 	}
 	_, err = tx.Exec(ctx, `
-		insert into profile_restrictions (user_id, restricted_by, reason)
+		insert into restricted_profiles (user_id, restricted_by, reason)
 		values ($1, $2, $3)
 		on conflict (user_id) do update
 		   set restricted_by = excluded.restricted_by,
@@ -70,20 +70,20 @@ func (s *Service) RestrictProfile(
 		       restricted_at = now()
 	`, subject, admin.ID, reason)
 	if err != nil {
-		return Restriction{}, fmt.Errorf("restrict profile: %w", err)
+		return Restricted{}, fmt.Errorf("restrict profile: %w", err)
 	}
-	if err := recordRestrictionAudit(ctx, tx, admin.ID, subject, "restrict", reason); err != nil {
-		return Restriction{}, err
+	if err := recordRestrictedProfileAudit(ctx, tx, admin.ID, subject, "restrict", reason); err != nil {
+		return Restricted{}, err
 	}
 	if err := notify.Record(ctx, tx, notify.Event{
 		Type: notify.ProfileRestricted, Account: &subject, Words: notify.Words{Reason: reason},
 	}); err != nil {
-		return Restriction{}, err
+		return Restricted{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Restriction{}, fmt.Errorf("commit profile restriction: %w", err)
+		return Restricted{}, fmt.Errorf("commit restricting a profile: %w", err)
 	}
-	return s.ProfileRestriction(ctx, handle)
+	return s.RestrictedProfile(ctx, handle)
 }
 
 func (s *Service) RestoreProfile(ctx context.Context, admin api.Account, handle string) error {
@@ -96,14 +96,14 @@ func (s *Service) RestoreProfile(ctx context.Context, admin api.Account, handle 
 	if err != nil {
 		return err
 	}
-	lifted, err := tx.Exec(ctx, `delete from profile_restrictions where user_id = $1`, subject)
+	lifted, err := tx.Exec(ctx, `delete from restricted_profiles where user_id = $1`, subject)
 	if err != nil {
 		return fmt.Errorf("restore profile: %w", err)
 	}
 	if lifted.RowsAffected() == 0 {
 		return ErrNotRestricted
 	}
-	if err := recordRestrictionAudit(ctx, tx, admin.ID, subject, "restore", ""); err != nil {
+	if err := recordRestrictedProfileAudit(ctx, tx, admin.ID, subject, "restore", ""); err != nil {
 		return err
 	}
 	if err := notify.Record(ctx, tx, notify.Event{
@@ -131,18 +131,18 @@ func lockAccountByHandle(ctx context.Context, tx pgx.Tx, handle string) (uuid.UU
 	return accountID, nil
 }
 
-func recordRestrictionAudit(
+func recordRestrictedProfileAudit(
 	ctx context.Context,
 	tx pgx.Tx,
 	actor, subject uuid.UUID,
 	action, reason string,
 ) error {
 	_, err := tx.Exec(ctx, `
-		insert into profile_restriction_audits (id, actor_id, subject_id, action, reason)
+		insert into restricted_profile_audits (id, actor_id, subject_id, action, reason)
 		values ($1, $2, $3, $4, $5)
 	`, uuid.New(), actor, subject, action, reason)
 	if err != nil {
-		return fmt.Errorf("record profile restriction audit: %w", err)
+		return fmt.Errorf("record restricted profile audit: %w", err)
 	}
 	return nil
 }

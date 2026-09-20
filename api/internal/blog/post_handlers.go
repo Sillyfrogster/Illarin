@@ -509,8 +509,8 @@ func toAPIPostPicture(found *PostMedia, sign func(string) string) *PostMediaResp
 	if found == nil {
 		return nil
 	}
-	address := PostMediaURL(found.ID, found.Purpose, media.DerivativeVersion)
-	thumb := PostMediaThumbURL(found.ID, media.DerivativeVersion)
+	address := PostMediaURL(found.ID, found.Purpose, media.ImageSizeVersion)
+	thumb := PostMediaThumbURL(found.ID, media.ImageSizeVersion)
 	if sign != nil {
 		address = sign(address)
 		thumb = sign(thumb)
@@ -546,7 +546,7 @@ func toAPIByline(found Byline) PostByline {
 	}
 	if found.Avatar != nil {
 		shown.Avatar = &profile.ProfileAvatar{
-			Url:    account.AvatarURL(found.Avatar.MediaID, found.Avatar.DerivativeVersion),
+			Url:    account.AvatarURL(found.Avatar.MediaID, found.Avatar.ImageSizeVersion),
 			Width:  found.Avatar.Width,
 			Height: found.Avatar.Height,
 		}

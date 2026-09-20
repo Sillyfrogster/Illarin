@@ -25,7 +25,7 @@ func (s *Service) Delete(ctx context.Context, ownerID, id uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("read work deletion state: %w", err)
 	}
-	if state.WithheldAt.Valid {
+	if state.TakenDownAt.Valid {
 		return work.ErrWorkFrozen
 	}
 	now := s.works.Now()

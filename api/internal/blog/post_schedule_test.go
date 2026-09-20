@@ -446,17 +446,17 @@ func TestAScheduledEditionKeepsItsPicturesAfterTheDraftedChangesDropsThem(t *tes
 	if held != 1 {
 		t.Fatalf("the scheduled edition refers to %d pictures, want 1", held)
 	}
-	if _, err := sweeper(stack.handlers.Works).Sweep(t.Context()); err != nil {
-		t.Fatalf("sweep: %v", err)
+	if _, err := cleanup(stack.handlers.Works).Cleanup(t.Context()); err != nil {
+		t.Fatalf("cleanup: %v", err)
 	}
 	var blob *string
 	err = stack.pool.QueryRow(t.Context(),
 		`select blob_id::text from post_media where id = $1`, picture.ID).Scan(&blob)
 	if err != nil {
-		t.Fatalf("read the picture after sweeping: %v", err)
+		t.Fatalf("read the picture after cleanup: %v", err)
 	}
 	if blob == nil {
-		t.Fatal("sweeping took the picture a scheduled edition still needs")
+		t.Fatal("cleanup took the picture a scheduled edition still needs")
 	}
 }
 
@@ -607,7 +607,7 @@ func TestTheSchedulerStopsWithTheProcessItRunsIn(t *testing.T) {
 	}
 }
 
-// sweeper cleans up blobs the way the server's background sweeper does
-func sweeper(works *work.Service) *storage.Sweeper {
-	return storage.NewSweeper(works.Pool(), works.Store())
+// cleanup cleans up blobs the way the server's background cleanup does
+func cleanup(works *work.Service) *storage.Cleanup {
+	return storage.NewCleanup(works.Pool(), works.Store())
 }

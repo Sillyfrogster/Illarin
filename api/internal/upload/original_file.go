@@ -12,19 +12,19 @@ import (
 )
 
 func (s *Service) AcceptOriginalFile(ctx context.Context, in OriginalFileInput, candidate *work.Candidate) (Operation, error) {
-	var withheldAt pgtype.Timestamptz
+	var takenDownAt pgtype.Timestamptz
 	err := s.pool.QueryRow(ctx, `
-		select withheld_at
+		select taken_down_at
 		  from works
 		 where id = $1 and owner_id = $2 and deleted_at is null
-	`, in.WorkID, in.OwnerID).Scan(&withheldAt)
+	`, in.WorkID, in.OwnerID).Scan(&takenDownAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Operation{}, work.ErrNotFound
 	}
 	if err != nil {
 		return Operation{}, fmt.Errorf("check the original file owner: %w", err)
 	}
-	if withheldAt.Valid {
+	if takenDownAt.Valid {
 		return Operation{}, work.ErrWorkFrozen
 	}
 

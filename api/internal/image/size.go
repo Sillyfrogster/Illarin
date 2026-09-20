@@ -14,18 +14,18 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *Handlers) GetMediaVariant(c *gin.Context) {
+func (h *Handlers) GetImageSize(c *gin.Context) {
 	mediaID, ok := api.PathID(c, "media_id")
 	if !ok {
 		return
 	}
-	variant := c.Param("variant")
-	derivativeVersion, ok := api.PathNumber(c, "derivative_version")
+	size := c.Param("size")
+	imageSizeVersion, ok := api.PathNumber(c, "image_size_version")
 	if !ok {
 		return
 	}
 	q := api.ReadQuery(c)
-	params := GetMediaVariantParams{
+	params := GetImageSizeParams{
 		Expires:   api.QueryText[string](q, "expires"),
 		Signature: api.QueryText[string](q, "signature"),
 	}
@@ -36,20 +36,20 @@ func (h *Handlers) GetMediaVariant(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if derivativeVersion < 1 || uint64(derivativeVersion) > math.MaxUint32 {
-		api.Refuse(c, http.StatusNotFound, "no such media variant")
+	if imageSizeVersion < 1 || uint64(imageSizeVersion) > math.MaxUint32 {
+		api.Refuse(c, http.StatusNotFound, "no such media size")
 		return
 	}
-	download, err := h.works.MediaVariant(c.Request.Context(), work.MediaRequest{
+	download, err := h.works.ImageSize(c.Request.Context(), work.MediaRequest{
 		MediaID:   mediaID,
-		Variant:   variant,
-		Version:   uint32(derivativeVersion),
+		Size:      size,
+		Version:   uint32(imageSizeVersion),
 		ViewerID:  viewerID,
 		Expires:   valueOrEmpty(params.Expires),
 		Signature: valueOrEmpty(params.Signature),
 	})
 	if errors.Is(err, work.ErrMediaNotFound) {
-		h.sharedImageVariant(c, mediaID, variant, uint32(derivativeVersion), params)
+		h.sharedImageSize(c, mediaID, size, uint32(imageSizeVersion), params)
 		return
 	}
 	if errors.Is(err, storage.ErrInsufficientSpace) {
@@ -72,21 +72,21 @@ func (h *Handlers) GetMediaVariant(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h *Handlers) sharedImageVariant(
+func (h *Handlers) sharedImageSize(
 	c *gin.Context,
 	mediaID uuid.UUID,
-	variant string,
+	size string,
 	version uint32,
-	params GetMediaVariantParams,
+	params GetImageSizeParams,
 ) {
 	ctx := c.Request.Context()
 	owners := []func() (string, string, bool, error){
 		func() (string, string, bool, error) {
-			redirect, mediaType, err := h.accounts.AvatarVariant(ctx, mediaID, variant, version)
+			redirect, mediaType, err := h.accounts.AvatarImageSize(ctx, mediaID, size, version)
 			return redirect, mediaType, false, err
 		},
 		func() (string, string, bool, error) {
-			return h.posts.PostMediaVariant(ctx, mediaID, variant, version,
+			return h.posts.PostImageSize(ctx, mediaID, size, version,
 				valueOrEmpty(params.Expires), valueOrEmpty(params.Signature))
 		},
 	}
@@ -115,7 +115,7 @@ func (h *Handlers) sharedImageVariant(
 		c.Status(http.StatusOK)
 		return
 	}
-	api.Refuse(c, http.StatusNotFound, "no such media variant")
+	api.Refuse(c, http.StatusNotFound, "no such media size")
 }
 
 func valueOrEmpty(value *string) string {
@@ -127,11 +127,11 @@ func valueOrEmpty(value *string) string {
 
 func toAPIMedia(found work.Media) Media {
 	return Media{
-		Id:                found.ID,
-		WorkId:            found.WorkID,
-		Role:              MediaRole(found.Role),
-		Width:             found.Width,
-		Height:            found.Height,
-		DerivativeVersion: int(found.DerivativeVersion),
+		Id:               found.ID,
+		WorkId:           found.WorkID,
+		Role:             MediaRole(found.Role),
+		Width:            found.Width,
+		Height:           found.Height,
+		ImageSizeVersion: int(found.ImageSizeVersion),
 	}
 }

@@ -61,20 +61,20 @@ func LockEditable(
 	workID uuid.UUID,
 ) (string, error) {
 	var workType string
-	var withheld bool
+	var takenDown bool
 	err := tx.QueryRow(ctx, `
-		select type, withheld_at is not null
+		select type, taken_down_at is not null
 		  from works
 		 where id = $1 and owner_id = $2 and deleted_at is null
 		 for update
-	`, workID, ownerID).Scan(&workType, &withheld)
+	`, workID, ownerID).Scan(&workType, &takenDown)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}
 	if err != nil {
 		return "", fmt.Errorf("read block owner: %w", err)
 	}
-	if withheld {
+	if takenDown {
 		return "", ErrWorkFrozen
 	}
 	return workType, nil

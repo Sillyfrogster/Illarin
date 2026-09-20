@@ -17,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
+func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableImageSize(t *testing.T) {
 	t.Parallel()
 	r, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Theme with screenshots")
@@ -33,12 +33,12 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 		t.Fatalf("add media status = %d, want 201: %s", added.Code, added.Body.String())
 	}
 	var media struct {
-		ID                string `json:"id"`
-		WorkID            string `json:"workId"`
-		Role              string `json:"role"`
-		Width             int    `json:"width"`
-		Height            int    `json:"height"`
-		DerivativeVersion uint32 `json:"derivativeVersion"`
+		ID               string `json:"id"`
+		WorkID           string `json:"workId"`
+		Role             string `json:"role"`
+		Width            int    `json:"width"`
+		Height           int    `json:"height"`
+		ImageSizeVersion uint32 `json:"imageSizeVersion"`
 	}
 	if err := json.Unmarshal(added.Body.Bytes(), &media); err != nil {
 		t.Fatalf("decode media response: %v", err)
@@ -78,28 +78,28 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 		t.Fatalf("media list = %+v, want %s", mediaList.Items, media.ID)
 	}
 
-	variantURL := "/media/" + media.ID + "/grid/" + "2"
-	variant := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, variantURL, nil))
-	if variant.Code != http.StatusOK {
-		t.Fatalf("media status = %d, want 200: %s", variant.Code, variant.Body.String())
+	sizeURL := "/media/" + media.ID + "/grid/" + "2"
+	size := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, sizeURL, nil))
+	if size.Code != http.StatusOK {
+		t.Fatalf("media status = %d, want 200: %s", size.Code, size.Body.String())
 	}
-	if got := variant.Header().Get("Cache-Control"); got != "public, max-age=31536000, immutable" {
+	if got := size.Header().Get("Cache-Control"); got != "public, max-age=31536000, immutable" {
 		t.Errorf("Cache-Control = %q", got)
 	}
-	if got := variant.Header().Get("Content-Type"); got != "image/png" {
+	if got := size.Header().Get("Content-Type"); got != "image/png" {
 		t.Errorf("Content-Type = %q, want image/png", got)
 	}
-	if got := variant.Header().Get("Content-Disposition"); got != "inline" {
+	if got := size.Header().Get("Content-Disposition"); got != "inline" {
 		t.Errorf("Content-Disposition = %q, want inline", got)
 	}
-	if got := variant.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+	if got := size.Header().Get("X-Content-Type-Options"); got != "nosniff" {
 		t.Errorf("X-Content-Type-Options = %q, want nosniff", got)
 	}
-	if got := variant.Header().Get("X-Accel-Redirect"); !strings.HasPrefix(got, "/_illarin/derivatives/") {
-		t.Errorf("X-Accel-Redirect = %q, want internal derivative path", got)
+	if got := size.Header().Get("X-Accel-Redirect"); !strings.HasPrefix(got, "/_illarin/image-cache/") {
+		t.Errorf("X-Accel-Redirect = %q, want internal image cache path", got)
 	}
-	if variant.Body.Len() != 0 {
-		t.Errorf("Go wrote %d media bytes instead of handing off to nginx", variant.Body.Len())
+	if size.Body.Len() != 0 {
+		t.Errorf("Go wrote %d media bytes instead of handing off to nginx", size.Body.Len())
 	}
 	preview := apitest.Send(t, r, httptest.NewRequest(
 		http.MethodGet, "/media/"+media.ID+"/og/2", nil,
@@ -107,19 +107,19 @@ func TestCreatorAddsMediaAndAnyoneFetchesAnImmutableVariant(t *testing.T) {
 	if preview.Code != http.StatusOK {
 		t.Fatalf("og preview status = %d, want 200: %s", preview.Code, preview.Body.String())
 	}
-	if preview.Header().Get("X-Accel-Redirect") == variant.Header().Get("X-Accel-Redirect") {
-		t.Fatal("composed og preview reused the grid derivative")
+	if preview.Header().Get("X-Accel-Redirect") == size.Header().Get("X-Accel-Redirect") {
+		t.Fatal("composed og preview reused the grid size")
 	}
-	var eventCount int
-	if err := pool.QueryRow(context.Background(), `select count(*) from download_events`).Scan(&eventCount); err != nil {
-		t.Fatalf("count download events: %v", err)
+	var recorded int
+	if err := pool.QueryRow(context.Background(), `select count(*) from download_records`).Scan(&recorded); err != nil {
+		t.Fatalf("count download records: %v", err)
 	}
-	if eventCount != 0 {
-		t.Fatalf("media handoffs wrote %d download events", eventCount)
+	if recorded != 0 {
+		t.Fatalf("media handoffs wrote %d download records", recorded)
 	}
 }
 
-func TestMediaRouteRefusesArbitraryVariantsAndVersions(t *testing.T) {
+func TestMediaRouteRefusesArbitrarySizesAndVersions(t *testing.T) {
 	t.Parallel()
 	r := harness.NewRouter(t)
 	for _, path := range []string{
@@ -133,7 +133,7 @@ func TestMediaRouteRefusesArbitraryVariantsAndVersions(t *testing.T) {
 	}
 }
 
-func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.T) {
+func TestAMissingImageSizeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	r, session, works, pool := harness.NewVerifiedUploadRouterWithStoreFactory(
@@ -169,8 +169,8 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	if err != nil {
 		t.Fatalf("open unlimited store: %v", err)
 	}
-	if err := unlimited.ClearDerivatives(context.Background()); err != nil {
-		t.Fatalf("clear generated derivatives: %v", err)
+	if err := unlimited.ClearImageCache(context.Background()); err != nil {
+		t.Fatalf("clear the image cache: %v", err)
 	}
 	var digestBytes []byte
 	if err := pool.QueryRow(context.Background(), `
@@ -183,9 +183,9 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	}
 	var digest [32]byte
 	copy(digest[:], digestBytes)
-	disposable := storage.DerivativeID{SourceDigest: digest, Variant: "old", Version: 1}
-	if err := unlimited.PutDerivative(context.Background(), disposable, []byte("old cache")); err != nil {
-		t.Fatalf("seed disposable derivative: %v", err)
+	disposable := storage.ImageSizeID{SourceDigest: digest, Size: "old", Version: 1}
+	if err := unlimited.PutImageSize(context.Background(), disposable, []byte("old cache")); err != nil {
+		t.Fatalf("seed a disposable image size: %v", err)
 	}
 
 	limited, err := storage.NewStoreWithCapacity(pool, root, storage.Capacity{
@@ -208,8 +208,8 @@ func TestMissingDerivativeYieldsToTheStorageReserveAndEvictsTheCache(t *testing.
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatalf("media status = %d, want 503: %s", response.Code, response.Body.String())
 	}
-	if _, err := limited.OpenDerivative(context.Background(), disposable); !errors.Is(err, storage.ErrDerivativeNotFound) {
-		t.Fatalf("disposable derivative survived low space: %v", err)
+	if _, err := limited.OpenImageSize(context.Background(), disposable); !errors.Is(err, storage.ErrImageSizeNotFound) {
+		t.Fatalf("disposable image size survived low space: %v", err)
 	}
 }
 

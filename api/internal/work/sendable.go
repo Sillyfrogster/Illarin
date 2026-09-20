@@ -29,7 +29,7 @@ func (s *Service) SendableWork(
 		  from work_public.works
 		 where id = $1
 		   and deleted_at is null
-		   and withheld_at is null
+		   and taken_down_at is null
 		   and lifecycle = 'published'
 	`, workID).Scan(&found.Type, &found.Name, &number, &originalFileID, &coverID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -124,7 +124,7 @@ func (s *Service) sendPictures(
 	if err != nil {
 		return nil, fmt.Errorf("read the blocks to send: %w", err)
 	}
-	withheld := galleryImagesLeftBehind(blocks)
+	leftBehind := galleryImagesLeftBehind(blocks)
 	rows, err := q.Query(ctx, `
 		select id, role
 		  from work_public.work_media
@@ -143,7 +143,7 @@ func (s *Service) sendPictures(
 		if err := rows.Scan(&picture.MediaID, &picture.Role); err != nil {
 			return nil, fmt.Errorf("read a picture to send: %w", err)
 		}
-		if withheld[picture.MediaID] {
+		if leftBehind[picture.MediaID] {
 			continue
 		}
 		picture.IsCover = coverID != nil && *coverID == picture.MediaID
@@ -155,7 +155,7 @@ func (s *Service) sendPictures(
 
 // galleryImagesLeftBehind names the gallery images the creator keeps out of downloads.
 func galleryImagesLeftBehind(blocks []block.Block) map[uuid.UUID]bool {
-	withheld := make(map[uuid.UUID]bool)
+	leftBehind := make(map[uuid.UUID]bool)
 	for _, holder := range blocks {
 		for _, element := range holder.Elements {
 			set, isSet := element.Content.(block.ImageSet)
@@ -164,12 +164,12 @@ func galleryImagesLeftBehind(blocks []block.Block) map[uuid.UUID]bool {
 			}
 			for _, image := range set.Images {
 				if image.OmitFromDownloads {
-					withheld[image.MediaID] = true
+					leftBehind[image.MediaID] = true
 				}
 			}
 		}
 	}
-	return withheld
+	return leftBehind
 }
 
 func (s *Service) SignedURL(path string) string {

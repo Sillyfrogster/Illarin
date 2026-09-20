@@ -27,7 +27,7 @@ type Settings struct {
 	Recheck           time.Duration
 	Lease             time.Duration
 	Retention         time.Duration
-	SweepInterval     time.Duration
+	CleanupInterval   time.Duration
 	Batch             int
 	MaxAttempts       int
 	PendingPerApp     int
@@ -43,7 +43,7 @@ func DefaultSettings() Settings {
 		Recheck:           5 * time.Second,
 		Lease:             dispatch.Life,
 		Retention:         7 * 24 * time.Hour,
-		SweepInterval:     5 * time.Minute,
+		CleanupInterval:   5 * time.Minute,
 		Batch:             10,
 		MaxAttempts:       5,
 		PendingPerApp:     100,
@@ -288,7 +288,7 @@ func (s *Sends) worksInstalledBehind(
 		   and entry.work_id = any($2::uuid[])
 		   and entry.version_number < published.number
 		   and subject.deleted_at is null
-		   and subject.withheld_at is null
+		   and subject.taken_down_at is null
 		   and subject.lifecycle = 'published'
 	`, userID, workIDs)
 	if err != nil {

@@ -59,7 +59,7 @@ func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testi
 	var digest [32]byte
 	copy(digest[:], digestBytes)
 
-	if err := storage.NewSweeper(pool, failingDeleteStore{Store: store}).
+	if err := storage.NewCleanup(pool, failingDeleteStore{Store: store}).
 		Purge(ctx, digest, "legal_order", actorID); err == nil {
 		t.Fatal("purge succeeded despite the storage failure")
 	}
@@ -82,8 +82,8 @@ func TestPurgeCommitsTheTombstoneAndBrokenReferencesBeforeDeletingBytes(t *testi
 		t.Fatalf("purge failure left %d live references", references)
 	}
 
-	if _, err := storage.NewSweeper(pool, store).Sweep(ctx); err != nil {
-		t.Fatalf("resume purge from the sweeper: %v", err)
+	if _, err := storage.NewCleanup(pool, store).Cleanup(ctx); err != nil {
+		t.Fatalf("resume purge from the cleanup: %v", err)
 	}
 	var blobID uuid.UUID
 	if err := pool.QueryRow(ctx,
@@ -134,7 +134,7 @@ func TestPurgeDeletesSharedBytesBreaksReferencesAndRecordsATombstone(t *testing.
 	var contentDigest [32]byte
 	copy(contentDigest[:], digest)
 
-	if err := storage.NewSweeperWithClock(pool, store, clock).Purge(ctx, contentDigest, "legal_order", actorID); err != nil {
+	if err := storage.NewCleanupWithClock(pool, store, clock).Purge(ctx, contentDigest, "legal_order", actorID); err != nil {
 		t.Fatalf("purge: %v", err)
 	}
 	if _, err := store.Open(ctx, blobID); !errors.Is(err, storage.ErrBlobNotFound) {
@@ -182,7 +182,7 @@ func TestPurgedBytesCannotBeStoredAgain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("put blob: %v", err)
 	}
-	if err := storage.NewSweeper(pool, store).Purge(ctx, stored.Digest, "illegal_content", actorID); err != nil {
+	if err := storage.NewCleanup(pool, store).Purge(ctx, stored.Digest, "illegal_content", actorID); err != nil {
 		t.Fatalf("purge: %v", err)
 	}
 	_, err = apitest.Uploads(service).AcceptUpload(ctx, upload.UploadInput{

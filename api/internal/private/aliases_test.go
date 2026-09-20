@@ -51,7 +51,7 @@ func TestAPrivatePromptSavedUnderTheOldNamesStaysPrivate(t *testing.T) {
 func TestTheWorkPageStillCarriesTheOldNamesForPrivateAndPreservedPrompts(t *testing.T) {
 	t.Parallel()
 	stack := newPreservedStack(t)
-	stack.preserve(t, "1.0.0", "jailbreak", "The withheld one.")
+	stack.preserve(t, "1.0.0", "jailbreak", "The kept-back one.")
 
 	answer := apitest.Send(t, stack.router, apitest.Authorized(httptest.NewRequest(
 		http.MethodGet, "/v1/works/"+stack.workID, nil,

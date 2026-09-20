@@ -16,11 +16,11 @@ type AppAccessToken struct {
 }
 
 type AppLibraryEntry struct {
-	ConnectedAppID     pgtype.UUID
-	WorkID             pgtype.UUID
-	VersionNumber      int32
-	ReportedAt         pgtype.Timestamptz
-	NotifiedWithheldAt pgtype.Timestamptz
+	ConnectedAppID      pgtype.UUID
+	WorkID              pgtype.UUID
+	VersionNumber       int32
+	ReportedAt          pgtype.Timestamptz
+	NotifiedTakenDownAt pgtype.Timestamptz
 }
 
 type AppRefreshHistory struct {
@@ -37,7 +37,7 @@ type Blob struct {
 	StorageKey string
 }
 
-type BlobSweepMark struct {
+type BlobCleanupMark struct {
 	BlobID   pgtype.UUID
 	MarkedAt pgtype.Timestamptz
 }
@@ -227,14 +227,14 @@ type ConnectionRequest struct {
 	PollIntervalSeconds int32
 }
 
-type DownloadEvent struct {
-	ID                 int64
-	WorkID             pgtype.UUID
-	OriginalFileID     pgtype.UUID
-	Format             string
-	HandedOffAt        pgtype.Timestamptz
-	AuthorizationClass string
-	Visibility         string
+type DownloadRecord struct {
+	ID             int64
+	WorkID         pgtype.UUID
+	OriginalFileID pgtype.UUID
+	Format         string
+	HandedOffAt    pgtype.Timestamptz
+	Access         string
+	Visibility     string
 }
 
 type EmailVerificationToken struct {
@@ -472,22 +472,6 @@ type ProfileMedium struct {
 	CreatedAt pgtype.Timestamptz
 }
 
-type ProfileRestriction struct {
-	UserID       pgtype.UUID
-	RestrictedBy pgtype.UUID
-	Reason       string
-	RestrictedAt pgtype.Timestamptz
-}
-
-type ProfileRestrictionAudit struct {
-	ID         pgtype.UUID
-	ActorID    pgtype.UUID
-	SubjectID  pgtype.UUID
-	Action     string
-	Reason     string
-	RecordedAt pgtype.Timestamptz
-}
-
 type PublicProfile struct {
 	UserID        pgtype.UUID
 	DisplayName   string
@@ -505,9 +489,20 @@ type PublicProfileLink struct {
 	Url      string
 }
 
-type PublicationAuthority struct {
-	UserID     pgtype.UUID
-	AssignedAt pgtype.Timestamptz
+type RestrictedProfile struct {
+	UserID       pgtype.UUID
+	RestrictedBy pgtype.UUID
+	Reason       string
+	RestrictedAt pgtype.Timestamptz
+}
+
+type RestrictedProfileAudit struct {
+	ID         pgtype.UUID
+	ActorID    pgtype.UUID
+	SubjectID  pgtype.UUID
+	Action     string
+	Reason     string
+	RecordedAt pgtype.Timestamptz
 }
 
 type RetiredHandle struct {
@@ -594,9 +589,9 @@ type Work struct {
 	CreatedAt             pgtype.Timestamptz
 	UpdatedAt             pgtype.Timestamptz
 	IndexedAt             pgtype.Timestamptz
-	WithheldAt            pgtype.Timestamptz
-	WithheldBy            pgtype.UUID
-	WithheldReason        pgtype.Text
+	TakenDownAt           pgtype.Timestamptz
+	TakenDownBy           pgtype.UUID
+	TakenDownReason       pgtype.Text
 	DeletedAt             pgtype.Timestamptz
 	RecoverableUntil      pgtype.Timestamptz
 	Lifecycle             string
@@ -768,9 +763,9 @@ type WorkPublicWork struct {
 	CreatedAt          pgtype.Timestamptz
 	UpdatedAt          pgtype.Timestamptz
 	IndexedAt          pgtype.Timestamptz
-	WithheldAt         pgtype.Timestamptz
-	WithheldBy         pgtype.UUID
-	WithheldReason     pgtype.Text
+	TakenDownAt        pgtype.Timestamptz
+	TakenDownBy        pgtype.UUID
+	TakenDownReason    pgtype.Text
 	DeletedAt          pgtype.Timestamptz
 	RecoverableUntil   pgtype.Timestamptz
 	Lifecycle          string

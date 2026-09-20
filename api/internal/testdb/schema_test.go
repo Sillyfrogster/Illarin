@@ -22,7 +22,7 @@ func TestCoreTablesExist(t *testing.T) {
 		"work_blocks",
 		"work_summaries",
 		"blobs",
-		"blob_sweep_marks",
+		"blob_cleanup_marks",
 		"blob_tombstones",
 		"users",
 		"retired_handles",
@@ -295,7 +295,7 @@ func TestVisibilityDefaultsToListedAndRejectsUnknownValues(t *testing.T) {
 	}
 }
 
-func TestWithholdingFieldsPopulateTogether(t *testing.T) {
+func TestTakenDownFieldsPopulateTogether(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	ctx := context.Background()
@@ -303,9 +303,9 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 	workID := uuid.New()
 	actorID := uuid.New()
 	_, err := pool.Exec(ctx,
-		`insert into users (id, username) values ($1, 'withhold.actor')`, actorID)
+		`insert into users (id, username) values ($1, 'takedown.actor')`, actorID)
 	if err != nil {
-		t.Fatalf("insert withhold actor: %v", err)
+		t.Fatalf("insert takedown actor: %v", err)
 	}
 	_, err = pool.Exec(ctx,
 		`insert into works (id, type, name, lifecycle)
@@ -316,22 +316,22 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 
 	_, err = pool.Exec(ctx,
 		`update works
-		    set withheld_at = now(), withheld_by = $2, withheld_reason = 'review'
+		    set taken_down_at = now(), taken_down_by = $2, taken_down_reason = 'review'
 		  where id = $1`, workID, actorID)
 	if err != nil {
-		t.Fatalf("set complete withhold: %v", err)
+		t.Fatalf("set complete takedown: %v", err)
 	}
 
 	partial := []struct {
 		name string
 		set  string
 	}{
-		{name: "time only", set: "withheld_at = now()"},
-		{name: "actor only", set: "withheld_by = gen_random_uuid()"},
-		{name: "reason only", set: "withheld_reason = 'review'"},
-		{name: "without time", set: "withheld_by = gen_random_uuid(), withheld_reason = 'review'"},
-		{name: "without actor", set: "withheld_at = now(), withheld_reason = 'review'"},
-		{name: "without reason", set: "withheld_at = now(), withheld_by = gen_random_uuid()"},
+		{name: "time only", set: "taken_down_at = now()"},
+		{name: "actor only", set: "taken_down_by = gen_random_uuid()"},
+		{name: "reason only", set: "taken_down_reason = 'review'"},
+		{name: "without time", set: "taken_down_by = gen_random_uuid(), taken_down_reason = 'review'"},
+		{name: "without actor", set: "taken_down_at = now(), taken_down_reason = 'review'"},
+		{name: "without reason", set: "taken_down_at = now(), taken_down_by = gen_random_uuid()"},
 	}
 	for _, test := range partial {
 		t.Run(test.name, func(t *testing.T) {
@@ -344,7 +344,7 @@ func TestWithholdingFieldsPopulateTogether(t *testing.T) {
 			}
 			_, err = pool.Exec(ctx, `update works set `+test.set+` where id = $1`, id)
 			if err == nil {
-				t.Fatal("partial withhold was accepted")
+				t.Fatal("partial takedown was accepted")
 			}
 		})
 	}
@@ -364,7 +364,7 @@ func TestOriginalFormatAndOriginalFileFormatHaveSeparateHomes(t *testing.T) {
 		}
 	}
 	for _, column := range []string{
-		"type", "visibility", "withheld_at", "withheld_by", "withheld_reason", "deleted_at", "original_format",
+		"type", "visibility", "taken_down_at", "taken_down_by", "taken_down_reason", "deleted_at", "original_format",
 	} {
 		if !slices.Contains(workColumns, column) {
 			t.Errorf("works has no %s", column)
@@ -410,14 +410,14 @@ func TestOriginalFileIdentityCanBackACompositeForeignKey(t *testing.T) {
 	}
 }
 
-func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
+func TestADownloadRecordCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	workID, originalFileID, _ := insertOriginalFile(t, pool)
 
-	columns, err := tableColumns(pool, "download_events")
+	columns, err := tableColumns(pool, "download_records")
 	if err != nil {
-		t.Fatalf("read download event columns: %v", err)
+		t.Fatalf("read download record columns: %v", err)
 	}
 	want := []string{
 		"id",
@@ -425,24 +425,24 @@ func TestDownloadEventCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 		"original_file_id",
 		"format",
 		"handed_off_at",
-		"authorization_class",
+		"access",
 		"visibility",
 	}
 	if !slices.Equal(columns, want) {
-		t.Fatalf("download event columns = %v, want %v", columns, want)
+		t.Fatalf("download record columns = %v, want %v", columns, want)
 	}
 
 	_, err = pool.Exec(context.Background(), `
-		insert into download_events
-			(work_id, original_file_id, format, authorization_class, visibility)
-		values ($1, $2, 'raw', 'anonymous', 'listed')
+		insert into download_records
+			(work_id, original_file_id, format, access, visibility)
+		values ($1, $2, 'raw', 'public', 'listed')
 	`, workID, originalFileID)
 	if err != nil {
-		t.Fatalf("insert download event: %v", err)
+		t.Fatalf("insert download record: %v", err)
 	}
 }
 
-func TestDownloadEventMayOmitAnOriginalFile(t *testing.T) {
+func TestADownloadRecordMayOmitAnOriginalFile(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	workID := uuid.New()
@@ -455,15 +455,15 @@ func TestDownloadEventMayOmitAnOriginalFile(t *testing.T) {
 		t.Fatalf("insert work without an original file: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
-		insert into download_events
-			(work_id, original_file_id, format, authorization_class, visibility)
-		values ($1, null, 'chara_card_v3', 'anonymous', 'listed')
+		insert into download_records
+			(work_id, original_file_id, format, access, visibility)
+		values ($1, null, 'chara_card_v3', 'public', 'listed')
 	`, workID); err != nil {
-		t.Fatalf("insert download event without an original file: %v", err)
+		t.Fatalf("insert download record without an original file: %v", err)
 	}
 }
 
-func TestDownloadEventsAreImmutable(t *testing.T) {
+func TestDownloadRecordsAreImmutable(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	workID, originalFileID, _ := insertOriginalFile(t, pool)
@@ -471,25 +471,25 @@ func TestDownloadEventsAreImmutable(t *testing.T) {
 
 	var eventID int64
 	err := pool.QueryRow(ctx, `
-		insert into download_events
-			(work_id, original_file_id, format, authorization_class, visibility)
-		values ($1, $2, 'raw', 'anonymous', 'listed')
+		insert into download_records
+			(work_id, original_file_id, format, access, visibility)
+		values ($1, $2, 'raw', 'public', 'listed')
 		returning id
 	`, workID, originalFileID).Scan(&eventID)
 	if err != nil {
-		t.Fatalf("insert download event: %v", err)
+		t.Fatalf("insert download record: %v", err)
 	}
 
 	if _, err := pool.Exec(ctx, `
-		update download_events set authorization_class = 'owner' where id = $1
+		update download_records set access = 'owner' where id = $1
 	`, eventID); err == nil {
-		t.Fatal("download event was updated")
+		t.Fatal("download record was updated")
 	}
-	if _, err := pool.Exec(ctx, `delete from download_events where id = $1`, eventID); err == nil {
-		t.Fatal("download event was deleted")
+	if _, err := pool.Exec(ctx, `delete from download_records where id = $1`, eventID); err == nil {
+		t.Fatal("download record was deleted")
 	}
-	if _, err := pool.Exec(ctx, `truncate download_events`); err == nil {
-		t.Fatal("download events were truncated")
+	if _, err := pool.Exec(ctx, `truncate download_records`); err == nil {
+		t.Fatal("download records were truncated")
 	}
 }
 
@@ -536,16 +536,16 @@ func TestLegacyCountersAreFrozenAtTheCutover(t *testing.T) {
 	}
 }
 
-func TestDownloadEventOriginalFileMustBelongToItsWork(t *testing.T) {
+func TestADownloadRecordsOriginalFileMustBelongToItsWork(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	firstWorkID, firstOriginalFileID, _ := insertOriginalFile(t, pool)
 	secondWorkID, _, _ := insertOriginalFile(t, pool)
 
 	_, err := pool.Exec(context.Background(), `
-		insert into download_events
-			(work_id, original_file_id, format, authorization_class, visibility)
-		values ($1, $2, 'raw', 'anonymous', 'listed')
+		insert into download_records
+			(work_id, original_file_id, format, access, visibility)
+		values ($1, $2, 'raw', 'public', 'listed')
 	`, secondWorkID, firstOriginalFileID)
 	if err == nil {
 		t.Fatalf("original file %s from work %s was recorded for work %s",
@@ -553,38 +553,36 @@ func TestDownloadEventOriginalFileMustBelongToItsWork(t *testing.T) {
 	}
 }
 
-func TestDownloadEventVocabularyIsClosed(t *testing.T) {
+func TestTheDownloadRecordVocabularyIsClosed(t *testing.T) {
 	t.Parallel()
 	pool := Connect(t)
 	workID, originalFileID, _ := insertOriginalFile(t, pool)
 	ctx := context.Background()
 
-	for _, authorizationClass := range []string{
-		"anonymous", "signed_in", "owner", "linked_instance",
-	} {
+	for _, access := range []string{"public", "owner", "app"} {
 		_, err := pool.Exec(ctx, `
-			insert into download_events
-				(work_id, original_file_id, format, authorization_class, visibility)
+			insert into download_records
+				(work_id, original_file_id, format, access, visibility)
 			values ($1, $2, 'raw', $3, 'listed')
-		`, workID, originalFileID, authorizationClass)
+		`, workID, originalFileID, access)
 		if err != nil {
-			t.Fatalf("insert %s download event: %v", authorizationClass, err)
+			t.Fatalf("insert %s download record: %v", access, err)
 		}
 	}
 
 	for name, values := range map[string][3]string{
-		"blank target":          {" ", "anonymous", "listed"},
-		"unknown authorization": {"raw", "crawler", "listed"},
-		"unknown visibility":    {"raw", "anonymous", "private"},
+		"blank target":       {" ", "public", "listed"},
+		"unknown access":     {"raw", "crawler", "listed"},
+		"unknown visibility": {"raw", "public", "private"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := pool.Exec(ctx, `
-				insert into download_events
-					(work_id, original_file_id, format, authorization_class, visibility)
+				insert into download_records
+					(work_id, original_file_id, format, access, visibility)
 				values ($1, $2, $3, $4, $5)
 			`, workID, originalFileID, values[0], values[1], values[2])
 			if err == nil {
-				t.Fatal("invalid download event was accepted")
+				t.Fatal("invalid download record was accepted")
 			}
 		})
 	}
@@ -741,7 +739,7 @@ func TestBrowseIndexStartsWithCreationTimeAndCarriesTheCatalogPredicate(t *testi
 	if !strings.Contains(definition, "(created_at DESC, id DESC)") {
 		t.Errorf("browse index ordering = %q, want creation time and id descending", definition)
 	}
-	for _, clause := range []string{"visibility = 'listed'", "withheld_at IS NULL", "deleted_at IS NULL"} {
+	for _, clause := range []string{"visibility = 'listed'", "taken_down_at IS NULL", "deleted_at IS NULL"} {
 		if !strings.Contains(predicate, clause) {
 			t.Errorf("browse index predicate %q does not contain %q", predicate, clause)
 		}

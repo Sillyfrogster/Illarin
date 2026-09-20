@@ -261,17 +261,17 @@ func TestOnlyTheOwnerOfALiveWorkCanAddAnOriginalFile(t *testing.T) {
 	}
 
 	if _, err := pool.Exec(context.Background(), `
-		update works set withheld_at = now(), withheld_by = $2, withheld_reason = 'held'
+		update works set taken_down_at = now(), taken_down_by = $2, taken_down_reason = 'held'
 		 where id = $1
 	`, created.ID, ownerID); err != nil {
-		t.Fatalf("withhold work: %v", err)
+		t.Fatalf("take down work: %v", err)
 	}
 	_, err = svc.AcceptOriginalFile(context.Background(), OriginalFileInput{
 		OwnerID: ownerID, WorkID: created.ID, Filename: "card.json",
 		File: bytes.NewReader([]byte(`{"spec":"as_character"}`)),
 	}, currentCandidate(t, svc, created.ID))
 	if !errors.Is(err, work.ErrWorkFrozen) {
-		t.Fatalf("withheld revision error = %v, want work.ErrAssetFrozen", err)
+		t.Fatalf("taken down revision error = %v, want work.ErrAssetFrozen", err)
 	}
 }
 

@@ -155,11 +155,11 @@ func TestWorkPageAnswersNormallyForAnUnlistedWork(t *testing.T) {
 	}
 }
 
-func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
+func TestTakenDownDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 	t.Parallel()
 	r, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
-	withhold := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
-		t, r, session, works, withFilename(apitest.ExampleMetadata("Withheld"), "withheld"), []byte("a"),
+	takeDown := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
+		t, r, session, works, withFilename(apitest.ExampleMetadata("TakenDown"), "taken down"), []byte("a"),
 	))
 	deleted := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
 		t, r, session, works, withFilename(apitest.ExampleMetadata("Deleted"), "deleted"), []byte("b"),
@@ -172,10 +172,10 @@ func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 	}
 	if _, err := pool.Exec(context.Background(), `
 		update works
-		   set withheld_at = now(), withheld_by = $2, withheld_reason = 'testing'
+		   set taken_down_at = now(), taken_down_by = $2, taken_down_reason = 'testing'
 		 where id = $1
-	`, withhold, staff); err != nil {
-		t.Fatalf("withhold work: %v", err)
+	`, takeDown, staff); err != nil {
+		t.Fatalf("take down work: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(),
 		`update works set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deleted,
@@ -185,7 +185,7 @@ func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 
 	never := "22222222-2222-2222-2222-222222222222"
 	var bodies []string
-	for _, id := range []string{withhold, deleted, never} {
+	for _, id := range []string{takeDown, deleted, never} {
 		response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+id, nil))
 		if response.Code != http.StatusNotFound {
 			t.Fatalf("GET /v1/works/%s status = %d, want 404: %s",
@@ -198,7 +198,7 @@ func TestWithheldDeletedAndNeverExistedWorksAnswerAlike(t *testing.T) {
 	}
 }
 
-func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
+func TestBlurredReaderIsNeverHandedAClearImageSize(t *testing.T) {
 	t.Parallel()
 	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("After Dark")
@@ -228,7 +228,7 @@ func TestBlurredReaderIsNeverHandedAClearVariant(t *testing.T) {
 		}
 		for _, clear := range []string{"/detail/", "/thumb/", "/og/"} {
 			if strings.Contains(string(encoded), clear) {
-				t.Errorf("a %s reader was handed a %s variant: %s", preference, clear, encoded)
+				t.Errorf("a %s reader was handed a %s size: %s", preference, clear, encoded)
 			}
 		}
 		if page.Preview == nil || !strings.Contains(*page.Preview, "/og_blurred/") {

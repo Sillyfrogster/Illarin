@@ -32,12 +32,12 @@ const (
 )
 
 type Media struct {
-	ID                uuid.UUID
-	WorkID            uuid.UUID
-	Role              MediaRole
-	Width             int
-	Height            int
-	DerivativeVersion uint32
+	ID               uuid.UUID
+	WorkID           uuid.UUID
+	Role             MediaRole
+	Width            int
+	Height           int
+	ImageSizeVersion uint32
 }
 
 type AddMediaInput struct {
@@ -55,7 +55,7 @@ type MediaDownload struct {
 
 type MediaRequest struct {
 	MediaID   uuid.UUID
-	Variant   string
+	Size      string
 	Version   uint32
 	ViewerID  *uuid.UUID
 	Expires   string
@@ -90,19 +90,19 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 	if !in.Role.Valid() {
 		return Media{}, ErrInvalidMediaRole
 	}
-	var withheldAt pgtype.Timestamptz
+	var takenDownAt pgtype.Timestamptz
 	err := s.pool.QueryRow(ctx, `
-		select withheld_at
+		select taken_down_at
 		  from works
 		 where id = $1 and owner_id = $2 and deleted_at is null
-	`, in.WorkID, in.OwnerID).Scan(&withheldAt)
+	`, in.WorkID, in.OwnerID).Scan(&takenDownAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Media{}, ErrMediaNotFound
 	}
 	if err != nil {
 		return Media{}, fmt.Errorf("check media owner: %w", err)
 	}
-	if withheldAt.Valid {
+	if takenDownAt.Valid {
 		return Media{}, ErrWorkFrozen
 	}
 
@@ -150,7 +150,7 @@ func (s *Service) AddMedia(ctx context.Context, in AddMediaInput, candidate *Can
 	return Media{
 		ID: id, WorkID: in.WorkID, Role: in.Role,
 		Width: prepared.Width, Height: prepared.Height,
-		DerivativeVersion: mediaproc.DerivativeVersion,
+		ImageSizeVersion: mediaproc.ImageSizeVersion,
 	}, nil
 }
 
@@ -161,7 +161,7 @@ func (s *Service) ListMedia(ctx context.Context, workID uuid.UUID, viewerID *uui
 		   from works
 		  where id = $1 and deleted_at is null
 		    and (lifecycle = 'published' or owner_id = $2)
-		    and (withheld_at is null or owner_id = $2)`, workID, viewerID,
+		    and (taken_down_at is null or owner_id = $2)`, workID, viewerID,
 	).Scan(&foundWorkID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -193,7 +193,7 @@ func (s *Service) ListMedia(ctx context.Context, workID uuid.UUID, viewerID *uui
 		}
 		found.Width = int(width.Int32)
 		found.Height = int(height.Int32)
-		found.DerivativeVersion = mediaproc.DerivativeVersion
+		found.ImageSizeVersion = mediaproc.ImageSizeVersion
 		media = append(media, found)
 	}
 	if err := rows.Err(); err != nil {
@@ -333,13 +333,13 @@ func MediaUploadFailure(err error) format.FailureReason {
 	}
 }
 
-func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownload, error) {
-	_, ordinary := mediaproc.VariantByName(in.Variant)
-	_, composed := mediaproc.LinkCardByName(in.Variant)
-	if (!ordinary && !composed) || in.Version != mediaproc.DerivativeVersion {
+func (s *Service) ImageSize(ctx context.Context, in MediaRequest) (MediaDownload, error) {
+	_, ordinary := mediaproc.ImageSizeByName(in.Size)
+	_, composed := mediaproc.LinkCardByName(in.Size)
+	if (!ordinary && !composed) || in.Version != mediaproc.ImageSizeVersion {
 		return MediaDownload{}, ErrMediaNotFound
 	}
-	variant, version := in.Variant, in.Version
+	size, version := in.Size, in.Version
 	var blobID uuid.UUID
 	var digestBytes []byte
 	var private, owner, draft bool
@@ -356,7 +356,7 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 		  join blobs blob on blob.id = media.blob_id
 		 where media.id = $1
 		   and work.deleted_at is null
-		   and (work.withheld_at is null or work.owner_id = $2)
+		   and (work.taken_down_at is null or work.owner_id = $2)
 	`, in.MediaID, in.ViewerID).Scan(&blobID, &digestBytes, &private, &owner, &draft)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MediaDownload{}, ErrMediaNotFound
@@ -365,7 +365,7 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 		return MediaDownload{}, fmt.Errorf("find media: %w", err)
 	}
 	if private {
-		path := fmt.Sprintf("/media/%s/%s/%d", in.MediaID, variant, version)
+		path := fmt.Sprintf("/media/%s/%s/%d", in.MediaID, size, version)
 		if (!draft && !owner) || !s.signer.Valid(path, in.Expires, in.Signature, s.now()) {
 			return MediaDownload{}, ErrMediaNotFound
 		}
@@ -375,23 +375,23 @@ func (s *Service) MediaVariant(ctx context.Context, in MediaRequest) (MediaDownl
 	}
 	var digest [sha256.Size]byte
 	copy(digest[:], digestBytes)
-	redirect, err := s.media.Serve(ctx, blobID, digest, variant, version)
+	redirect, err := s.media.Serve(ctx, blobID, digest, size, version)
 	if err != nil {
 		return MediaDownload{}, err
 	}
 	return MediaDownload{
 		InternalRedirect: redirect,
-		MediaType:        s.media.DerivativeType(),
+		MediaType:        s.media.ImageSizeMediaType(),
 		Private:          private,
 	}, nil
 }
 
-// ImageAddress is where a picture variant is served, signed when only its owner may see it
-func (s *Service) ImageAddress(mediaID uuid.UUID, variant string, blurred, private bool) string {
+// ImageAddress is where a picture size is served, signed when only its owner may see it
+func (s *Service) ImageAddress(mediaID uuid.UUID, size string, blurred, private bool) string {
 	if blurred {
-		variant += "_blurred"
+		size += "_blurred"
 	}
-	path := fmt.Sprintf("/media/%s/%s/%d", mediaID, variant, mediaproc.DerivativeVersion)
+	path := fmt.Sprintf("/media/%s/%s/%d", mediaID, size, mediaproc.ImageSizeVersion)
 	if !private {
 		return path
 	}

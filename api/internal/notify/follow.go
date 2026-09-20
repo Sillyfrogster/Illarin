@@ -46,7 +46,7 @@ func (s *Service) setFollow(ctx context.Context, account, work uuid.UUID, state 
 		with target as (
 			select id, owner_id is not distinct from $1 as is_owner
 			  from works
-			 where id = $2 and lifecycle = 'published' and deleted_at is null and withheld_at is null
+			 where id = $2 and lifecycle = 'published' and deleted_at is null and taken_down_at is null
 		), written as (
 			insert into work_follows (account_id, work_id, state, set_at)
 			select $1, id, $3, $4 from target where not is_owner

@@ -172,17 +172,8 @@ func (h *Handlers) blogError(c *gin.Context, err error) {
 }
 
 func (h *Handlers) blogAdmin(c *gin.Context, action string) (accountIdentity, bool) {
-	current, ok := api.Verified(c, action)
+	current, ok := api.Admin(c, action)
 	if !ok {
-		return accountIdentity{}, false
-	}
-	held, err := h.blog.HoldsAuthority(c.Request.Context(), current.ID)
-	if err != nil {
-		api.Refuse(c, http.StatusInternalServerError, "Could not check who administers the blog.")
-		return accountIdentity{}, false
-	}
-	if !held {
-		api.Refuse(c, http.StatusForbidden, "Only the account that administers the blog can do that.")
 		return accountIdentity{}, false
 	}
 	return accountIdentity{ID: current.ID, Handle: current.Handle}, true
@@ -234,7 +225,7 @@ func toAPIWriter(found Writer, shown account.PublicProfile) WriterResponse {
 	}
 	if shown.Avatar != nil {
 		writer.Avatar = &profile.ProfileAvatar{
-			Url:    account.AvatarURL(shown.Avatar.MediaID, shown.Avatar.DerivativeVersion),
+			Url:    account.AvatarURL(shown.Avatar.MediaID, shown.Avatar.ImageSizeVersion),
 			Width:  shown.Avatar.Width,
 			Height: shown.Avatar.Height,
 		}

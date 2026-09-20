@@ -254,8 +254,8 @@ func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 	imagesInChosenDownload(t, r, workID, "charx", &chosen)
 
 	rows, err := pool.Query(context.Background(), `
-		select format, authorization_class
-		  from download_events where work_id = $1
+		select format, access
+		  from download_records where work_id = $1
 	`, workID)
 	if err != nil {
 		t.Fatalf("read the download log: %v", err)
@@ -263,21 +263,21 @@ func TestADownloadRecordsItsFormatAndNothingAboutTheImagesChosen(t *testing.T) {
 	defer rows.Close()
 	recorded := 0
 	for rows.Next() {
-		var formatID, class string
-		if err := rows.Scan(&formatID, &class); err != nil {
-			t.Fatalf("read a download event: %v", err)
+		var formatID, access string
+		if err := rows.Scan(&formatID, &access); err != nil {
+			t.Fatalf("read a download record: %v", err)
 		}
-		if formatID != "charx" || class != "anonymous" {
-			t.Errorf("event = %q by %q, want the format and a coarse class", formatID, class)
+		if formatID != "charx" || access != "public" {
+			t.Errorf("record = %q by %q, want the format and a coarse access", formatID, access)
 		}
 		recorded++
 	}
 	if recorded != 1 {
-		t.Fatalf("download events = %d, want the one handoff", recorded)
+		t.Fatalf("download records = %d, want the one handoff", recorded)
 	}
 	columns, err := pool.Query(context.Background(), `
 		select column_name from information_schema.columns
-		 where table_name = 'download_events'
+		 where table_name = 'download_records'
 	`)
 	if err != nil {
 		t.Fatalf("read the log's shape: %v", err)

@@ -16,7 +16,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing.T) {
+func TestOnlyAnAdminCanTakeDownAnWorkAndTheDecisionIsRecordedTogether(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
@@ -25,7 +25,7 @@ func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing
 		return apitest.AuthorizedJSONRequest(
 			t,
 			http.MethodPut,
-			"/v1/works/"+workID+"/withhold",
+			"/v1/works/"+workID+"/takedown",
 			`{"reason":"Copyright report under review"}`,
 			session,
 		)
@@ -33,7 +33,7 @@ func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing
 
 	refused := apitest.Send(t, router, request())
 	if refused.Code != http.StatusForbidden {
-		t.Fatalf("creator withhold status = %d, want 403: %s", refused.Code, refused.Body.String())
+		t.Fatalf("creator takedown status = %d, want 403: %s", refused.Code, refused.Body.String())
 	}
 	if _, err := pool.Exec(context.Background(), `
 		update users set role = 'moderator' where username = 'verified.creator'
@@ -42,7 +42,7 @@ func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing
 	}
 	refused = apitest.Send(t, router, request())
 	if refused.Code != http.StatusForbidden {
-		t.Fatalf("moderator withhold status = %d, want 403: %s", refused.Code, refused.Body.String())
+		t.Fatalf("moderator takedown status = %d, want 403: %s", refused.Code, refused.Body.String())
 	}
 
 	var adminID uuid.UUID
@@ -52,24 +52,24 @@ func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing
 		t.Fatalf("make test account an admin: %v", err)
 	}
 
-	withheld := apitest.Send(t, router, request())
-	if withheld.Code != http.StatusNoContent {
-		t.Fatalf("admin withhold status = %d, want 204: %s", withheld.Code, withheld.Body.String())
+	takenDown := apitest.Send(t, router, request())
+	if takenDown.Code != http.StatusNoContent {
+		t.Fatalf("admin takedown status = %d, want 204: %s", takenDown.Code, takenDown.Body.String())
 	}
 
 	var actor uuid.UUID
 	var reason string
 	var at time.Time
 	if err := pool.QueryRow(context.Background(), `
-		select withheld_by, withheld_reason, withheld_at from works where id = $1
+		select taken_down_by, taken_down_reason, taken_down_at from works where id = $1
 	`, workID).Scan(&actor, &reason, &at); err != nil {
-		t.Fatalf("read withhold decision: %v", err)
+		t.Fatalf("read takedown decision: %v", err)
 	}
 	if actor != adminID || reason != "Copyright report under review" || at.IsZero() {
-		t.Fatalf("withhold = actor %s, reason %q, at %v", actor, reason, at)
+		t.Fatalf("takedown = actor %s, reason %q, at %v", actor, reason, at)
 	}
 
-	clear := httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/withhold", nil)
+	clear := httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/takedown", nil)
 	apitest.Authorized(clear, session)
 	cleared := apitest.Send(t, router, clear)
 	if cleared.Code != http.StatusNoContent {
@@ -77,31 +77,31 @@ func TestOnlyAnAdminCanWithholdAnWorkAndTheDecisionIsRecordedTogether(t *testing
 	}
 	var decisionCleared bool
 	if err := pool.QueryRow(context.Background(), `
-		select withheld_by is null and withheld_reason is null and withheld_at is null
+		select taken_down_by is null and taken_down_reason is null and taken_down_at is null
 		  from works where id = $1
 	`, workID).Scan(&decisionCleared); err != nil {
-		t.Fatalf("read cleared withhold: %v", err)
+		t.Fatalf("read cleared takedown: %v", err)
 	}
 	if !decisionCleared {
-		t.Fatal("clearing did not remove the complete withhold decision")
+		t.Fatal("clearing did not remove the complete takedown decision")
 	}
 }
 
-func TestOwnerCanViewAndDownloadAWithheldWorkWithItsDecision(t *testing.T) {
+func TestOwnerCanViewAndDownloadATakenDownWorkWithItsDecision(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
-	mediaID := addWithholdingTestMedia(t, router, session, workID)
+	mediaID := addTakedownTestMedia(t, router, session, workID)
 
 	if _, err := pool.Exec(context.Background(), `
 		update works work
-		   set withheld_at = '2026-08-14 12:30:00+00',
-		       withheld_by = owner.id,
-		       withheld_reason = 'Copyright report under review'
+		   set taken_down_at = '2026-08-14 12:30:00+00',
+		       taken_down_by = owner.id,
+		       taken_down_reason = 'Copyright report under review'
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
 	`, workID); err != nil {
-		t.Fatalf("withhold work: %v", err)
+		t.Fatalf("take down work: %v", err)
 	}
 
 	pageRequest, err := http.NewRequest(http.MethodGet, "/v1/works/"+workID, nil)
@@ -117,9 +117,9 @@ func TestOwnerCanViewAndDownloadAWithheldWorkWithItsDecision(t *testing.T) {
 	if err := json.Unmarshal(pageResponse.Body.Bytes(), &page); err != nil {
 		t.Fatalf("decode owner page: %v", err)
 	}
-	if page.Withhold == nil || page.Withhold.Reason != "Copyright report under review" ||
-		page.Withhold.At.IsZero() {
-		t.Fatalf("withhold shown to owner = %+v", page.Withhold)
+	if page.Takedown == nil || page.Takedown.Reason != "Copyright report under review" ||
+		page.Takedown.At.IsZero() {
+		t.Fatalf("takedown shown to owner = %+v", page.Takedown)
 	}
 
 	downloadRequest, err := http.NewRequest(http.MethodGet, "/download/"+workID, nil)
@@ -148,18 +148,18 @@ func TestOwnerCanViewAndDownloadAWithheldWorkWithItsDecision(t *testing.T) {
 func TestUnavailableWorksAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
-	withheldID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
+	takenDownID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
 	deletedID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
-	withheldMediaID := addWithholdingTestMedia(t, router, session, withheldID)
-	deletedMediaID := addWithholdingTestMedia(t, router, session, deletedID)
+	takenDownMediaID := addTakedownTestMedia(t, router, session, takenDownID)
+	deletedMediaID := addTakedownTestMedia(t, router, session, deletedID)
 
 	if _, err := pool.Exec(context.Background(), `
 		update works work
-		   set withheld_at = now(), withheld_by = owner.id, withheld_reason = 'Review'
+		   set taken_down_at = now(), taken_down_by = owner.id, taken_down_reason = 'Review'
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
-	`, withheldID); err != nil {
-		t.Fatalf("withhold work: %v", err)
+	`, takenDownID); err != nil {
+		t.Fatalf("take down work: %v", err)
 	}
 	if _, err := pool.Exec(context.Background(),
 		`update works set deleted_at = now(), recoverable_until = now() + interval '30 days' where id = $1`, deletedID,
@@ -171,22 +171,22 @@ func TestUnavailableWorksAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 	missingMediaID := "33333333-3333-4333-8333-333333333333"
 	for name, paths := range map[string][]string{
 		"asset page": {
-			"/v1/works/" + withheldID,
+			"/v1/works/" + takenDownID,
 			"/v1/works/" + deletedID,
 			"/v1/works/" + missingWorkID,
 		},
 		"download": {
-			"/download/" + withheldID,
+			"/download/" + takenDownID,
 			"/download/" + deletedID,
 			"/download/" + missingWorkID,
 		},
 		"media list": {
-			"/v1/works/" + withheldID + "/media",
+			"/v1/works/" + takenDownID + "/media",
 			"/v1/works/" + deletedID + "/media",
 			"/v1/works/" + missingWorkID + "/media",
 		},
 		"media file": {
-			"/media/" + withheldMediaID + "/grid/2",
+			"/media/" + takenDownMediaID + "/grid/2",
 			"/media/" + deletedMediaID + "/grid/2",
 			"/media/" + missingMediaID + "/grid/2",
 		},
@@ -212,17 +212,17 @@ func TestUnavailableWorksAnswerTheSameAcrossEveryPublicRead(t *testing.T) {
 	}
 }
 
-func TestWithheldWorkRefusesCreatorMutations(t *testing.T) {
+func TestTakenDownWorkRefusesCreatorMutations(t *testing.T) {
 	t.Parallel()
 	router, session, works, pool := harness.NewVerifiedUploadRouterWithPool(t, format.NewRegistry())
 	workID := apitest.UploadVisibilityTestWork(t, router, session, works, "")
 	if _, err := pool.Exec(context.Background(), `
 		update works work
-		   set withheld_at = now(), withheld_by = owner.id, withheld_reason = 'Review'
+		   set taken_down_at = now(), taken_down_by = owner.id, taken_down_reason = 'Review'
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
 	`, workID); err != nil {
-		t.Fatalf("withhold work: %v", err)
+		t.Fatalf("take down work: %v", err)
 	}
 
 	changes := []*http.Request{
@@ -242,7 +242,7 @@ func TestWithheldWorkRefusesCreatorMutations(t *testing.T) {
 		}
 	}
 
-	clear := httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/withhold", nil)
+	clear := httptest.NewRequest(http.MethodDelete, "/v1/works/"+workID+"/takedown", nil)
 	apitest.Authorized(clear, session)
 	response := apitest.Send(t, router, clear)
 	if response.Code != http.StatusForbidden {
@@ -250,7 +250,7 @@ func TestWithheldWorkRefusesCreatorMutations(t *testing.T) {
 	}
 }
 
-func TestWithheldWorkRefusesEveryPrivatePromptMutation(t *testing.T) {
+func TestTakenDownWorkRefusesEveryPrivatePromptMutation(t *testing.T) {
 	t.Parallel()
 	_, router, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	started := apitest.StartPreset(t, router, session, "lumiverse")
@@ -269,11 +269,11 @@ func TestWithheldWorkRefusesEveryPrivatePromptMutation(t *testing.T) {
 	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
 	if _, err := pool.Exec(t.Context(), `
 		update works work
-		   set withheld_at = now(), withheld_by = owner.id, withheld_reason = 'Review'
+		   set taken_down_at = now(), taken_down_by = owner.id, taken_down_reason = 'Review'
 		  from users owner
 		 where work.id = $1 and owner.username = 'verified.creator'
 	`, started.ID); err != nil {
-		t.Fatalf("withhold work: %v", err)
+		t.Fatalf("take down work: %v", err)
 	}
 
 	textChange := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
@@ -316,7 +316,7 @@ func TestWithheldWorkRefusesEveryPrivatePromptMutation(t *testing.T) {
 	}
 }
 
-func addWithholdingTestMedia(
+func addTakedownTestMedia(
 	t *testing.T,
 	router http.Handler,
 	session *http.Cookie,

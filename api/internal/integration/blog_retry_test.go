@@ -362,7 +362,7 @@ func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
 		t.Fatalf("forget the rotated secrets: %v", err)
 	}
 	if forgotten != 1 {
-		t.Fatalf("the sweep forgot %d secrets, want 1", forgotten)
+		t.Fatalf("the cleanup forgot %d secrets, want 1", forgotten)
 	}
 	stack.to.forget()
 	after := stack.readyPost(t)
@@ -387,7 +387,7 @@ func TestARotatedSecretSignsUnderBothUntilTheOverlapEnds(t *testing.T) {
 	}
 }
 
-func TestOnlyTheAuthorityRotatesASigningSecret(t *testing.T) {
+func TestOnlyAnAdminRotatesASigningSecret(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
@@ -523,7 +523,7 @@ func TestAnUnsettledDeliveryIsNotReplayed(t *testing.T) {
 	}
 }
 
-func TestExhaustedWorkStaysVisibleToTheAuthority(t *testing.T) {
+func TestExhaustedWorkStaysVisibleToTheAdmin(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 	made := stack.active(t, "Release feed")
@@ -535,7 +535,7 @@ func TestExhaustedWorkStaysVisibleToTheAuthority(t *testing.T) {
 	listed := stack.diagnosed(t, "?state=failed")
 
 	if len(listed.Attempts) != 1 {
-		t.Fatalf("the authority sees %d exhausted attempts, want 1", len(listed.Attempts))
+		t.Fatalf("the admin sees %d exhausted attempts, want 1", len(listed.Attempts))
 	}
 	shown := listed.Attempts[0]
 	if shown.SettledReason != "exhausted" {

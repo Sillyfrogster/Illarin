@@ -20,7 +20,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestSweepRecordsACanonicalFileLeftBeforeItsBlobTransactionCommitted(t *testing.T) {
+func TestCleanupRecordsACanonicalFileLeftBeforeItsBlobTransactionCommitted(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
@@ -40,12 +40,12 @@ func TestSweepRecordsACanonicalFileLeftBeforeItsBlobTransactionCommitted(t *test
 		t.Fatalf("write canonical orphan: %v", err)
 	}
 
-	result, err := storage.NewSweeper(pool, store).Sweep(ctx)
+	result, err := storage.NewCleanup(pool, store).Cleanup(ctx)
 	if err != nil {
-		t.Fatalf("sweep: %v", err)
+		t.Fatalf("cleanup: %v", err)
 	}
 	if result.Marked != 1 {
-		t.Fatalf("sweep = %+v, want the recovered orphan marked", result)
+		t.Fatalf("cleanup = %+v, want the recovered orphan marked", result)
 	}
 	var recorded bool
 	if err := pool.QueryRow(ctx,
@@ -54,11 +54,11 @@ func TestSweepRecordsACanonicalFileLeftBeforeItsBlobTransactionCommitted(t *test
 		t.Fatalf("find recovered orphan: %v", err)
 	}
 	if !recorded {
-		t.Fatal("canonical orphan was not recorded for sweeping")
+		t.Fatal("canonical orphan was not recorded for cleanup")
 	}
 }
 
-func TestSweepRemovesATombstonedCanonicalOrphanInsteadOfRecordingIt(t *testing.T) {
+func TestCleanupRemovesATombstonedCanonicalOrphanInsteadOfRecordingIt(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
@@ -87,12 +87,12 @@ func TestSweepRemovesATombstonedCanonicalOrphanInsteadOfRecordingIt(t *testing.T
 		t.Fatalf("leave canonical orphan: %v", err)
 	}
 
-	result, err := storage.NewSweeper(pool, store).Sweep(ctx)
+	result, err := storage.NewCleanup(pool, store).Cleanup(ctx)
 	if err != nil {
-		t.Fatalf("sweep: %v", err)
+		t.Fatalf("cleanup: %v", err)
 	}
 	if result.Marked != 0 {
-		t.Fatalf("sweep = %+v, want no tombstoned orphan recorded", result)
+		t.Fatalf("cleanup = %+v, want no tombstoned orphan recorded", result)
 	}
 	encoded := hex.EncodeToString(stored.Digest[:])
 	if _, err := os.Stat(filepath.Join(root, "blobs", encoded[:2], encoded)); !os.IsNotExist(err) {
@@ -100,7 +100,7 @@ func TestSweepRemovesATombstonedCanonicalOrphanInsteadOfRecordingIt(t *testing.T
 	}
 }
 
-func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
+func TestCleanupCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
@@ -112,7 +112,7 @@ func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 	clock := func() time.Time { return now }
 	service := work.NewServiceWithClock(pool, apitest.RegistryWith(t, apitest.OpaqueModule{}), store, clock)
 	ownerID := uuid.New()
-	if _, err := pool.Exec(ctx, `insert into users (id, username) values ($1, 'sweep.durable')`, ownerID); err != nil {
+	if _, err := pool.Exec(ctx, `insert into users (id, username) values ($1, 'cleanup.durable')`, ownerID); err != nil {
 		t.Fatalf("insert owner: %v", err)
 	}
 	created, err := apitest.Uploads(service).Create(ctx, upload.CreateInput{
@@ -126,14 +126,14 @@ func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 		t.Fatalf("delete work: %v", err)
 	}
 	now = now.Add(page.RecoveryWindow + time.Second)
-	if _, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx); err != nil {
+	if _, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx); err != nil {
 		t.Fatalf("mark expired work: %v", err)
 	}
 
-	now = now.Add(storage.SweepDelay + time.Second)
-	if _, err := storage.NewSweeperWithClock(pool, failingDeleteStore{Store: store}, clock).
-		Sweep(ctx); err == nil {
-		t.Fatal("sweep succeeded despite the storage failure")
+	now = now.Add(storage.CleanupDelay + time.Second)
+	if _, err := storage.NewCleanupWithClock(pool, failingDeleteStore{Store: store}, clock).
+		Cleanup(ctx); err == nil {
+		t.Fatal("cleanup succeeded despite the storage failure")
 	}
 	var references int
 	if err := pool.QueryRow(ctx,
@@ -142,11 +142,11 @@ func TestSweepCommitsExpiredReferenceRemovalBeforeDeletingBytes(t *testing.T) {
 		t.Fatalf("count expired references: %v", err)
 	}
 	if references != 0 {
-		t.Fatalf("sweep failure left %d expired references", references)
+		t.Fatalf("cleanup failure left %d expired references", references)
 	}
 }
 
-func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *testing.T) {
+func TestCleanupMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
@@ -158,7 +158,7 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 	clock := func() time.Time { return now }
 	service := work.NewServiceWithClock(pool, apitest.RegistryWith(t, apitest.OpaqueModule{}), store, clock)
 	ownerID := uuid.New()
-	if _, err := pool.Exec(ctx, `insert into users (id, username) values ($1, 'sweep.owner')`, ownerID); err != nil {
+	if _, err := pool.Exec(ctx, `insert into users (id, username) values ($1, 'cleanup.owner')`, ownerID); err != nil {
 		t.Fatalf("insert owner: %v", err)
 	}
 
@@ -202,12 +202,12 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 	`, rejected.ID); err != nil {
 		t.Fatalf("reject upload: %v", err)
 	}
-	first, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx)
+	first, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx)
 	if err != nil {
-		t.Fatalf("first sweep: %v", err)
+		t.Fatalf("first cleanup: %v", err)
 	}
 	if first.Marked != 2 || first.Deleted != 0 {
-		t.Fatalf("first sweep = %+v, want two marked and none deleted", first)
+		t.Fatalf("first cleanup = %+v, want two marked and none deleted", first)
 	}
 	for _, id := range []uuid.UUID{recoverableBlob, orphan.ID, rejectedBlob} {
 		opened, err := store.Open(ctx, id)
@@ -217,16 +217,16 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 		opened.Close()
 	}
 
-	now = now.Add(storage.SweepDelay + time.Second)
-	second, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx)
+	now = now.Add(storage.CleanupDelay + time.Second)
+	second, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx)
 	if err != nil {
-		t.Fatalf("second sweep: %v", err)
+		t.Fatalf("second cleanup: %v", err)
 	}
 	if second.Deleted != 2 {
-		t.Fatalf("second sweep = %+v, want two deleted", second)
+		t.Fatalf("second cleanup = %+v, want two deleted", second)
 	}
 	if _, err := store.Open(ctx, recoverableBlob); err != nil {
-		t.Fatalf("recoverable blob was swept: %v", err)
+		t.Fatalf("recoverable blob was cleaned up: %v", err)
 	}
 	for _, id := range []uuid.UUID{orphan.ID, rejectedBlob} {
 		if _, err := store.Open(ctx, id); !errors.Is(err, storage.ErrBlobNotFound) {
@@ -235,7 +235,7 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 	}
 }
 
-func TestSweepRechecksReferencesImmediatelyBeforeDeleting(t *testing.T) {
+func TestCleanupRechecksReferencesImmediatelyBeforeDeleting(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
@@ -253,8 +253,8 @@ func TestSweepRechecksReferencesImmediatelyBeforeDeleting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("put blob: %v", err)
 	}
-	if _, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx); err != nil {
-		t.Fatalf("mark sweep: %v", err)
+	if _, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx); err != nil {
+		t.Fatalf("mark cleanup: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		insert into upload_operations (id, owner_id, blob_id, filename, status)
@@ -263,22 +263,22 @@ func TestSweepRechecksReferencesImmediatelyBeforeDeleting(t *testing.T) {
 		t.Fatalf("add concurrent reference: %v", err)
 	}
 
-	now = now.Add(storage.SweepDelay + time.Second)
-	result, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx)
+	now = now.Add(storage.CleanupDelay + time.Second)
+	result, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx)
 	if err != nil {
-		t.Fatalf("delete sweep: %v", err)
+		t.Fatalf("delete cleanup: %v", err)
 	}
 	if result.Deleted != 0 {
-		t.Fatalf("delete sweep = %+v, want the new reference to cancel deletion", result)
+		t.Fatalf("delete cleanup = %+v, want the new reference to cancel deletion", result)
 	}
 	opened, err := store.Open(ctx, stored.ID)
 	if err != nil {
-		t.Fatalf("newly referenced blob was swept: %v", err)
+		t.Fatalf("newly referenced blob was cleaned up: %v", err)
 	}
 	opened.Close()
 }
 
-func TestConcurrentConvergenceClearsAnOldSweepMark(t *testing.T) {
+func TestConcurrentConvergenceClearsAnOldCleanupMark(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
@@ -292,10 +292,10 @@ func TestConcurrentConvergenceClearsAnOldSweepMark(t *testing.T) {
 	if err != nil {
 		t.Fatalf("put orphan: %v", err)
 	}
-	if _, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx); err != nil {
+	if _, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx); err != nil {
 		t.Fatalf("mark orphan: %v", err)
 	}
-	now = now.Add(storage.SweepDelay + time.Second)
+	now = now.Add(storage.CleanupDelay + time.Second)
 
 	converged, err := store.Put(ctx, bytes.NewReader([]byte("converging upload")))
 	if err != nil {
@@ -304,12 +304,12 @@ func TestConcurrentConvergenceClearsAnOldSweepMark(t *testing.T) {
 	if converged.ID != stored.ID {
 		t.Fatalf("converged blob = %s, want %s", converged.ID, stored.ID)
 	}
-	result, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx)
+	result, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx)
 	if err != nil {
-		t.Fatalf("sweep after convergence: %v", err)
+		t.Fatalf("cleanup after convergence: %v", err)
 	}
 	if result.Deleted != 0 {
-		t.Fatalf("sweep after convergence = %+v, want no deletion", result)
+		t.Fatalf("cleanup after convergence = %+v, want no deletion", result)
 	}
 	opened, err := store.Open(ctx, stored.ID)
 	if err != nil {
@@ -318,7 +318,7 @@ func TestConcurrentConvergenceClearsAnOldSweepMark(t *testing.T) {
 	opened.Close()
 }
 
-func TestSweepCollectsAnWorkAfterItsRecoveryWindow(t *testing.T) {
+func TestCleanupCollectsAnWorkAfterItsRecoveryWindow(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	pool := testdb.Connect(t)
@@ -351,12 +351,12 @@ func TestSweepCollectsAnWorkAfterItsRecoveryWindow(t *testing.T) {
 	}
 
 	now = now.Add(page.RecoveryWindow + time.Second)
-	marked, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx)
+	marked, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx)
 	if err != nil || marked.Marked != 1 || marked.Deleted != 0 {
 		t.Fatalf("mark expired work = %+v, %v; want one mark", marked, err)
 	}
-	now = now.Add(storage.SweepDelay + time.Second)
-	deleted, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx)
+	now = now.Add(storage.CleanupDelay + time.Second)
+	deleted, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx)
 	if err != nil || deleted.Deleted != 1 {
 		t.Fatalf("collect expired work = %+v, %v; want one deletion", deleted, err)
 	}
@@ -381,7 +381,7 @@ func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
 
 	authorID := uuid.New()
 	if _, err := pool.Exec(ctx,
-		`insert into users (id, username) values ($1, 'sweep.author')`, authorID,
+		`insert into users (id, username) values ($1, 'cleanup.author')`, authorID,
 	); err != nil {
 		t.Fatalf("insert author: %v", err)
 	}
@@ -432,17 +432,17 @@ func TestPostPicturesLiveWhileAnEditionStillRefersToThem(t *testing.T) {
 		t.Fatalf("record what the revision refers to: %v", err)
 	}
 
-	if _, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx); err != nil {
-		t.Fatalf("mark sweep: %v", err)
+	if _, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx); err != nil {
+		t.Fatalf("mark cleanup: %v", err)
 	}
-	now = now.Add(storage.SweepDelay + time.Second)
-	if _, err := storage.NewSweeperWithClock(pool, store, clock).Sweep(ctx); err != nil {
-		t.Fatalf("delete sweep: %v", err)
+	now = now.Add(storage.CleanupDelay + time.Second)
+	if _, err := storage.NewCleanupWithClock(pool, store, clock).Cleanup(ctx); err != nil {
+		t.Fatalf("delete cleanup: %v", err)
 	}
 
 	opened, err := store.Open(ctx, kept.ID)
 	if err != nil {
-		t.Fatalf("a picture a revision refers to was swept: %v", err)
+		t.Fatalf("a picture a revision refers to was cleaned up: %v", err)
 	}
 	opened.Close()
 	if _, err := store.Open(ctx, dropped.ID); !errors.Is(err, storage.ErrBlobNotFound) {

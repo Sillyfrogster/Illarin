@@ -68,7 +68,7 @@ select entry.connected_app_id,
  where app.user_id = $1
    and app.revoked_at is null
    and work.deleted_at is null
-   and work.withheld_at is null
+   and work.taken_down_at is null
    and work.lifecycle = 'published'
  group by entry.connected_app_id
 `
@@ -202,7 +202,7 @@ const browseWorks = `-- name: BrowseWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        a.type, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.visibility, a.withheld_at, a.withheld_reason
+       a.visibility, a.taken_down_at, a.taken_down_reason
   from works a
   left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
@@ -217,11 +217,11 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
    and a.deleted_at is null
    and (
        ($2::uuid is null
-        and a.visibility = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.taken_down_at is null)
        or
        (a.owner_id = $2::uuid
         and ($1::boolean
-             or (a.visibility = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
    and ($3::text = '' or a.type = $3::text)
    and ($1::boolean
@@ -282,19 +282,19 @@ type BrowseWorksParams struct {
 }
 
 type BrowseWorksRow struct {
-	ID             pgtype.UUID
-	Name           string
-	Creator        string
-	Type           string
-	IsNsfw         pgtype.Bool
-	CreatedAt      pgtype.Timestamptz
-	Lifecycle      string
-	CoverID        pgtype.UUID
-	CoverWidth     pgtype.Int4
-	CoverHeight    pgtype.Int4
-	Visibility     string
-	WithheldAt     pgtype.Timestamptz
-	WithheldReason pgtype.Text
+	ID              pgtype.UUID
+	Name            string
+	Creator         string
+	Type            string
+	IsNsfw          pgtype.Bool
+	CreatedAt       pgtype.Timestamptz
+	Lifecycle       string
+	CoverID         pgtype.UUID
+	CoverWidth      pgtype.Int4
+	CoverHeight     pgtype.Int4
+	Visibility      string
+	TakenDownAt     pgtype.Timestamptz
+	TakenDownReason pgtype.Text
 }
 
 func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]BrowseWorksRow, error) {
@@ -334,8 +334,8 @@ func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]Bro
 			&i.CoverWidth,
 			&i.CoverHeight,
 			&i.Visibility,
-			&i.WithheldAt,
-			&i.WithheldReason,
+			&i.TakenDownAt,
+			&i.TakenDownReason,
 		); err != nil {
 			return nil, err
 		}
@@ -434,31 +434,6 @@ func (q *Queries) ClearPendingEmailCopies(ctx context.Context, arg ClearPendingE
 	return err
 }
 
-const clearWorkWithhold = `-- name: ClearWorkWithhold :one
-with cleared as (
-    update works as work
-       set withheld_at = null, withheld_by = null, withheld_reason = null,
-           updated_at = now()
-     where work.id = $1 and work.withheld_at is not null and work.deleted_at is null
-    returning work.id, work.owner_id, work.name, work.published_version_id
-)
-select cleared.owner_id, coalesce(version.payload ->> 'name', cleared.name)::text as public_name
-  from cleared
-  left join work_versions version on version.id = cleared.published_version_id
-`
-
-type ClearWorkWithholdRow struct {
-	OwnerID    pgtype.UUID
-	PublicName string
-}
-
-func (q *Queries) ClearWorkWithhold(ctx context.Context, id pgtype.UUID) (ClearWorkWithholdRow, error) {
-	row := q.db.QueryRow(ctx, clearWorkWithhold, id)
-	var i ClearWorkWithholdRow
-	err := row.Scan(&i.OwnerID, &i.PublicName)
-	return i, err
-}
-
 const connectedAppForUsedRefreshToken = `-- name: ConnectedAppForUsedRefreshToken :one
 select history.connected_app_id, app.user_id
   from app_refresh_history as history
@@ -490,11 +465,11 @@ select count(*)
    and a.deleted_at is null
    and (
        ($2::uuid is null
-        and a.visibility = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.taken_down_at is null)
        or
        (a.owner_id = $2::uuid
         and ($1::boolean
-             or (a.visibility = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
    and ($3::text = '' or a.type = $3::text)
    and ($1::boolean
@@ -586,7 +561,7 @@ select count(*)
   left join users owner on owner.id = a.owner_id
  where a.lifecycle = 'published'
    and a.visibility = 'listed'
-   and a.withheld_at is null
+   and a.taken_down_at is null
    and a.deleted_at is null
    and ($1::uuid is null or a.owner_id = $1::uuid)
    and ($2::text = '' or a.type = $2::text)
@@ -1519,6 +1494,31 @@ func (q *Queries) InstalledAppVersions(ctx context.Context, arg InstalledAppVers
 	return items, nil
 }
 
+const liftTakedown = `-- name: LiftTakedown :one
+with cleared as (
+    update works as work
+       set taken_down_at = null, taken_down_by = null, taken_down_reason = null,
+           updated_at = now()
+     where work.id = $1 and work.taken_down_at is not null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_version_id
+)
+select cleared.owner_id, coalesce(version.payload ->> 'name', cleared.name)::text as public_name
+  from cleared
+  left join work_versions version on version.id = cleared.published_version_id
+`
+
+type LiftTakedownRow struct {
+	OwnerID    pgtype.UUID
+	PublicName string
+}
+
+func (q *Queries) LiftTakedown(ctx context.Context, id pgtype.UUID) (LiftTakedownRow, error) {
+	row := q.db.QueryRow(ctx, liftTakedown, id)
+	var i LiftTakedownRow
+	err := row.Scan(&i.OwnerID, &i.PublicName)
+	return i, err
+}
+
 const listConnectedApps = `-- name: ListConnectedApps :many
 select id, app_name, name, app_version,
        protocol_version, capabilities, accepted_formats,
@@ -1635,7 +1635,7 @@ select a.id, a.type, original.format, a.original_format,
   left join work_original_files original on original.id = a.original_file_id
  where a.lifecycle = 'published'
    and a.visibility = 'listed'
-   and a.withheld_at is null
+   and a.taken_down_at is null
    and a.deleted_at is null
    and ($1 = '' or a.type = $1)
    and (not $2::boolean or original.format is not distinct from $3)
@@ -2089,7 +2089,7 @@ select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, a.own
    and r.blob_id is not null
    and a.lifecycle = 'published'
    and a.deleted_at is null
-   and (a.withheld_at is null or a.owner_id = $2::uuid)
+   and (a.taken_down_at is null or a.owner_id = $2::uuid)
 `
 
 type OriginalFileLocationParams struct {
@@ -2612,7 +2612,7 @@ select version.number
   join work_versions version on version.id = work.published_version_id
  where work.id = $1
    and deleted_at is null
-   and withheld_at is null
+   and taken_down_at is null
    and lifecycle = 'published'
 `
 
@@ -2709,7 +2709,7 @@ const setWorkVisibility = `-- name: SetWorkVisibility :execrows
 update works
    set visibility = $3, updated_at = now()
  where id = $1 and owner_id = $2 and lifecycle = 'published'
-   and withheld_at is null and deleted_at is null
+   and taken_down_at is null and deleted_at is null
 `
 
 type SetWorkVisibilityParams struct {
@@ -2730,7 +2730,7 @@ const softDeleteWork = `-- name: SoftDeleteWork :execrows
 update works
    set deleted_at = $3, recoverable_until = $4, updated_at = $3
  where id = $1 and owner_id = $2
-   and withheld_at is null and deleted_at is null
+   and taken_down_at is null and deleted_at is null
 `
 
 type SoftDeleteWorkParams struct {
@@ -2788,6 +2788,43 @@ func (q *Queries) TakeConnectionRateLimit(ctx context.Context, arg TakeConnectio
 	return i, err
 }
 
+const takeDownWork = `-- name: TakeDownWork :one
+with taken_down as (
+    update works as work
+       set taken_down_at = now(), taken_down_by = $2, taken_down_reason = $3,
+           updated_at = now()
+     where work.id = $1 and work.lifecycle = 'published'
+       and work.taken_down_at is null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_version_id
+), stopped as (
+    update sends as send
+       set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
+     where send.work_id in (select taken_down.id from taken_down)
+       and send.state = 'queued'
+)
+select taken_down.owner_id, coalesce(version.payload ->> 'name', taken_down.name)::text as public_name
+  from taken_down
+  left join work_versions version on version.id = taken_down.published_version_id
+`
+
+type TakeDownWorkParams struct {
+	ID              pgtype.UUID
+	TakenDownBy     pgtype.UUID
+	TakenDownReason pgtype.Text
+}
+
+type TakeDownWorkRow struct {
+	OwnerID    pgtype.UUID
+	PublicName string
+}
+
+func (q *Queries) TakeDownWork(ctx context.Context, arg TakeDownWorkParams) (TakeDownWorkRow, error) {
+	row := q.db.QueryRow(ctx, takeDownWork, arg.ID, arg.TakenDownBy, arg.TakenDownReason)
+	var i TakeDownWorkRow
+	err := row.Scan(&i.OwnerID, &i.PublicName)
+	return i, err
+}
+
 const takeOAuthState = `-- name: TakeOAuthState :one
 delete from oauth_states
  where token_hash = $1 and expires_at > now()
@@ -2819,40 +2856,40 @@ func (q *Queries) TakePasswordReset(ctx context.Context, tokenHash []byte) (pgty
 	return user_id, err
 }
 
-const takeWithheldNotices = `-- name: TakeWithheldNotices :many
+const takeTakedownNotices = `-- name: TakeTakedownNotices :many
 update app_library_entries as entry
-   set notified_withheld_at = work.withheld_at
+   set notified_taken_down_at = work.taken_down_at
   from work_public.works as work
  where entry.connected_app_id = $1
    and work.id = entry.work_id
    and work.type = any($2::text[])
-   and work.withheld_at is not null
+   and work.taken_down_at is not null
    and work.deleted_at is null
-   and entry.notified_withheld_at is distinct from work.withheld_at
-returning entry.work_id, work.name::text as name, work.withheld_at
+   and entry.notified_taken_down_at is distinct from work.taken_down_at
+returning entry.work_id, work.name::text as name, work.taken_down_at
 `
 
-type TakeWithheldNoticesParams struct {
+type TakeTakedownNoticesParams struct {
 	ConnectedAppID pgtype.UUID
 	Types          []string
 }
 
-type TakeWithheldNoticesRow struct {
-	WorkID     pgtype.UUID
-	Name       string
-	WithheldAt pgtype.Timestamptz
+type TakeTakedownNoticesRow struct {
+	WorkID      pgtype.UUID
+	Name        string
+	TakenDownAt pgtype.Timestamptz
 }
 
-func (q *Queries) TakeWithheldNotices(ctx context.Context, arg TakeWithheldNoticesParams) ([]TakeWithheldNoticesRow, error) {
-	rows, err := q.db.Query(ctx, takeWithheldNotices, arg.ConnectedAppID, arg.Types)
+func (q *Queries) TakeTakedownNotices(ctx context.Context, arg TakeTakedownNoticesParams) ([]TakeTakedownNoticesRow, error) {
+	rows, err := q.db.Query(ctx, takeTakedownNotices, arg.ConnectedAppID, arg.Types)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TakeWithheldNoticesRow
+	var items []TakeTakedownNoticesRow
 	for rows.Next() {
-		var i TakeWithheldNoticesRow
-		if err := rows.Scan(&i.WorkID, &i.Name, &i.WithheldAt); err != nil {
+		var i TakeTakedownNoticesRow
+		if err := rows.Scan(&i.WorkID, &i.Name, &i.TakenDownAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -3426,43 +3463,6 @@ func (q *Queries) VerifyUserEmail(ctx context.Context, arg VerifyUserEmailParams
 	return i, err
 }
 
-const withholdWork = `-- name: WithholdWork :one
-with withheld as (
-    update works as work
-       set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
-           updated_at = now()
-     where work.id = $1 and work.lifecycle = 'published'
-       and work.withheld_at is null and work.deleted_at is null
-    returning work.id, work.owner_id, work.name, work.published_version_id
-), stopped as (
-    update sends as send
-       set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
-     where send.work_id in (select withheld.id from withheld)
-       and send.state = 'queued'
-)
-select withheld.owner_id, coalesce(version.payload ->> 'name', withheld.name)::text as public_name
-  from withheld
-  left join work_versions version on version.id = withheld.published_version_id
-`
-
-type WithholdWorkParams struct {
-	ID             pgtype.UUID
-	WithheldBy     pgtype.UUID
-	WithheldReason pgtype.Text
-}
-
-type WithholdWorkRow struct {
-	OwnerID    pgtype.UUID
-	PublicName string
-}
-
-func (q *Queries) WithholdWork(ctx context.Context, arg WithholdWorkParams) (WithholdWorkRow, error) {
-	row := q.db.QueryRow(ctx, withholdWork, arg.ID, arg.WithheldBy, arg.WithheldReason)
-	var i WithholdWorkRow
-	err := row.Scan(&i.OwnerID, &i.PublicName)
-	return i, err
-}
-
 const workBlocks = `-- name: WorkBlocks :many
 select id, definition, title, position, hidden, layout, width, elements
   from work_blocks
@@ -3651,7 +3651,7 @@ func (q *Queries) WorkConnectedAppStates(ctx context.Context, arg WorkConnectedA
 }
 
 const workDeletionState = `-- name: WorkDeletionState :one
-select withheld_at, deleted_at
+select taken_down_at, deleted_at
   from works
  where id = $1 and owner_id = $2
 `
@@ -3662,14 +3662,14 @@ type WorkDeletionStateParams struct {
 }
 
 type WorkDeletionStateRow struct {
-	WithheldAt pgtype.Timestamptz
-	DeletedAt  pgtype.Timestamptz
+	TakenDownAt pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
 }
 
 func (q *Queries) WorkDeletionState(ctx context.Context, arg WorkDeletionStateParams) (WorkDeletionStateRow, error) {
 	row := q.db.QueryRow(ctx, workDeletionState, arg.ID, arg.OwnerID)
 	var i WorkDeletionStateRow
-	err := row.Scan(&i.WithheldAt, &i.DeletedAt)
+	err := row.Scan(&i.TakenDownAt, &i.DeletedAt)
 	return i, err
 }
 
@@ -3681,14 +3681,14 @@ select a.id, a.type, a.name, a.blurb, a.tags, a.is_nsfw, a.visibility,
        coalesce(original.identifier, '')::text as identifier,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = $2::uuid, false)::boolean as is_owner,
-       a.withheld_reason, a.withheld_at
+       a.taken_down_reason, a.taken_down_at
   from works a
   left join users owner on owner.id = a.owner_id
   left join work_original_files original on original.id = a.original_file_id
  where a.id = $1
    and a.deleted_at is null
    and (a.lifecycle = 'published' or a.owner_id = $2::uuid)
-   and (a.withheld_at is null or a.owner_id = $2::uuid)
+   and (a.taken_down_at is null or a.owner_id = $2::uuid)
 `
 
 type WorkPageParams struct {
@@ -3712,8 +3712,8 @@ type WorkPageRow struct {
 	Identifier        string
 	Creator           string
 	IsOwner           bool
-	WithheldReason    pgtype.Text
-	WithheldAt        pgtype.Timestamptz
+	TakenDownReason   pgtype.Text
+	TakenDownAt       pgtype.Timestamptz
 }
 
 func (q *Queries) WorkPage(ctx context.Context, arg WorkPageParams) (WorkPageRow, error) {
@@ -3735,8 +3735,8 @@ func (q *Queries) WorkPage(ctx context.Context, arg WorkPageParams) (WorkPageRow
 		&i.Identifier,
 		&i.Creator,
 		&i.IsOwner,
-		&i.WithheldReason,
-		&i.WithheldAt,
+		&i.TakenDownReason,
+		&i.TakenDownAt,
 	)
 	return i, err
 }
@@ -3801,7 +3801,7 @@ func (q *Queries) WorkPageMedia(ctx context.Context, id pgtype.UUID) ([]WorkPage
 }
 
 const workStateForOwner = `-- name: WorkStateForOwner :one
-select withheld_at, lifecycle
+select taken_down_at, lifecycle
   from works
  where id = $1 and owner_id = $2 and deleted_at is null
 `
@@ -3812,13 +3812,13 @@ type WorkStateForOwnerParams struct {
 }
 
 type WorkStateForOwnerRow struct {
-	WithheldAt pgtype.Timestamptz
-	Lifecycle  string
+	TakenDownAt pgtype.Timestamptz
+	Lifecycle   string
 }
 
 func (q *Queries) WorkStateForOwner(ctx context.Context, arg WorkStateForOwnerParams) (WorkStateForOwnerRow, error) {
 	row := q.db.QueryRow(ctx, workStateForOwner, arg.ID, arg.OwnerID)
 	var i WorkStateForOwnerRow
-	err := row.Scan(&i.WithheldAt, &i.Lifecycle)
+	err := row.Scan(&i.TakenDownAt, &i.Lifecycle)
 	return i, err
 }

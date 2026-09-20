@@ -9,19 +9,18 @@ import (
 	"github.com/google/uuid"
 )
 
-// Authority says whether an account administers the blog and whether its writer switch is on
-type Authority interface {
-	HoldsAuthority(ctx context.Context, accountID uuid.UUID) (bool, error)
+// Writers says whether an account's writer switch is on
+type Writers interface {
 	IsWriter(ctx context.Context, accountID uuid.UUID) (bool, error)
 }
 
 type Handlers struct {
 	accounts *Service
 	apps     *connect.Apps
-	blog     Authority
+	blog     Writers
 }
 
-func NewHandlers(accounts *Service, apps *connect.Apps, posts Authority) *Handlers {
+func NewHandlers(accounts *Service, apps *connect.Apps, posts Writers) *Handlers {
 	return &Handlers{accounts: accounts, apps: apps, blog: posts}
 }
 

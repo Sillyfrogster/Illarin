@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestDiscordRepairsRequireAuthorityAndDoNotRepeatOrRewriteHistory(t *testing.T) {
+func TestDiscordRepairsNeedAnAdminAndDoNotRepeatOrRewriteHistory(t *testing.T) {
 	t.Parallel()
 	stack := newIntegrationStack(t)
 	channel := stack.channelWithRole(t, "Readers")

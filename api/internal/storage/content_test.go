@@ -173,45 +173,45 @@ func TestOpenReturnsTheWholeBlob(t *testing.T) {
 	}
 }
 
-func TestDerivativesAreDisposableWithoutTouchingSourceBlobs(t *testing.T) {
+func TestTheImageCacheIsDisposableWithoutTouchingSourceBlobs(t *testing.T) {
 	t.Parallel()
 	store := newTestStore(t)
 	stored, err := store.Put(context.Background(), bytes.NewReader([]byte("source")))
 	if err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	derivative := DerivativeID{SourceDigest: stored.Digest, Variant: "detail", Version: 2}
-	if err := store.PutDerivative(context.Background(), derivative, []byte("rendered")); err != nil {
-		t.Fatalf("PutDerivative: %v", err)
+	id := ImageSizeID{SourceDigest: stored.Digest, Size: "detail", Version: 2}
+	if err := store.PutImageSize(context.Background(), id, []byte("rendered")); err != nil {
+		t.Fatalf("PutImageSize: %v", err)
 	}
 
-	rendered, err := store.OpenDerivative(context.Background(), derivative)
+	opened, err := store.OpenImageSize(context.Background(), id)
 	if err != nil {
-		t.Fatalf("OpenDerivative: %v", err)
+		t.Fatalf("OpenImageSize: %v", err)
 	}
-	got, err := io.ReadAll(rendered)
-	rendered.Close()
+	got, err := io.ReadAll(opened)
+	opened.Close()
 	if err != nil {
-		t.Fatalf("read derivative: %v", err)
+		t.Fatalf("read the image size: %v", err)
 	}
 	if string(got) != "rendered" {
-		t.Errorf("derivative = %q, want rendered", got)
+		t.Errorf("image size = %q, want rendered", got)
 	}
 
-	if err := store.ClearDerivatives(context.Background()); err != nil {
-		t.Fatalf("ClearDerivatives: %v", err)
+	if err := store.ClearImageCache(context.Background()); err != nil {
+		t.Fatalf("ClearImageCache: %v", err)
 	}
-	if _, err := store.OpenDerivative(context.Background(), derivative); err == nil {
-		t.Fatal("derivative still exists after clearing the cache")
+	if _, err := store.OpenImageSize(context.Background(), id); err == nil {
+		t.Fatal("the image size still exists after clearing the cache")
 	}
 	source, err := store.Open(context.Background(), stored.ID)
 	if err != nil {
-		t.Fatalf("Open source after clearing derivatives: %v", err)
+		t.Fatalf("Open source after clearing the image cache: %v", err)
 	}
 	source.Close()
 }
 
-func TestDerivativeIdentityIncludesSourceVariantAndVersion(t *testing.T) {
+func TestImageSizeIdentityIncludesSourceSizeAndVersion(t *testing.T) {
 	t.Parallel()
 	store := newTestStore(t)
 	first, err := store.Put(context.Background(), bytes.NewReader([]byte("first source")))
@@ -223,63 +223,63 @@ func TestDerivativeIdentityIncludesSourceVariantAndVersion(t *testing.T) {
 		t.Fatalf("put second source: %v", err)
 	}
 
-	derivatives := []struct {
-		id   DerivativeID
+	sizes := []struct {
+		id   ImageSizeID
 		want string
 	}{
-		{id: DerivativeID{SourceDigest: first.Digest, Variant: "grid", Version: 1}, want: "first grid v1"},
-		{id: DerivativeID{SourceDigest: first.Digest, Variant: "grid", Version: 2}, want: "first grid v2"},
-		{id: DerivativeID{SourceDigest: first.Digest, Variant: "detail", Version: 1}, want: "first detail v1"},
-		{id: DerivativeID{SourceDigest: second.Digest, Variant: "grid", Version: 1}, want: "second grid v1"},
+		{id: ImageSizeID{SourceDigest: first.Digest, Size: "grid", Version: 1}, want: "first grid v1"},
+		{id: ImageSizeID{SourceDigest: first.Digest, Size: "grid", Version: 2}, want: "first grid v2"},
+		{id: ImageSizeID{SourceDigest: first.Digest, Size: "detail", Version: 1}, want: "first detail v1"},
+		{id: ImageSizeID{SourceDigest: second.Digest, Size: "grid", Version: 1}, want: "second grid v1"},
 	}
-	for _, derivative := range derivatives {
-		if err := store.PutDerivative(context.Background(), derivative.id,
-			[]byte(derivative.want)); err != nil {
-			t.Fatalf("PutDerivative: %v", err)
+	for _, rendered := range sizes {
+		if err := store.PutImageSize(context.Background(), rendered.id,
+			[]byte(rendered.want)); err != nil {
+			t.Fatalf("PutSize: %v", err)
 		}
 	}
 
-	for _, derivative := range derivatives {
-		opened, err := store.OpenDerivative(context.Background(), derivative.id)
+	for _, rendered := range sizes {
+		opened, err := store.OpenImageSize(context.Background(), rendered.id)
 		if err != nil {
-			t.Fatalf("OpenDerivative: %v", err)
+			t.Fatalf("OpenSize: %v", err)
 		}
 		got, err := io.ReadAll(opened)
 		opened.Close()
 		if err != nil {
-			t.Fatalf("read derivative: %v", err)
+			t.Fatalf("read the image size: %v", err)
 		}
-		if string(got) != derivative.want {
-			t.Errorf("derivative = %q, want %q", got, derivative.want)
+		if string(got) != rendered.want {
+			t.Errorf("image size = %q, want %q", got, rendered.want)
 		}
 	}
 }
 
-func TestDerivativeCanBeHandedToTheInternalByteServer(t *testing.T) {
+func TestAnImageSizeCanBeHandedToTheInternalByteServer(t *testing.T) {
 	t.Parallel()
 	store := newTestStore(t)
 	stored, err := store.Put(context.Background(), bytes.NewReader([]byte("source")))
 	if err != nil {
 		t.Fatalf("Put: %v", err)
 	}
-	id := DerivativeID{SourceDigest: stored.Digest, Variant: "grid", Version: 1}
-	if err := store.PutDerivative(context.Background(), id, []byte("rendered")); err != nil {
-		t.Fatalf("PutDerivative: %v", err)
+	id := ImageSizeID{SourceDigest: stored.Digest, Size: "grid", Version: 1}
+	if err := store.PutImageSize(context.Background(), id, []byte("rendered")); err != nil {
+		t.Fatalf("PutSize: %v", err)
 	}
 
-	redirect, err := store.InternalDerivativeRedirect(context.Background(), id)
+	redirect, err := store.InternalImageSizeRedirect(context.Background(), id)
 	if err != nil {
-		t.Fatalf("InternalDerivativeRedirect: %v", err)
+		t.Fatalf("InternalImageSizeRedirect: %v", err)
 	}
-	if !strings.HasPrefix(redirect, "/_illarin/derivatives/") {
-		t.Fatalf("redirect = %q, want internal derivative location", redirect)
+	if !strings.HasPrefix(redirect, "/_illarin/image-cache/") {
+		t.Fatalf("redirect = %q, want internal image cache location", redirect)
 	}
 
-	if err := store.ClearDerivatives(context.Background()); err != nil {
-		t.Fatalf("ClearDerivatives: %v", err)
+	if err := store.ClearImageCache(context.Background()); err != nil {
+		t.Fatalf("ClearImageCache: %v", err)
 	}
-	_, err = store.InternalDerivativeRedirect(context.Background(), id)
-	if !errors.Is(err, ErrDerivativeNotFound) {
-		t.Fatalf("missing derivative error = %v, want ErrDerivativeNotFound", err)
+	_, err = store.InternalImageSizeRedirect(context.Background(), id)
+	if !errors.Is(err, ErrImageSizeNotFound) {
+		t.Fatalf("missing image size error = %v, want ErrImageSizeNotFound", err)
 	}
 }

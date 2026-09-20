@@ -101,7 +101,7 @@ func (h *Handlers) CorrectWorkVersionNotes(c *gin.Context) {
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "This work is frozen while it is withheld.")
+		api.Refuse(c, http.StatusConflict, "This work is frozen while it is taken down.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not correct the notes.")
 	default:
@@ -138,7 +138,7 @@ func (h *Handlers) WithdrawWorkVersion(c *gin.Context) {
 	case errors.Is(err, ErrVersionAlreadyWithdrawn):
 		api.Refuse(c, http.StatusConflict, "This version is already withdrawn.")
 	case errors.Is(err, work.ErrWorkFrozen):
-		api.Refuse(c, http.StatusConflict, "This work is frozen while it is withheld.")
+		api.Refuse(c, http.StatusConflict, "This work is frozen while it is taken down.")
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such version.")
 	case err != nil:
@@ -273,8 +273,8 @@ func toAPINamedPrompts(prompts []Prompt) []NamedPrompt {
 func toAPIComparison(compared Comparison) VersionComparison {
 	served := VersionComparison{
 		From: page.ToRecordedVersion(compared.From), To: page.ToRecordedVersion(compared.To),
-		Groups:          ToChangeGroups(compared.Groups),
-		PromptsWithheld: compared.PromptsWithheld,
+		Groups:        ToChangeGroups(compared.Groups),
+		PromptsHidden: compared.PromptsHidden,
 	}
 	if compared.Unavailable != "" {
 		unavailable := compared.Unavailable

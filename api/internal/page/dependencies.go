@@ -51,7 +51,7 @@ func extensionDependencies(ctx context.Context, q db.DBTX, subject dependencySub
 		 where original.identifier = any($1::text[])
 		   and original.format = $2 and listed.type = $3 and listed.id <> $4
 		   and listed.lifecycle = 'published' and listed.visibility = 'listed'
-		   and listed.withheld_at is null and listed.deleted_at is null
+		   and listed.taken_down_at is null and listed.deleted_at is null
 		   and ($5 <> 'hidden' or not listed.is_nsfw)
 		 order by listed.created_at, listed.id
 	`, identifiers, subject.format, subject.workType, subject.workID, string(subject.preference))

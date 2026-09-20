@@ -127,7 +127,7 @@ func TestDetailsRequestMustSayWhetherToKeepOrClearTheBlurb(t *testing.T) {
 	}
 }
 
-func TestAWithheldWorkRefusesNewDetailsWithTheFrozenCode(t *testing.T) {
+func TestATakenDownWorkRefusesNewDetailsWithTheFrozenCode(t *testing.T) {
 	t.Parallel()
 	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
 	workID := apitest.PublishedCharacter(t, r, session)
@@ -135,13 +135,13 @@ func TestAWithheldWorkRefusesNewDetailsWithTheFrozenCode(t *testing.T) {
 		`update users set role = 'admin' where username = 'verified.creator'`); err != nil {
 		t.Fatalf("make the creator an admin: %v", err)
 	}
-	if withheld := apitest.Send(t, r, apitest.AuthorizedJSONRequest(t, http.MethodPut,
-		"/v1/works/"+workID+"/withhold", `{"reason":"Report under review"}`, session)); withheld.Code != http.StatusNoContent {
-		t.Fatalf("withhold status = %d, want 204: %s", withheld.Code, withheld.Body.String())
+	if takenDown := apitest.Send(t, r, apitest.AuthorizedJSONRequest(t, http.MethodPut,
+		"/v1/works/"+workID+"/takedown", `{"reason":"Report under review"}`, session)); takenDown.Code != http.StatusNoContent {
+		t.Fatalf("takedown status = %d, want 204: %s", takenDown.Code, takenDown.Body.String())
 	}
 
 	response := apitest.SaveDetails(t, r, session, workID,
-		`{"name":"Renamed while withheld","blurb":"","isNsfw":false}`)
+		`{"name":"Renamed while taken down","blurb":"","isNsfw":false}`)
 	if response.Code != http.StatusConflict {
 		t.Fatalf("status = %d, want 409: %s", response.Code, response.Body.String())
 	}

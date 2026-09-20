@@ -24,7 +24,7 @@ const (
 	profileLinkLimit = 6
 )
 
-const avatarVariant = "grid"
+const avatarSize = "grid"
 
 var (
 	ErrProfileMediaNotFound = errors.New("profile media does not exist")
@@ -32,7 +32,7 @@ var (
 )
 
 func AvatarURL(mediaID uuid.UUID, version uint32) string {
-	return fmt.Sprintf("/media/%s/%s/%d", mediaID, avatarVariant, version)
+	return fmt.Sprintf("/media/%s/%s/%d", mediaID, avatarSize, version)
 }
 
 type ProfileLink struct {
@@ -41,10 +41,10 @@ type ProfileLink struct {
 }
 
 type ProfileAvatar struct {
-	MediaID           uuid.UUID
-	Width             int
-	Height            int
-	DerivativeVersion uint32
+	MediaID          uuid.UUID
+	Width            int
+	Height           int
+	ImageSizeVersion uint32
 }
 
 type PublicProfile struct {
@@ -72,12 +72,12 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 	var width, height *int
 	err := s.pool.QueryRow(ctx, `
 		select account.id, account.username, account.show_nsfw_contributions_on_profile,
-		       restriction.user_id is not null,
+		       restricted.user_id is not null,
 		       coalesce(profile.display_name, ''), coalesce(profile.biography, ''),
 		       coalesce(profile.contact_email, ''),
 		       avatar.id, avatar.width, avatar.height
 		  from users account
-		  left join profile_restrictions restriction on restriction.user_id = account.id
+		  left join restricted_profiles restricted on restricted.user_id = account.id
 		  left join public_profiles profile on profile.user_id = account.id
 		  left join profile_media avatar
 		         on avatar.id = profile.avatar_media_id and avatar.blob_id is not null
@@ -104,10 +104,10 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 	}
 	if avatarID != nil && width != nil && height != nil {
 		found.Avatar = &ProfileAvatar{
-			MediaID:           *avatarID,
-			Width:             *width,
-			Height:            *height,
-			DerivativeVersion: mediaproc.DerivativeVersion,
+			MediaID:          *avatarID,
+			Width:            *width,
+			Height:           *height,
+			ImageSizeVersion: mediaproc.ImageSizeVersion,
 		}
 	}
 	links, err := s.profileLinks(ctx, found.ID)
@@ -224,13 +224,13 @@ func (s *Service) RemoveAvatar(ctx context.Context, owner api.Account) (PublicPr
 	return s.PublicProfile(ctx, owner.Handle)
 }
 
-func (s *Service) AvatarVariant(
+func (s *Service) AvatarImageSize(
 	ctx context.Context,
 	mediaID uuid.UUID,
-	variant string,
+	size string,
 	version uint32,
 ) (string, string, error) {
-	if _, known := mediaproc.VariantByName(variant); !known || version != mediaproc.DerivativeVersion {
+	if _, known := mediaproc.ImageSizeByName(size); !known || version != mediaproc.ImageSizeVersion {
 		return "", "", ErrProfileMediaNotFound
 	}
 	var blobID uuid.UUID
@@ -252,11 +252,11 @@ func (s *Service) AvatarVariant(
 	}
 	var digest [sha256.Size]byte
 	copy(digest[:], digestBytes)
-	redirect, err := s.media.Serve(ctx, blobID, digest, variant, version)
+	redirect, err := s.media.Serve(ctx, blobID, digest, size, version)
 	if err != nil {
 		return "", "", err
 	}
-	return redirect, s.media.DerivativeType(), nil
+	return redirect, s.media.ImageSizeMediaType(), nil
 }
 
 func replaceAvatar(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID, mediaID *uuid.UUID) error {
@@ -292,10 +292,10 @@ func lockProfileForEdit(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID) error
 	}
 	var restricted bool
 	err := tx.QueryRow(ctx, `
-		select exists (select 1 from profile_restrictions where user_id = $1)
+		select exists (select 1 from restricted_profiles where user_id = $1)
 	`, ownerID).Scan(&restricted)
 	if err != nil {
-		return fmt.Errorf("read profile restriction state: %w", err)
+		return fmt.Errorf("read whether the profile is restricted: %w", err)
 	}
 	if restricted {
 		return ErrProfileRestricted
@@ -419,10 +419,10 @@ func plainField(field, raw string, limit int, allowBreaks bool) (string, error) 
 func (s *Service) refuseWhileRestricted(ctx context.Context, ownerID uuid.UUID) error {
 	var restricted bool
 	err := s.pool.QueryRow(ctx, `
-		select exists (select 1 from profile_restrictions where user_id = $1)
+		select exists (select 1 from restricted_profiles where user_id = $1)
 	`, ownerID).Scan(&restricted)
 	if err != nil {
-		return fmt.Errorf("read profile restriction state: %w", err)
+		return fmt.Errorf("read whether the profile is restricted: %w", err)
 	}
 	if restricted {
 		return ErrProfileRestricted

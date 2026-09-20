@@ -21,7 +21,7 @@ func CandidateResult(c *gin.Context, candidate *work.Candidate, err error) bool 
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Send the drafted-changes version you reviewed.", "code": "drafted_changes_version_required"})
 		return true
 	case errors.Is(err, work.ErrWorkFrozen):
-		c.JSON(http.StatusConflict, CandidateConflict{Code: CandidateConflictCodeWorkFrozen, Error: "A withheld work cannot be changed."})
+		c.JSON(http.StatusConflict, CandidateConflict{Code: CandidateConflictCodeWorkFrozen, Error: "A taken-down work cannot be changed."})
 		return true
 	case err == nil && candidate.SavedVersion > 0:
 		c.Header("X-Drafted-Changes-Version", strconv.FormatInt(candidate.SavedVersion, 10))
