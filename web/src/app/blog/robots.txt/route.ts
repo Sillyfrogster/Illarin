@@ -2,7 +2,7 @@ import { blogAddress } from "@/lib/blog-address";
 
 export const dynamic = "force-dynamic";
 
-export function blogRobots(): string {
+function blogRobots(): string {
   return [
     "User-Agent: *",
     "Allow: /",

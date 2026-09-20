@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { blogRobots } from "./blog/robots.txt/route";
+import { GET } from "./blog/robots.txt/route";
 import { buildRobots } from "./robots";
 
 const robots = buildRobots("https://illarin.com");
@@ -10,8 +10,8 @@ test("points crawlers at the sitemap", () => {
   expect(robots.sitemap).toBe("https://illarin.com/sitemap.xml");
 });
 
-test("the blog origin points crawlers at its own sitemap and nothing else", () => {
-  expect(blogRobots()).toBe(
+test("the blog origin points crawlers at its own sitemap and nothing else", async () => {
+  expect(await GET().text()).toBe(
     "User-Agent: *\nAllow: /\nSitemap: http://blog.localhost:8000/sitemap.xml\n",
   );
 });
