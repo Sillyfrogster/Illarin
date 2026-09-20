@@ -129,7 +129,7 @@ func (OpaqueModule) Declaration() format.Declaration {
 	declaration.Label = "Test format"
 	declaration.Direction.Write = true
 	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderWorkVersion}
-	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
+	declaration.TestedOriginalFormats = append(declaration.TestedOriginalFormats, format.OriginalFormatIllarin)
 	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
 		block.RoleDescription: {
 			Read:  format.RoleSupport{Grade: format.SupportFull},
@@ -175,8 +175,8 @@ func ReaderDeclaration(id, workType string) format.Declaration {
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
 			ItemBytes: block.MaxItemBytes,
 		},
-		ConsumedKeys:  []string{"payload"},
-		Preservation:  format.PreservationDeclaration{Body: "test"},
-		TestedOrigins: []string{id},
+		ConsumedKeys:          []string{"payload"},
+		Preservation:          format.PreservationDeclaration{Body: "test"},
+		TestedOriginalFormats: []string{id},
 	}
 }

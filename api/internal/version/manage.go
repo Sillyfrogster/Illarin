@@ -48,12 +48,12 @@ func (s *Service) RestoreVersion(ctx context.Context, ownerID, workID uuid.UUID,
 	_, err = tx.Exec(ctx, `
 		update works set name = $2, blurb = $3, tags = $4, is_nsfw = $5,
 		       credited_author = $6, nickname = $7, work_version = $8,
-		       origin_format = $9, original_file_id = $10, cover_media_id = $11,
+		       original_format = $9, original_file_id = $10, cover_media_id = $11,
 		       updated_at = now()
 		 where id = $1
 	`, workID, metadata.Name, metadata.Blurb, metadata.Tags, metadata.IsNSFW,
 		metadata.CreditedAuthor, metadata.Nickname, metadata.WorkVersion,
-		recorded.Origin, recorded.OriginalFileID, metadata.Cover)
+		recorded.OriginalFormat, recorded.OriginalFileID, metadata.Cover)
 	if err != nil {
 		return fmt.Errorf("restore the recorded header: %w", err)
 	}

@@ -62,7 +62,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 		t.Fatalf("acceptance after revocation cleared = %v, want stale", err)
 	}
 	var count int
-	if err := pool.QueryRow(context.Background(), `select count(*) from ingest_operations where target_work_id = $1`, id).Scan(&count); err != nil {
+	if err := pool.QueryRow(context.Background(), `select count(*) from upload_operations where target_work_id = $1`, id).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 	if count != 0 {

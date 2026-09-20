@@ -63,7 +63,7 @@ func (s *Sweeper) preparePurge(
 		return uuid.Nil, fmt.Errorf("record purge tombstone: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		update ingest_operations
+		update upload_operations
 		   set status = 'failed', failure_reason = 'internal_failure', blob_id = null,
 		       lease_token = null, lease_expires_at = null, updated_at = $2
 		 where blob_id = $1 and status <> 'success'

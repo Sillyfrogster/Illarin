@@ -140,7 +140,7 @@ func uploadReviewed(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (bool, err
 	var reviewed bool
 	err := tx.QueryRow(ctx, `
 		select not exists (
-			select 1 from ingest_operations
+			select 1 from upload_operations
 			 where target_work_id = $1 and status = 'preview')
 	`, workID).Scan(&reviewed)
 	if err != nil {

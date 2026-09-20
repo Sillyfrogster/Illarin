@@ -46,7 +46,7 @@ func (s *Service) AcceptOriginalFile(ctx context.Context, in OriginalFileInput, 
 	}
 	id := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into ingest_operations
+		insert into upload_operations
 			(id, owner_id, blob_id, filename, status, target_work_id, candidate_version)
 		values ($1, $2, $3, $4, 'pending', $5, $6)
 	`, id, in.OwnerID, stored.ID, in.Filename, in.WorkID, candidate.Version)

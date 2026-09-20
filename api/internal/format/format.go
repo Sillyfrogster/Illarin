@@ -386,25 +386,25 @@ func scalarText(value json.RawMessage) string {
 }
 
 type Declaration struct {
-	ID               string
-	Label            string
-	Type             string
-	Types            []string
-	Input            Input
-	Columns          []ColumnDisposition
-	Anomalies        []AnomalyDeclaration
-	Direction        Direction
-	Recognition      []Recognition
-	Roles            map[block.Role]DirectionalRoleSupport
-	Header           []HeaderField
-	Slots            []SlotDeclaration
-	Limits           ContentLimits
-	ConsumedKeys     []string
-	Boilerplate      []Boilerplate
-	Preservation     PreservationDeclaration
-	TestedOrigins    []string
-	PreservesOrigins []string
-	KeepsUpload      bool
+	ID                       string
+	Label                    string
+	Type                     string
+	Types                    []string
+	Input                    Input
+	Columns                  []ColumnDisposition
+	Anomalies                []AnomalyDeclaration
+	Direction                Direction
+	Recognition              []Recognition
+	Roles                    map[block.Role]DirectionalRoleSupport
+	Header                   []HeaderField
+	Slots                    []SlotDeclaration
+	Limits                   ContentLimits
+	ConsumedKeys             []string
+	Boilerplate              []Boilerplate
+	Preservation             PreservationDeclaration
+	TestedOriginalFormats    []string
+	PreservesOriginalFormats []string
+	KeepsUpload              bool
 	// KeepsPrivatePrompts says an app reading this format keeps a work's private prompts out of sight.
 	KeepsPrivatePrompts bool
 }
@@ -456,7 +456,7 @@ func validateDeclarationShape(d Declaration) error {
 	if !d.Direction.Read && !d.Direction.Write {
 		return errors.New("at least one direction is required")
 	}
-	if d.KeepsUpload && (!d.Direction.Read || !d.Direction.Write || !slices.Equal(d.TestedOrigins, []string{d.ID})) {
+	if d.KeepsUpload && (!d.Direction.Read || !d.Direction.Write || !slices.Equal(d.TestedOriginalFormats, []string{d.ID})) {
 		return errors.New("a module that keeps the upload reads and writes only its own files")
 	}
 	if d.Direction.Read && d.Input == InputFile && len(d.Recognition) == 0 {
@@ -615,11 +615,11 @@ func validateStorageContract(d Declaration) error {
 	if d.Preservation.Body == "" {
 		return errors.New("a namespace for the format's own leftover keys is required")
 	}
-	if len(d.TestedOrigins) == 0 {
-		return errors.New("tested origins are required")
+	if len(d.TestedOriginalFormats) == 0 {
+		return errors.New("tested original formats are required")
 	}
-	for _, origin := range d.PreservesOrigins {
-		if !slices.Contains(d.TestedOrigins, origin) {
+	for _, origin := range d.PreservesOriginalFormats {
+		if !slices.Contains(d.TestedOriginalFormats, origin) {
 			return fmt.Errorf("preserved origin %q has not been tested", origin)
 		}
 	}

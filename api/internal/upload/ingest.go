@@ -345,7 +345,7 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 	row := s.pool.QueryRow(ctx, `
 		with candidate as (
 			select id
-			  from ingest_operations
+			  from upload_operations
 			 where available_at <= $1
 			   and (status = 'pending'
 			        or (status = 'processing' and lease_expires_at <= $1))
@@ -353,7 +353,7 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 			 for update skip locked
 			 limit 1
 		)
-		update ingest_operations operation
+		update upload_operations operation
 		   set status = 'processing',
 		       attempts = attempts + 1,
 		       lease_token = $2,
@@ -468,7 +468,7 @@ func (s *Service) retryIngest(ctx context.Context, job ingestJob) error {
 	}
 	now := s.now()
 	result, err := s.pool.Exec(ctx, `
-		update ingest_operations
+		update upload_operations
 		   set status = 'pending', available_at = $3, lease_token = null,
 		       lease_expires_at = null, updated_at = $4
 		 where id = $1 and lease_token = $2 and status = 'processing'
@@ -485,7 +485,7 @@ func (s *Service) retryIngest(ctx context.Context, job ingestJob) error {
 func (s *Service) failIngest(ctx context.Context, job ingestJob, reason, message string) error {
 	now := s.now()
 	result, err := s.pool.Exec(ctx, `
-		update ingest_operations
+		update upload_operations
 		   set status = 'failed', failure_reason = $3, failure_message = nullif($4, ''),
 		       blob_id = null, lease_token = null, lease_expires_at = null, updated_at = $5
 		 where id = $1 and lease_token = $2 and status = 'processing'
@@ -514,7 +514,7 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 	var status Status
 	var lease pgtype.UUID
 	if err := tx.QueryRow(ctx, `
-		select status, lease_token from ingest_operations where id = $1 for update
+		select status, lease_token from upload_operations where id = $1 for update
 	`, job.ID).Scan(&status, &lease); err != nil {
 		return fmt.Errorf("lock ingest finalization: %w", err)
 	}
@@ -538,7 +538,7 @@ func (s *Service) finalizeIngest(ctx context.Context, job ingestJob, prepared pr
 		return err
 	}
 	result, err := tx.Exec(ctx, `
-		update ingest_operations
+		update upload_operations
 		   set status = 'success', work_id = $3, blob_id = null,
 		       lease_token = null, lease_expires_at = null, updated_at = $4
 		 where id = $1 and lease_token = $2 and status = 'processing'
@@ -635,7 +635,7 @@ func (s *Service) writeIngestResultWithDecisions(
 	isNSFW := prepared.IsNSFW
 	a := work.Work{
 		ID: workID, Type: prepared.Type, Format: prepared.Format,
-		OriginFormat:   &prepared.Format,
+		OriginalFormat: &prepared.Format,
 		WorkVersion:    prepared.Header.WorkVersion,
 		CreditedAuthor: prepared.Header.CreditedAuthor, Nickname: prepared.Header.Nickname,
 		Name: prepared.Name, Blurb: prepared.Blurb, Tags: prepared.Tags,
@@ -699,7 +699,7 @@ func (s *Service) replaceContent(
 	}
 	if _, err := tx.Exec(ctx, `
 		update works
-		   set origin_format = $2, work_version = $3, credited_author = $4,
+		   set original_format = $2, work_version = $3, credited_author = $4,
 		       nickname = $5, updated_at = now()
 		 where id = $1
 	`, job.Target.WorkID, prepared.Format, prepared.Header.WorkVersion,

@@ -7,8 +7,8 @@ import { TypeMark } from "@/components/browse/TypeMark";
 import { Button } from "@/components/ui/button";
 import {
   type BrowseType,
-  fetchPreservedNamespaces,
-  type PreservedNamespace,
+  fetchPreservedData,
+  type PreservedData,
 } from "@/lib/api/query";
 import type { ImportedWork } from "@/lib/import-stage";
 import { describePreservedLabels } from "@/lib/preserved";
@@ -24,13 +24,13 @@ export function ImportReceipt({
   headingRef: RefObject<HTMLHeadingElement | null>;
   onBeginAgain: () => void;
 }) {
-  const [preserved, setPreserved] = useState<PreservedNamespace[] | null>(null);
+  const [preserved, setPreserved] = useState<PreservedData[] | null>(null);
   const type = work.type as BrowseType;
   const label = (TYPE_LABELS[type] ?? work.type).toLowerCase();
 
   useEffect(() => {
     let active = true;
-    void fetchPreservedNamespaces(work.id).then((found) => {
+    void fetchPreservedData(work.id).then((found) => {
       if (active) setPreserved(found);
     });
     return () => {

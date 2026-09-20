@@ -267,7 +267,7 @@ func TestAnUploadWaitingForADecisionRefusesPublicationAndKeepsThePublicWork(t *t
 		t.Fatal(err)
 	}
 	_, err = pool.Exec(ctx, `
-		insert into ingest_operations (id, owner_id, blob_id, filename, status,
+		insert into upload_operations (id, owner_id, blob_id, filename, status,
 		    target_work_id, replacement_preview)
 		values ($1, $2, $3, 'replacement.json', 'preview', $4, '{}'::jsonb)
 	`, uuid.New(), owner, stored.ID, id)

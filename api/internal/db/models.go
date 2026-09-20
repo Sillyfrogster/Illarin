@@ -255,31 +255,6 @@ type InboxEntry struct {
 	UpdateCount int32
 }
 
-type IngestOperation struct {
-	ID                 pgtype.UUID
-	OwnerID            pgtype.UUID
-	BlobID             pgtype.UUID
-	Filename           string
-	Status             string
-	Name               pgtype.Text
-	Blurb              pgtype.Text
-	Tags               []string
-	IsNsfw             pgtype.Bool
-	Visibility         string
-	WorkID             pgtype.UUID
-	FailureReason      pgtype.Text
-	Attempts           int32
-	AvailableAt        pgtype.Timestamptz
-	LeaseToken         pgtype.UUID
-	LeaseExpiresAt     pgtype.Timestamptz
-	CreatedAt          pgtype.Timestamptz
-	UpdatedAt          pgtype.Timestamptz
-	TargetWorkID       pgtype.UUID
-	FailureMessage     pgtype.Text
-	CandidateVersion   pgtype.Int8
-	ReplacementPreview []byte
-}
-
 type MigrationException struct {
 	ID         pgtype.UUID
 	Type       string
@@ -560,6 +535,31 @@ type Session struct {
 	ExpiresAt pgtype.Timestamptz
 }
 
+type UploadOperation struct {
+	ID                 pgtype.UUID
+	OwnerID            pgtype.UUID
+	BlobID             pgtype.UUID
+	Filename           string
+	Status             string
+	Name               pgtype.Text
+	Blurb              pgtype.Text
+	Tags               []string
+	IsNsfw             pgtype.Bool
+	Visibility         string
+	WorkID             pgtype.UUID
+	FailureReason      pgtype.Text
+	Attempts           int32
+	AvailableAt        pgtype.Timestamptz
+	LeaseToken         pgtype.UUID
+	LeaseExpiresAt     pgtype.Timestamptz
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	TargetWorkID       pgtype.UUID
+	FailureMessage     pgtype.Text
+	CandidateVersion   pgtype.Int8
+	ReplacementPreview []byte
+}
+
 type User struct {
 	ID                             pgtype.UUID
 	Username                       string
@@ -603,7 +603,7 @@ type Work struct {
 	WorkVersion           string
 	CreditedAuthor        string
 	Nickname              string
-	OriginFormat          pgtype.Text
+	OriginalFormat        pgtype.Text
 	PublishedVersionID    pgtype.UUID
 	DraftedChangesVersion int64
 }
@@ -666,6 +666,18 @@ type WorkFollow struct {
 	WorkID    pgtype.UUID
 	State     string
 	SetAt     pgtype.Timestamptz
+}
+
+type WorkFoundImage struct {
+	ID        pgtype.UUID
+	WorkID    pgtype.UUID
+	MediaID   pgtype.UUID
+	Address   string
+	Name      string
+	BlockID   pgtype.UUID
+	Section   string
+	Position  int32
+	CreatedAt pgtype.Timestamptz
 }
 
 type WorkIntegration struct {
@@ -765,7 +777,7 @@ type WorkPublicWork struct {
 	WorkVersion        interface{}
 	CreditedAuthor     interface{}
 	Nickname           interface{}
-	OriginFormat       interface{}
+	OriginalFormat     interface{}
 	VersionNumber      pgtype.Int4
 	PublishedVersionID pgtype.UUID
 }
@@ -821,18 +833,6 @@ type WorkSummary struct {
 	Facets           []byte
 	FacetStamp       string
 	FacetComputedAt  pgtype.Timestamptz
-}
-
-type WorkVaultPicture struct {
-	ID        pgtype.UUID
-	WorkID    pgtype.UUID
-	MediaID   pgtype.UUID
-	Address   string
-	Name      string
-	BlockID   pgtype.UUID
-	Section   string
-	Position  int32
-	CreatedAt pgtype.Timestamptz
 }
 
 type WorkVersion struct {

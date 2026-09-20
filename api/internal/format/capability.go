@@ -125,16 +125,16 @@ func (t Offered) Notes() int {
 }
 
 type CapabilitySubject struct {
-	Type     string
-	Origin   string
-	Elements []block.Element
+	Type           string
+	OriginalFormat string
+	Elements       []block.Element
 }
 
-func (s CapabilitySubject) origin() string {
-	if s.Origin == "" {
-		return OriginIllarin
+func (s CapabilitySubject) originalFormat() string {
+	if s.OriginalFormat == "" {
+		return OriginalFormatIllarin
 	}
-	return s.Origin
+	return s.OriginalFormat
 }
 
 func (r *Registry) WritesType(workType string) bool {
@@ -171,7 +171,7 @@ func (r *Registry) OfferedFormats(subject CapabilitySubject) []Offered {
 		if !declaration.Direction.Write || declaration.Type != subject.Type {
 			continue
 		}
-		if !slices.Contains(declaration.TestedOrigins, subject.origin()) {
+		if !slices.Contains(declaration.TestedOriginalFormats, subject.originalFormat()) {
 			continue
 		}
 		roles, survives := lossReport(declaration, subject)
@@ -302,7 +302,7 @@ func (r *Registry) CapabilityStamp() string {
 		}
 		fmt.Fprintf(digest, "module\x00%s\x00%s\x00%s\x00%s\n",
 			declaration.ID, declaration.Type, declaration.Label,
-			strings.Join(declaration.TestedOrigins, ","))
+			strings.Join(declaration.TestedOriginalFormats, ","))
 		for _, role := range block.Roles() {
 			support := declaration.Roles[role].Write
 			condition := ""

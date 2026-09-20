@@ -176,9 +176,9 @@ func (LumiverseModule) Declaration() format.Declaration {
 		Preservation: format.PreservationDeclaration{
 			Body: lumiverseNamespace, Container: []string{lvExtensions},
 		},
-		TestedOrigins:       []string{LumiverseID, format.OriginIllarin, format.OriginV1},
-		PreservesOrigins:    []string{format.OriginV1},
-		KeepsPrivatePrompts: true,
+		TestedOriginalFormats:    []string{LumiverseID, format.OriginalFormatIllarin, format.OriginalFormatV1},
+		PreservesOriginalFormats: []string{format.OriginalFormatV1},
+		KeepsPrivatePrompts:      true,
 	}
 }
 

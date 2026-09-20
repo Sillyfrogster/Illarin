@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handlers) ListPreservedNamespaces(c *gin.Context) {
+func (h *Handlers) ListPreservedData(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -19,16 +19,16 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context) {
 	if !ok {
 		return
 	}
-	found, err := h.works.PreservedNamespaces(c.Request.Context(), owner.ID, id)
+	found, err := h.works.PreservedData(c.Request.Context(), owner.ID, id)
 	switch {
 	case errors.Is(err, work.ErrNotFound):
 		api.Refuse(c, http.StatusNotFound, "No such work.")
 	case err != nil:
 		api.Refuse(c, http.StatusInternalServerError, "Could not load extra file data. Try again.")
 	default:
-		served := make([]PreservedNamespace, 0, len(found))
+		served := make([]PreservedData, 0, len(found))
 		for _, namespace := range found {
-			served = append(served, PreservedNamespace{
+			served = append(served, PreservedData{
 				Name: namespace.Name, Label: format.PreservedLabel(namespace.Name), Bytes: namespace.Bytes,
 			})
 		}
@@ -36,7 +36,7 @@ func (h *Handlers) ListPreservedNamespaces(c *gin.Context) {
 	}
 }
 
-func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
+func (h *Handlers) DeletePreservedData(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
 		return
@@ -51,7 +51,7 @@ func (h *Handlers) DeletePreservedNamespace(c *gin.Context) {
 		return
 	}
 	candidate := &work.Candidate{Version: version}
-	err := h.works.DeletePreservedNamespace(
+	err := h.works.DeletePreservedData(
 		c.Request.Context(), owner.ID, id, namespace, candidate)
 	if CandidateResult(c, candidate, err) {
 		return

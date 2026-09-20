@@ -111,7 +111,7 @@ func TestIngestFailureReasonsStayAtTheClosedFive(t *testing.T) {
 	if err := pool.QueryRow(context.Background(), `
 		select pg_get_constraintdef(oid)
 		  from pg_constraint
-		 where conname = 'ingest_operations_failure_reason_check'
+		 where conname = 'upload_operations_failure_reason_check'
 	`).Scan(&definition); err != nil {
 		t.Fatalf("read ingest failure reason constraint: %v", err)
 	}
@@ -364,7 +364,7 @@ func TestOriginalFormatAndOriginalFileFormatHaveSeparateHomes(t *testing.T) {
 		}
 	}
 	for _, column := range []string{
-		"type", "visibility", "withheld_at", "withheld_by", "withheld_reason", "deleted_at", "origin_format",
+		"type", "visibility", "withheld_at", "withheld_by", "withheld_reason", "deleted_at", "original_format",
 	} {
 		if !slices.Contains(workColumns, column) {
 			t.Errorf("works has no %s", column)

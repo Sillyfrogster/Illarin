@@ -75,10 +75,10 @@ func (SillyTavernModule) Declaration() format.Declaration {
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
 			ItemBytes: block.MaxItemBytes,
 		},
-		ConsumedKeys:  []string{entriesKey},
-		Boilerplate:   nil,
-		Preservation:  format.PreservationDeclaration{Body: bookNamespace},
-		TestedOrigins: []string{SillyTavernID, format.OriginIllarin},
+		ConsumedKeys:          []string{entriesKey},
+		Boilerplate:           nil,
+		Preservation:          format.PreservationDeclaration{Body: bookNamespace},
+		TestedOriginalFormats: []string{SillyTavernID, format.OriginalFormatIllarin},
 	}
 }
 

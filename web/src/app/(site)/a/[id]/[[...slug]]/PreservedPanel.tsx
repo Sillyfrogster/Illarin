@@ -3,9 +3,9 @@
 import { ChevronRight, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
-  deletePreservedNamespace,
-  fetchPreservedNamespaces,
-  type PreservedNamespace,
+  deletePreservedData,
+  fetchPreservedData,
+  type PreservedData,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { useDraftedChanges } from "@/lib/drafted-changes";
@@ -13,10 +13,10 @@ import { useDraftedChanges } from "@/lib/drafted-changes";
 export function PreservedPanel({ workId }: { workId: string }) {
   const candidate = useDraftedChanges();
   const [open, setOpen] = useState(false);
-  const [namespaces, setNamespaces] = useState<PreservedNamespace[] | null>(
+  const [namespaces, setNamespaces] = useState<PreservedData[] | null>(
     null,
   );
-  const [deleting, setDeleting] = useState<PreservedNamespace | null>(null);
+  const [deleting, setDeleting] = useState<PreservedData | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -24,7 +24,7 @@ export function PreservedPanel({ workId }: { workId: string }) {
     setOpen(true);
     if (namespaces !== null) return;
     setMessage("");
-    const found = await fetchPreservedNamespaces(workId);
+    const found = await fetchPreservedData(workId);
     setNamespaces(found);
   }
 
@@ -33,7 +33,7 @@ export function PreservedPanel({ workId }: { workId: string }) {
     setPending(true);
     setMessage("");
     try {
-      await deletePreservedNamespace(candidate, workId, namespace);
+      await deletePreservedData(candidate, workId, namespace);
       setNamespaces(
         (current) =>
           current?.filter((held) => held.name !== namespace) ?? current,
@@ -167,7 +167,7 @@ function DeleteNamespaceDialog({
   onCancel,
   onDelete,
 }: {
-  namespace: PreservedNamespace;
+  namespace: PreservedData;
   pending: boolean;
   onCancel: () => void;
   onDelete: () => void;

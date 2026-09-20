@@ -17,10 +17,10 @@ func testReaderDeclaration(id, workType string) Declaration {
 			Type: RecognitionShape, Containers: []Container{JSON},
 			Required: map[string]ValueType{"payload": ValueBoolean},
 		}},
-		Limits:        ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
-		ConsumedKeys:  []string{"payload"},
-		Preservation:  PreservationDeclaration{Body: "test"},
-		TestedOrigins: []string{id},
+		Limits:                ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
+		ConsumedKeys:          []string{"payload"},
+		Preservation:          PreservationDeclaration{Body: "test"},
+		TestedOriginalFormats: []string{id},
 	}
 }
 

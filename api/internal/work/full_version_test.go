@@ -245,7 +245,7 @@ func TestAVersionRetainsExactContentAndCannotBeRewritten(t *testing.T) {
 	_, pool := apitest.Works(t)
 	id, blockID, promptID := uuid.New(), uuid.New(), uuid.New()
 	versionExec(t, pool, `insert into works (id, type, name, lifecycle, blurb, tags, is_nsfw,
-		work_version, credited_author, nickname, origin_format)
+		work_version, credited_author, nickname, original_format)
 		values ($1, 'preset', 'Recorded preset', 'published', 'Original blurb', '{one,two}', false,
 		'v free text', 'Original author', 'Original nickname', 'test-preset')`, id)
 	versionExec(t, pool, `insert into work_blocks (id, work_id, definition, title, position, hidden, layout, width, elements)
@@ -268,7 +268,7 @@ func TestAVersionRetainsExactContentAndCannotBeRewritten(t *testing.T) {
 		payload->>'name' = 'Recorded preset' and payload->>'blurb' = 'Original blurb'
 		and payload->'tags' = '["one","two"]'::jsonb and payload->>'is_nsfw' = 'false'
 		and payload->>'work_version' = 'v free text' and payload->>'credited_author' = 'Original author'
-		and payload->>'nickname' = 'Original nickname' and payload->>'origin_format' = 'test-preset'
+		and payload->>'nickname' = 'Original nickname' and payload->>'original_format' = 'test-preset'
 		and payload#>>'{blocks,0,title}' = 'My changelog' and payload#>>'{blocks,0,hidden}' = 'true'
 		and payload#>>'{blocks,0,width}' = 'half' and payload#>>'{blocks,0,layout}' = 'single'
 		and payload#>>'{blocks,0,elements,0,content,text}' = 'Handwritten history'

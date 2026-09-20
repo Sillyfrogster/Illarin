@@ -131,7 +131,7 @@ func TestUploadWaitsWhenItsMaximumWriteWouldCrossTheStorageReserve(t *testing.T)
 		t.Fatalf("refused upload has Location %q", response.Header().Get("Location"))
 	}
 	var operations int
-	if err := pool.QueryRow(context.Background(), `select count(*) from ingest_operations`).Scan(&operations); err != nil {
+	if err := pool.QueryRow(context.Background(), `select count(*) from upload_operations`).Scan(&operations); err != nil {
 		t.Fatalf("count ingest operations: %v", err)
 	}
 	if operations != 0 {
@@ -293,7 +293,7 @@ func TestCharacterUploadLandsOnABuiltDraftPage(t *testing.T) {
 	}
 	var origin, version, author, nickname string
 	if err := pool.QueryRow(context.Background(), `
-		select origin_format, work_version, credited_author, nickname
+		select original_format, work_version, credited_author, nickname
 		  from works where id = $1
 	`, workID).Scan(&origin, &version, &author, &nickname); err != nil {
 		t.Fatalf("read imported header: %v", err)
@@ -369,7 +369,7 @@ func TestEveryCharacterReaderBuildsTheCatalogPage(t *testing.T) {
 			}
 			var origin string
 			if err := pool.QueryRow(context.Background(),
-				`select origin_format from works where id = $1`, workID,
+				`select original_format from works where id = $1`, workID,
 			).Scan(&origin); err != nil || origin != test.origin {
 				t.Errorf("origin = %q, %v; want %q", origin, err, test.origin)
 			}

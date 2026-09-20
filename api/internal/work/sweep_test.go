@@ -191,12 +191,12 @@ func TestSweepMarksThenDeletesOnlyBlobsWithoutLiveOrRecoverableReferences(t *tes
 	}
 	var rejectedBlob uuid.UUID
 	if err := pool.QueryRow(ctx,
-		`select blob_id from ingest_operations where id = $1`, rejected.ID,
+		`select blob_id from upload_operations where id = $1`, rejected.ID,
 	).Scan(&rejectedBlob); err != nil {
 		t.Fatalf("read rejected blob: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
-		update ingest_operations
+		update upload_operations
 		   set status = 'failed', failure_reason = 'malformed_input', blob_id = null
 		 where id = $1
 	`, rejected.ID); err != nil {
@@ -257,7 +257,7 @@ func TestSweepRechecksReferencesImmediatelyBeforeDeleting(t *testing.T) {
 		t.Fatalf("mark sweep: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
-		insert into ingest_operations (id, owner_id, blob_id, filename, status)
+		insert into upload_operations (id, owner_id, blob_id, filename, status)
 		values ($1, $2, $3, 'converged.bin', 'pending')
 	`, uuid.New(), ownerID, stored.ID); err != nil {
 		t.Fatalf("add concurrent reference: %v", err)

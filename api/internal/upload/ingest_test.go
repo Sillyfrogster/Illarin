@@ -113,7 +113,7 @@ func TestUnrecognisedImportFailsTerminallyAndReleasesItsBlobReference(t *testing
 	}
 	var blobReferences int
 	if err := pool.QueryRow(context.Background(), `
-		select count(*) from ingest_operations where id = $1 and blob_id is not null
+		select count(*) from upload_operations where id = $1 and blob_id is not null
 	`, operation.ID).Scan(&blobReferences); err != nil {
 		t.Fatalf("count references: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestExpiredLeaseIsTakenAgainAndFinalizationIsIdempotent(t *testing.T) {
 	}
 	var status string
 	if err := pool.QueryRow(context.Background(),
-		`select status from ingest_operations`).Scan(&status); err != nil {
+		`select status from upload_operations`).Scan(&status); err != nil {
 		t.Fatalf("read operation: %v", err)
 	}
 	if status != "success" {

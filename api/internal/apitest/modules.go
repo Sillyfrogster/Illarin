@@ -40,7 +40,7 @@ func (ReplacingModule) Declaration() format.Declaration {
 	declaration.Label = "Replacing format"
 	declaration.Direction.Write = true
 	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderWorkVersion}
-	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
+	declaration.TestedOriginalFormats = append(declaration.TestedOriginalFormats, format.OriginalFormatIllarin)
 	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
 		block.RoleDescription: {
 			Read:  format.RoleSupport{Grade: format.SupportFull},

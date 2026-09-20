@@ -26,7 +26,7 @@ func (privatePromptModule) Declaration() format.Declaration {
 	declaration.Label = "Private prompt format"
 	declaration.Direction.Write = true
 	declaration.Header = []format.HeaderField{format.HeaderName}
-	declaration.TestedOrigins = append(declaration.TestedOrigins, format.OriginIllarin)
+	declaration.TestedOriginalFormats = append(declaration.TestedOriginalFormats, format.OriginalFormatIllarin)
 	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
 		block.RolePromptFragments: {
 			Read:  format.RoleSupport{Grade: format.SupportFull},

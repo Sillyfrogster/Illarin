@@ -30,11 +30,11 @@ func writerDeclaration(id string, grades map[block.Role]SupportGrade) Declaratio
 	}
 	return Declaration{
 		ID: id, Label: id, Type: "character", Direction: Direction{Write: true},
-		Roles:         roles,
-		Limits:        ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
-		ConsumedKeys:  []string{"payload"},
-		Preservation:  PreservationDeclaration{Body: "card"},
-		TestedOrigins: []string{id, OriginIllarin},
+		Roles:                 roles,
+		Limits:                ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
+		ConsumedKeys:          []string{"payload"},
+		Preservation:          PreservationDeclaration{Body: "card"},
+		TestedOriginalFormats: []string{id, OriginalFormatIllarin},
 	}
 }
 
@@ -94,10 +94,10 @@ func TestAnUntestedOriginOffersNoFormat(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, writerDeclaration("preset_lumiverse", fullCharacterGrades()))
 	offered := registry.OfferedFormats(CapabilitySubject{
-		Type: "character", Origin: "chara_card_v2", Elements: filledCharacter(),
+		Type: "character", OriginalFormat: "chara_card_v2", Elements: filledCharacter(),
 	})
 	if len(offered) != 0 {
-		t.Fatalf("offered = %+v, want none for an untested origin", offered)
+		t.Fatalf("offered = %+v, want none for an untested original format", offered)
 	}
 }
 
@@ -302,10 +302,10 @@ func TestPreservedDataTravelsByOriginMatchAlone(t *testing.T) {
 
 	registry := registryOf(t, card, sibling, stranger)
 
-	if !registry.TravelsWithOrigin(card.ID, sibling) {
+	if !registry.TravelsWithOriginalFormat(card.ID, sibling) {
 		t.Error("preserved data did not travel to its own family")
 	}
-	if registry.TravelsWithOrigin(card.ID, stranger) {
+	if registry.TravelsWithOriginalFormat(card.ID, stranger) {
 		t.Error("preserved data reached another family")
 	}
 }
@@ -314,17 +314,17 @@ func TestPreservedDataFromARetiredOriginTravelsWhereTheFormatKeepsIt(t *testing.
 	t.Parallel()
 	keeper := writerDeclaration("lorebook_lumiverse", fullCharacterGrades())
 	keeper.Preservation = PreservationDeclaration{Body: "lorebook"}
-	keeper.PreservesOrigins = []string{"retired"}
-	keeper.TestedOrigins = append(keeper.TestedOrigins, "retired")
+	keeper.PreservesOriginalFormats = []string{"retired"}
+	keeper.TestedOriginalFormats = append(keeper.TestedOriginalFormats, "retired")
 	other := writerDeclaration("theme_lumiverse", fullCharacterGrades())
 	other.Preservation = PreservationDeclaration{Body: "bundle"}
 	registry := registryOf(t, keeper, other)
 
-	if !registry.TravelsWithOrigin("retired", keeper) {
-		t.Error("preserved data from a retired origin did not reach the format that keeps it")
+	if !registry.TravelsWithOriginalFormat("retired", keeper) {
+		t.Error("preserved data from a retired original format did not reach the format that keeps it")
 	}
-	if registry.TravelsWithOrigin("retired", other) {
-		t.Error("preserved data from a retired origin reached a format that does not keep it")
+	if registry.TravelsWithOriginalFormat("retired", other) {
+		t.Error("preserved data from a retired original format reached a format that does not keep it")
 	}
 }
 

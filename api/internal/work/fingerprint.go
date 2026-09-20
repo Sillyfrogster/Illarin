@@ -33,7 +33,7 @@ func (s *Service) contentFingerprint(
 	var origin pgtype.Text
 	var cover pgtype.UUID
 	err := q.QueryRow(ctx, `
-		select type, origin_format, name, blurb, work_version, credited_author,
+		select type, original_format, name, blurb, work_version, credited_author,
 		       nickname, cover_media_id
 		  from works
 		 where id = $1 and deleted_at is null

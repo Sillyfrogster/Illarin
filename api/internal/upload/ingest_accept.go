@@ -37,7 +37,7 @@ func (s *Service) AcceptIngest(ctx context.Context, in IngestInput) (Operation, 
 		return Operation{}, err
 	}
 	_, err = tx.Exec(ctx, `
-		insert into ingest_operations
+		insert into upload_operations
 			(id, owner_id, blob_id, filename, status, name, blurb, tags, is_nsfw, visibility)
 		values ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9)
 	`, id, in.OwnerID, stored.ID, in.Filename, in.Name, in.Blurb, tags, in.IsNSFW, visibility)
@@ -57,7 +57,7 @@ func (s *Service) GetIngest(ctx context.Context, ownerID, id uuid.UUID) (Operati
 	var replacementPreview []byte
 	err := s.pool.QueryRow(ctx, `
 		select status, work_id, failure_reason, failure_message, replacement_preview
-		  from ingest_operations where id = $1 and owner_id = $2
+		  from upload_operations where id = $1 and owner_id = $2
 	`, id, ownerID).Scan(&status, &workID, &failureReason, &failureMessage, &replacementPreview)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Operation{}, ErrIngestNotFound

@@ -1,9 +1,9 @@
 -- name: InsertWork :one
 insert into works
   (id, type, owner_id, name, blurb, tags, is_nsfw, visibility, lifecycle,
-   work_version, credited_author, nickname, origin_format, created_at)
+   work_version, credited_author, nickname, original_format, created_at)
 values ($1, $2, $3, $4, $5, $6, sqlc.narg('is_nsfw')::boolean, $7, $8,
-        $9, $10, $11, sqlc.narg('origin_format')::text,
+        $9, $10, $11, sqlc.narg('original_format')::text,
         coalesce(sqlc.narg('created_at')::timestamptz, now()))
 returning created_at;
 
@@ -27,7 +27,7 @@ values ($1, $2, $3, $4, $5, $6, $7);
 update works set original_file_id = $2, updated_at = now() where id = $1;
 
 -- name: ListWorks :many
-select a.id, a.type, original.format, a.origin_format,
+select a.id, a.type, original.format, a.original_format,
        a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
@@ -257,7 +257,7 @@ select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, a.own
    and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
 -- name: WorkByID :one
-select a.id, a.type, original.format, a.origin_format,
+select a.id, a.type, original.format, a.original_format,
        a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,

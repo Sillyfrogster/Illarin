@@ -166,7 +166,7 @@ func (s *Service) EnsureAccountStorage(
 	err := tx.QueryRow(ctx, `
 		with account_blobs as (
 			select operation.blob_id
-			  from ingest_operations operation
+			  from upload_operations operation
 			 where operation.owner_id = $1
 			   and operation.blob_id is not null
 			   and operation.status in ('pending', 'processing')
@@ -238,7 +238,7 @@ func WorkByID(ctx context.Context, q db.DBTX, id uuid.UUID) (Work, error) {
 	}
 	return Work{
 		ID: uuidFromPgtype(row.ID), Type: row.Type, Format: row.Format,
-		OriginFormat: textToPointer(row.OriginFormat), WorkVersion: row.WorkVersion,
+		OriginalFormat: textToPointer(row.OriginalFormat), WorkVersion: row.WorkVersion,
 		CreditedAuthor: row.CreditedAuthor, Nickname: row.Nickname,
 		Name: row.Name, Blurb: row.Blurb, Tags: row.Tags,
 		IsNSFW: &row.IsNsfw, Visibility: Visibility(row.Visibility), Lifecycle: Lifecycle(row.Lifecycle),

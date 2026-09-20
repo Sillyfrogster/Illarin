@@ -17,7 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func preservedNamespaces(
+func preservedData(
 	t *testing.T,
 	r http.Handler,
 	session *http.Cookie,
@@ -40,7 +40,7 @@ func preservedNamespaces(
 		Bytes int    `json:"bytes"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &found); err != nil {
-		t.Fatalf("decode preserved namespaces: %v", err)
+		t.Fatalf("decode preserved data: %v", err)
 	}
 	return found
 }
@@ -62,7 +62,7 @@ func TestThePanelNamesTheNamespacesAnWorkCarries(t *testing.T) {
 	r, session, works := harness.NewCharacterIngestRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
 
-	found := preservedNamespaces(t, r, session, workID)
+	found := preservedData(t, r, session, workID)
 	names := namespaceNames(found)
 	for _, want := range []string{"card", "character_book", "chub", "tavern_helper"} {
 		if !contains(names, want) {
@@ -93,7 +93,7 @@ func TestACreatorDeletesOneNamespaceAndKeepsTheRest(t *testing.T) {
 		t.Fatalf("delete chub: status = %d: %s", response.Code, response.Body.String())
 	}
 
-	names := namespaceNames(preservedNamespaces(t, r, session, workID))
+	names := namespaceNames(preservedData(t, r, session, workID))
 	if contains(names, "chub") {
 		t.Errorf("chub survived its deletion: %v", names)
 	}
@@ -136,7 +136,7 @@ func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 	t.Parallel()
 	r, session, works := harness.NewCharacterIngestRouter(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.CardWithThirdPartyNamespaces)
-	before := preservedNamespaces(t, r, session, workID)
+	before := preservedData(t, r, session, workID)
 
 	page := apitest.FetchStartedWork(t, r, session, workID)
 	core := apitest.EditableBlock(apitest.BlockNamed(t, page.Blocks, "character_core"))
@@ -146,9 +146,9 @@ func TestEditingABlockLeavesEveryPreservedKeyUntouched(t *testing.T) {
 		t.Fatalf("save the description: status = %d: %s", saved.Code, saved.Body.String())
 	}
 
-	after := preservedNamespaces(t, r, session, workID)
+	after := preservedData(t, r, session, workID)
 	if len(before) != len(after) {
-		t.Fatalf("preserved namespaces = %v, were %v", after, before)
+		t.Fatalf("preserved data = %v, were %v", after, before)
 	}
 	for index := range before {
 		if before[index] != after[index] {
@@ -202,7 +202,7 @@ func namespaceBytes(
 	workID, namespace string,
 ) int {
 	t.Helper()
-	for _, row := range preservedNamespaces(t, r, session, workID) {
+	for _, row := range preservedData(t, r, session, workID) {
 		if row.Name == namespace {
 			return row.Bytes
 		}

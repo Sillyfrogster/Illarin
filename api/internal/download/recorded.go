@@ -193,7 +193,7 @@ func (s *Service) recordedExportSubject(
 	subject.workID = workID
 	subject.workType = recorded.Type
 	subject.name = recorded.Metadata.Name
-	subject.origin = recorded.Origin
+	subject.originalFormat = recorded.OriginalFormat
 	subject.header = format.Header{
 		Name:           recorded.Metadata.Name,
 		Blurb:          recorded.Metadata.Blurb,

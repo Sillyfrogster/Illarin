@@ -55,9 +55,9 @@ func (Spindle) Declaration() format.Declaration {
 			"version", "name", "identifier", "author", "github", "homepage", "description",
 			"permissions", "entry_backend", "entry_frontend", "minimum_lumiverse_version",
 		},
-		Preservation:  format.PreservationDeclaration{Body: SpindleID},
-		TestedOrigins: []string{SpindleID},
-		KeepsUpload:   true,
+		Preservation:          format.PreservationDeclaration{Body: SpindleID},
+		TestedOriginalFormats: []string{SpindleID},
+		KeepsUpload:           true,
 	}
 }
 

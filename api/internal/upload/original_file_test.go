@@ -206,7 +206,7 @@ func TestAReplacementFileBecomesTheWorksOrigin(t *testing.T) {
 	}
 	var origin, version string
 	if err := pool.QueryRow(context.Background(), `
-		select origin_format, work_version from works where id = $1
+		select original_format, work_version from works where id = $1
 	`, created.ID).Scan(&origin, &version); err != nil {
 		t.Fatalf("read origin: %v", err)
 	}

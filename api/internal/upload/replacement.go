@@ -51,7 +51,7 @@ func (s *Service) stageReplacement(ctx context.Context, job ingestJob, prepared 
 		return err
 	}
 	result, err := tx.Exec(ctx, `
-		update ingest_operations
+		update upload_operations
 		   set status = 'preview', replacement_preview = $3,
 		       lease_token = null, lease_expires_at = null, updated_at = $4
 		 where id = $1 and lease_token = $2 and status = 'processing'
@@ -607,7 +607,7 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operat
 	var stored []byte
 	err = tx.QueryRow(ctx, `
 		select status, target_work_id, blob_id, filename, replacement_preview
-		  from ingest_operations
+		  from upload_operations
 		 where id = $1 and owner_id = $2 for update
 	`, operationID, ownerID).Scan(&status, &targetID, &blobID, &filename, &stored)
 	if err != nil {
@@ -632,7 +632,7 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operat
 		return Operation{}, err
 	}
 	if _, err := tx.Exec(ctx, `
-		update ingest_operations
+		update upload_operations
 		   set status = 'success', work_id = $2, blob_id = null, replacement_preview = null,
 		       updated_at = $3
 		 where id = $1
@@ -652,7 +652,7 @@ func (s *Service) AcceptReplacement(ctx context.Context, ownerID, workID, operat
 func (s *Service) ReviewedReplacement(ctx context.Context, ownerID, workID uuid.UUID) (Operation, error) {
 	var operationID uuid.UUID
 	err := s.pool.QueryRow(ctx, `
-		select id from ingest_operations
+		select id from upload_operations
 		 where target_work_id = $1 and owner_id = $2
 		   and status in ('pending', 'processing', 'preview')
 		 order by created_at desc limit 1
@@ -668,7 +668,7 @@ func (s *Service) ReviewedReplacement(ctx context.Context, ownerID, workID uuid.
 
 func (s *Service) CancelReplacement(ctx context.Context, ownerID, workID, operationID uuid.UUID) error {
 	result, err := s.pool.Exec(ctx, `
-		update ingest_operations
+		update upload_operations
 		   set status = 'cancelled', blob_id = null, replacement_preview = null, updated_at = $4
 		 where id = $1 and owner_id = $2 and target_work_id = $3 and status = 'preview'
 	`, operationID, ownerID, workID, s.now())

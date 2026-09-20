@@ -262,13 +262,13 @@ func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
 
 func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 	t.Parallel()
-	for _, test := range []struct{ origin, offered string }{
+	for _, test := range []struct{ originalFormat, offered string }{
 		{LumiverseID, LumiverseID},
 		{SillyTavernID, SillyTavernID},
 	} {
-		t.Run(test.origin, func(t *testing.T) {
+		t.Run(test.originalFormat, func(t *testing.T) {
 			targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
-				Type: Type, Origin: test.origin,
+				Type: Type, OriginalFormat: test.originalFormat,
 				Elements: []block.Element{{
 					ID: uuid.New(), Type: block.TypePromptList, Role: block.RolePromptFragments,
 					Content: block.PromptList{Fragments: []block.PromptFragment{{Text: "kept"}}},
@@ -555,7 +555,7 @@ func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
 		t.Error("a name belonging to the other preset format was written into the file")
 	}
 	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
-		Type: Type, Origin: SillyTavernID,
+		Type: Type, OriginalFormat: SillyTavernID,
 		Elements: []block.Element{{
 			ID: uuid.New(), Type: block.TypeSettingGroup, Role: block.RoleSamplerSettings,
 			Content: block.SettingGroup{Settings: []block.Setting{

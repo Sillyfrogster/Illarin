@@ -428,10 +428,10 @@ func TestASillyTavernOriginOffersNoAppForPrivatePrompts(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, sillyTavernPreset)
 	offered := testRegistry(t).OfferedFormats(format.CapabilitySubject{
-		Type: Type, Origin: SillyTavernID, Elements: parsed.Elements,
+		Type: Type, OriginalFormat: SillyTavernID, Elements: parsed.Elements,
 	})
 	if apps := private.EligibleApps(testRegistry(t), format.OfferedIDs(offered)); len(apps) != 0 {
-		t.Fatalf("apps allowed private prompts from a SillyTavern origin = %v, want none", apps)
+		t.Fatalf("apps allowed private prompts from a SillyTavern original format = %v, want none", apps)
 	}
 }
 

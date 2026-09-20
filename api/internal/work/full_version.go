@@ -61,7 +61,7 @@ func (v FullVersion) HoldPrompts(
 type FullVersion struct {
 	Version
 	Type           string
-	Origin         string
+	OriginalFormat string
 	OriginalFileID *uuid.UUID
 	Metadata       VersionMetadata
 	Blocks         []block.Block
@@ -90,10 +90,10 @@ type VersionPreserved struct {
 
 type versionPayload struct {
 	VersionMetadata
-	Type      string             `json:"type"`
-	Origin    string             `json:"origin_format"`
-	Blocks    []block.Block      `json:"blocks"`
-	Preserved []VersionPreserved `json:"preserved_data"`
+	Type           string             `json:"type"`
+	OriginalFormat string             `json:"original_format"`
+	Blocks         []block.Block      `json:"blocks"`
+	Preserved      []VersionPreserved `json:"preserved_data"`
 }
 
 func ReadVersion(ctx context.Context, tx pgx.Tx, workID uuid.UUID, number int) (FullVersion, error) {
@@ -120,7 +120,7 @@ func ReadVersion(ctx context.Context, tx pgx.Tx, workID uuid.UUID, number int) (
 		return FullVersion{}, fmt.Errorf("read version %d: %w", number, err)
 	}
 	recorded.Type = payload.Type
-	recorded.Origin = payload.Origin
+	recorded.OriginalFormat = payload.OriginalFormat
 	recorded.OriginalFileID = uuidOrNil(sourceRevision)
 	recorded.Metadata = payload.VersionMetadata
 	recorded.Blocks = payload.Blocks

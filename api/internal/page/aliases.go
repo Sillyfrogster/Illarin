@@ -30,8 +30,8 @@ func registerAliases(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPut, "/v1/assets/:id/identity", d.JSON, h.SetWorkDetails)
 	routes.Handle(http.MethodPost, "/v1/assets/:id/publish", d.JSON, h.PublishWork)
 	routes.Handle(http.MethodPut, "/v1/assets/:id/discovery", d.JSON, h.SetWorkVisibility)
-	routes.Handle(http.MethodGet, "/v1/assets/:id/preserved", d.JSON, h.ListPreservedNamespaces)
-	routes.Handle(http.MethodDelete, "/v1/assets/:id/preserved/:namespace", d.JSON, h.DeletePreservedNamespace)
+	routes.Handle(http.MethodGet, "/v1/assets/:id/preserved", d.JSON, h.ListPreservedData)
+	routes.Handle(http.MethodDelete, "/v1/assets/:id/preserved/:namespace", d.JSON, h.DeletePreservedData)
 }
 
 func aliasBrowseQuery(q *api.Query) {

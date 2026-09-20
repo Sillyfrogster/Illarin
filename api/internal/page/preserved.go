@@ -7,22 +7,22 @@ import (
 	"github.com/google/uuid"
 )
 
-// PreservedNamespaces names the namespaces of preserved data a work carries.
-func (s *Service) PreservedNamespaces(
+// PreservedData names the namespaces of preserved data a work carries.
+func (s *Service) PreservedData(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	workID uuid.UUID,
-) ([]work.PreservedNamespace, error) {
-	return s.works.PreservedNamespaces(ctx, ownerID, workID)
+) ([]work.PreservedData, error) {
+	return s.works.PreservedData(ctx, ownerID, workID)
 }
 
-// DeletePreservedNamespace drops one namespace of preserved data from a work.
-func (s *Service) DeletePreservedNamespace(
+// DeletePreservedData drops one namespace of preserved data from a work.
+func (s *Service) DeletePreservedData(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	workID uuid.UUID,
 	namespace string,
 	candidate *work.Candidate,
 ) error {
-	return s.works.DeletePreservedNamespace(ctx, ownerID, workID, namespace, candidate)
+	return s.works.DeletePreservedData(ctx, ownerID, workID, namespace, candidate)
 }

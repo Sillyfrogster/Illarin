@@ -416,7 +416,7 @@ type RecordedVersion struct {
 	WithdrawnAt           *time.Time `json:"withdrawnAt,omitempty"`
 }
 
-type PreservedNamespace struct {
+type PreservedData struct {
 	Bytes int    `json:"bytes"`
 	Label string `json:"label"`
 	Name  string `json:"name"`

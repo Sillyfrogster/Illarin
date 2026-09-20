@@ -65,9 +65,9 @@ func TestTheModuleReadsAndWritesTheLorebookType(t *testing.T) {
 		t.Errorf("declaration invented slots %v or boilerplate %v",
 			declaration.Slots, declaration.Boilerplate)
 	}
-	if !slices.Contains(declaration.TestedOrigins, ID) ||
-		!slices.Contains(declaration.TestedOrigins, format.OriginIllarin) {
-		t.Errorf("tested origins = %v, want its own format and Illarin", declaration.TestedOrigins)
+	if !slices.Contains(declaration.TestedOriginalFormats, ID) ||
+		!slices.Contains(declaration.TestedOriginalFormats, format.OriginalFormatIllarin) {
+		t.Errorf("tested origins = %v, want its own format and Illarin", declaration.TestedOriginalFormats)
 	}
 	if slices.Contains(declaration.ConsumedKeys, "description") {
 		t.Error("the module declared the book's description consumed")
@@ -273,7 +273,7 @@ func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 	t.Parallel()
 	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
-		Type: Type, Origin: ID,
+		Type: Type, OriginalFormat: ID,
 		Elements: []block.Element{
 			{
 				ID: uuid.New(), Type: block.TypeEntryTable, Role: block.RoleLorebookEntries,
@@ -303,10 +303,10 @@ func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 func TestNoCardWriterIsOfferedForABook(t *testing.T) {
 	t.Parallel()
 	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
-		Type: "character", Origin: ID,
+		Type: "character", OriginalFormat: ID,
 	})
 	if len(targets) != 0 {
-		t.Fatalf("offered %+v for a lorebook origin under the character type, want none", targets)
+		t.Fatalf("offered %+v for a lorebook original format under the character type, want none", targets)
 	}
 }
 

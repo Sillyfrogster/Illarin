@@ -29,7 +29,7 @@ type Work struct {
 	ID             uuid.UUID
 	Type           string
 	Format         string
-	OriginFormat   *string
+	OriginalFormat *string
 	WorkVersion    string
 	CreditedAuthor string
 	Nickname       string

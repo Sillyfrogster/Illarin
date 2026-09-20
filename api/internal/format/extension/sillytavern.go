@@ -52,9 +52,9 @@ func (SillyTavern) Declaration() format.Declaration {
 			"display_name", "js", "author", "version", "description", "dependencies",
 			"minimum_client_version", "homePage", "homepage",
 		},
-		Preservation:  format.PreservationDeclaration{Body: SillyTavernID},
-		TestedOrigins: []string{SillyTavernID},
-		KeepsUpload:   true,
+		Preservation:          format.PreservationDeclaration{Body: SillyTavernID},
+		TestedOriginalFormats: []string{SillyTavernID},
+		KeepsUpload:           true,
 	}
 }
 

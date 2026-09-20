@@ -17,7 +17,7 @@ func workToInsertParams(a Work, ownerID uuid.UUID, madeAt *time.Time) db.InsertW
 		WorkVersion:    a.WorkVersion,
 		CreditedAuthor: a.CreditedAuthor,
 		Nickname:       a.Nickname,
-		OriginFormat:   textToNullable(a.OriginFormat),
+		OriginalFormat: textToNullable(a.OriginalFormat),
 		ID:             pgtype.UUID{Bytes: a.ID, Valid: true},
 		Type:           a.Type,
 		OwnerID:        pgtype.UUID{Bytes: ownerID, Valid: true},

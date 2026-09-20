@@ -32,7 +32,7 @@ var ErrVaultPictureNeedsMedia = errors.New("upload your own copy of this picture
 func insertVaultPictures(ctx context.Context, tx pgx.Tx, workID uuid.UUID, pictures []WaitingPicture) error {
 	for position, picture := range pictures {
 		if _, err := tx.Exec(ctx, `
-			insert into work_vault_pictures (id, work_id, media_id, address, name, block_id, section, position)
+			insert into work_found_images (id, work_id, media_id, address, name, block_id, section, position)
 			values ($1, $2, $3, $4, $5, $6, $7, $8)
 		`, picture.ID, workID, picture.MediaID, picture.Address, picture.Name, picture.BlockID, picture.Section, position); err != nil {
 			return fmt.Errorf("record a vault picture: %w", err)
@@ -56,7 +56,7 @@ func (s *Service) ListVault(ctx context.Context, ownerID, workID uuid.UUID) ([]W
 	rows, err := s.pool.Query(ctx, `
 		select picture.id, picture.media_id, picture.address, picture.name, picture.block_id, picture.section,
 		       coalesce(media.width, 0), coalesce(media.height, 0)
-		  from work_vault_pictures picture
+		  from work_found_images picture
 		  left join work_media media on media.id = picture.media_id
 		 where picture.work_id = $1
 		 order by picture.position, picture.created_at
@@ -132,7 +132,7 @@ func (s *Service) placeInPage(
 	}
 	if made != nil {
 		if _, err := tx.Exec(ctx, `
-			update work_vault_pictures set block_id = $3
+			update work_found_images set block_id = $3
 			 where work_id = $1 and block_id is null and section = $2
 		`, workID, picture.Section, *made); err != nil {
 			return nil, fmt.Errorf("point the section's other pictures at its new block: %w", err)
@@ -147,7 +147,7 @@ func (s *Service) placeInPage(
 	if err := block.Insert(ctx, tx, workID, after); err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(ctx, `delete from work_vault_pictures where id = $1`, picture.ID); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_found_images where id = $1`, picture.ID); err != nil {
 		return nil, fmt.Errorf("take the picture out of the vault: %w", err)
 	}
 	if err := s.writeSummary(ctx, tx, workID); err != nil {
@@ -173,14 +173,14 @@ func (s *Service) DiscardVaultPicture(
 	if err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `delete from work_vault_pictures where id = $1`, pictureID); err != nil {
+	if _, err := tx.Exec(ctx, `delete from work_found_images where id = $1`, pictureID); err != nil {
 		return fmt.Errorf("take the picture out of the vault: %w", err)
 	}
 	if picture.MediaID != nil {
 		if _, err := tx.Exec(ctx, `
 			delete from work_media
 			 where id = $1 and work_id = $2
-			   and not exists (select 1 from work_vault_pictures where media_id = $1)
+			   and not exists (select 1 from work_found_images where media_id = $1)
 		`, *picture.MediaID, workID); err != nil {
 			return fmt.Errorf("let the picture go: %w", err)
 		}
@@ -192,7 +192,7 @@ func lockVaultPicture(ctx context.Context, tx pgx.Tx, workID, pictureID uuid.UUI
 	picture := WaitingPicture{ID: pictureID}
 	err := tx.QueryRow(ctx, `
 		select media_id, address, name, block_id, section
-		  from work_vault_pictures
+		  from work_found_images
 		 where id = $1 and work_id = $2
 		 for update
 	`, pictureID, workID).Scan(&picture.MediaID, &picture.Address, &picture.Name, &picture.BlockID, &picture.Section)

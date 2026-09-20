@@ -364,18 +364,18 @@ func TestEveryCharacterOriginWritesEveryCharacterFormat(t *testing.T) {
 	body := `"name":"Ana","description":"Keeps the archive.","first_mes":"Hello",
 		"alternate_greetings":["You again."],
 		"character_book":{"entries":[{"keys":["ledger"],"content":"A debt."}]}`
-	origins := map[string]format.Inspection{
+	originalFormats := map[string]format.Inspection{
 		V2:    jsonCard(t, `{"spec":"chara_card_v2","spec_version":"2.0","data":{`+body+`}}`),
 		V3:    jsonCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":{`+body+`}}`),
 		CharX: charxCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":{`+body+`}}`, nil),
 	}
 	for _, module := range Modules() {
 		declaration := module.Declaration()
-		for origin, file := range origins {
-			if !slices.Contains(declaration.TestedOrigins, origin) {
-				t.Fatalf("%s declares no tested origin for %s", module.ID(), origin)
+		for originalFormat, file := range originalFormats {
+			if !slices.Contains(declaration.TestedOriginalFormats, originalFormat) {
+				t.Fatalf("%s declares no tested original format for %s", module.ID(), originalFormat)
 			}
-			t.Run(origin+"-to-"+module.ID(), func(t *testing.T) {
+			t.Run(originalFormat+"-to-"+module.ID(), func(t *testing.T) {
 				parsed := resolveAndParse(t, file)
 				written := write(t, module, exportWorkOf(parsed))
 				fields := writtenBody(t, written.Body, module.ID())

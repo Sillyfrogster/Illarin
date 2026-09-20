@@ -49,7 +49,7 @@ import type {
   PostSchedule,
   PostSummary,
   PostUnpublishing,
-  PreservedNamespace,
+  PreservedData,
   PrivatePromptMismatch,
   PrivatePromptMismatchList,
   Profile,
@@ -133,7 +133,7 @@ export type {
   PostSchedule,
   PostSummary,
   PostUnpublishing,
-  PreservedNamespace,
+  PreservedData,
   Profile,
   ProfileLink,
   ProfileRestriction,
@@ -677,10 +677,10 @@ export async function publishWorkVersion(
   };
 }
 
-export async function fetchPreservedNamespaces(
+export async function fetchPreservedData(
   id: string,
-): Promise<PreservedNamespace[]> {
-  const { data } = await api<PreservedNamespace[]>(
+): Promise<PreservedData[]> {
+  const { data } = await api<PreservedData[]>(
     "GET",
     `/v1/works/${id}/preserved`,
   );
@@ -845,7 +845,7 @@ export async function resolvePromptCorrespondence(
   }
 }
 
-export async function deletePreservedNamespace(
+export async function deletePreservedData(
   candidate: Candidate,
   id: string,
   namespace: string,

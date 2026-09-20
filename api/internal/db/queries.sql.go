@@ -1399,7 +1399,7 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertU
 const insertWork = `-- name: InsertWork :one
 insert into works
   (id, type, owner_id, name, blurb, tags, is_nsfw, visibility, lifecycle,
-   work_version, credited_author, nickname, origin_format, created_at)
+   work_version, credited_author, nickname, original_format, created_at)
 values ($1, $2, $3, $4, $5, $6, $12::boolean, $7, $8,
         $9, $10, $11, $13::text,
         coalesce($14::timestamptz, now()))
@@ -1419,7 +1419,7 @@ type InsertWorkParams struct {
 	CreditedAuthor string
 	Nickname       string
 	IsNsfw         pgtype.Bool
-	OriginFormat   pgtype.Text
+	OriginalFormat pgtype.Text
 	CreatedAt      pgtype.Timestamptz
 }
 
@@ -1437,7 +1437,7 @@ func (q *Queries) InsertWork(ctx context.Context, arg InsertWorkParams) (pgtype.
 		arg.CreditedAuthor,
 		arg.Nickname,
 		arg.IsNsfw,
-		arg.OriginFormat,
+		arg.OriginalFormat,
 		arg.CreatedAt,
 	)
 	var created_at pgtype.Timestamptz
@@ -1626,7 +1626,7 @@ func (q *Queries) ListDeletedWorks(ctx context.Context, arg ListDeletedWorksPara
 }
 
 const listWorks = `-- name: ListWorks :many
-select a.id, a.type, original.format, a.origin_format,
+select a.id, a.type, original.format, a.original_format,
        a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
@@ -1661,7 +1661,7 @@ type ListWorksRow struct {
 	ID             pgtype.UUID
 	Type           string
 	Format         pgtype.Text
-	OriginFormat   pgtype.Text
+	OriginalFormat pgtype.Text
 	WorkVersion    string
 	CreditedAuthor string
 	Nickname       string
@@ -1696,7 +1696,7 @@ func (q *Queries) ListWorks(ctx context.Context, arg ListWorksParams) ([]ListWor
 			&i.ID,
 			&i.Type,
 			&i.Format,
-			&i.OriginFormat,
+			&i.OriginalFormat,
 			&i.WorkVersion,
 			&i.CreditedAuthor,
 			&i.Nickname,
@@ -3511,7 +3511,7 @@ func (q *Queries) WorkBlocks(ctx context.Context, workID pgtype.UUID) ([]WorkBlo
 }
 
 const workByID = `-- name: WorkByID :one
-select a.id, a.type, original.format, a.origin_format,
+select a.id, a.type, original.format, a.original_format,
        a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
        coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
@@ -3525,7 +3525,7 @@ type WorkByIDRow struct {
 	ID             pgtype.UUID
 	Type           string
 	Format         string
-	OriginFormat   pgtype.Text
+	OriginalFormat pgtype.Text
 	WorkVersion    string
 	CreditedAuthor string
 	Nickname       string
@@ -3546,7 +3546,7 @@ func (q *Queries) WorkByID(ctx context.Context, id pgtype.UUID) (WorkByIDRow, er
 		&i.ID,
 		&i.Type,
 		&i.Format,
-		&i.OriginFormat,
+		&i.OriginalFormat,
 		&i.WorkVersion,
 		&i.CreditedAuthor,
 		&i.Nickname,

@@ -38,7 +38,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (work.Work, error)
 	}
 
 	a := work.Work{
-		ID: workID, Type: workType, Format: parsed.Format, OriginFormat: &parsed.Format,
+		ID: workID, Type: workType, Format: parsed.Format, OriginalFormat: &parsed.Format,
 		WorkVersion: parsed.Header.WorkVersion, CreditedAuthor: parsed.Header.CreditedAuthor,
 		Nickname:   parsed.Header.Nickname,
 		Name:       orElse(in.Name, parsed.Header.Name),

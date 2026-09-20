@@ -133,16 +133,16 @@ func (s *Service) validatePrivatePromptApps(
 	if allowedApps == nil || !private.HasPromptFragments(blocks) {
 		return nil
 	}
-	var origin string
-	if err := q.QueryRow(ctx, `select coalesce(origin_format, '') from works where id = $1`, workID).Scan(&origin); err != nil {
-		return fmt.Errorf("read the work origin for private prompts: %w", err)
+	var originalFormat string
+	if err := q.QueryRow(ctx, `select coalesce(original_format, '') from works where id = $1`, workID).Scan(&originalFormat); err != nil {
+		return fmt.Errorf("read the work original format for private prompts: %w", err)
 	}
 	elements := make([]block.Element, 0)
 	for _, holder := range blocks {
 		elements = append(elements, holder.Elements...)
 	}
 	offered := s.reg.OfferedFormats(format.CapabilitySubject{
-		Type: workType, Origin: origin, Elements: elements,
+		Type: workType, OriginalFormat: originalFormat, Elements: elements,
 	})
 	eligible := private.EligibleApps(s.reg, format.OfferedIDs(offered))
 	for _, app := range *allowedApps {

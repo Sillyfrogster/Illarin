@@ -301,7 +301,7 @@ func TestReplacementPreviewAcceptsACharacterFormatChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	var origin string
-	if err := pool.QueryRow(context.Background(), `select origin_format from works where id = $1`, created.ID).Scan(&origin); err != nil || origin != "new_character" {
+	if err := pool.QueryRow(context.Background(), `select original_format from works where id = $1`, created.ID).Scan(&origin); err != nil || origin != "new_character" {
 		t.Fatalf("replacement origin = %q, error = %v", origin, err)
 	}
 }

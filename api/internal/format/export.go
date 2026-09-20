@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	OriginIllarin = "illarin"
-	OriginV1      = "v1"
+	OriginalFormatIllarin = "illarin"
+	OriginalFormatV1      = "v1"
 )
 
 type ExportWork struct {
@@ -70,12 +70,12 @@ type Writer interface {
 	Write(context.Context, ExportWork) (MainFile, error)
 }
 
-// TravelsWithOrigin says whether data preserved from origin goes into target's export, even when origin has no module left.
-func (r *Registry) TravelsWithOrigin(origin string, target Declaration) bool {
-	if slices.Contains(target.PreservesOrigins, origin) {
+// TravelsWithOriginalFormat says whether data preserved from one original format goes into target's export, even when that format has no module left.
+func (r *Registry) TravelsWithOriginalFormat(originalFormat string, target Declaration) bool {
+	if slices.Contains(target.PreservesOriginalFormats, originalFormat) {
 		return true
 	}
-	declared, known := r.Declaration(origin)
+	declared, known := r.Declaration(originalFormat)
 	return known && declared.Preservation.Body == target.Preservation.Body &&
 		slices.Equal(declared.Preservation.Container, target.Preservation.Container)
 }

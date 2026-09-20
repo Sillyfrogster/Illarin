@@ -90,11 +90,11 @@ func themeDeclaration(
 	styles format.RoleSupport,
 	header []format.HeaderField,
 ) format.Declaration {
-	testedOrigins := []string{id, format.OriginIllarin}
-	var preservesOrigins []string
+	testedOrigins := []string{id, format.OriginalFormatIllarin}
+	var preservesOriginalFormats []string
 	if id == LumiverseID {
-		testedOrigins = append(testedOrigins, format.OriginV1)
-		preservesOrigins = append(preservesOrigins, format.OriginV1)
+		testedOrigins = append(testedOrigins, format.OriginalFormatV1)
+		preservesOriginalFormats = append(preservesOriginalFormats, format.OriginalFormatV1)
 	}
 	return format.Declaration{
 		ID: id, Label: label, Type: Type,
@@ -132,10 +132,10 @@ func themeDeclaration(
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
 			ItemBytes: block.MaxItemBytes, ArchiveFiles: format.MaxArchiveFiles,
 		},
-		ConsumedKeys:  themeConsumedKeys(id, colors, controls),
-		Boilerplate:   themeBoilerplate(id),
-		Preservation:  format.PreservationDeclaration{Body: id},
-		TestedOrigins: testedOrigins, PreservesOrigins: preservesOrigins,
+		ConsumedKeys:          themeConsumedKeys(id, colors, controls),
+		Boilerplate:           themeBoilerplate(id),
+		Preservation:          format.PreservationDeclaration{Body: id},
+		TestedOriginalFormats: testedOrigins, PreservesOriginalFormats: preservesOriginalFormats,
 	}
 }
 

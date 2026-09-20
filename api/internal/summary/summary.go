@@ -53,10 +53,10 @@ func writeFormats(ctx context.Context, tx pgx.Tx, reg *format.Registry, workID u
 // Formats works out the formats a work can be downloaded in from its drafted blocks
 func Formats(ctx context.Context, q db.DBTX, reg *format.Registry, workID uuid.UUID) ([]format.Offered, error) {
 	var workType string
-	var origin pgtype.Text
+	var originalFormat pgtype.Text
 	err := q.QueryRow(ctx, `
-		select type, origin_format from works where id = $1 and deleted_at is null
-	`, workID).Scan(&workType, &origin)
+		select type, original_format from works where id = $1 and deleted_at is null
+	`, workID).Scan(&workType, &originalFormat)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -72,7 +72,7 @@ func Formats(ctx context.Context, q db.DBTX, reg *format.Registry, workID uuid.U
 		elements = append(elements, holder.Elements...)
 	}
 	return reg.OfferedFormats(format.CapabilitySubject{
-		Type: workType, Origin: origin.String, Elements: elements,
+		Type: workType, OriginalFormat: originalFormat.String, Elements: elements,
 	}), nil
 }
 

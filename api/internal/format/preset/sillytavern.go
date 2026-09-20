@@ -141,7 +141,7 @@ func (SillyTavernModule) Declaration() format.Declaration {
 		Preservation: format.PreservationDeclaration{
 			Body: sillyTavernNamespace, Container: []string{stExtensions},
 		},
-		TestedOrigins: []string{SillyTavernID, format.OriginIllarin},
+		TestedOriginalFormats: []string{SillyTavernID, format.OriginalFormatIllarin},
 	}
 }
 

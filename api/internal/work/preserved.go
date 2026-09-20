@@ -9,17 +9,17 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type PreservedNamespace struct {
+type PreservedData struct {
 	Name  string
 	Bytes int
 }
 
-func (s *Service) PreservedNamespaces(
+func (s *Service) PreservedData(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	workID uuid.UUID,
-) ([]PreservedNamespace, error) {
-	originFormat, err := s.preservedWorkOrigin(ctx, ownerID, workID)
+) ([]PreservedData, error) {
+	originalFormat, err := s.originalFormatOf(ctx, ownerID, workID)
 	if err != nil {
 		return nil, err
 	}
@@ -31,27 +31,27 @@ func (s *Service) PreservedNamespaces(
 		 order by namespace
 	`, workID)
 	if err != nil {
-		return nil, fmt.Errorf("read preserved namespaces: %w", err)
+		return nil, fmt.Errorf("read preserved data: %w", err)
 	}
 	defer rows.Close()
 
-	declaration, declared := s.reg.Declaration(originFormat)
-	found := make([]PreservedNamespace, 0)
+	declaration, declared := s.reg.Declaration(originalFormat)
+	found := make([]PreservedData, 0)
 	for rows.Next() {
 		var name, sample string
 		var size int64
 		if err := rows.Scan(&name, &size, &sample); err != nil {
-			return nil, fmt.Errorf("read preserved namespace: %w", err)
+			return nil, fmt.Errorf("read preserved data: %w", err)
 		}
 		if declared && declaration.RecordsNothing(name, []byte(sample)) {
 			continue
 		}
-		found = append(found, PreservedNamespace{Name: name, Bytes: int(size)})
+		found = append(found, PreservedData{Name: name, Bytes: int(size)})
 	}
 	return found, rows.Err()
 }
 
-func (s *Service) DeletePreservedNamespace(
+func (s *Service) DeletePreservedData(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	workID uuid.UUID,
@@ -79,25 +79,25 @@ func (s *Service) DeletePreservedNamespace(
 	return candidate.Commit(ctx, tx, workID)
 }
 
-func (s *Service) preservedWorkOrigin(
+func (s *Service) originalFormatOf(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	workID uuid.UUID,
 ) (string, error) {
-	var origin *string
+	var originalFormat *string
 	err := s.pool.QueryRow(ctx, `
-		select origin_format
+		select original_format
 		  from works
 		 where id = $1 and owner_id = $2 and deleted_at is null
-	`, workID, ownerID).Scan(&origin)
+	`, workID, ownerID).Scan(&originalFormat)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}
 	if err != nil {
-		return "", fmt.Errorf("read work origin: %w", err)
+		return "", fmt.Errorf("read the original format: %w", err)
 	}
-	if origin == nil {
+	if originalFormat == nil {
 		return "", nil
 	}
-	return *origin, nil
+	return *originalFormat, nil
 }

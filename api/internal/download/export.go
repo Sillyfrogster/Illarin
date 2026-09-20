@@ -50,7 +50,7 @@ type exportSubject struct {
 	workID         uuid.UUID
 	workType       string
 	name           string
-	origin         string
+	originalFormat string
 	header         format.Header
 	blocks         []block.Block
 	cover          *uuid.UUID
@@ -286,7 +286,7 @@ func (subject exportSubject) carries(image block.ImageItem) bool {
 
 func (subject exportSubject) capability() format.CapabilitySubject {
 	return format.CapabilitySubject{
-		Type: subject.workType, Origin: subject.origin, Elements: subject.elements(),
+		Type: subject.workType, OriginalFormat: subject.originalFormat, Elements: subject.elements(),
 	}
 }
 
@@ -306,10 +306,10 @@ func (s *Service) exportSubject(
 	viewerID *uuid.UUID,
 ) (exportSubject, error) {
 	var subject exportSubject
-	var origin pgtype.Text
+	var originalFormat pgtype.Text
 	var ownerID, originalFileID, cover pgtype.UUID
 	err := q.QueryRow(ctx, `
-		select work.type, work.name, work.blurb, work.origin_format, work.lifecycle,
+		select work.type, work.name, work.blurb, work.original_format, work.lifecycle,
 		       work.work_version, work.credited_author, work.nickname,
 		       work.owner_id, work.original_file_id, work.cover_media_id
 		  from works work
@@ -317,7 +317,7 @@ func (s *Service) exportSubject(
 		   and (work.lifecycle = 'published' or work.owner_id = $2)
 		   and (work.withheld_at is null or work.owner_id = $2)
 	`, workID, viewerID).Scan(
-		&subject.workType, &subject.name, &subject.header.Blurb, &origin, &subject.lifecycle,
+		&subject.workType, &subject.name, &subject.header.Blurb, &originalFormat, &subject.lifecycle,
 		&subject.header.WorkVersion, &subject.header.CreditedAuthor,
 		&subject.header.Nickname, &ownerID, &originalFileID, &cover,
 	)
@@ -329,7 +329,7 @@ func (s *Service) exportSubject(
 	}
 	subject.workID = workID
 	subject.header.Name = subject.name
-	subject.origin = origin.String
+	subject.originalFormat = originalFormat.String
 	subject.cover = uuidOrNil(cover)
 	subject.ownerID = uuidOrNil(ownerID)
 	subject.originalFileID = uuidOrNil(originalFileID)
@@ -346,11 +346,11 @@ func (s *Service) travellingPreservedData(
 	subject exportSubject,
 	formatID string,
 ) ([]format.Remainder, error) {
-	if subject.origin == "" {
+	if subject.originalFormat == "" {
 		return nil, nil
 	}
 	written, writes := s.reg.Declaration(formatID)
-	if !writes || !s.reg.TravelsWithOrigin(subject.origin, written) {
+	if !writes || !s.reg.TravelsWithOriginalFormat(subject.originalFormat, written) {
 		return nil, nil
 	}
 	if subject.recorded != nil {

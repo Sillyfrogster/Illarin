@@ -84,7 +84,7 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 			t.Errorf("%s parsed as type %q format %q", entry.Name(), parsed.Type, parsed.Format)
 		}
 		for _, sidecar := range unreadArchiveEntries(file) {
-			if !slices.Contains(preservedNamespaces(parsed.Remainder), sidecar) {
+			if !slices.Contains(preservedData(parsed.Remainder), sidecar) {
 				t.Errorf("%s lost the archived %s", entry.Name(), sidecar)
 			}
 		}
@@ -122,7 +122,7 @@ func unreadArchiveEntries(file format.Inspection) []string {
 	return unread
 }
 
-func preservedNamespaces(rows []format.Remainder) []string {
+func preservedData(rows []format.Remainder) []string {
 	kept := make([]string, 0, len(rows))
 	for _, row := range rows {
 		kept = append(kept, row.Namespace)

@@ -334,7 +334,7 @@ func blobHasLiveReference(ctx context.Context, tx pgx.Tx, id uuid.UUID, now time
 
 func liveBlobReferenceExpression(blobID, at string) string {
 	return `exists (
-		select 1 from ingest_operations operation
+		select 1 from upload_operations operation
 		 where operation.blob_id = ` + blobID + `
 		   and operation.status in ('pending', 'processing')
 		union all

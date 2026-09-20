@@ -65,8 +65,8 @@ func (Module) Declaration() format.Declaration {
 		Preservation: format.PreservationDeclaration{
 			Body: bookNamespace, Container: []string{extensionsKey},
 		},
-		TestedOrigins:    []string{ID, format.OriginIllarin, format.OriginV1},
-		PreservesOrigins: []string{format.OriginV1},
+		TestedOriginalFormats:    []string{ID, format.OriginalFormatIllarin, format.OriginalFormatV1},
+		PreservesOriginalFormats: []string{format.OriginalFormatV1},
 	}
 }
 
