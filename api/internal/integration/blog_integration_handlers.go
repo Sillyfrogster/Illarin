@@ -15,7 +15,7 @@ import (
 const defaultAttemptListing = 50
 
 func (h *Handlers) ListBlogIntegrations(c *gin.Context) {
-	if _, ok := h.access.Authority(c, "reading publication integrations"); !ok {
+	if _, ok := h.access.Authority(c, "reading blog integrations"); !ok {
 		return
 	}
 	configured, err := h.blog.Integrations(c.Request.Context())
@@ -29,7 +29,7 @@ func (h *Handlers) ListBlogIntegrations(c *gin.Context) {
 }
 
 func (h *Handlers) AddBlogIntegration(c *gin.Context) {
-	authority, ok := h.access.Authority(c, "configuring a publication integration")
+	authority, ok := h.access.Authority(c, "configuring a blog integration")
 	if !ok {
 		return
 	}
@@ -120,7 +120,7 @@ func (h *Handlers) UpdateBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "changing a publication integration")
+	authority, ok := h.access.Authority(c, "changing a blog integration")
 	if !ok {
 		return
 	}
@@ -148,7 +148,7 @@ func (h *Handlers) RemoveBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "removing a publication integration")
+	authority, ok := h.access.Authority(c, "removing a blog integration")
 	if !ok {
 		return
 	}
@@ -165,7 +165,7 @@ func (h *Handlers) VerifyBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "verifying a publication integration")
+	authority, ok := h.access.Authority(c, "verifying a blog integration")
 	if !ok {
 		return
 	}
@@ -184,7 +184,7 @@ func (h *Handlers) DisableBlogIntegration(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "disabling a publication integration")
+	authority, ok := h.access.Authority(c, "disabling a blog integration")
 	if !ok {
 		return
 	}
@@ -203,7 +203,7 @@ func (h *Handlers) RotateBlogIntegrationSecret(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "rotating a integration's signing secret")
+	authority, ok := h.access.Authority(c, "rotating an integration's signing secret")
 	if !ok {
 		return
 	}
@@ -228,7 +228,7 @@ func (h *Handlers) ListBlogAnnouncementAttempts(c *gin.Context) {
 	if q.Refused(c) {
 		return
 	}
-	if _, ok := h.access.Authority(c, "reading publication attempts"); !ok {
+	if _, ok := h.access.Authority(c, "reading blog announcement attempts"); !ok {
 		return
 	}
 	state := ""
@@ -252,7 +252,7 @@ func (h *Handlers) ListBlogAnnouncementTries(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if _, ok := h.access.Authority(c, "reading what a attempt tried"); !ok {
+	if _, ok := h.access.Authority(c, "reading what an announcement attempt tried"); !ok {
 		return
 	}
 	made, err := h.blog.Tries(c.Request.Context(), id)
@@ -268,7 +268,7 @@ func (h *Handlers) ReplayBlogAnnouncementAttempt(c *gin.Context) {
 	if !ok {
 		return
 	}
-	authority, ok := h.access.Authority(c, "replaying a publication attempt")
+	authority, ok := h.access.Authority(c, "replaying a blog announcement attempt")
 	if !ok {
 		return
 	}
