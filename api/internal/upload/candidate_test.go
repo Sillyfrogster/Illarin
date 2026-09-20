@@ -51,7 +51,7 @@ func TestRevocationRejectsAnUploadWaitingForCandidateAcceptance(t *testing.T) {
 	if err := <-done; !errors.Is(err, work.ErrWorkFrozen) {
 		t.Fatalf("revoked acceptance = %v, want frozen", err)
 	}
-	if err := staff.NewService(pool).LiftTakedown(context.Background(), id); err != nil {
+	if err := staff.NewService(svc.works).LiftTakedown(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
 	_, err = svc.AcceptOriginalFile(context.Background(), OriginalFileInput{

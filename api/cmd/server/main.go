@@ -163,7 +163,7 @@ func run() error {
 	background.Add(9)
 	go func() {
 		defer background.Done()
-		staff.NewService(pool).RunRollup(runtimeContext, func(err error) {
+		staff.NewService(svc).RunRollup(runtimeContext, func(err error) {
 			log.Printf("daily totals: %v", err)
 		})
 	}()

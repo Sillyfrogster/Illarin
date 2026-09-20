@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -124,11 +125,16 @@ func (s *Service) Report(ctx context.Context, now time.Time) (Report, error) {
 	if err := rows.Err(); err != nil {
 		return Report{}, fmt.Errorf("read the daily totals: %w", err)
 	}
+	report.Previous, err = s.totalsBetween(ctx, day(from.AddDate(0, 0, -ReportDays)), day(from.AddDate(0, 0, -1)))
+	if err != nil {
+		return Report{}, err
+	}
 	works, err := s.pool.Query(ctx, `
-		select total.work_id, work.name, work.type, sum(total.count)::int as downloads
+		select total.work_id, work.name, work.type, work.cover_media_id, work.is_nsfw,
+		       sum(total.count)::int as downloads
 		  from daily_totals total join works work on work.id = total.work_id
 		 where total.kind = 'download' and total.day between $1::date and $2::date
-		 group by total.work_id, work.name, work.type
+		 group by total.work_id, work.name, work.type, work.cover_media_id, work.is_nsfw
 		 order by downloads desc, work.name limit $3
 	`, report.From, report.Through, topWorks)
 	if err != nil {
@@ -137,12 +143,35 @@ func (s *Service) Report(ctx context.Context, now time.Time) (Report, error) {
 	defer works.Close()
 	for works.Next() {
 		var top ReportWork
-		if err := works.Scan(&top.ID, &top.Name, &top.Type, &top.Downloads); err != nil {
+		var cover *uuid.UUID
+		var nsfw *bool
+		if err := works.Scan(&top.ID, &top.Name, &top.Type, &cover, &nsfw, &top.Downloads); err != nil {
 			return Report{}, fmt.Errorf("read a most downloaded work: %w", err)
+		}
+		if cover != nil {
+			address := s.works.ImageAddress(*cover, "thumb", nsfw != nil && *nsfw, false)
+			top.Cover = &address
 		}
 		report.TopWorks = append(report.TopWorks, top)
 	}
 	return report, works.Err()
+}
+
+// totalsBetween sums every kind over a run of days, both ends included
+func (s *Service) totalsBetween(ctx context.Context, from, through string) (ReportTotals, error) {
+	var totals ReportTotals
+	err := s.pool.QueryRow(ctx, `
+		select coalesce(sum(count) filter (where kind = 'visit'), 0)::int,
+		       coalesce(sum(count) filter (where kind = 'download'), 0)::int,
+		       coalesce(sum(count) filter (where kind = 'send'), 0)::int,
+		       coalesce(sum(count) filter (where kind = 'sign_up'), 0)::int,
+		       coalesce(sum(count) filter (where kind = 'publish'), 0)::int
+		  from daily_totals where day between $1::date and $2::date
+	`, from, through).Scan(&totals.Visits, &totals.Downloads, &totals.Sends, &totals.SignUps, &totals.Publishes)
+	if err != nil {
+		return ReportTotals{}, fmt.Errorf("read the totals of the days before: %w", err)
+	}
+	return totals, nil
 }
 
 func day(at time.Time) string {

@@ -29,11 +29,17 @@ func Works(t *testing.T) (*work.Service, *pgxpool.Pool) {
 func WorksWithRegistry(t *testing.T, registry *format.Registry) (*work.Service, *pgxpool.Pool) {
 	t.Helper()
 	pool := testdb.Connect(t)
+	return WorksOver(t, pool, registry), pool
+}
+
+// WorksOver gives a test the shared service over a database it already has
+func WorksOver(t *testing.T, pool *pgxpool.Pool, registry *format.Registry) *work.Service {
+	t.Helper()
 	blob, err := storage.NewStore(pool, t.TempDir())
 	if err != nil {
 		t.Fatalf("storage: %v", err)
 	}
-	return work.NewService(pool, registry, blob), pool
+	return work.NewService(pool, registry, blob)
 }
 
 func RegistryWith(t *testing.T, modules ...format.Module) *format.Registry {

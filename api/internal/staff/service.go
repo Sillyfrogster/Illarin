@@ -4,6 +4,7 @@ package staff
 import (
 	"errors"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,11 +19,12 @@ var (
 )
 
 type Service struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	works *work.Service
 }
 
-func NewService(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+func NewService(works *work.Service) *Service {
+	return &Service{pool: works.Pool(), works: works}
 }
 
 func uuidToPgtype(u uuid.UUID) pgtype.UUID {

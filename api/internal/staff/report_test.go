@@ -4,10 +4,12 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/staff"
 	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/google/uuid"
@@ -80,7 +82,7 @@ func TestTheNightlyRollupKeepsDailyTotalsAndDropsEventsAfterThirtyDays(t *testin
 		t.Fatalf("insert Umami's rows: %v", err)
 	}
 
-	service := staff.NewService(pool)
+	service := staff.NewService(apitest.WorksOver(t, pool, format.NewRegistry()))
 	for range 2 {
 		if err := service.Rollup(ctx, today); err != nil {
 			t.Fatalf("roll up: %v", err)
@@ -126,6 +128,7 @@ func TestOnlyStaffReadTheReportAndItCoversThirtyCompleteDays(t *testing.T) {
 	router, session, pool := harness.NewConnectRouter(t)
 	ctx := context.Background()
 	workID := apitest.PublishedCharacter(t, router, session)
+	apitest.UploadedImageID(t, router, session, workID, "avatar", apitest.PNG(t, 64, 64))
 	other := uuid.New()
 	if _, err := pool.Exec(ctx, `
 		insert into works (id, type, name, lifecycle) values ($1, 'character', 'Quiet Shelf', 'published')
@@ -162,9 +165,15 @@ func TestOnlyStaffReadTheReportAndItCoversThirtyCompleteDays(t *testing.T) {
 	if last.Visits != 40 || last.Downloads != 8 || last.Sends != 0 || first.SignUps != 2 || first.Day != report.From {
 		t.Fatalf("days = first %+v, last %+v", first, last)
 	}
+	if report.Previous != (staff.ReportTotals{SignUps: 9}) {
+		t.Fatalf("previous 30 days = %+v, want only the 9 sign-ups on the day before the report", report.Previous)
+	}
 	if len(report.TopWorks) != 2 || report.TopWorks[0].ID != other.String() || report.TopWorks[0].Downloads != 5 ||
-		report.TopWorks[0].Name != "Quiet Shelf" || report.TopWorks[1].ID != workID {
+		report.TopWorks[0].Name != "Quiet Shelf" || report.TopWorks[0].Cover != nil || report.TopWorks[1].ID != workID {
 		t.Fatalf("top works = %+v", report.TopWorks)
+	}
+	if cover := report.TopWorks[1].Cover; cover == nil || !strings.Contains(*cover, "/media/") {
+		t.Fatalf("the published character's cover = %v, want a media address", cover)
 	}
 }
 
