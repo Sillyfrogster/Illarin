@@ -14,7 +14,7 @@ func testReaderDeclaration(id, workType string) Declaration {
 	return Declaration{
 		ID: id, Type: workType, Direction: Direction{Read: true},
 		Recognition: []Recognition{{
-			Type: RecognitionSignature, Containers: []Container{JSON},
+			Type: RecognitionShape, Containers: []Container{JSON},
 			Required: map[string]ValueType{"payload": ValueBoolean},
 		}},
 		Limits:        ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
@@ -26,45 +26,45 @@ func testReaderDeclaration(id, workType string) Declaration {
 
 func (s stubModule) ID() string               { return s.id }
 func (s stubModule) Declaration() Declaration { return testReaderDeclaration(s.id, "character") }
-func (stubModule) Claim(Inspection) (Claim, bool) {
-	return Claim{}, false
+func (stubModule) Match(Inspection) (Match, bool) {
+	return Match{}, false
 }
 
-type declaredDiscriminatorModule struct{}
+type declaredMarkerModule struct{}
 
-func (declaredDiscriminatorModule) ID() string { return "theme_lumiverse" }
-func (declaredDiscriminatorModule) Declaration() Declaration {
+func (declaredMarkerModule) ID() string { return "theme_lumiverse" }
+func (declaredMarkerModule) Declaration() Declaration {
 	declaration := testReaderDeclaration("theme_lumiverse", "theme")
 	declaration.Recognition = []Recognition{{
-		Type: RecognitionDiscriminator, Containers: []Container{JSON},
+		Type: RecognitionMarker, Containers: []Container{JSON},
 		Path: []string{"format"}, Values: []string{"3"},
 	}}
 	return declaration
 }
-func (m declaredDiscriminatorModule) Claim(file Inspection) (Claim, bool) {
-	return ClaimByDeclaration(file, m.Declaration())
+func (m declaredMarkerModule) Match(file Inspection) (Match, bool) {
+	return MatchByDeclaration(file, m.Declaration())
 }
-func (declaredDiscriminatorModule) Parse(context.Context, Inspection, Claim) (Parsed, error) {
+func (declaredMarkerModule) Parse(context.Context, Inspection, Match) (Parsed, error) {
 	return Parsed{}, nil
 }
 
-func TestDiscriminatorOutsideTheAcceptedSetNamesTheFormatAndValue(t *testing.T) {
+func TestMarkerOutsideTheAcceptedSetNamesTheFormatAndValue(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry()
-	if err := registry.Register(declaredDiscriminatorModule{}); err != nil {
+	if err := registry.Register(declaredMarkerModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
 	file := Inspection{Payloads: []Payload{{
-		ID: 0, Locator: Locator{Container: JSON},
+		ID: 0, Location: PayloadLocation{Container: JSON},
 		Root: map[string]json.RawMessage{"format": json.RawMessage(`4`)},
 	}}}
-	_, claimed, err := registry.Resolve(file)
-	if claimed || !errors.Is(err, ErrUnsupportedFormat) ||
+	_, matched, err := registry.Resolve(file)
+	if matched || !errors.Is(err, ErrUnsupportedFormat) ||
 		!strings.Contains(err.Error(), "theme_lumiverse") || !strings.Contains(err.Error(), `"4"`) {
-		t.Fatalf("Resolve = claimed %v, error %v; want named unsupported discriminator", claimed, err)
+		t.Fatalf("Resolve = matched %v, error %v; want named unsupported marker", matched, err)
 	}
 }
-func (s stubModule) Parse(context.Context, Inspection, Claim) (Parsed, error) {
+func (s stubModule) Parse(context.Context, Inspection, Match) (Parsed, error) {
 	return Parsed{Format: s.id}, nil
 }
 
@@ -75,10 +75,10 @@ type declarationModule struct {
 
 func (m declarationModule) Declaration() Declaration { return m.declaration }
 
-func registerSignatures(t *testing.T, signatures map[string]map[string]ValueType) *Registry {
+func registerShapes(t *testing.T, shapes map[string]map[string]ValueType) *Registry {
 	t.Helper()
 	registry := NewRegistry()
-	for id, required := range signatures {
+	for id, required := range shapes {
 		declaration := testReaderDeclaration(id, "character")
 		declaration.Recognition[0].Required = required
 		if err := registry.Register(declarationModule{
@@ -90,36 +90,36 @@ func registerSignatures(t *testing.T, signatures map[string]map[string]ValueType
 	return registry
 }
 
-func TestValidationRejectsASignatureThatShadowsAnother(t *testing.T) {
+func TestValidationRejectsAShapeThatShadowsAnother(t *testing.T) {
 	t.Parallel()
-	registry := registerSignatures(t, map[string]map[string]ValueType{
+	registry := registerShapes(t, map[string]map[string]ValueType{
 		"looser":   {"alpha": ValueString},
 		"stricter": {"alpha": ValueString, "beta": ValueBoolean},
 	})
 	if err := registry.ValidateDeclarations(); !errors.Is(err, ErrInvariant) {
-		t.Fatalf("validation error = %v, want the shadowed signature rejected", err)
+		t.Fatalf("validation error = %v, want the shadowed shape rejected", err)
 	}
 }
 
-func TestValidationAcceptsSignaturesThatEachRequireWhatTheOtherDoesNot(t *testing.T) {
+func TestValidationAcceptsShapesThatEachRequireWhatTheOtherDoesNot(t *testing.T) {
 	t.Parallel()
-	registry := registerSignatures(t, map[string]map[string]ValueType{
+	registry := registerShapes(t, map[string]map[string]ValueType{
 		"first":  {"alpha": ValueString},
 		"second": {"beta": ValueBoolean},
 	})
 	if err := registry.ValidateDeclarations(); err != nil {
-		t.Fatalf("validation error = %v, want signatures with disjoint keys accepted", err)
+		t.Fatalf("validation error = %v, want shapes with disjoint keys accepted", err)
 	}
 }
 
-func TestValidationRejectsTwoModulesDeclaringOneSignature(t *testing.T) {
+func TestValidationRejectsTwoModulesDeclaringOneShape(t *testing.T) {
 	t.Parallel()
-	registry := registerSignatures(t, map[string]map[string]ValueType{
+	registry := registerShapes(t, map[string]map[string]ValueType{
 		"first":  {"alpha": ValueString},
 		"second": {"alpha": ValueString},
 	})
 	if err := registry.ValidateDeclarations(); !errors.Is(err, ErrInvariant) {
-		t.Fatalf("validation error = %v, want the repeated signature rejected", err)
+		t.Fatalf("validation error = %v, want the repeated shape rejected", err)
 	}
 }
 

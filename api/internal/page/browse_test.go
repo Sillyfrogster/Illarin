@@ -26,13 +26,13 @@ func (browseModule) ID() string { return "browse_card" }
 func (browseModule) Declaration() format.Declaration {
 	return apitest.ReaderDeclaration("browse_card", "character")
 }
-func (browseModule) Claim(file format.Inspection) (format.Claim, bool) {
+func (browseModule) Match(file format.Inspection) (format.Match, bool) {
 	if len(file.Payloads) == 0 {
-		return format.Claim{}, false
+		return format.Match{}, false
 	}
-	return format.CompatibilityClaim(file.Payloads[0]), true
+	return format.CompatibilityMatch(file.Payloads[0]), true
 }
-func (browseModule) Parse(_ context.Context, file format.Inspection, _ format.Claim) (format.Parsed, error) {
+func (browseModule) Parse(_ context.Context, file format.Inspection, _ format.Match) (format.Parsed, error) {
 	elements := []block.Element{
 		{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Test description"}},
 		{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Hello"}}}},

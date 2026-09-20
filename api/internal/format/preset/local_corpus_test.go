@@ -38,11 +38,11 @@ func TestEveryLocalPresetSurvivesADownload(t *testing.T) {
 		read++
 		t.Run(entry.Name(), func(t *testing.T) {
 			file := document(t, string(data))
-			resolution, claimed, err := testRegistry(t).Resolve(file)
-			if err != nil || !claimed {
-				t.Fatalf("resolve: claimed=%v err=%v", claimed, err)
+			resolution, matched, err := testRegistry(t).Resolve(file)
+			if err != nil || !matched {
+				t.Fatalf("resolve: matched=%v err=%v", matched, err)
 			}
-			parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+			parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 			if err != nil {
 				t.Fatalf("parse: %v", err)
 			}

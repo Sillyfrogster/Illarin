@@ -181,7 +181,7 @@ func TestInspectTellsRootZIPEntriesApart(t *testing.T) {
 			if len(got.Payloads) != test.payloads {
 				t.Fatalf("payload count = %d, want %d", len(got.Payloads), test.payloads)
 			}
-			if test.payloads == 1 && got.Payloads[0].Locator.Name != test.entryName {
+			if test.payloads == 1 && got.Payloads[0].Location.Name != test.entryName {
 				t.Fatalf("payloads = %+v, want decoded %s", got.Payloads, test.entryName)
 			}
 		})
@@ -200,7 +200,7 @@ func TestAThemeBundleExposesItsJSONAndReferencedFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("inspect theme bundle: %v", err)
 	}
-	if len(inspected.Payloads) != 1 || inspected.Payloads[0].Locator.Name != "theme.json" {
+	if len(inspected.Payloads) != 1 || inspected.Payloads[0].Location.Name != "theme.json" {
 		t.Fatalf("payloads = %+v, want theme.json", inspected.Payloads)
 	}
 	opened, err := inspected.OpenZIPEntry(context.Background(), "assets/host.woff2")
@@ -321,11 +321,11 @@ func TestInspectFindsAJSONPayloadInALatePNGChunk(t *testing.T) {
 	if len(got.Payloads) != 1 {
 		t.Fatalf("payload count = %d, want 1", len(got.Payloads))
 	}
-	if got.Payloads[0].Locator.Name != "ccv3" {
-		t.Errorf("payload locator = %q, want ccv3", got.Payloads[0].Locator.Name)
+	if got.Payloads[0].Location.Name != "ccv3" {
+		t.Errorf("payload location = %q, want ccv3", got.Payloads[0].Location.Name)
 	}
-	if got.Payloads[0].Locator.Offset <= 512 {
-		t.Errorf("payload offset = %d, want it beyond the old head peek", got.Payloads[0].Locator.Offset)
+	if got.Payloads[0].Location.Offset <= 512 {
+		t.Errorf("payload offset = %d, want it beyond the old head peek", got.Payloads[0].Location.Offset)
 	}
 	if spec, ok := got.Payloads[0].String("spec"); !ok || spec != "chara_card_v2" {
 		t.Errorf("spec = %q, %v; want chara_card_v2, true", spec, ok)
@@ -400,8 +400,8 @@ func TestInspectOffersARasterFileAsItsOwnImage(t *testing.T) {
 	if len(got.Images) != 1 {
 		t.Fatalf("image count = %d, want the file itself", len(got.Images))
 	}
-	if got.Images[0].Locator.Container != PNG || got.Images[0].Locator.Name != "" {
-		t.Fatalf("image locator = %+v, want the whole PNG", got.Images[0].Locator)
+	if got.Images[0].Location.Container != PNG || got.Images[0].Location.Name != "" {
+		t.Fatalf("image location = %+v, want the whole PNG", got.Images[0].Location)
 	}
 
 	opened, err := got.OpenImage(context.Background(), got.Images[0].ID)
@@ -435,8 +435,8 @@ func TestInspectListsArchivedImagesAndLeavesOtherEntriesAlone(t *testing.T) {
 	if len(got.Images) != 1 {
 		t.Fatalf("image count = %d, want only the PNG entry", len(got.Images))
 	}
-	if got.Images[0].Locator.Name != "assets/icon/main.png" {
-		t.Fatalf("image locator = %+v, want the icon entry", got.Images[0].Locator)
+	if got.Images[0].Location.Name != "assets/icon/main.png" {
+		t.Fatalf("image location = %+v, want the icon entry", got.Images[0].Location)
 	}
 
 	opened, err := got.OpenImage(context.Background(), got.Images[0].ID)

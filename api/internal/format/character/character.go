@@ -31,14 +31,14 @@ var labels = map[string]string{
 
 func declaration(id string) format.Declaration {
 	recognition := []format.Recognition{{
-		Type:       format.RecognitionDiscriminator,
+		Type:       format.RecognitionMarker,
 		Containers: []format.Container{format.JSON, format.PNG, format.JPEG, format.WebP, format.GIF},
 		Path:       []string{"spec"}, Values: []string{id},
 	}}
 	if id == V2 {
 		recognition[0].SupersededBy = []string{V3}
 		recognition = append(recognition, format.Recognition{
-			Type: format.RecognitionSignature, LegacyOnly: true,
+			Type: format.RecognitionShape, LegacyOnly: true,
 			Containers: []format.Container{format.JSON, format.PNG, format.JPEG, format.WebP, format.GIF},
 			Required: map[string]format.ValueType{
 				"name": format.ValueString, "description": format.ValueString,
@@ -49,7 +49,7 @@ func declaration(id string) format.Declaration {
 	}
 	if id == CharX {
 		recognition = []format.Recognition{{
-			Type: format.RecognitionDiscriminator, Containers: []format.Container{format.ZIP},
+			Type: format.RecognitionMarker, Containers: []format.Container{format.ZIP},
 			Path: []string{"spec"}, Values: []string{V3},
 		}}
 	}
@@ -150,15 +150,15 @@ type card struct {
 	fields map[string]json.RawMessage
 }
 
-func readCard(file format.Inspection, claim format.Claim, implemented int, moduleID string) (card, error) {
-	payload, ok := claim.Payload(file)
+func readCard(file format.Inspection, match format.Match, implemented int, moduleID string) (card, error) {
+	payload, ok := match.Payload(file)
 	if !ok {
-		return card{}, fmt.Errorf("%s payload: the claimed payload is missing", moduleID)
+		return card{}, fmt.Errorf("%s payload: the matched payload is missing", moduleID)
 	}
 	if err := readableVersion(payload, implemented); err != nil {
 		return card{}, fmt.Errorf("%s spec_version: %w", moduleID, err)
 	}
-	fields, ok := Fields(file, claim)
+	fields, ok := Fields(file, match)
 	if !ok {
 		return card{}, fmt.Errorf("%s data: missing or not an object", moduleID)
 	}
@@ -413,7 +413,7 @@ func (c card) extensions() map[string]json.RawMessage {
 
 func documentImage(file format.Inspection) []format.Media {
 	for _, image := range file.Images {
-		if image.Locator.Container != format.ZIP {
+		if image.Location.Container != format.ZIP {
 			return []format.Media{{Role: media.Avatar, ImageID: image.ID}}
 		}
 	}

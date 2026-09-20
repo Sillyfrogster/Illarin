@@ -315,11 +315,11 @@ func parseSpindle(t *testing.T, data []byte) format.Parsed {
 func tryParseSpindle(t *testing.T, data []byte) (format.Parsed, error) {
 	t.Helper()
 	file := inspectZip(t, data)
-	claim, ok := Spindle{}.Claim(file)
+	match, ok := Spindle{}.Match(file)
 	if !ok {
-		t.Fatal("the archive was not claimed")
+		t.Fatal("the archive was not matched")
 	}
-	return Spindle{}.Parse(context.Background(), file, claim)
+	return Spindle{}.Parse(context.Background(), file, match)
 }
 
 func inspectZip(t *testing.T, data []byte) format.Inspection {

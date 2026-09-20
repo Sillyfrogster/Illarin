@@ -181,11 +181,11 @@ func TestAnArchiveWithBothManifestsIsRefusedAsAmbiguous(t *testing.T) {
 		"spindle.json": sampleManifest, "dist/frontend.js": "",
 		"manifest.json": tavernManifest, "dist/index.js": "",
 	}))
-	resolution, claimed, err := registry.Resolve(file)
-	if err != nil || !claimed {
-		t.Fatalf("resolve = %v %t, want one module to take the archive and refuse it", err, claimed)
+	resolution, matched, err := registry.Resolve(file)
+	if err != nil || !matched {
+		t.Fatalf("resolve = %v %t, want one module to take the archive and refuse it", err, matched)
 	}
-	_, err = resolution.Module.Parse(context.Background(), file, resolution.Claim)
+	_, err = resolution.Module.Parse(context.Background(), file, resolution.Match)
 	if reason, ok := format.FailureOf(err); !ok || reason != format.FailureMalformedInput ||
 		!strings.Contains(err.Error(), "spindle.json") || !strings.Contains(err.Error(), "manifest.json") {
 		t.Fatalf("parse = %v, want a refusal naming both manifests", err)
@@ -245,9 +245,9 @@ func parseTavern(t *testing.T, data []byte) format.Parsed {
 func tryParseTavern(t *testing.T, data []byte) (format.Parsed, error) {
 	t.Helper()
 	file := inspectZip(t, data)
-	claim, ok := SillyTavern{}.Claim(file)
+	match, ok := SillyTavern{}.Match(file)
 	if !ok {
-		t.Fatal("the archive was not claimed")
+		t.Fatal("the archive was not matched")
 	}
-	return SillyTavern{}.Parse(context.Background(), file, claim)
+	return SillyTavern{}.Parse(context.Background(), file, match)
 }

@@ -58,8 +58,8 @@ func TestTheModuleReadsAndWritesTheLorebookType(t *testing.T) {
 		t.Fatalf("declaration: %v", err)
 	}
 	if len(declaration.Recognition) != 1 ||
-		declaration.Recognition[0].Type != format.RecognitionSignature {
-		t.Errorf("recognition = %+v, want one structural signature", declaration.Recognition)
+		declaration.Recognition[0].Type != format.RecognitionShape {
+		t.Errorf("recognition = %+v, want one shape", declaration.Recognition)
 	}
 	if len(declaration.Slots) != 0 || len(declaration.Boilerplate) != 0 {
 		t.Errorf("declaration invented slots %v or boilerplate %v",
@@ -74,45 +74,45 @@ func TestTheModuleReadsAndWritesTheLorebookType(t *testing.T) {
 	}
 }
 
-func TestTheSignatureDoesNotOverlapAnotherModules(t *testing.T) {
+func TestTheShapeDoesNotOverlapAnotherModules(t *testing.T) {
 	t.Parallel()
 	if err := testRegistry(t).ValidateDeclarations(); err != nil {
 		t.Fatalf("declarations across every module: %v", err)
 	}
 }
 
-func TestOnlyADocumentHoldingEntriesIsClaimed(t *testing.T) {
+func TestOnlyADocumentHoldingEntriesIsMatched(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
-		name     string
-		body     string
-		claimant string
+		name      string
+		body      string
+		matchedBy string
 	}{
-		{name: "a book", body: `{"entries": []}`, claimant: ID},
-		{name: "a book with fields around it", body: twoEntries, claimant: ID},
+		{name: "a book", body: `{"entries": []}`, matchedBy: ID},
+		{name: "a book with fields around it", body: twoEntries, matchedBy: ID},
 		{
-			name:     "a card before any spec existed",
-			body:     `{"name":"a","description":"b","personality":"c","scenario":"d","first_mes":"e"}`,
-			claimant: "chara_card_v2",
+			name:      "a card before any spec existed",
+			body:      `{"name":"a","description":"b","personality":"c","scenario":"d","first_mes":"e"}`,
+			matchedBy: "chara_card_v2",
 		},
 		{
-			name:     "entries as an object",
-			body:     `{"entries": {"0": {}}}`,
-			claimant: SillyTavernID,
+			name:      "entries as an object",
+			body:      `{"entries": {"0": {}}}`,
+			matchedBy: SillyTavernID,
 		},
-		{name: "nothing recognisable", body: `{"colours": []}`, claimant: ""},
+		{name: "nothing recognisable", body: `{"colours": []}`, matchedBy: ""},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			resolution, claimed, err := testRegistry(t).Resolve(document(t, test.body))
+			resolution, matched, err := testRegistry(t).Resolve(document(t, test.body))
 			if err != nil {
 				t.Fatalf("resolve: %v", err)
 			}
-			claimant := ""
-			if claimed {
-				claimant = resolution.Module.ID()
+			matchedBy := ""
+			if matched {
+				matchedBy = resolution.Module.ID()
 			}
-			if claimant != test.claimant {
-				t.Fatalf("claimed by %q, want %q", claimant, test.claimant)
+			if matchedBy != test.matchedBy {
+				t.Fatalf("matched by %q, want %q", matchedBy, test.matchedBy)
 			}
 		})
 	}
@@ -208,7 +208,7 @@ func TestAMalformedFieldInOneEntryCostsThatFieldAlone(t *testing.T) {
 func TestEntriesThatAreNotAListRefuseTheImport(t *testing.T) {
 	t.Parallel()
 	file := document(t, `{"entries": {"0": {"content": "x"}}}`)
-	_, err := Module{}.Parse(context.Background(), file, format.CompatibilityClaim(file.Payloads[0]))
+	_, err := Module{}.Parse(context.Background(), file, format.CompatibilityMatch(file.Payloads[0]))
 	if reason, classified := format.FailureOf(err); !classified ||
 		reason != format.FailureMalformedInput {
 		t.Fatalf("parse error = %v, want a malformed input refusal", err)
@@ -347,14 +347,14 @@ func testRegistry(t *testing.T) *format.Registry {
 func parse(t *testing.T, body string) format.Parsed {
 	t.Helper()
 	file := document(t, body)
-	resolution, claimed, err := testRegistry(t).Resolve(file)
+	resolution, matched, err := testRegistry(t).Resolve(file)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if !claimed {
-		t.Fatal("no module claimed the book")
+	if !matched {
+		t.Fatal("no module matched the book")
 	}
-	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}

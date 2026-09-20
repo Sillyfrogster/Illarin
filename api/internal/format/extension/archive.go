@@ -60,15 +60,15 @@ func archiveManifest(file format.Inspection) (string, bool) {
 	return "", false
 }
 
-// claimArchive claims an archive for the module whose manifest it holds, even a misplaced one, so the refusal can say where it is.
-func claimArchive(file format.Inspection, declaration format.Declaration, manifest string) (format.Claim, bool) {
+// matchArchive matches an archive for the module whose manifest it holds, even a misplaced one, so the refusal can say where it is.
+func matchArchive(file format.Inspection, declaration format.Declaration, manifest string) (format.Match, bool) {
 	if chosen, ok := archiveManifest(file); !ok || chosen != manifest {
-		return format.Claim{}, false
+		return format.Match{}, false
 	}
-	if claim, ok := format.ClaimByDeclaration(file, declaration); ok {
-		return claim, true
+	if match, ok := format.MatchByDeclaration(file, declaration); ok {
+		return match, true
 	}
-	return format.WholeFileCompatibilityClaim(file), true
+	return format.WholeFileCompatibilityMatch(file), true
 }
 
 func misplacedManifest(file format.Inspection, manifest string) (string, bool) {

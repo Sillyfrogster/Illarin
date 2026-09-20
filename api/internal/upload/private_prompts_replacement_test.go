@@ -14,7 +14,7 @@ import (
 )
 
 type privatePromptModule struct {
-	claimsFirstPayload
+	matchesFirstPayload
 	parsed *format.Parsed
 }
 
@@ -37,7 +37,7 @@ func (privatePromptModule) Declaration() format.Declaration {
 	return declaration
 }
 
-func (module privatePromptModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (module privatePromptModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return *module.parsed, nil
 }
 

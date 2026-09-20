@@ -12,8 +12,8 @@ const (
 	CharX = "charx"
 )
 
-func Fields(file format.Inspection, claim format.Claim) (map[string]json.RawMessage, bool) {
-	payload, ok := claim.Payload(file)
+func Fields(file format.Inspection, match format.Match) (map[string]json.RawMessage, bool) {
+	payload, ok := match.Payload(file)
 	if !ok {
 		return nil, false
 	}

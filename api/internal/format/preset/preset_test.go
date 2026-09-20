@@ -382,14 +382,14 @@ func testRegistry(t *testing.T) *format.Registry {
 func parse(t *testing.T, body string) format.Parsed {
 	t.Helper()
 	file := document(t, body)
-	resolution, claimed, err := testRegistry(t).Resolve(file)
+	resolution, matched, err := testRegistry(t).Resolve(file)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if !claimed {
-		t.Fatal("no module claimed the preset")
+	if !matched {
+		t.Fatal("no module matched the preset")
 	}
-	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}

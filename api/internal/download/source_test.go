@@ -533,15 +533,15 @@ func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
 func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *testing.T) {
 	t.Parallel()
 	registry := format.NewRegistry()
-	if err := registry.Register(apitest.NeverClaimsModule{}); err != nil {
-		t.Fatalf("register non-claiming module: %v", err)
+	if err := registry.Register(apitest.NeverMatchesModule{}); err != nil {
+		t.Fatalf("register non-matching module: %v", err)
 	}
 	r, session, works := harness.NewVerifiedIngestRouter(t, registry)
 	body := &bytes.Buffer{}
 	form := multipart.NewWriter(body)
-	apitest.WriteMetadataPart(t, form, apitest.ExampleMetadata("Claimed image"))
+	apitest.WriteMetadataPart(t, form, apitest.ExampleMetadata("Matched image"))
 	header := textproto.MIMEHeader{}
-	header.Set("Content-Disposition", `form-data; name="file"; filename="claimed.png"`)
+	header.Set("Content-Disposition", `form-data; name="file"; filename="matched.png"`)
 	header.Set("Content-Type", "image/jpeg")
 	part, err := form.CreatePart(header)
 	if err != nil {
@@ -565,7 +565,7 @@ func TestFilenameExtensionAndDeclaredTypeCannotMakeAnUnknownSVGImportable(t *tes
 
 	removedCompletion := apitest.Send(t, r, apitest.AuthorizedJSONRequest(
 		t, http.MethodPatch, accepted.Header().Get("Location"),
-		`{"type":"theme","name":"Claimed image"}`, session,
+		`{"type":"theme","name":"Matched image"}`, session,
 	))
 	if removedCompletion.Code != http.StatusNotFound {
 		t.Fatalf("removed completion route status = %d, want 404", removedCompletion.Code)

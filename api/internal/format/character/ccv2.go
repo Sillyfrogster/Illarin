@@ -12,16 +12,16 @@ func (CCv2Module) ID() string { return V2 }
 
 func (CCv2Module) Declaration() format.Declaration { return declaration(V2) }
 
-func (m CCv2Module) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m CCv2Module) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
 func (m CCv2Module) Parse(
 	_ context.Context,
 	file format.Inspection,
-	claim format.Claim,
+	match format.Match,
 ) (format.Parsed, error) {
-	read, err := readCard(file, claim, 2, m.ID())
+	read, err := readCard(file, match, 2, m.ID())
 	if err != nil {
 		return format.Parsed{}, err
 	}

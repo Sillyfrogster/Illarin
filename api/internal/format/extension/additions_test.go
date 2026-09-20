@@ -174,11 +174,11 @@ func TestTheCodeIsReadNoFurtherThanTheLargestArchiveHolds(t *testing.T) {
 			padding(half) + "\tctx.ui.registerInputBarAction({ label: \"Past the limit\" })\n}\n",
 	}))
 	reader := Spindle{readingTime: time.Hour}
-	claim, ok := reader.Claim(file)
+	match, ok := reader.Match(file)
 	if !ok {
-		t.Fatal("the archive was not claimed")
+		t.Fatal("the archive was not matched")
 	}
-	parsed, err := reader.Parse(context.Background(), file, claim)
+	parsed, err := reader.Parse(context.Background(), file, match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -204,16 +204,16 @@ func TestReadingThatRunsOutOfTimeKeepsWhatItFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("inspect: %v", err)
 	}
-	claim, ok := Spindle{}.Claim(inspected)
+	match, ok := Spindle{}.Match(inspected)
 	if !ok {
-		t.Fatal("the archive was not claimed")
+		t.Fatal("the archive was not matched")
 	}
 	store.stallFrom, store.stallTo = 128<<10, 384<<10
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 	began := time.Now()
-	parsed, err := Spindle{}.Parse(ctx, inspected, claim)
+	parsed, err := Spindle{}.Parse(ctx, inspected, match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}

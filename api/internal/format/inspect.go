@@ -99,8 +99,8 @@ type blobSource struct {
 }
 
 type Image struct {
-	ID      uint32
-	Locator Locator
+	ID       uint32
+	Location PayloadLocation
 }
 
 var ErrImageUnavailable = errors.New("the probe located no such image")
@@ -120,7 +120,7 @@ func (i Inspection) OpenImage(ctx context.Context, id uint32) (io.ReadCloser, er
 		return nil, fmt.Errorf("image %d: %w", id, ErrImageUnavailable)
 	}
 	reader := &rangeReaderAt{ctx: ctx, store: i.source.store, id: i.source.id, size: i.source.size}
-	if found.Locator.Container != ZIP {
+	if found.Location.Container != ZIP {
 		return io.NopCloser(io.NewSectionReader(reader, 0, i.source.size)), nil
 	}
 	archive, err := zip.NewReader(reader, i.source.size)
@@ -128,7 +128,7 @@ func (i Inspection) OpenImage(ctx context.Context, id uint32) (io.ReadCloser, er
 		return nil, fmt.Errorf("reopen archive for image %d: %w", id, err)
 	}
 	for _, entry := range archive.File {
-		if entry.Name != found.Locator.Name {
+		if entry.Name != found.Location.Name {
 			continue
 		}
 		opened, err := entry.Open()
@@ -137,7 +137,7 @@ func (i Inspection) OpenImage(ctx context.Context, id uint32) (io.ReadCloser, er
 		}
 		return opened, nil
 	}
-	return nil, fmt.Errorf("archive entry %q: %w", found.Locator.Name, ErrImageUnavailable)
+	return nil, fmt.Errorf("archive entry %q: %w", found.Location.Name, ErrImageUnavailable)
 }
 
 func (i Inspection) OpenZIPEntry(ctx context.Context, name string) (io.ReadCloser, error) {
@@ -201,7 +201,7 @@ func IsInlineMediaType(mediaType string) bool {
 	return false
 }
 
-type Locator struct {
+type PayloadLocation struct {
 	Container Container
 	Name      string
 	Offset    int64
@@ -209,7 +209,7 @@ type Locator struct {
 
 type Payload struct {
 	ID       uint32
-	Locator  Locator
+	Location PayloadLocation
 	Root     map[string]json.RawMessage
 	ByteSize int64
 }
@@ -304,10 +304,10 @@ func InspectWithLimits(
 		if err != nil {
 			return Inspection{}, classifyContainerError(fmt.Errorf("inspect JSON: %w", err))
 		}
-		result.addPayload(Locator{Container: JSON, Name: "root"}, root, size)
+		result.addPayload(PayloadLocation{Container: JSON, Name: "root"}, root, size)
 	}
 	if _, raster := inlineMediaTypes[result.Container]; raster {
-		result.addImage(Locator{Container: result.Container})
+		result.addImage(PayloadLocation{Container: result.Container})
 	}
 	return result, nil
 }
@@ -391,7 +391,7 @@ func inspectPNG(reader *rangeReaderAt, result *Inspection) error {
 			name, root, payloadBytes, ok := textPayload(data)
 			chunk.Name = name
 			if ok {
-				result.addPayload(Locator{Container: PNG, Name: name, Offset: offset}, root, payloadBytes)
+				result.addPayload(PayloadLocation{Container: PNG, Name: name, Offset: offset}, root, payloadBytes)
 			}
 		}
 		result.PNGChunks = append(result.PNGChunks, chunk)
@@ -453,7 +453,7 @@ func inspectZIP(reader *rangeReaderAt, result *Inspection, limits Limits) error 
 			continue
 		}
 		if imageExtensions[strings.ToLower(path.Ext(entry.Name))] {
-			result.addImage(Locator{Container: ZIP, Name: entry.Name, Offset: offset})
+			result.addImage(PayloadLocation{Container: ZIP, Name: entry.Name, Offset: offset})
 		}
 		if !strings.EqualFold(entry.Name, "card.json") &&
 			!strings.EqualFold(entry.Name, "theme.json") &&
@@ -473,7 +473,7 @@ func inspectZIP(reader *rangeReaderAt, result *Inspection, limits Limits) error 
 			return fmt.Errorf("close ZIP entry %q: %w", entry.Name, closeErr)
 		}
 		result.addPayload(
-			Locator{Container: ZIP, Name: entry.Name, Offset: offset},
+			PayloadLocation{Container: ZIP, Name: entry.Name, Offset: offset},
 			root, int64(entry.UncompressedSize64),
 		)
 	}
@@ -518,14 +518,14 @@ func unsafeArchivePath(name string) bool {
 	return cleaned == ".." || strings.HasPrefix(cleaned, "../")
 }
 
-func (i *Inspection) addImage(locator Locator) {
-	i.Images = append(i.Images, Image{ID: uint32(len(i.Images)), Locator: locator})
+func (i *Inspection) addImage(location PayloadLocation) {
+	i.Images = append(i.Images, Image{ID: uint32(len(i.Images)), Location: location})
 }
 
-func (i *Inspection) addPayload(locator Locator, root map[string]json.RawMessage, byteSize int64) {
+func (i *Inspection) addPayload(location PayloadLocation, root map[string]json.RawMessage, byteSize int64) {
 	i.Payloads = append(i.Payloads, Payload{
 		ID:       uint32(len(i.Payloads)),
-		Locator:  locator,
+		Location: location,
 		Root:     root,
 		ByteSize: byteSize,
 	})

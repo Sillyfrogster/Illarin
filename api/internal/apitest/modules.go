@@ -7,17 +7,17 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 )
 
-type ClaimsFirstPayload struct{}
+type MatchesFirstPayload struct{}
 
-func (ClaimsFirstPayload) Claim(file format.Inspection) (format.Claim, bool) {
+func (MatchesFirstPayload) Match(file format.Inspection) (format.Match, bool) {
 	if len(file.Payloads) == 0 {
-		return format.Claim{}, false
+		return format.Match{}, false
 	}
-	return format.CompatibilityClaim(file.Payloads[0]), true
+	return format.CompatibilityMatch(file.Payloads[0]), true
 }
 
 type RecognizedModule struct {
-	ClaimsFirstPayload
+	MatchesFirstPayload
 	Parsed format.Parsed
 }
 
@@ -25,12 +25,12 @@ func (RecognizedModule) ID() string { return "recognized" }
 func (RecognizedModule) Declaration() format.Declaration {
 	return ReaderDeclaration("recognized", "character")
 }
-func (module RecognizedModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (module RecognizedModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return module.Parsed, nil
 }
 
 type ReplacingModule struct {
-	ClaimsFirstPayload
+	MatchesFirstPayload
 	Parsed *format.Parsed
 }
 
@@ -49,7 +49,7 @@ func (ReplacingModule) Declaration() format.Declaration {
 	}
 	return declaration
 }
-func (module ReplacingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (module ReplacingModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return *module.Parsed, nil
 }
 func (ReplacingModule) Write(context.Context, format.ExportWork) (format.MainFile, error) {

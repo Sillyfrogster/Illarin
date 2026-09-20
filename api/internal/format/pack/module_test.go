@@ -236,11 +236,11 @@ func parse(t *testing.T, data []byte) format.Parsed {
 		t.Fatalf("inspect Pack: %v", err)
 	}
 	module := Module{}
-	claim, ok := module.Claim(file)
+	match, ok := module.Match(file)
 	if !ok {
-		t.Fatal("the Pack signature did not claim the file")
+		t.Fatal("the Pack shape did not match the file")
 	}
-	parsed, err := module.Parse(context.Background(), file, claim)
+	parsed, err := module.Parse(context.Background(), file, match)
 	if err != nil {
 		t.Fatalf("parse Pack: %v", err)
 	}

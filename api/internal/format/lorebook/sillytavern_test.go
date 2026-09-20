@@ -51,17 +51,17 @@ func TestASillyTavernWorldInfoFileIsRecognisedAsItsOwnFormat(t *testing.T) {
 	t.Parallel()
 	registry := testRegistry(t)
 
-	resolution, claimed, err := registry.Resolve(document(t, worldInfo))
-	if err != nil || !claimed {
-		t.Fatalf("resolve the world info file: claimed %v, %v", claimed, err)
+	resolution, matched, err := registry.Resolve(document(t, worldInfo))
+	if err != nil || !matched {
+		t.Fatalf("resolve the world info file: matched %v, %v", matched, err)
 	}
 	if resolution.Module.ID() != SillyTavernID {
 		t.Errorf("world info read as %q, want %q", resolution.Module.ID(), SillyTavernID)
 	}
 
-	resolution, claimed, err = registry.Resolve(document(t, twoEntries))
-	if err != nil || !claimed {
-		t.Fatalf("resolve the listed book: claimed %v, %v", claimed, err)
+	resolution, matched, err = registry.Resolve(document(t, twoEntries))
+	if err != nil || !matched {
+		t.Fatalf("resolve the listed book: matched %v, %v", matched, err)
 	}
 	if resolution.Module.ID() != ID {
 		t.Errorf("the listed book read as %q, want %q", resolution.Module.ID(), ID)

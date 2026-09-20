@@ -48,7 +48,7 @@ func testReaderDeclaration(id, workType string) format.Declaration {
 	return format.Declaration{
 		ID: id, Type: workType, Direction: format.Direction{Read: true},
 		Recognition: []format.Recognition{{
-			Type: format.RecognitionSignature, Containers: []format.Container{format.JSON},
+			Type: format.RecognitionShape, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{"payload": format.ValueBoolean},
 		}},
 		Limits: format.ContentLimits{
@@ -61,13 +61,13 @@ func testReaderDeclaration(id, workType string) format.Declaration {
 	}
 }
 
-type claimsFirstPayload struct{}
+type matchesFirstPayload struct{}
 
-func (claimsFirstPayload) Claim(file format.Inspection) (format.Claim, bool) {
+func (matchesFirstPayload) Match(file format.Inspection) (format.Match, bool) {
 	if len(file.Payloads) == 0 {
-		return format.Claim{}, false
+		return format.Match{}, false
 	}
-	return format.CompatibilityClaim(file.Payloads[0]), true
+	return format.CompatibilityMatch(file.Payloads[0]), true
 }
 
 type opaqueTestModule struct{}
@@ -97,10 +97,10 @@ func (opaqueTestModule) Write(_ context.Context, written format.ExportWork) (for
 		MediaType: "text/plain", Extension: ".txt",
 	}, nil
 }
-func (opaqueTestModule) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.WholeFileCompatibilityClaim(file), true
+func (opaqueTestModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.WholeFileCompatibilityMatch(file), true
 }
-func (opaqueTestModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (opaqueTestModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return format.Parsed{
 		Type: "character", Format: "test_opaque",
 		Elements: []block.Element{
@@ -111,7 +111,7 @@ func (opaqueTestModule) Parse(context.Context, format.Inspection, format.Claim) 
 }
 
 type recognizedModule struct {
-	claimsFirstPayload
+	matchesFirstPayload
 	parsed format.Parsed
 }
 
@@ -119,12 +119,12 @@ func (recognizedModule) ID() string { return "recognized" }
 func (recognizedModule) Declaration() format.Declaration {
 	return testReaderDeclaration("recognized", "character")
 }
-func (module recognizedModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (module recognizedModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return module.parsed, nil
 }
 
 type replacingModule struct {
-	claimsFirstPayload
+	matchesFirstPayload
 	parsed *format.Parsed
 }
 
@@ -143,7 +143,7 @@ func (replacingModule) Declaration() format.Declaration {
 	}
 	return declaration
 }
-func (module replacingModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (module replacingModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return *module.parsed, nil
 }
 func (replacingModule) Write(context.Context, format.ExportWork) (format.MainFile, error) {

@@ -19,32 +19,32 @@ import (
 func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
-		name     string
-		body     string
-		claimant string
+		name      string
+		body      string
+		matchedBy string
 	}{
-		{name: "schema version 1", body: `{"schemaVersion": 1, "blocks": []}`, claimant: LumiverseID},
-		{name: "schema version 2", body: `{"schemaVersion": 2, "blocks": []}`, claimant: LumiverseID},
-		{name: "a whole preset", body: lumiversePreset, claimant: LumiverseID},
+		{name: "schema version 1", body: `{"schemaVersion": 1, "blocks": []}`, matchedBy: LumiverseID},
+		{name: "schema version 2", body: `{"schemaVersion": 2, "blocks": []}`, matchedBy: LumiverseID},
+		{name: "a whole preset", body: lumiversePreset, matchedBy: LumiverseID},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			file := document(t, test.body)
-			resolution, claimed, err := testRegistry(t).Resolve(file)
+			resolution, matched, err := testRegistry(t).Resolve(file)
 			if err != nil {
 				t.Fatalf("resolve: %v", err)
 			}
-			claimant := ""
-			if claimed {
-				claimant = resolution.Module.ID()
+			matchedBy := ""
+			if matched {
+				matchedBy = resolution.Module.ID()
 			}
-			if claimant != test.claimant {
-				t.Fatalf("claimed by %q, want %q", claimant, test.claimant)
+			if matchedBy != test.matchedBy {
+				t.Fatalf("matched by %q, want %q", matchedBy, test.matchedBy)
 			}
-			if !claimed {
+			if !matched {
 				return
 			}
 			if _, err := resolution.Module.Parse(
-				context.Background(), file, resolution.Claim,
+				context.Background(), file, resolution.Match,
 			); err != nil {
 				t.Fatalf("parse: %v", err)
 			}
@@ -52,9 +52,9 @@ func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
 	}
 
 	t.Run("a marker outside the set", func(t *testing.T) {
-		_, claimed, err := testRegistry(t).Resolve(document(t, `{"schemaVersion": 3, "blocks": []}`))
-		if claimed {
-			t.Fatal("a marker outside the set was claimed")
+		_, matched, err := testRegistry(t).Resolve(document(t, `{"schemaVersion": 3, "blocks": []}`))
+		if matched {
+			t.Fatal("a marker outside the set was matched")
 		}
 		if !errors.Is(err, format.ErrUnsupportedFormat) {
 			t.Fatalf("resolve error = %v, want an unsupported format", err)
@@ -408,11 +408,11 @@ func TestMalformedKeyedPrivatePromptMetadataIsRefused(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			file := document(t, `{"schemaVersion":1,"blocks":`+test.blocks+`}`)
-			claim, claimed := (LumiverseModule{}).Claim(file)
-			if !claimed {
-				t.Fatal("the Lumiverse marker was not claimed")
+			match, matched := (LumiverseModule{}).Match(file)
+			if !matched {
+				t.Fatal("the Lumiverse marker was not matched")
 			}
-			_, err := (LumiverseModule{}).Parse(context.Background(), file, claim)
+			_, err := (LumiverseModule{}).Parse(context.Background(), file, match)
 			if reason, classified := format.FailureOf(err); !classified ||
 				reason != format.FailureMalformedInput {
 				t.Fatalf("parse error = %v, want a malformed input refusal", err)
@@ -469,11 +469,11 @@ func TestALargePayloadImportsWithinTheDeclaredLimits(t *testing.T) {
 func TestABlockListThatIsNotAListRefusesTheImport(t *testing.T) {
 	t.Parallel()
 	file := document(t, `{"schemaVersion": 1, "blocks": {"0": {}}}`)
-	claim, claimed := (LumiverseModule{}).Claim(file)
-	if !claimed {
+	match, matched := (LumiverseModule{}).Match(file)
+	if !matched {
 		t.Fatal("the marker was not recognised")
 	}
-	_, err := (LumiverseModule{}).Parse(context.Background(), file, claim)
+	_, err := (LumiverseModule{}).Parse(context.Background(), file, match)
 	if reason, classified := format.FailureOf(err); !classified ||
 		reason != format.FailureMalformedInput {
 		t.Fatalf("parse error = %v, want a malformed input refusal", err)

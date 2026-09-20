@@ -135,9 +135,9 @@ type AnomalyDeclaration struct {
 type RecognitionType string
 
 const (
-	RecognitionDiscriminator RecognitionType = "discriminator"
-	RecognitionSignature     RecognitionType = "signature"
-	RecognitionEntry         RecognitionType = "entry"
+	RecognitionMarker RecognitionType = "marker"
+	RecognitionShape  RecognitionType = "shape"
+	RecognitionEntry  RecognitionType = "entry"
 )
 
 type ValueType string
@@ -161,42 +161,42 @@ type Recognition struct {
 	SupersededBy []string
 }
 
-func ClaimByDeclaration(file Inspection, declaration Declaration) (Claim, bool) {
+func MatchByDeclaration(file Inspection, declaration Declaration) (Match, bool) {
 	for _, recognition := range declaration.Recognition {
 		if supersededInFile(file, recognition) {
 			continue
 		}
 		for _, payload := range file.Payloads {
 			if len(recognition.Containers) > 0 &&
-				!slices.Contains(recognition.Containers, payload.Locator.Container) {
+				!slices.Contains(recognition.Containers, payload.Location.Container) {
 				continue
 			}
 			switch recognition.Type {
-			case RecognitionDiscriminator:
+			case RecognitionMarker:
 				value, ok := payloadValue(payload.Root, recognition.Path)
 				if !ok || !slices.Contains(recognition.Values, value) {
 					continue
 				}
-				return Claim{
+				return Match{
 					payloadID: payload.ID, strength: authoritative, formatID: declaration.ID,
 				}, true
-			case RecognitionSignature:
+			case RecognitionShape:
 				if recognition.LegacyOnly {
 					if spec, _ := payload.String("spec"); spec != "" {
 						continue
 					}
 				}
-				if signatureMatches(payload.Root, recognition.Required) {
-					return CompatibilityClaim(payload), true
+				if shapeMatches(payload.Root, recognition.Required) {
+					return CompatibilityMatch(payload), true
 				}
 			case RecognitionEntry:
-				if payload.Locator.Name == file.ArchiveBase+recognition.Entry {
-					return CompatibilityClaim(payload), true
+				if payload.Location.Name == file.ArchiveBase+recognition.Entry {
+					return CompatibilityMatch(payload), true
 				}
 			}
 		}
 	}
-	return Claim{}, false
+	return Match{}, false
 }
 
 func supersededInFile(file Inspection, recognition Recognition) bool {
@@ -205,7 +205,7 @@ func supersededInFile(file Inspection, recognition Recognition) bool {
 	}
 	for _, payload := range file.Payloads {
 		if len(recognition.Containers) > 0 &&
-			!slices.Contains(recognition.Containers, payload.Locator.Container) {
+			!slices.Contains(recognition.Containers, payload.Location.Container) {
 			continue
 		}
 		value, ok := payloadValue(payload.Root, recognition.Path)
@@ -240,7 +240,7 @@ func payloadValue(root map[string]json.RawMessage, path []string) (string, bool)
 	return "", false
 }
 
-func signatureMatches(root map[string]json.RawMessage, required map[string]ValueType) bool {
+func shapeMatches(root map[string]json.RawMessage, required map[string]ValueType) bool {
 	for key, wanted := range required {
 		raw, ok := root[key]
 		if !ok || jsonValueType(raw) != wanted {
@@ -532,21 +532,21 @@ func validateRecognition(d Declaration) error {
 			return errors.New("recognition needs at least one container")
 		}
 		switch recognition.Type {
-		case RecognitionDiscriminator:
+		case RecognitionMarker:
 			if len(recognition.Path) == 0 || len(recognition.Values) == 0 {
-				return errors.New("a discriminator needs a location and accepted values")
+				return errors.New("a marker needs a location and accepted values")
 			}
 			for _, superseding := range recognition.SupersededBy {
 				if slices.Contains(recognition.Values, superseding) {
-					return fmt.Errorf("value %q both matches and supersedes the discriminator", superseding)
+					return fmt.Errorf("value %q both matches and supersedes the marker", superseding)
 				}
 			}
-		case RecognitionSignature:
+		case RecognitionShape:
 			if len(recognition.Required) == 0 {
-				return errors.New("a structural signature needs required keys")
+				return errors.New("a shape needs required keys")
 			}
 			if len(recognition.SupersededBy) > 0 {
-				return errors.New("only a discriminator can name what supersedes it")
+				return errors.New("only a marker can name what supersedes it")
 			}
 			for key, valueType := range recognition.Required {
 				if key == "" || !valueType.known() {

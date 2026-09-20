@@ -35,7 +35,7 @@ func (LumiverseModule) Declaration() format.Declaration {
 		LumiverseID,
 		"Lumiverse theme bundle",
 		[]format.Recognition{{
-			Type: format.RecognitionDiscriminator, Containers: []format.Container{format.ZIP},
+			Type: format.RecognitionMarker, Containers: []format.Container{format.ZIP},
 			Path: []string{"format"}, Values: []string{"3"},
 		}},
 		lumiverseColors,
@@ -50,7 +50,7 @@ func (SillyTavernModule) Declaration() format.Declaration {
 		SillyTavernID,
 		"SillyTavern theme",
 		[]format.Recognition{{
-			Type: format.RecognitionSignature, Containers: []format.Container{format.JSON},
+			Type: format.RecognitionShape, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				"main_text_color": format.ValueString,
 				"blur_strength":   format.ValueNumber,
@@ -290,32 +290,32 @@ func hasEnabledStylesheet(styles block.StylesheetSet) bool {
 	})
 }
 
-func (m LumiverseModule) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m LumiverseModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
-func (m SillyTavernModule) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m SillyTavernModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
-func payloadFor(file format.Inspection, claim format.Claim, id string) (format.Payload, error) {
-	payload, ok := claim.Payload(file)
+func payloadFor(file format.Inspection, match format.Match, id string) (format.Payload, error) {
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Payload{}, fmt.Errorf("%s payload: the claimed payload is missing", id)
+		return format.Payload{}, fmt.Errorf("%s payload: the matched payload is missing", id)
 	}
 	return payload, nil
 }
 
-func (m LumiverseModule) Parse(ctx context.Context, file format.Inspection, claim format.Claim) (format.Parsed, error) {
-	payload, err := payloadFor(file, claim, m.ID())
+func (m LumiverseModule) Parse(ctx context.Context, file format.Inspection, match format.Match) (format.Parsed, error) {
+	payload, err := payloadFor(file, match, m.ID())
 	if err != nil {
 		return format.Parsed{}, err
 	}
 	return readLumiverse(ctx, file, payload)
 }
 
-func (m SillyTavernModule) Parse(_ context.Context, file format.Inspection, claim format.Claim) (format.Parsed, error) {
-	payload, err := payloadFor(file, claim, m.ID())
+func (m SillyTavernModule) Parse(_ context.Context, file format.Inspection, match format.Match) (format.Parsed, error) {
+	payload, err := payloadFor(file, match, m.ID())
 	if err != nil {
 		return format.Parsed{}, err
 	}

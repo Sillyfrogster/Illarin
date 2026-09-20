@@ -180,15 +180,15 @@ func MakeEveryFragmentPrivate(t *testing.T, body SaveBlockBody, apps []string) S
 	return body
 }
 
-// NeverClaimsModule is a format that recognises no file
-type NeverClaimsModule struct{}
+// NeverMatchesModule is a format that recognises no file
+type NeverMatchesModule struct{}
 
-func (NeverClaimsModule) ID() string { return "never" }
-func (NeverClaimsModule) Declaration() format.Declaration {
+func (NeverMatchesModule) ID() string { return "never" }
+func (NeverMatchesModule) Declaration() format.Declaration {
 	return ReaderDeclaration("never", "character")
 }
-func (NeverClaimsModule) Claim(format.Inspection) (format.Claim, bool) { return format.Claim{}, false }
-func (NeverClaimsModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (NeverMatchesModule) Match(format.Inspection) (format.Match, bool) { return format.Match{}, false }
+func (NeverMatchesModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return format.Parsed{}, errors.New("unreachable")
 }
 

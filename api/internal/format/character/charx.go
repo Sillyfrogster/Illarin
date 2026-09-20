@@ -24,16 +24,16 @@ func (CharXModule) Declaration() format.Declaration { return declaration(CharX) 
 
 func (CharXModule) OwnedSpecs() []string { return []string{V3} }
 
-func (m CharXModule) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m CharXModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
 func (m CharXModule) Parse(
 	ctx context.Context,
 	file format.Inspection,
-	claim format.Claim,
+	match format.Match,
 ) (format.Parsed, error) {
-	read, err := readCard(file, claim, 3, m.ID())
+	read, err := readCard(file, match, 3, m.ID())
 	if err != nil {
 		return format.Parsed{}, err
 	}
@@ -62,8 +62,8 @@ const (
 func archivedMembers(ctx context.Context, file format.Inspection) ([]format.Remainder, error) {
 	pictures := make(map[string]bool, len(file.Images))
 	for _, image := range file.Images {
-		if image.Locator.Container == format.ZIP {
-			pictures[image.Locator.Name] = true
+		if image.Location.Container == format.ZIP {
+			pictures[image.Location.Name] = true
 		}
 	}
 	kept := make([]format.Remainder, 0)
@@ -185,10 +185,10 @@ func archivedImages(read card, file format.Inspection) []format.Media {
 		})
 	}
 	for _, image := range file.Images {
-		if image.Locator.Container != format.ZIP || named[image.ID] {
+		if image.Location.Container != format.ZIP || named[image.ID] {
 			continue
 		}
-		role := archivedRole(image.Locator.Name, hasAvatar)
+		role := archivedRole(image.Location.Name, hasAvatar)
 		if role == media.Avatar {
 			hasAvatar = true
 		}
@@ -245,10 +245,10 @@ func cardFileRole(file cardFile, hasAvatar bool) (media.Role, bool) {
 func archivedImage(file format.Inspection, path string) (uint32, bool) {
 	wanted := strings.TrimPrefix(strings.ReplaceAll(path, "\\", "/"), "./")
 	for _, image := range file.Images {
-		if image.Locator.Container != format.ZIP {
+		if image.Location.Container != format.ZIP {
 			continue
 		}
-		if strings.TrimPrefix(image.Locator.Name, "./") == wanted {
+		if strings.TrimPrefix(image.Location.Name, "./") == wanted {
 			return image.ID, true
 		}
 	}

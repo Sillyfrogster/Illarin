@@ -234,14 +234,14 @@ func (smallLimitModule) Declaration() format.Declaration {
 	return declaration
 }
 
-func (m smallLimitModule) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m smallLimitModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
 func (smallLimitModule) Parse(
 	context.Context,
 	format.Inspection,
-	format.Claim,
+	format.Match,
 ) (format.Parsed, error) {
 	return format.Parsed{}, errors.New("an over-limit file never reaches the reader")
 }

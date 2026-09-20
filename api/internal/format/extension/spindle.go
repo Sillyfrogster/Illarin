@@ -61,8 +61,8 @@ func (Spindle) Declaration() format.Declaration {
 	}
 }
 
-func (module Spindle) Claim(file format.Inspection) (format.Claim, bool) {
-	return claimArchive(file, module.Declaration(), spindleManifest)
+func (module Spindle) Match(file format.Inspection) (format.Match, bool) {
+	return matchArchive(file, module.Declaration(), spindleManifest)
 }
 
 type spindleManifestFields struct {
@@ -71,16 +71,16 @@ type spindleManifestFields struct {
 	Permissions                                         []string
 }
 
-func (s Spindle) Parse(ctx context.Context, file format.Inspection, claim format.Claim) (format.Parsed, error) {
+func (s Spindle) Parse(ctx context.Context, file format.Inspection, match format.Match) (format.Parsed, error) {
 	if err := checkArchive(file); err != nil {
 		return format.Parsed{}, err
 	}
 	if !hasEntry(file, spindleManifest) {
 		return format.Parsed{}, refuseMisplaced(file, spindleManifest)
 	}
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", SpindleID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", SpindleID)
 	}
 	manifest, err := readSpindleManifest(payload.Root)
 	if err != nil {

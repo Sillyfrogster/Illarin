@@ -36,7 +36,7 @@ func (Module) Declaration() format.Declaration {
 		ID: ID, Label: "Lorebook", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Type:       format.RecognitionSignature,
+			Type:       format.RecognitionShape,
 			Containers: []format.Container{format.JSON},
 			Required:   map[string]format.ValueType{entriesKey: format.ValueArray},
 		}},
@@ -70,18 +70,18 @@ func (Module) Declaration() format.Declaration {
 	}
 }
 
-func (m Module) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m Module) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
 func (m Module) Parse(
 	_ context.Context,
 	file format.Inspection,
-	claim format.Claim,
+	match format.Match,
 ) (format.Parsed, error) {
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", ID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", ID)
 	}
 	source := maps.Clone(payload.Root)
 

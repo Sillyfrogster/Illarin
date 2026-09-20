@@ -116,7 +116,7 @@ func (LumiverseModule) Declaration() format.Declaration {
 		ID: LumiverseID, Label: "Lumiverse preset", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Type:       format.RecognitionDiscriminator,
+			Type:       format.RecognitionMarker,
 			Containers: []format.Container{format.JSON},
 			Path:       []string{lvSchemaVersion},
 			Values:     []string{"1", "2"},
@@ -189,18 +189,18 @@ func lumiverseSettingSupport(named []slot) format.DirectionalRoleSupport {
 	}
 }
 
-func (m LumiverseModule) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m LumiverseModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
 func (m LumiverseModule) Parse(
 	_ context.Context,
 	file format.Inspection,
-	claim format.Claim,
+	match format.Match,
 ) (format.Parsed, error) {
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", LumiverseID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", LumiverseID)
 	}
 	source := maps.Clone(payload.Root)
 

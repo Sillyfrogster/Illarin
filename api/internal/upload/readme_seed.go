@@ -48,8 +48,8 @@ func (s *Service) seedFromReadme(ctx context.Context, file format.Inspection, re
 func archivedImages(file format.Inspection) map[string]uint32 {
 	held := make(map[string]uint32, len(file.Images))
 	for _, image := range file.Images {
-		if image.Locator.Container == format.ZIP {
-			held[image.Locator.Name] = image.ID
+		if image.Location.Container == format.ZIP {
+			held[image.Location.Name] = image.ID
 		}
 	}
 	return held

@@ -31,7 +31,7 @@ func (Module) Declaration() format.Declaration {
 		ID: ID, Label: "Lumiverse pack", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Type: format.RecognitionSignature, Containers: []format.Container{format.JSON},
+			Type: format.RecognitionShape, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				"packName": format.ValueString, "lumiaItems": format.ValueArray,
 				"loomItems": format.ValueArray,
@@ -75,18 +75,18 @@ func (Module) Declaration() format.Declaration {
 	}
 }
 
-func (module Module) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, module.Declaration())
+func (module Module) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, module.Declaration())
 }
 
 func (Module) Parse(
 	_ context.Context,
 	file format.Inspection,
-	claim format.Claim,
+	match format.Match,
 ) (format.Parsed, error) {
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", ID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", ID)
 	}
 	source := maps.Clone(payload.Root)
 	var name string

@@ -126,13 +126,13 @@ func (*leasedModule) ID() string { return "leased" }
 func (*leasedModule) Declaration() format.Declaration {
 	return testReaderDeclaration("leased", "character")
 }
-func (*leasedModule) Claim(file format.Inspection) (format.Claim, bool) {
+func (*leasedModule) Match(file format.Inspection) (format.Match, bool) {
 	if len(file.Payloads) == 0 {
-		return format.Claim{}, false
+		return format.Match{}, false
 	}
-	return format.CompatibilityClaim(file.Payloads[0]), true
+	return format.CompatibilityMatch(file.Payloads[0]), true
 }
-func (m *leasedModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (m *leasedModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	if m.calls.Add(1) == 1 {
 		close(m.started)
 		<-m.release
@@ -140,7 +140,7 @@ func (m *leasedModule) Parse(context.Context, format.Inspection, format.Claim) (
 	return format.Parsed{Type: "character", Format: "leased"}, nil
 }
 
-func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
+func TestExpiredLeaseIsTakenAgainAndFinalizationIsIdempotent(t *testing.T) {
 	t.Parallel()
 	pool := testdb.Connect(t)
 	ownerID := uuid.New()
@@ -181,7 +181,7 @@ func TestExpiredLeaseIsReclaimedAndFinalizationIsIdempotent(t *testing.T) {
 
 	clock.Store(clock.Load().(time.Time).Add(2 * time.Minute))
 	if processed, err := service.ProcessNextIngest(context.Background()); err != nil || !processed {
-		t.Fatalf("reclaimed process = %v, %v; want true, nil", processed, err)
+		t.Fatalf("second process = %v, %v; want true, nil", processed, err)
 	}
 	close(module.release)
 	if err := <-firstDone; err != nil {

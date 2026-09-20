@@ -150,11 +150,11 @@ func (OpaqueModule) Write(_ context.Context, written format.ExportWork) (format.
 	}, nil
 }
 
-func (OpaqueModule) Claim(file format.Inspection) (format.Claim, bool) {
-	return format.WholeFileCompatibilityClaim(file), true
+func (OpaqueModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.WholeFileCompatibilityMatch(file), true
 }
 
-func (OpaqueModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (OpaqueModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return format.Parsed{
 		Type: "character", Format: "test_opaque",
 		Elements: []block.Element{
@@ -168,7 +168,7 @@ func ReaderDeclaration(id, workType string) format.Declaration {
 	return format.Declaration{
 		ID: id, Type: workType, Direction: format.Direction{Read: true},
 		Recognition: []format.Recognition{{
-			Type: format.RecognitionSignature, Containers: []format.Container{format.JSON},
+			Type: format.RecognitionShape, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{"payload": format.ValueBoolean},
 		}},
 		Limits: format.ContentLimits{

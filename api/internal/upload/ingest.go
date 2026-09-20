@@ -119,18 +119,18 @@ func (s *Service) readImport(
 	inspected format.Inspection,
 	expectedType string,
 ) (preparedImport, error) {
-	resolution, claimed, err := s.reg.Resolve(inspected)
+	resolution, matched, err := s.reg.Resolve(inspected)
 	if err != nil {
 		return preparedImport{}, err
 	}
-	if !claimed {
+	if !matched {
 		return preparedImport{}, format.ErrUnsupportedFormat
 	}
 
 	declaration := resolution.Module.Declaration()
-	payload, ok := resolution.Claim.Payload(inspected)
+	payload, ok := resolution.Match.Payload(inspected)
 	if !ok {
-		return preparedImport{}, format.ErrInvalidClaim
+		return preparedImport{}, format.ErrInvalidMatch
 	}
 	payloadBytes := payload.ByteSize
 	if payloadBytes == 0 {
@@ -152,7 +152,7 @@ func (s *Service) readImport(
 		))
 	}
 
-	parsed, err := resolution.Module.Parse(ctx, inspected, resolution.Claim)
+	parsed, err := resolution.Module.Parse(ctx, inspected, resolution.Match)
 	if err != nil {
 		if _, classified := format.FailureOf(err); classified {
 			return preparedImport{}, err
@@ -406,7 +406,7 @@ func (s *Service) leaseNextIngest(ctx context.Context) (ingestJob, bool, error) 
 func prepareIngest(job ingestJob, parsed format.Parsed) (preparedIngest, error) {
 	workType := parsed.Type
 	if workType == "" {
-		return preparedIngest{}, errors.New("claimed format did not declare a type")
+		return preparedIngest{}, errors.New("matched format did not declare a type")
 	}
 	if job.Target != nil && workType != job.Target.Type {
 		return preparedIngest{}, errWrongType

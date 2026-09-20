@@ -222,7 +222,7 @@ func TestAnUnrecognisedOriginalFileIsRefusedWithoutChangingTheWork(t *testing.T)
 	ownerID := originalFileOwner(t, svc, "unsupported.revision.owner")
 	created := ingestOne(t, svc, ownerID, "card.json", []byte(`{"spec":"as_character"}`))
 
-	operation := addRevision(t, svc, ownerID, created.ID, "mystery.bin", []byte("nothing claims this"))
+	operation := addRevision(t, svc, ownerID, created.ID, "mystery.bin", []byte("nothing matches this"))
 	if operation.Status != IngestFailed || operation.Work != nil {
 		t.Fatalf("revision operation = %+v, want failed without a work", operation)
 	}
@@ -345,15 +345,15 @@ func (m typeModule) Declaration() format.Declaration {
 	return testReaderDeclaration(m.id, m.workType)
 }
 
-func (m typeModule) Claim(file format.Inspection) (format.Claim, bool) {
+func (m typeModule) Match(file format.Inspection) (format.Match, bool) {
 	for _, payload := range file.Payloads {
 		if spec, _ := payload.String("spec"); spec == m.id {
-			return format.AuthoritativeClaim(payload, "spec")
+			return format.AuthoritativeMatch(payload, "spec")
 		}
 	}
-	return format.Claim{}, false
+	return format.Match{}, false
 }
 
-func (m typeModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (m typeModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return format.Parsed{Type: m.workType, Format: m.id}, nil
 }

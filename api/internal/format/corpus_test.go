@@ -48,7 +48,7 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 		t.Fatal("read local probe corpus")
 	}
 
-	checked, claimed := 0, 0
+	checked, matched := 0, 0
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -74,8 +74,8 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 		if !resolved {
 			return nil
 		}
-		claimed++
-		parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+		matched++
+		parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 	if checked == 0 {
 		t.Fatal("local probe corpus is empty")
 	}
-	if claimed == 0 {
+	if matched == 0 {
 		t.Fatal("no fixture in the local probe corpus resolved to a module")
 	}
 }
@@ -108,8 +108,8 @@ func unreadArchiveEntries(file format.Inspection) []string {
 	}
 	pictures := make(map[string]bool, len(file.Images))
 	for _, image := range file.Images {
-		if image.Locator.Container == format.ZIP {
-			pictures[image.Locator.Name] = true
+		if image.Location.Container == format.ZIP {
+			pictures[image.Location.Name] = true
 		}
 	}
 	unread := make([]string, 0)

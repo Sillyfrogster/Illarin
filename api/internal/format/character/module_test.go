@@ -304,7 +304,7 @@ func TestCCv2DoesNotConsumeV3OnlyGroupGreetingsOrWorks(t *testing.T) {
 func TestAVersionPastTheOneWeImplementIsRefusedRatherThanGuessedAt(t *testing.T) {
 	t.Parallel()
 	later := jsonCard(t, `{"spec":"chara_card_v3","spec_version":"4.0","data":{"name":"Ana"}}`)
-	_, err := CCv3Module{}.Parse(context.Background(), later, claimFor(t, CCv3Module{}, later))
+	_, err := CCv3Module{}.Parse(context.Background(), later, matchFor(t, CCv3Module{}, later))
 	reason, classified := format.FailureOf(err)
 	if !classified || reason != format.FailureUnsupportedVersion {
 		t.Fatalf("parse error = %v, want an unsupported version", err)
@@ -326,7 +326,7 @@ func TestARequiredRoleWithTheWrongTypeRefusesTheCardAndNamesThePart(t *testing.T
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":17,"first_mes":"Hello"}
 	}`)
-	_, err := CCv3Module{}.Parse(context.Background(), file, claimFor(t, CCv3Module{}, file))
+	_, err := CCv3Module{}.Parse(context.Background(), file, matchFor(t, CCv3Module{}, file))
 	if err == nil || !strings.Contains(err.Error(), "chara_card_v3") ||
 		!strings.Contains(err.Error(), "description") || !strings.Contains(err.Error(), "string") {
 		t.Fatalf("parse error = %v, want the module, required role and reason", err)
@@ -336,7 +336,7 @@ func TestARequiredRoleWithTheWrongTypeRefusesTheCardAndNamesThePart(t *testing.T
 func TestARecognizedCardWithNoReadableDataNamesTheModuleAndPart(t *testing.T) {
 	t.Parallel()
 	file := jsonCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":17}`)
-	_, err := CCv3Module{}.Parse(context.Background(), file, claimFor(t, CCv3Module{}, file))
+	_, err := CCv3Module{}.Parse(context.Background(), file, matchFor(t, CCv3Module{}, file))
 	if err == nil || !strings.Contains(err.Error(), V3) || !strings.Contains(err.Error(), "data") ||
 		!strings.Contains(err.Error(), "object") {
 		t.Fatalf("parse error = %v, want module, data and reason", err)
@@ -432,8 +432,8 @@ func TestAV3CardCarryingItsV2CopyIsReadAsV3(t *testing.T) {
 		textChunk{name: "ccv3", body: `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana"}}`},
 		textChunk{name: "chara", body: `{"spec":"chara_card_v2","spec_version":"2.0","data":{"name":"Ana"}}`},
 	)
-	if _, ok := (CCv2Module{}).Claim(file); ok {
-		t.Error("CCv2 claimed the copy of itself a v3 card carries")
+	if _, ok := (CCv2Module{}).Match(file); ok {
+		t.Error("CCv2 matched the copy of itself a v3 card carries")
 	}
 	if parsed := resolveAndParse(t, file); parsed.Format != V3 {
 		t.Errorf("format = %q, want %q", parsed.Format, V3)
@@ -453,11 +453,11 @@ func TestAV2CardWithNoV3CopyIsStillReadAsV2(t *testing.T) {
 func TestAV3CardInAnArchiveIsCharXAndNotCCv3(t *testing.T) {
 	t.Parallel()
 	file := charxCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana"}}`, nil)
-	if _, ok := (CCv3Module{}).Claim(file); ok {
-		t.Error("CCv3 claimed a card inside an archive")
+	if _, ok := (CCv3Module{}).Match(file); ok {
+		t.Error("CCv3 matched a card inside an archive")
 	}
-	if _, ok := (CharXModule{}).Claim(file); !ok {
-		t.Error("CharX did not claim its own archive")
+	if _, ok := (CharXModule{}).Match(file); !ok {
+		t.Error("CharX did not match its own archive")
 	}
 }
 
@@ -469,27 +469,27 @@ func resolveAndParse(t *testing.T, file format.Inspection) format.Parsed {
 			t.Fatalf("register %q: %v", module.ID(), err)
 		}
 	}
-	resolution, claimed, err := registry.Resolve(file)
+	resolution, matched, err := registry.Resolve(file)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if !claimed {
-		t.Fatal("no module claimed the card")
+	if !matched {
+		t.Fatal("no module matched the card")
 	}
-	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	return parsed
 }
 
-func claimFor(t *testing.T, module format.Reader, file format.Inspection) format.Claim {
+func matchFor(t *testing.T, module format.Reader, file format.Inspection) format.Match {
 	t.Helper()
-	claim, ok := module.Claim(file)
+	match, ok := module.Match(file)
 	if !ok {
-		t.Fatalf("module %q did not claim the card", module.ID())
+		t.Fatalf("module %q did not match the card", module.ID())
 	}
-	return claim
+	return match
 }
 
 func jsonCard(t *testing.T, body string) format.Inspection {

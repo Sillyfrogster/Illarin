@@ -16,11 +16,11 @@ func TestCCv2UsesTheSpecRepresentationWithoutShadowFields(t *testing.T) {
 		"personality":"shadow only"
 	}`))
 
-	claim, ok := (CCv2Module{}).Claim(file)
+	match, ok := (CCv2Module{}).Match(file)
 	if !ok {
-		t.Fatal("CCv2 did not claim its own spec")
+		t.Fatal("CCv2 did not match its own spec")
 	}
-	fields, ok := Fields(file, claim)
+	fields, ok := Fields(file, match)
 	if !ok {
 		t.Fatal("selected CCv2 representation is missing")
 	}
@@ -42,25 +42,25 @@ func TestCCv2UsesLegacyShapeOnlyWithoutARecognizedSpec(t *testing.T) {
 		"first_mes":"Hello"
 	}`)
 
-	if _, ok := (CCv2Module{}).Claim(document(legacy)); !ok {
-		t.Fatal("CCv2 did not make a compatibility claim for a legacy shape")
+	if _, ok := (CCv2Module{}).Match(document(legacy)); !ok {
+		t.Fatal("CCv2 did not make a compatibility match for a legacy shape")
 	}
 
 	legacy["spec"] = json.RawMessage(`"chara_card_v3"`)
 	file := document(legacy)
-	if _, ok := (CCv2Module{}).Claim(file); ok {
-		t.Fatal("CCv2 claimed legacy shadow fields beside a recognized CCv3 spec")
+	if _, ok := (CCv2Module{}).Match(file); ok {
+		t.Fatal("CCv2 matched legacy shadow fields beside a recognized CCv3 spec")
 	}
-	if _, ok := (CCv3Module{}).Claim(file); !ok {
-		t.Fatal("CCv3 did not claim its own spec")
+	if _, ok := (CCv3Module{}).Match(file); !ok {
+		t.Fatal("CCv3 did not match its own spec")
 	}
 }
 
 func document(root map[string]json.RawMessage) format.Inspection {
 	return format.Inspection{Payloads: []format.Payload{{
-		ID:      0,
-		Locator: format.Locator{Container: format.JSON},
-		Root:    root,
+		ID:       0,
+		Location: format.PayloadLocation{Container: format.JSON},
+		Root:     root,
 	}}}
 }
 

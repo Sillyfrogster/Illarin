@@ -349,16 +349,16 @@ func (m namedReplacementModule) Declaration() format.Declaration {
 	return declaration
 }
 
-func (m namedReplacementModule) Claim(file format.Inspection) (format.Claim, bool) {
+func (m namedReplacementModule) Match(file format.Inspection) (format.Match, bool) {
 	for _, payload := range file.Payloads {
 		if spec, _ := payload.String("spec"); spec == m.id {
-			return format.AuthoritativeClaim(payload, "spec")
+			return format.AuthoritativeMatch(payload, "spec")
 		}
 	}
-	return format.Claim{}, false
+	return format.Match{}, false
 }
 
-func (m namedReplacementModule) Parse(context.Context, format.Inspection, format.Claim) (format.Parsed, error) {
+func (m namedReplacementModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
 	return m.parsed, nil
 }
 

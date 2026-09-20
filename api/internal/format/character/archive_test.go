@@ -73,12 +73,12 @@ func TestAnArchivedFileTooLargeToKeepTurnsTheCardAway(t *testing.T) {
 		"huge.bin": incompressible(maxArchiveMemberBytes + 1),
 	})
 	module := CharXModule{}
-	claim, held := module.Claim(file)
+	match, held := module.Match(file)
 	if !held {
-		t.Fatal("the module claimed nothing")
+		t.Fatal("the module matched nothing")
 	}
 
-	_, err := module.Parse(context.Background(), file, claim)
+	_, err := module.Parse(context.Background(), file, match)
 	reason, classified := format.FailureOf(err)
 	if !classified || reason != format.FailureLimitExceeded {
 		t.Fatalf("err = %v, want a refusal naming the limit", err)
@@ -95,7 +95,7 @@ func incompressible(size int) []byte {
 	return held
 }
 
-func TestAnArchivedFileNeverClaimsAPathTheWriterProduces(t *testing.T) {
+func TestAnArchivedFileNeverMatchesAPathTheWriterProduces(t *testing.T) {
 	t.Parallel()
 	written := []archivedFile{{path: "assets/icon/image/main.png", data: []byte("picture")}}
 	preserved := []format.Remainder{

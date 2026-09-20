@@ -58,8 +58,8 @@ func (SillyTavern) Declaration() format.Declaration {
 	}
 }
 
-func (module SillyTavern) Claim(file format.Inspection) (format.Claim, bool) {
-	return claimArchive(file, module.Declaration(), sillyTavernManifest)
+func (module SillyTavern) Match(file format.Inspection) (format.Match, bool) {
+	return matchArchive(file, module.Declaration(), sillyTavernManifest)
 }
 
 type sillyTavernManifestFields struct {
@@ -68,16 +68,16 @@ type sillyTavernManifestFields struct {
 	Dependencies                               []string
 }
 
-func (SillyTavern) Parse(ctx context.Context, file format.Inspection, claim format.Claim) (format.Parsed, error) {
+func (SillyTavern) Parse(ctx context.Context, file format.Inspection, match format.Match) (format.Parsed, error) {
 	if err := checkArchive(file); err != nil {
 		return format.Parsed{}, err
 	}
 	if !hasEntry(file, sillyTavernManifest) {
 		return format.Parsed{}, refuseMisplaced(file, sillyTavernManifest)
 	}
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", SillyTavernID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", SillyTavernID)
 	}
 	manifest, err := readSillyTavernManifest(payload.Root)
 	if err != nil {

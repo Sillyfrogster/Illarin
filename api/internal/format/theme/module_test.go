@@ -129,7 +129,7 @@ func TestBothThemeModulesDeclareTheirPublicContract(t *testing.T) {
 	registry := testRegistry(t)
 	for _, module := range preset.Modules() {
 		if err := registry.Register(module); err != nil {
-			t.Fatalf("theme signature overlaps %s: %v", module.ID(), err)
+			t.Fatalf("theme shape overlaps %s: %v", module.ID(), err)
 		}
 	}
 }
@@ -346,11 +346,11 @@ func TestSillyTavernJoinsOnlyEnabledComponentStylesheetsAfterTheMainSheet(t *tes
 	}
 }
 
-func TestLumiverseMarkerOutsideTheDeclaredSetIsNotClaimed(t *testing.T) {
+func TestLumiverseMarkerOutsideTheDeclaredSetIsNotMatched(t *testing.T) {
 	t.Parallel()
 	file := inspect(t, themeBundle(t, strings.Replace(lumiverseTheme, `"format":3`, `"format":4`, 1), nil), "future.lumitheme")
-	if _, claimed := (LumiverseModule{}).Claim(file); claimed {
-		t.Error("format marker 4 was claimed as though it were 3")
+	if _, matched := (LumiverseModule{}).Match(file); matched {
+		t.Error("format marker 4 was matched as though it were 3")
 	}
 }
 
@@ -376,14 +376,14 @@ func elementFor(t *testing.T, elements []block.Element, role block.Role) block.C
 
 func parse(t *testing.T, file format.Inspection) format.Parsed {
 	t.Helper()
-	resolution, claimed, err := testRegistry(t).Resolve(file)
+	resolution, matched, err := testRegistry(t).Resolve(file)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if !claimed {
-		t.Fatal("no module claimed the theme")
+	if !matched {
+		t.Fatal("no module matched the theme")
 	}
-	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
