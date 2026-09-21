@@ -1,8 +1,9 @@
-import { ArrowUpRight, KeyRound, Plug, Send } from "lucide-react";
+import { ArrowUpRight, Compass, KeyRound, Plug, Send } from "lucide-react";
 import Link from "next/link";
 import { AccountSettings } from "@/components/auth/AccountSettings";
 import { ConnectedApps } from "@/components/connect/ConnectedApps";
 import { Shell } from "@/components/layout/Shell";
+import { BrowsePreferences } from "@/components/preferences/BrowsePreferences";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
 import { Button } from "@/components/ui/button";
 import { pageMetadata } from "@/lib/site-metadata";
@@ -18,7 +19,7 @@ const DISCORD_NOTICES: Record<string, string> = {
 
 export const metadata = pageMetadata(
   "Account settings",
-  "Manage your sign-in methods and connected apps.",
+  "Manage what Browse shows you, your sign-in methods and connected apps.",
 );
 
 export default async function SettingsPage({
@@ -38,7 +39,7 @@ export default async function SettingsPage({
           Account settings
         </h1>
         <p className="mt-3 font-prose text-ui text-mute">
-          Manage your sign-in methods and connected apps.
+          Manage what Browse shows you, your sign-in methods and connected apps.
         </p>
       </header>
 
@@ -47,8 +48,15 @@ export default async function SettingsPage({
           <PublicProfileCard />
           <nav
             aria-label="Account settings"
-            className="mt-5 grid grid-cols-1 gap-1 sm:grid-cols-3 lg:grid-cols-1"
+            className="mt-5 grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-1"
           >
+            <a
+              className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              href="#browse"
+            >
+              <Compass aria-hidden="true" className="size-4 text-accent" />
+              Browse
+            </a>
             <a
               className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
               href="#ways-in"
@@ -74,7 +82,21 @@ export default async function SettingsPage({
         </aside>
 
         <div className="min-w-0">
-          <section aria-labelledby="ways-in">
+          <section aria-labelledby="browse">
+            <h2
+              className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
+              id="browse"
+            >
+              Browse
+            </h2>
+            <div className="mt-5">
+              <BrowsePreferences />
+            </div>
+          </section>
+          <section
+            aria-labelledby="ways-in"
+            className="mt-12 border-t border-rule pt-9"
+          >
             <h2
               className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
               id="ways-in"
