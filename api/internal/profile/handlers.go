@@ -17,7 +17,7 @@ import (
 
 const (
 	restrictedOwnerMessage = "An admin has restricted your public profile. Contact Illarin to have it reviewed."
-	recentVersionsShown    = 8
+	recentVersionsRead     = 24
 )
 
 func (h *Handlers) GetProfile(c *gin.Context) {
@@ -215,7 +215,7 @@ func (h *Handlers) showProfile(c *gin.Context, found account.PublicProfile) {
 		}
 		shown.Featured = page.ToAPIBrowseWorks(featured)
 	}
-	recent, err := h.versions.RecentByCreator(ctx, found.ID, preference, recentVersionsShown)
+	recent, err := h.versions.RecentByCreator(ctx, found.ID, preference, recentVersionsRead)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the profile.")
 		return

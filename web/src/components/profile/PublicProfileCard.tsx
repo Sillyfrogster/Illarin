@@ -59,7 +59,7 @@ export function PublicProfileCard() {
         </p>
       </div>
       <Button asChild className="w-full justify-between" variant="secondary">
-        <Link href="/settings/profile">
+        <Link href={`/@${profile.handle}`}>
           Edit profile
           <ArrowRight aria-hidden="true" />
         </Link>

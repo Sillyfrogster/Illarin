@@ -64,6 +64,7 @@ import type {
   QueuedSend,
   ReaderPreferences,
   ReadinessItem,
+  RecentVersion,
   RecordedVersion,
   RecordedVersionDownloads,
   RecordedVersionList,
@@ -143,6 +144,7 @@ export type {
   PreservedData,
   Profile,
   ProfileLink,
+  RecentVersion,
   RestrictedProfile,
   PromptCorrespondenceRequest,
   PromptListContent,
@@ -247,10 +249,14 @@ function writeRefusal(error: unknown, fallback: string): Error {
   );
 }
 
-export async function fetchProfile(handle: string): Promise<Profile | null> {
+export async function fetchProfile(
+  handle: string,
+  cookie?: string,
+): Promise<Profile | null> {
   const { data, error } = await api<Profile>(
     "GET",
     `/v1/profiles/${encodeURIComponent(handle)}`,
+    { headers: cookie ? { cookie } : undefined },
   );
   if (error || !data) return null;
   return data;

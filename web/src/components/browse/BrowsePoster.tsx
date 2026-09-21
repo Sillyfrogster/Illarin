@@ -1,9 +1,10 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import { CircleHelp, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import type { BrowseWork, NsfwPreference } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { posterFace, type TypeSetting, typeSetting } from "@/lib/poster-face";
@@ -40,17 +41,26 @@ function groundFor(id: string) {
 }
 
 export function BrowsePoster({
+  action,
+  animated = false,
   apps,
+  byline = true,
+  className,
   work,
   eager = false,
   preference,
 }: {
+  action?: ReactNode;
+  animated?: boolean;
   apps?: string[];
+  byline?: boolean;
+  className?: string;
   work: BrowseWork;
   eager?: boolean;
   preference: NsfwPreference;
 }) {
   const [failed, setFailed] = useState(false);
+  const still = useReducedMotion();
   const face = posterFace({ cover: work.cover, failed });
   const name = workDisplayName(work.name);
   const blurred = work.isNsfw === true && preference !== "shown";
@@ -64,8 +74,28 @@ export function BrowsePoster({
     </Link>
   );
 
+  const Card = animated ? motion.li : "li";
+  const arrival =
+    animated && !still
+      ? {
+          layout: true,
+          initial: { opacity: 0, scale: 0.92 },
+          animate: { opacity: 1, scale: 1 },
+          exit: { opacity: 0, scale: 0.92 },
+          transition: { type: "spring", stiffness: 300, damping: 30 } as const,
+        }
+      : {};
   return (
-    <li className="group relative flex min-w-0 flex-col rounded-plate outline-offset-4 focus-within:outline-2 focus-within:outline-accent">
+    <Card
+      className={cn(
+        "group relative flex min-w-0 flex-col rounded-plate outline-offset-4 focus-within:outline-2 focus-within:outline-accent",
+        className,
+      )}
+      {...arrival}
+    >
+      {action ? (
+        <div className="absolute top-2.5 right-2.5 z-2">{action}</div>
+      ) : null}
       {face === "art" ? (
         <div className={cn(PLATE, "relative aspect-5/6 bg-inset")}>
           {work.cover ? (
@@ -118,13 +148,17 @@ export function BrowsePoster({
             type={work.type}
           />
           {TYPE_LABELS[work.type]}
-          <span aria-hidden="true">·</span>
-          <Link
-            className="relative z-1 -my-3 inline-flex min-h-11 min-w-0 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
-            href={`/@${work.creator}`}
-          >
-            @{work.creator}
-          </Link>
+          {byline ? (
+            <>
+              <span aria-hidden="true">·</span>
+              <Link
+                className="relative z-1 -my-3 inline-flex min-h-11 min-w-0 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
+                href={`/@${work.creator}`}
+              >
+                @{work.creator}
+              </Link>
+            </>
+          ) : null}
         </p>
 
         {apps?.length ? (
@@ -158,7 +192,7 @@ export function BrowsePoster({
 
         {work.takedown ? <TakenDown takedown={work.takedown} /> : null}
       </div>
-    </li>
+    </Card>
   );
 }
 

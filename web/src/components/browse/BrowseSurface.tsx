@@ -24,15 +24,13 @@ import {
 } from "@/lib/nsfw-preference";
 import { BrowsePoster } from "./BrowsePoster";
 import { BrowseSearch } from "./BrowseSearch";
+import { BrowseLoading, GRID, Message } from "./BrowseStates";
 import { FeatureRow } from "./FeatureRow";
 import { ReaderLine } from "./ReaderLine";
 import { TypeIndex } from "./TypeIndex";
 import { useBrowseNavigation } from "./use-browse-navigation";
 
 const PAGE = 24;
-
-const GRID =
-  "m-0 grid list-none grid-cols-2 items-start gap-x-4 gap-y-9 p-0 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-5";
 
 export function BrowseSurface({
   basePath = "/browse",
@@ -301,44 +299,6 @@ export function BrowseSurface({
         ) : null}
       </div>
     </Shell>
-  );
-}
-
-function BrowseLoading() {
-  return (
-    <output aria-label="Loading works" className="block">
-      <div className={GRID}>
-        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((slot) => (
-          <div key={slot}>
-            <div className="aspect-5/6 animate-pulse rounded-plate bg-deep motion-reduce:animate-none" />
-            <div className="mt-4 h-4 w-3/4 animate-pulse rounded-control bg-deep motion-reduce:animate-none" />
-            <div className="mt-2 h-3 w-1/2 animate-pulse rounded-control bg-deep motion-reduce:animate-none" />
-          </div>
-        ))}
-      </div>
-    </output>
-  );
-}
-
-function Message({
-  action,
-  body,
-  title,
-}: {
-  action?: React.ReactNode;
-  body?: string;
-  title: string;
-}) {
-  return (
-    <div className="rounded-plate bg-deep px-6 py-14 text-center sm:px-12">
-      <h3 className="font-display text-title font-medium tracking-[-0.02em]">
-        {title}
-      </h3>
-      {body ? (
-        <p className="mx-auto mt-3 max-w-[46ch] text-prose text-mute">{body}</p>
-      ) : null}
-      {action ? <div className="mt-6 flex justify-center">{action}</div> : null}
-    </div>
   );
 }
 

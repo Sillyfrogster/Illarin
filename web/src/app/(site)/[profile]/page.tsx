@@ -5,12 +5,16 @@ import { cache } from "react";
 import { fetchDeletedWorks, fetchProfile, fetchWorks } from "@/lib/api/query";
 import { buildBrowseHref, readBrowseFilters } from "@/lib/browse-url";
 import { readProfileAddress } from "@/lib/profile-address";
-import { pageMetadata, readableForMetadata } from "@/lib/site-metadata";
-import { ProfileListing } from "./ProfileListing";
+import {
+  pageMetadata,
+  readableForMetadata,
+  siteUrl,
+} from "@/lib/site-metadata";
+import { ProfilePage } from "./ProfilePage";
 
 const loadProfile = cache(async (segment: string) => {
   const handle = readProfileAddress(decodeURIComponent(segment));
-  return handle ? fetchProfile(handle) : null;
+  return handle ? fetchProfile(handle, (await cookies()).toString()) : null;
 });
 
 export async function generateMetadata({
@@ -63,11 +67,12 @@ export default async function CreatorProfileListing({
   ]);
 
   return (
-    <ProfileListing
-      profile={profile}
-      filters={filters}
-      initialPage={initialPage}
+    <ProfilePage
+      address={`${siteUrl}/${canonical}`}
       deletedWorks={deletedWorks}
+      filters={filters}
+      initial={profile}
+      initialPage={initialPage}
     />
   );
 }
