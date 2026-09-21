@@ -20,7 +20,7 @@ export function countWords(
 }
 
 function plural(count: number, noun: string): string {
-  return `${count.toLocaleString("en-GB")} ${noun}${count === 1 ? "" : "s"}`;
+  return `${count.toLocaleString("en-US")} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 /** Says which version it was and when */
@@ -33,7 +33,7 @@ export function versionWords(version: RecentVersion, now = new Date()): string {
 
 function shortDate(value: string, now: Date): string {
   const at = new Date(value);
-  return at.toLocaleDateString("en-GB", {
+  return at.toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
     year: at.getFullYear() === now.getFullYear() ? undefined : "numeric",

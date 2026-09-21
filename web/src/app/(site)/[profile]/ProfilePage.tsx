@@ -18,6 +18,7 @@ import type {
 } from "@/lib/api/query";
 import type { Answer } from "@/lib/api/request";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { toggleFeatured } from "@/lib/profile-portfolio";
 import { Banner } from "./Banner";
 import { DeletedWorks } from "./DeletedWorks";
@@ -168,7 +169,10 @@ export function ProfilePage({
 
   return (
     <div
-      className={deletedWorks?.length ? undefined : "pb-chapter"}
+      className={cn(
+        "bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--v-field)_91%,var(--tint)),var(--v-field)_40rem)] bg-no-repeat",
+        !deletedWorks?.length && "pb-chapter",
+      )}
       style={{ "--tint": profile.tint || "var(--v-accent)" } as CSSProperties}
     >
       <Banner
@@ -192,10 +196,6 @@ export function ProfilePage({
             profile={profile}
             said={said}
             trouble={trouble}
-          />
-          <RestrictedControl
-            handle={profile.handle}
-            restricted={profile.restricted}
           />
         </div>
 
@@ -232,6 +232,10 @@ export function ProfilePage({
 
         <div className="min-w-0 pt-14 [grid-area:versions] empty:hidden lg:pt-12">
           <RecentVersions versions={profile.recentVersions} />
+          <RestrictedControl
+            handle={profile.handle}
+            restricted={profile.restricted}
+          />
         </div>
       </Shell>
 

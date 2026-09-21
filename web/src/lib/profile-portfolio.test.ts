@@ -38,9 +38,9 @@ test("a version line says which version and when, and a first publication says P
     workName: "The last archivist",
     workType: "character",
   };
-  expect(versionWords(version, now)).toBe("v4 · 20 Sept");
+  expect(versionWords(version, now)).toBe("v4 · Sep 20");
   expect(versionWords({ ...version, versionLabel: "2.1" }, now)).toBe(
-    "v4 · 2.1 · 20 Sept",
+    "v4 · 2.1 · Sep 20",
   );
   expect(
     versionWords(
@@ -52,7 +52,7 @@ test("a version line says which version and when, and a first publication says P
       },
       now,
     ),
-  ).toBe("Published · 2 Mar 2025");
+  ).toBe("Published · Mar 2, 2025");
 });
 
 test("a run of versions of one work folds into its newest, counting the rest", () => {

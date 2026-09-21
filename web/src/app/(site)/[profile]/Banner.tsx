@@ -83,9 +83,9 @@ export function Banner({
       />
 
       {editing ? (
-        <div className="absolute bottom-4 left-[var(--rail-inset)] flex flex-wrap items-center gap-2 [--v-deep:rgb(255_255_255/0.14)] [--v-ink:#ffffff] [--v-mute:#e6e0f0]">
+        <div className="absolute top-8 right-[var(--rail-inset)] flex items-center gap-2 [--v-deep:rgb(255_255_255/0.14)] [--v-ink:#ffffff] [--v-mute:#e6e0f0] lg:top-auto lg:right-auto lg:bottom-4 lg:left-[var(--rail-inset)]">
           <Button
-            className="bg-[rgb(0_0_0/0.45)] backdrop-blur-md hover:bg-[rgb(0_0_0/0.6)]"
+            className="bg-[rgb(0_0_0/0.45)] backdrop-blur-md hover:bg-[rgb(0_0_0/0.6)] max-lg:size-11 max-lg:px-0"
             disabled={pending}
             id="profile-banner-pick"
             loading={pending}
@@ -93,17 +93,19 @@ export function Banner({
             variant="secondary"
           >
             <ImageUp aria-hidden="true" />
-            {banner ? "Change banner" : "Add banner"}
+            <span className="max-lg:sr-only">
+              {banner ? "Change banner" : "Add banner"}
+            </span>
           </Button>
           {banner ? (
             <Button
-              className="bg-[rgb(0_0_0/0.45)] backdrop-blur-md hover:bg-[rgb(0_0_0/0.6)]"
+              className="bg-[rgb(0_0_0/0.45)] backdrop-blur-md hover:bg-[rgb(0_0_0/0.6)] max-lg:size-11 max-lg:px-0"
               disabled={pending}
               onClick={onRemove}
               variant="secondary"
             >
               <Trash2 aria-hidden="true" />
-              Remove
+              <span className="max-lg:sr-only">Remove banner</span>
             </Button>
           ) : null}
           <input

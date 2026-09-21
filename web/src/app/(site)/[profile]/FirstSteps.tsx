@@ -22,7 +22,7 @@ export function FirstSteps({
       <p className="mt-2 max-w-[52ch] font-prose text-prose text-mute">
         Readers who follow a link to you land here.
       </p>
-      <ol className="m-0 mt-6 grid list-none gap-2 p-0">
+      <ol className="m-0 mt-6 grid list-none p-0">
         <Step
           action={
             <Button
@@ -83,7 +83,7 @@ function Step({
   label: string;
 }) {
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-control bg-plane px-4 py-3.5">
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-rule py-4">
       <span
         aria-hidden="true"
         className={cn(

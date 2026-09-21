@@ -327,7 +327,7 @@ function Featured({
           first.
         </p>
       ) : (
-        <ul className="m-0 mt-5 grid list-none grid-cols-2 items-start gap-x-4 gap-y-9 p-0 sm:grid-cols-4 sm:gap-x-5">
+        <ul className={cn(GRID, "mt-5")}>
           <AnimatePresence initial={false}>
             {featured.map((work, index) => (
               <BrowsePoster
@@ -458,9 +458,25 @@ function Nothing({
   }
   if (isOwner) return firstSteps;
   return (
-    <Message
-      body={`Follow @${handle} to hear when they publish.`}
-      title="Nothing published yet"
-    />
+    <div>
+      <ul aria-hidden="true" className={GRID}>
+        {[0, 1, 2, 3].map((slot) => (
+          <li
+            className={cn(
+              "aspect-5/6 rounded-plate border border-dashed border-rule",
+              slot > 1 && "max-sm:hidden",
+              slot > 2 && "max-lg:hidden",
+            )}
+            key={slot}
+          />
+        ))}
+      </ul>
+      <p className="mt-6 font-display text-section font-medium tracking-[-0.02em] text-ink">
+        Nothing published yet
+      </p>
+      <p className="mt-1.5 font-ui text-ui text-mute">
+        Follow @{handle} to hear when they publish.
+      </p>
+    </div>
   );
 }
