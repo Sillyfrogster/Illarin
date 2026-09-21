@@ -124,6 +124,7 @@ packages:
       import type { WorkBlock } from "./block";
       import type {
         AppFormat,
+        AppName,
         WorkImage,
         DownloadFormat,
         RecordedVersion,
@@ -131,7 +132,9 @@ packages:
     type_mappings:
       uuid.UUID: "string"
       block.WorkBlock: "WorkBlock"
+      block.Role: "string"
       page.AppFormat: "AppFormat"
+      page.AppName: "AppName"
       page.WorkImage: "WorkImage"
       page.DownloadFormat: "DownloadFormat"
       page.RecordedVersion: "RecordedVersion"

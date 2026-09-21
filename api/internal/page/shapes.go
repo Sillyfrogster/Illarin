@@ -80,6 +80,7 @@ type WorkDetail struct {
 	Original              *OriginalUpload          `json:"original" tstype:"OriginalUpload | null,required"`
 	Preview               *string                  `json:"preview" tstype:"string | null,required"`
 	Readiness             *[]ReadinessItem         `json:"readiness,omitempty"`
+	ReaderApp             *string                  `json:"readerApp" tstype:"string | null,required"`
 	PreservedPrompts      *int                     `json:"preservedPrompts,omitempty"`
 	Tags                  []WorkTag                `json:"tags"`
 	UnpublishedChanges    *bool                    `json:"unpublishedChanges,omitempty"`

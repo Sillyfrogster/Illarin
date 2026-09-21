@@ -127,7 +127,7 @@ func TestWorkPageShowsNoTotals(t *testing.T) {
 		"id": true, "type": true, "name": true, "blurb": true, "tags": true,
 		"creator": true, "isNsfw": true, "visibility": true, "createdAt": true,
 		"lifecycle": true, "isOwner": true, "downloads": true, "original": true,
-		"appTargets": true, "appFormats": true,
+		"appTargets": true, "appFormats": true, "readerApp": true,
 		"blocks": true, "media": true, "preview": true, "nsfwPreference": true,
 		"hasPrivatePrompts": true, "linkedInstallOnly": true, "allowedApps": true, "eligibleApps": true,
 		"latestVersion": true, "extensionDependencies": true, "installedAppVersions": true,

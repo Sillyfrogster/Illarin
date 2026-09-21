@@ -15,6 +15,7 @@ function work(over: Partial<WorkDetail> = {}): WorkDetail {
     creator: "nimhloth",
     extensionDependencies: [],
     installedAppVersions: [],
+    readerApp: null,
     isNsfw: false,
     visibility: "listed",
     lifecycle: "published",

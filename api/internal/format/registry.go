@@ -292,3 +292,17 @@ func validateMatch(file Inspection, module Reader, match Match) error {
 	}
 	return nil
 }
+
+// Declarations lists every module's declaration, sorted by id
+func (r *Registry) Declarations() []Declaration {
+	ids := make([]string, 0, len(r.modules))
+	for id := range r.modules {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	declarations := make([]Declaration, 0, len(ids))
+	for _, id := range ids {
+		declarations = append(declarations, r.modules[id].Declaration())
+	}
+	return declarations
+}

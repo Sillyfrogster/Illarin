@@ -8,7 +8,6 @@ import { DraftedChangesProvider } from "@/lib/drafted-changes";
 import { ExtensionDependenciesProvider } from "@/lib/extension-dependencies";
 import { readableForMetadata } from "@/lib/site-metadata";
 import { workMetadata } from "@/lib/work-metadata";
-import { workHoldsNothing } from "@/lib/work-page-content";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { isWorkId, workRedirect } from "@/lib/work-url";
 import { WorkBlocks } from "./WorkBlocks";
@@ -76,7 +75,6 @@ export default async function WorkPage({
             <article>
               <WorkHeader
                 work={work}
-                holdsNothing={workHoldsNothing(work.blocks)}
                 typeLabel={typeLabel}
                 sharedDate={sharedDate}
                 shellClassName={shellClasses}

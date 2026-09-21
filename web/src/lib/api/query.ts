@@ -36,6 +36,7 @@ import type {
   ElementType,
   EntryTableContent,
   ExtensionDependency,
+  FormatComparison,
   FoundImage,
   FoundImageList,
   ListWorksParams,
@@ -122,6 +123,7 @@ export type {
   ElementType,
   EntryTableContent,
   ExtensionDependency,
+  FormatComparison,
   UploadOperation,
   OriginalUpload,
   Post,
@@ -768,6 +770,13 @@ export async function withdrawWorkVersion(
     { body: { explanation } },
   );
   if (error) throw writeRefusal(error, "That version could not be withdrawn.");
+}
+
+/** fetchFormatTable reads the comparison of every format Illarin writes, field by field. */
+export async function fetchFormatTable(): Promise<FormatComparison> {
+  const { data, error } = await api<FormatComparison>("GET", "/v1/formats");
+  if (error || !data) throw new Error("Could not load the format comparison");
+  return data;
 }
 
 /** Loads the formats and media available for a historical download. */

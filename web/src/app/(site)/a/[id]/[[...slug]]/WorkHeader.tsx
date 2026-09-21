@@ -15,7 +15,6 @@ import { WorkFollowProvider } from "./follow/state";
 import { GetWork } from "./GetWork";
 import { VersionHistory } from "./history/VersionHistory";
 import { TakedownNotice } from "./TakedownNotice";
-import type { WorkChooserProps } from "./WorkChooser";
 import { coverMedia, WorkMedia } from "./WorkMedia";
 import {
   BLURB_LIMIT,
@@ -45,13 +44,11 @@ function browseTagHref(value: string): string {
 
 export function WorkHeader({
   work,
-  holdsNothing,
   typeLabel,
   sharedDate,
   shellClassName,
 }: {
   work: WorkDetail;
-  holdsNothing: boolean;
   typeLabel: string;
   sharedDate: string;
   shellClassName: string;
@@ -66,21 +63,14 @@ export function WorkHeader({
   const blurbTrouble = blurbLimitMessage(workspace.details.blurb);
   const covers = coverMedia(work.media);
   const showsMedia = covers.length > 0 || (work.isOwner && writing);
-  const chooser: WorkChooserProps = {
-    workId: work.id,
-    blocks: work.blocks,
-    downloads: work.downloads,
-    appFormats: work.appFormats,
-    holdsNothing,
-    images: work.media,
-    isOwner: work.isOwner,
-    type: work.type,
-    typeLabel: typeLabel.toLowerCase(),
-    hasPrivatePrompts: work.hasPrivatePrompts,
-    original: work.original,
-  };
   const sendable = canSendWork(work);
-  const download = <GetWork {...chooser} sendable={sendable} />;
+  const download = (
+    <GetWork
+      sendable={sendable}
+      typeLabel={typeLabel.toLowerCase()}
+      work={work}
+    />
+  );
 
   return (
     <WorkFollowProvider
@@ -305,10 +295,10 @@ export function WorkHeader({
             {isDraft ? null : (
               <div className="mt-7">
                 <GetWork
-                  {...chooser}
                   aside={<FollowControl />}
-                  installedAppVersions={work.installedAppVersions}
                   sendable={sendable}
+                  typeLabel={typeLabel.toLowerCase()}
+                  work={work}
                 />
               </div>
             )}

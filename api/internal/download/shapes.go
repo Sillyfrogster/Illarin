@@ -42,3 +42,24 @@ const (
 	GetRecordedVersionDownloadsParamsNsfwHidden  GetRecordedVersionDownloadsParamsNsfw = "hidden"
 	GetRecordedVersionDownloadsParamsNsfwShown   GetRecordedVersionDownloadsParamsNsfw = "shown"
 )
+
+type FormatComparison struct {
+	Apps    []page.AppName `json:"apps"`
+	Formats []FormatColumn `json:"formats"`
+}
+
+type FormatColumn struct {
+	Id          string         `json:"id"`
+	Label       string         `json:"label"`
+	Type        string         `json:"type"`
+	ReadBy      []string       `json:"readBy"`
+	KeepsUpload bool           `json:"keepsUpload"`
+	Fields      []FieldSupport `json:"fields"`
+}
+
+type FieldSupport struct {
+	Field block.Role `json:"field"`
+	Label string     `json:"label"`
+	Grade string     `json:"grade"`
+	Note  string     `json:"note"`
+}

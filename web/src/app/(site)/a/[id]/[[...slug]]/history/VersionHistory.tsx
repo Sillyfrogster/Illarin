@@ -200,11 +200,7 @@ export function VersionHistory({
                       download
                     ) : null
                   ) : published && !work.hasPrivatePrompts ? (
-                    <VersionDownload
-                      workId={work.id}
-                      typeName={typeName}
-                      version={shown}
-                    />
+                    <VersionDownload workId={work.id} version={shown} />
                   ) : null
                 }
                 key={shown.number}

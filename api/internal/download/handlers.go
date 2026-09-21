@@ -27,6 +27,7 @@ func NewHandlers(downloads *Service, accounts *account.Service) *Handlers {
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
 	routes.Handle(http.MethodGet, "/v1/works/:id/versions/:number/downloads", d.JSON, h.GetRecordedVersionDownloads)
+	routes.Handle(http.MethodGet, "/v1/formats", d.JSON, h.GetFormatTable)
 	routes.Handle(http.MethodGet, "/download/:id", d.Download, h.DownloadSource)
 	routes.Handle(http.MethodGet, "/download/:id/:format", d.Download, h.DownloadExport)
 	registerAliases(routes, h)
@@ -212,6 +213,11 @@ func (h *Handlers) GetRecordedVersionDownloads(c *gin.Context) {
 		Blocks:            blocks,
 		Media:             page.ToImages(offered.Media),
 	})
+}
+
+// GetFormatTable answers the comparison of every format Illarin writes
+func (h *Handlers) GetFormatTable(c *gin.Context) {
+	c.JSON(http.StatusOK, FormatTable(h.downloads.reg))
 }
 
 // ServeSendFile hands a connected app the file it was sent

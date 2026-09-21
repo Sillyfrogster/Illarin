@@ -105,6 +105,12 @@ func (h *Handlers) GetWork(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "could not read the work")
 		return
 	}
+	if page.ReaderApp, ok = ReaderApp(c, h.accounts, nil); !ok {
+		return
+	}
+	if page.ReaderApp != nil && *page.ReaderApp == account.AppAny {
+		page.ReaderApp = nil
+	}
 	if viewerID != nil && !found.IsOwner && found.Lifecycle != work.LifecycleDraft {
 		follow, err := h.notifications.FollowOf(c.Request.Context(), *viewerID, found.ID)
 		if err != nil {
