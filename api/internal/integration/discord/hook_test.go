@@ -172,8 +172,8 @@ func aRelease() Announcement {
 	return Announcement{
 		Title:    "Illarin 2.1 is out",
 		Summary:  "Packs travel with their worldbooks now.",
-		URL:      "https://blog.illarin.test/illarin-2-1",
-		Image:    "https://blog.illarin.test/illarin-2-1/card.png",
+		URL:      "https://illarin.test/blog/illarin-2-1",
+		Image:    "https://illarin.test/blog/illarin-2-1/card.png",
 		Category: "Release",
 		Author:   Author{Name: "Aaron", URL: "https://illarin.test/@aaron"},
 		At:       time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC),
@@ -194,13 +194,13 @@ func TestTheAnnouncementCarriesWhatIllarinDecidedToSay(t *testing.T) {
 	if embed.Description != "Packs travel with their worldbooks now." {
 		t.Errorf("description = %q", embed.Description)
 	}
-	if embed.URL != "https://blog.illarin.test/illarin-2-1" {
+	if embed.URL != "https://illarin.test/blog/illarin-2-1" {
 		t.Errorf("url = %q", embed.URL)
 	}
 	if embed.Timestamp != "2026-09-06T12:00:00Z" {
 		t.Errorf("timestamp = %q", embed.Timestamp)
 	}
-	if embed.Image.URL != "https://blog.illarin.test/illarin-2-1/card.png" {
+	if embed.Image.URL != "https://illarin.test/blog/illarin-2-1/card.png" {
 		t.Errorf("image = %q", embed.Image.URL)
 	}
 	if embed.Author.Name != "Aaron" || embed.Author.URL != "https://illarin.test/@aaron" {

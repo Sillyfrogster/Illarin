@@ -152,7 +152,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("integration secret key: %w", err)
 	}
-	publishing := blog.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
+	publishing := blog.DefaultPublishing(sealing, cfg.SiteURL)
 	posts := blog.NewService(pool, images, publishing)
 	integrations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
 	versions := version.NewService(pool, svc)

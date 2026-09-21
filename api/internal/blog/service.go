@@ -33,15 +33,13 @@ type Publishing struct {
 	Sealing secrets.Key
 	Sender  Sender
 	Site    string
-	Blog    string
 }
 
-func DefaultPublishing(sealing secrets.Key, site, blog string) Publishing {
+func DefaultPublishing(sealing secrets.Key, site string) Publishing {
 	return Publishing{
 		Sealing: sealing,
 		Sender:  dispatch.NewCaller(dispatch.DefaultLimits()),
 		Site:    site,
-		Blog:    blog,
 	}
 }
 
@@ -51,7 +49,6 @@ type Service struct {
 	media  *mediaproc.Library
 	signer dispatch.Key
 	site   string
-	blog   string
 	now    func() time.Time
 }
 
@@ -62,8 +59,8 @@ func NewService(
 ) *Service {
 	s := &Service{
 		pool: pool, media: media, signer: dispatch.NewKey(),
-		site: sending.Site, blog: sending.Blog,
-		now: time.Now,
+		site: sending.Site,
+		now:  time.Now,
 	}
 	s.Service = announcements.NewService(pool, sending.Sealing, sending.Sender, s.summaryWith, func(ctx context.Context, tx pgx.Tx, made announcements.Change) error {
 		return recordActivity(ctx, tx, made)
@@ -338,13 +335,9 @@ func (s *Service) sentByline(ctx context.Context, q db.DBTX, postID uuid.UUID) (
 }
 
 func (s *Service) postAddress(slug string) string {
-	return s.blogAddress("/" + url.PathEscape(slug))
+	return strings.TrimRight(s.site, "/") + "/blog/" + url.PathEscape(slug)
 }
 
 func (s *Service) profileAddress(handle string) string {
 	return strings.TrimRight(s.site, "/") + "/@" + url.PathEscape(handle)
-}
-
-func (s *Service) blogAddress(path string) string {
-	return strings.TrimRight(s.blog, "/") + path
 }

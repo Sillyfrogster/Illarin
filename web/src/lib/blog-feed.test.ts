@@ -44,7 +44,7 @@ const RELEASE: PostSummary = {
 const CATEGORY_SCOPE = {
   name: "Release",
   description: "Everything Illarin has published under Release.",
-  archive: "/category/release",
+  archive: "/blog/category/release",
 };
 
 test("the channel names the publication and the address it answers at", () => {
@@ -52,9 +52,9 @@ test("the channel names the publication and the address it answers at", () => {
   expect(feed).toStartWith('<?xml version="1.0" encoding="UTF-8"?>');
   expect(feed).toContain('<rss version="2.0"');
   expect(feed).toContain("<title>Illarin Blog</title>");
-  expect(feed).toContain("<link>http://blog.localhost:8000/</link>");
+  expect(feed).toContain("<link>http://localhost:8000/blog</link>");
   expect(feed).toContain(
-    '<atom:link href="http://blog.localhost:8000/feed.xml" rel="self"',
+    '<atom:link href="http://localhost:8000/blog/feed.xml" rel="self"',
   );
 });
 
@@ -62,10 +62,10 @@ test("a scoped channel names its own archive and feed", () => {
   const feed = blogFeed(CATEGORY_SCOPE, [RELEASE]);
   expect(feed).toContain("<title>Release · Illarin Blog</title>");
   expect(feed).toContain(
-    "<link>http://blog.localhost:8000/category/release</link>",
+    "<link>http://localhost:8000/blog/category/release</link>",
   );
   expect(feed).toContain(
-    '<atom:link href="http://blog.localhost:8000/category/release/feed.xml" rel="self"',
+    '<atom:link href="http://localhost:8000/blog/category/release/feed.xml" rel="self"',
   );
 });
 
@@ -73,7 +73,7 @@ test("an item carries the summary, attribution, category and public dates", () =
   const feed = blogFeed(BLOG_SCOPE, [RELEASE]);
   expect(feed).toContain("<title>Lumiverse 2.0 is out</title>");
   expect(feed).toContain(
-    "<link>http://blog.localhost:8000/lumiverse-2-0</link>",
+    "<link>http://localhost:8000/blog/lumiverse-2-0</link>",
   );
   expect(feed).toContain(
     "<description>Where announcements, releases and articles live now.</description>",
@@ -94,10 +94,10 @@ test("an item answers to the address the post first published under", () => {
   const corrected: PostSummary = { ...POST, slug: "corrected-address" };
   const feed = blogFeed(BLOG_SCOPE, [corrected]);
   expect(feed).toContain(
-    '<guid isPermaLink="true">http://blog.localhost:8000/first-post</guid>',
+    '<guid isPermaLink="true">http://localhost:8000/blog/first-post</guid>',
   );
   expect(feed).toContain(
-    "<link>http://blog.localhost:8000/corrected-address</link>",
+    "<link>http://localhost:8000/blog/corrected-address</link>",
   );
 });
 
@@ -123,13 +123,13 @@ test("the json feed names itself, its home and the posts it lists", () => {
   const feed = JSON.parse(blogJsonFeed(BLOG_SCOPE, [RELEASE]));
   expect(feed.version).toBe("https://jsonfeed.org/version/1.1");
   expect(feed.title).toBe("Illarin Blog");
-  expect(feed.home_page_url).toBe("http://blog.localhost:8000/");
-  expect(feed.feed_url).toBe("http://blog.localhost:8000/feed.json");
+  expect(feed.home_page_url).toBe("http://localhost:8000/blog");
+  expect(feed.feed_url).toBe("http://localhost:8000/blog/feed.json");
   expect(feed.items).toHaveLength(1);
 
   const [item] = feed.items;
-  expect(item.id).toBe("http://blog.localhost:8000/lumiverse-2-0");
-  expect(item.url).toBe("http://blog.localhost:8000/lumiverse-2-0");
+  expect(item.id).toBe("http://localhost:8000/blog/lumiverse-2-0");
+  expect(item.url).toBe("http://localhost:8000/blog/lumiverse-2-0");
   expect(item.title).toBe("Lumiverse 2.0 is out");
   expect(item.summary).toBe(
     "Where announcements, releases and articles live now.",
@@ -160,8 +160,8 @@ test("a json item answers to the address the post first published under", () => 
   const [item] = JSON.parse(
     blogJsonFeed(BLOG_SCOPE, [{ ...POST, slug: "corrected-address" }]),
   ).items;
-  expect(item.id).toBe("http://blog.localhost:8000/first-post");
-  expect(item.url).toBe("http://blog.localhost:8000/corrected-address");
+  expect(item.id).toBe("http://localhost:8000/blog/first-post");
+  expect(item.url).toBe("http://localhost:8000/blog/corrected-address");
 });
 
 test("an empty publication is still a valid json feed", () => {

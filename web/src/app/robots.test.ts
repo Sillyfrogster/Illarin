@@ -6,13 +6,16 @@ const robots = buildRobots("https://illarin.com");
 const rules = Array.isArray(robots.rules) ? robots.rules[0] : robots.rules;
 const disallowed = [rules.disallow ?? []].flat();
 
-test("points crawlers at the sitemap", () => {
-  expect(robots.sitemap).toBe("https://illarin.com/sitemap.xml");
+test("points crawlers at the site and blog sitemaps", () => {
+  expect(robots.sitemap).toEqual([
+    "https://illarin.com/sitemap.xml",
+    "https://illarin.com/blog/sitemap.xml",
+  ]);
 });
 
-test("the blog origin points crawlers at its own sitemap and nothing else", async () => {
+test("the blog robots route uses the site's address", async () => {
   expect(await GET().text()).toBe(
-    "User-Agent: *\nAllow: /\nSitemap: http://blog.localhost:8000/sitemap.xml\n",
+    "User-Agent: *\nAllow: /\nSitemap: http://localhost:8000/blog/sitemap.xml\n",
   );
 });
 

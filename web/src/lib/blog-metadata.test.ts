@@ -42,12 +42,12 @@ const OVERRIDE = {
   height: 630,
 };
 
-test("a post is canonical at its own address on the blog origin", () => {
+test("a post is canonical under the site origin", () => {
   const metadata = postMetadata(POST);
   expect(metadata.alternates?.canonical).toBe(
-    "http://blog.localhost:8000/first-post",
+    "http://localhost:8000/blog/first-post",
   );
-  expect(metadata.openGraph?.url).toBe("http://blog.localhost:8000/first-post");
+  expect(metadata.openGraph?.url).toBe("http://localhost:8000/blog/first-post");
 });
 
 test("a preview carries the title, the hand-written summary and the dates stored", () => {
@@ -81,14 +81,14 @@ test("a post with no override gets the card Illarin composes for it", () => {
   const metadata = postMetadata(POST);
   expect(metadata.openGraph?.images).toEqual([
     {
-      url: "http://blog.localhost:8000/first-post/card.png",
+      url: "http://localhost:8000/blog/first-post/card.png",
       width: 1200,
       height: 630,
       alt: "Illarin keeps its own writing",
     },
   ]);
   expect(metadata.twitter?.images).toEqual([
-    "http://blog.localhost:8000/first-post/card.png",
+    "http://localhost:8000/blog/first-post/card.png",
   ]);
 });
 
@@ -96,7 +96,7 @@ test("an uploaded override is the preview instead", () => {
   const metadata = postMetadata({ ...POST, linkCardImage: OVERRIDE });
   expect(metadata.openGraph?.images).toEqual([
     {
-      url: "http://blog.localhost:8000/media/5d31391b-cf7e-478f-814b-c6b28639e5a3/og/1",
+      url: "http://localhost:8000/media/5d31391b-cf7e-478f-814b-c6b28639e5a3/og/1",
       width: 1200,
       height: 630,
       alt: "Illarin keeps its own writing",
@@ -108,7 +108,7 @@ test("the article data a search engine reads invents no author or date", () => {
   const article = JSON.parse(postStructuredData(POST));
   expect(article["@type"]).toBe("Article");
   expect(article.headline).toBe("Illarin keeps its own writing");
-  expect(article.url).toBe("http://blog.localhost:8000/first-post");
+  expect(article.url).toBe("http://localhost:8000/blog/first-post");
   expect(article.datePublished).toBe("2026-08-29T10:33:48Z");
   expect(article.dateModified).toBeUndefined();
   expect(article.author).toEqual({
@@ -128,24 +128,24 @@ test("the article data carries the update it has and nothing more", () => {
     postStructuredData({ ...POST, updatedAt: "2026-09-02T11:15:00Z" }),
   );
   expect(article.dateModified).toBe("2026-09-02T11:15:00Z");
-  expect(article.image).toBe("http://blog.localhost:8000/first-post/card.png");
+  expect(article.image).toBe("http://localhost:8000/blog/first-post/card.png");
 });
 
-test("a narrowed archive is canonical on the blog origin and offers its own feeds", () => {
+test("a narrowed archive is canonical under the site origin and offers its own feeds", () => {
   const metadata = blogMetadata(
     "Release",
     archiveDescription("Release"),
-    "/category/release/page/2",
-    "/category/release",
+    "/blog/category/release/page/2",
+    "/blog/category/release",
   );
   expect(metadata.alternates?.canonical).toBe(
-    "http://blog.localhost:8000/category/release/page/2",
+    "http://localhost:8000/blog/category/release/page/2",
   );
   expect(metadata.alternates?.types).toEqual({
     "application/rss+xml":
-      "http://blog.localhost:8000/category/release/feed.xml",
+      "http://localhost:8000/blog/category/release/feed.xml",
     "application/feed+json":
-      "http://blog.localhost:8000/category/release/feed.json",
+      "http://localhost:8000/blog/category/release/feed.json",
   });
 });
 

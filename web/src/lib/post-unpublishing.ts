@@ -7,7 +7,6 @@ export const UNPUBLISHED_MESSAGE = "Illarin took this post out of public view.";
 
 export const UNPUBLISHED_HEADER = "x-unpublished-post";
 
-/** Where the blog's route tree lives inside the application. The proxy maps the blog origin's root onto it. */
 export const BLOG_TREE = "/blog";
 
 export const UNPUBLISHED_ROUTE = `${BLOG_TREE}/unpublished`;

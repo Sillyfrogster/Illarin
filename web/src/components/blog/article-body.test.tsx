@@ -22,10 +22,7 @@ const HELD: PostMedia[] = [PLACED, SECOND].map((id) => ({
 function render(...content: PostBlock[]): string {
   const body: PostBody = { version: POST_BODY_VERSION, content };
   return renderToStaticMarkup(
-    <OriginsProvider
-      blog="https://blog.illarin.test"
-      site="https://illarin.test"
-    >
+    <OriginsProvider site="https://illarin.test">
       <ArticleBody body={body} media={HELD} />
     </OriginsProvider>,
   );

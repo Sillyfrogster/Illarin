@@ -11,12 +11,6 @@ test("an address on Illarin's own hostname stays", () => {
   expect(leavesIllarin("https://illarin.test/browse", SITE)).toBe(false);
 });
 
-test("an address on one of Illarin's other hostnames stays", () => {
-  expect(leavesIllarin("https://blog.illarin.test/first-post", SITE)).toBe(
-    false,
-  );
-});
-
 test("a mailto address is not opened away", () => {
   expect(leavesIllarin("mailto:someone@example.com", SITE)).toBe(false);
 });

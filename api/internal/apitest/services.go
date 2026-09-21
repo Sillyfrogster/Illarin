@@ -72,7 +72,6 @@ func Publishing(to blog.Sender) blog.Publishing {
 		Sealing: SealingKey(),
 		Sender:  to,
 		Site:    "http://localhost:3000",
-		Blog:    "http://blog.localhost:3000",
 	}
 }
 

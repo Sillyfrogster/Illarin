@@ -14,7 +14,6 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { LineLink } from "@/components/ui/line-link";
 import { useAuth } from "@/lib/auth";
-import { useOrigins } from "@/lib/origins";
 import { AccountMenu } from "./AccountMenu";
 import {
   isCurrentPage,
@@ -27,7 +26,6 @@ import { Notch } from "./Notch";
 export function SiteHeader() {
   const pathname = usePathname();
   const { account } = useAuth();
-  const { blog } = useOrigins();
   const publish = publishAction(account);
   const { scrollY } = useScroll();
   const depth = useTransform(scrollY, [0, 40], [0.16, 0.36], { clamp: true });
@@ -51,7 +49,7 @@ export function SiteHeader() {
           aria-label="Primary"
           className="hidden items-center gap-8 text-meta sm:flex"
         >
-          {primaryDestinations(blog).map((item) => (
+          {primaryDestinations().map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -82,7 +80,7 @@ export function SiteHeader() {
               className="hidden items-center gap-2 md:flex"
               aria-label="Primary"
             >
-              {primaryDestinations(blog).map((item) => (
+              {primaryDestinations().map((item) => (
                 <LineLink
                   key={item.href}
                   href={item.href}

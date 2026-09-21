@@ -8,7 +8,7 @@ import type {
   PostMedia,
   PostMediaPurpose,
 } from "@/lib/api/query";
-import { useBlogHost } from "@/lib/origins";
+import { useBlogAddress } from "@/lib/origins";
 import { normalizedSlug } from "@/lib/post-link";
 import type { Draft } from "@/lib/post-writing";
 import { PicturePicker } from "./PicturePicker";
@@ -38,7 +38,7 @@ export function DetailsRail({
     file: File,
   ) => Promise<PostMedia | null>;
 }) {
-  const blogHost = useBlogHost();
+  const blogAddress = useBlogAddress();
 
   return (
     <div className="flex flex-col gap-7">
@@ -59,7 +59,7 @@ export function DetailsRail({
 
       {locked ? null : (
         <Field
-          hint={`${blogHost}/${normalizedSlug(draft.slug) || "…"}. You can change this until you publish. After that it is fixed.`}
+          hint={`${blogAddress}/${normalizedSlug(draft.slug) || "…"}. You can change this until you publish. After that it is fixed.`}
           htmlFor="post-slug"
           label="Address"
         >

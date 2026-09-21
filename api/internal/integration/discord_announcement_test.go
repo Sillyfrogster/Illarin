@@ -389,7 +389,7 @@ func TestAFirstPublicationAnnouncesWhatIllarinDecidedToSay(t *testing.T) {
 	if embed.Description != "What Illarin changed this week." {
 		t.Errorf("description = %q, want the hand-written summary", embed.Description)
 	}
-	if embed.URL != "http://blog.localhost:3000/"+post.Slug {
+	if embed.URL != "http://localhost:3000/blog/"+post.Slug {
 		t.Errorf("url = %q, want the canonical address", embed.URL)
 	}
 	if embed.Author.Name == "" || !strings.Contains(embed.Author.URL, "/@") {

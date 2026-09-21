@@ -8,14 +8,9 @@ import {
 
 export const config = { matcher: ["/((?!_next/).*)"] };
 
-/** Serves the blog origin's root from the blog tree and keeps the main site's old blog addresses pointing there. */
 export async function proxy(request: NextRequest) {
   const route = await routeRequest(
-    {
-      host: request.headers.get("host"),
-      pathname: request.nextUrl.pathname,
-      search: request.nextUrl.search,
-    },
+    { pathname: request.nextUrl.pathname },
     fetchUnpublishedPost,
   );
   switch (route.kind) {
@@ -23,12 +18,8 @@ export async function proxy(request: NextRequest) {
       return;
     case "redirect":
       return NextResponse.redirect(route.to, 308);
-    case "rewrite":
-      return NextResponse.rewrite(new URL(route.to, request.url), {
-        request: { headers: readerHeaders(request) },
-      });
     case "unpublished": {
-      const headers = readerHeaders(request);
+      const headers = new Headers(request.headers);
       headers.set(UNPUBLISHED_HEADER, route.slug);
       return NextResponse.rewrite(new URL(UNPUBLISHED_ROUTE, request.url), {
         request: { headers },
@@ -36,12 +27,4 @@ export async function proxy(request: NextRequest) {
       });
     }
   }
-}
-
-/** The blog origin reads only, so no page beneath it ever sees a cookie or a header the proxy itself sets. */
-function readerHeaders(request: NextRequest): Headers {
-  const headers = new Headers(request.headers);
-  headers.delete("cookie");
-  headers.delete(UNPUBLISHED_HEADER);
-  return headers;
 }

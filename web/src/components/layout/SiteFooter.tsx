@@ -1,13 +1,12 @@
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { shellClasses } from "@/components/layout/Shell";
 import { LineLink } from "@/components/ui/line-link";
-import { blogAddress } from "@/lib/blog-address";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
 import { primaryDestinations } from "./destinations";
 
 export function SiteFooter() {
   const destinations = [
-    ...primaryDestinations(blogAddress("/")),
+    ...primaryDestinations(),
     { label: "Publish", href: "/upload" },
     { label: "Account settings", href: "/settings" },
   ];

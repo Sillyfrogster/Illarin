@@ -13,7 +13,7 @@ import { announcementWord } from "@/lib/blog-announcement-attempt";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
 import { remainingDeletionWindow } from "@/lib/deletion-window";
-import { useBlogHost } from "@/lib/origins";
+import { useBlogAddress } from "@/lib/origins";
 import {
   type PublishAction,
   publishActions,
@@ -151,7 +151,7 @@ function Home({
   refusal: string;
   stamp: number;
 }) {
-  const blogHost = useBlogHost();
+  const blogAddress = useBlogAddress();
   const schedule = post.schedule;
   const waiting =
     schedule &&
@@ -168,7 +168,7 @@ function Home({
           {readersHave(post)}
         </p>
         <p className="font-prose text-meta text-mute wrap-anywhere">
-          {blogHost}/{post.slug}
+          {blogAddress}/{post.slug}
         </p>
         {post.deletion ? (
           <p

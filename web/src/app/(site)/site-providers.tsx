@@ -5,7 +5,7 @@ import { type ReactNode, useState } from "react";
 import { makeQueryClient } from "@/lib/api/query";
 import { AuthProvider } from "@/lib/auth";
 
-/** The account session and its queries, which signed-in pages need and the read-only blog origin must never load. */
+/** The account session and its queries for every page under the site shell. */
 export function SiteProviders({ children }: { children: ReactNode }) {
   const [client] = useState(makeQueryClient);
   return (

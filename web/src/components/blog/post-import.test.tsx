@@ -52,10 +52,7 @@ for (const [name, one] of CARRIED) {
 
   test(`${name} renders without stored markup`, () => {
     const html = renderToStaticMarkup(
-      <OriginsProvider
-        blog="https://blog.illarin.test"
-        site="https://illarin.test"
-      >
+      <OriginsProvider site="https://illarin.test">
         <ArticleBody body={one.body} media={HELD} />
       </OriginsProvider>,
     );

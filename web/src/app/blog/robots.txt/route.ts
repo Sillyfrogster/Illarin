@@ -1,4 +1,5 @@
 import { blogAddress } from "@/lib/blog-address";
+import { BLOG_HOME } from "@/lib/blog-paths";
 
 export const dynamic = "force-dynamic";
 
@@ -6,7 +7,7 @@ function blogRobots(): string {
   return [
     "User-Agent: *",
     "Allow: /",
-    `Sitemap: ${blogAddress("/sitemap.xml")}`,
+    `Sitemap: ${blogAddress(`${BLOG_HOME}/sitemap.xml`)}`,
     "",
   ].join("\n");
 }

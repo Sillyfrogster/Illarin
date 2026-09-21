@@ -21,7 +21,10 @@ export function buildRobots(origin: string): MetadataRoute.Robots {
         "/reset-password",
       ],
     },
-    sitemap: new URL("/sitemap.xml", origin).href,
+    sitemap: [
+      new URL("/sitemap.xml", origin).href,
+      new URL("/blog/sitemap.xml", origin).href,
+    ],
   };
 }
 
