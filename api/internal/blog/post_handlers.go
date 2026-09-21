@@ -545,8 +545,8 @@ func toAPIByline(found Byline) PostByline {
 		Historical:   found.AccountID == nil,
 	}
 	if found.Avatar != nil {
-		shown.Avatar = &profile.ProfileAvatar{
-			Url:    account.AvatarURL(found.Avatar.MediaID, found.Avatar.ImageSizeVersion),
+		shown.Avatar = &profile.ProfilePicture{
+			Url:    account.PictureURL(account.Avatar, found.Avatar.MediaID, found.Avatar.ImageSizeVersion),
 			Width:  found.Avatar.Width,
 			Height: found.Avatar.Height,
 		}
@@ -640,11 +640,11 @@ type PostAuthor struct {
 }
 
 type PostByline struct {
-	Avatar       *profile.ProfileAvatar `json:"avatar,omitempty"`
-	ContactEmail string                 `json:"contactEmail"`
-	DisplayName  string                 `json:"displayName"`
-	Handle       string                 `json:"handle"`
-	Historical   bool                   `json:"historical"`
+	Avatar       *profile.ProfilePicture `json:"avatar,omitempty"`
+	ContactEmail string                  `json:"contactEmail"`
+	DisplayName  string                  `json:"displayName"`
+	Handle       string                  `json:"handle"`
+	Historical   bool                    `json:"historical"`
 }
 
 type PostConflict struct {

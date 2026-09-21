@@ -50,6 +50,13 @@ export function notificationWords(entry: Notification): NotificationWords {
             )
           : null,
       };
+    case "work_published":
+      return {
+        lead: `${entry.creator?.name || `@${entry.creator?.handle ?? "someone"}`} published`,
+        subject: workName,
+        detail: "",
+        href: workPage,
+      };
     case "profile_restricted":
       return {
         lead: "Illarin staff restricted",

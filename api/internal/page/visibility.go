@@ -7,6 +7,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -76,9 +77,16 @@ func (s *Service) Publish(
 		return nil, err
 	}
 
-	var workType, name, lifecycle string
+	var workType, name, lifecycle, visibility, creator, creatorName string
 	var isNSFW *bool
-	err = tx.QueryRow(ctx, `select type, name, is_nsfw, lifecycle from works where id = $1`, workID).Scan(&workType, &name, &isNSFW, &lifecycle)
+	err = tx.QueryRow(ctx, `
+		select owned.type, owned.name, owned.is_nsfw, owned.lifecycle, owned.visibility,
+		       owner.username, coalesce(profile.display_name, '')
+		  from works owned
+		  join users owner on owner.id = owned.owner_id
+		  left join public_profiles profile on profile.user_id = owner.id
+		 where owned.id = $1
+	`, workID).Scan(&workType, &name, &isNSFW, &lifecycle, &visibility, &creator, &creatorName)
 	if err != nil {
 		return nil, fmt.Errorf("read work to publish: %w", err)
 	}
@@ -107,6 +115,14 @@ func (s *Service) Publish(
 	}
 	if _, err := tx.Exec(ctx, `select record_initial_work_version($1, false)`, workID); err != nil {
 		return nil, fmt.Errorf("record initial publication: %w", err)
+	}
+	if work.Visibility(visibility) == work.VisibilityListed {
+		if err := notify.Record(ctx, tx, notify.Event{
+			Type: notify.WorkPublished, Work: &workID,
+			Words: notify.Words{WorkName: name, Creator: creator, CreatorName: creatorName},
+		}); err != nil {
+			return nil, err
+		}
 	}
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
 		return nil, err

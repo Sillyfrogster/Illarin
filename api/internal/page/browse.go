@@ -138,37 +138,7 @@ func (s *Service) Browse(
 
 	page := BrowsePage{Items: make([]BrowseItem, 0, min(len(rows), f.Limit))}
 	for _, row := range rows[:min(len(rows), f.Limit)] {
-		draft := work.Lifecycle(row.Lifecycle) == work.LifecycleDraft
-		item := BrowseItem{
-			ID: uuidFromPgtype(row.ID), Name: row.Name, Creator: row.Creator,
-			Type: row.Type, IsNSFW: boolFromPgtype(row.IsNsfw),
-			Apps: format.AppsReading(row.Formats),
-		}
-		if ownProfile {
-			switch {
-			case draft:
-				item.OwnerState = "draft"
-			case row.TakenDownAt.Valid:
-				item.OwnerState = "taken_down"
-				item.Takedown = &Takedown{
-					Reason: row.TakenDownReason.String,
-					At:     row.TakenDownAt.Time,
-				}
-			case row.Visibility == "unlisted":
-				item.OwnerState = "unlisted"
-			}
-		}
-		if row.CoverID.Valid && row.CoverWidth.Valid && row.CoverHeight.Valid {
-			flagged := item.IsNSFW != nil && *item.IsNSFW
-			item.Cover = &Cover{
-				URL: s.works.ImageAddress(
-					uuidFromPgtype(row.CoverID), "grid",
-					preference != work.NSFWShown && flagged, draft,
-				),
-				Width: int(row.CoverWidth.Int32), Height: int(row.CoverHeight.Int32),
-			}
-		}
-		page.Items = append(page.Items, item)
+		page.Items = append(page.Items, s.browseItem(row, ownProfile, preference))
 	}
 	if len(rows) > f.Limit && len(page.Items) > 0 {
 		last := rows[f.Limit-1]
@@ -225,6 +195,55 @@ func (s *Service) Browse(
 		}
 	}
 	return page, nil
+}
+
+// Featured lists the works a creator chose to show first, in their order, under the reader's adult content setting
+func (s *Service) Featured(ctx context.Context, creatorID uuid.UUID, preference work.NSFWPreference) ([]BrowseItem, error) {
+	rows, err := db.New(s.pool).FeaturedWorks(ctx, db.FeaturedWorksParams{
+		CreatorID: uuidToPgtype(creatorID), NsfwPreference: string(preference),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read featured works: %w", err)
+	}
+	items := make([]BrowseItem, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, s.browseItem(db.BrowseWorksRow(row), false, preference))
+	}
+	return items, nil
+}
+
+func (s *Service) browseItem(row db.BrowseWorksRow, ownProfile bool, preference work.NSFWPreference) BrowseItem {
+	draft := work.Lifecycle(row.Lifecycle) == work.LifecycleDraft
+	item := BrowseItem{
+		ID: uuidFromPgtype(row.ID), Name: row.Name, Creator: row.Creator,
+		Type: row.Type, IsNSFW: boolFromPgtype(row.IsNsfw),
+		Apps: format.AppsReading(row.Formats),
+	}
+	if ownProfile {
+		switch {
+		case draft:
+			item.OwnerState = "draft"
+		case row.TakenDownAt.Valid:
+			item.OwnerState = "taken_down"
+			item.Takedown = &Takedown{
+				Reason: row.TakenDownReason.String,
+				At:     row.TakenDownAt.Time,
+			}
+		case row.Visibility == "unlisted":
+			item.OwnerState = "unlisted"
+		}
+	}
+	if row.CoverID.Valid && row.CoverWidth.Valid && row.CoverHeight.Valid {
+		flagged := item.IsNSFW != nil && *item.IsNSFW
+		item.Cover = &Cover{
+			URL: s.works.ImageAddress(
+				uuidFromPgtype(row.CoverID), "grid",
+				preference != work.NSFWShown && flagged, draft,
+			),
+			Width: int(row.CoverWidth.Int32), Height: int(row.CoverHeight.Int32),
+		}
+	}
+	return item
 }
 
 // countedTypes counts every type in view, and all of them together, under the search and app but without facets

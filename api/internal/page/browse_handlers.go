@@ -98,27 +98,7 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 		return
 	}
 
-	items := make([]BrowseWork, 0, len(found.Items))
-	for _, item := range found.Items {
-		var cover *BrowseCover
-		if item.Cover != nil {
-			cover = &BrowseCover{
-				Url: item.Cover.URL, Width: item.Cover.Width, Height: item.Cover.Height,
-			}
-		}
-		var ownerState *BrowseWorkOwnerState
-		if item.OwnerState != "" {
-			value := BrowseWorkOwnerState(item.OwnerState)
-			ownerState = &value
-		}
-		items = append(items, BrowseWork{
-			Apps: item.Apps,
-			Id:   item.ID, Name: item.Name, Creator: item.Creator,
-			Type: BrowseWorkType(item.Type), IsNsfw: item.IsNSFW, Cover: cover,
-			OwnerState: ownerState,
-			Takedown:   toAPITakedown(item.Takedown),
-		})
-	}
+	items := ToAPIBrowseWorks(found.Items)
 	var next *BrowseCursor
 	if found.Next != nil {
 		next = &BrowseCursor{Before: found.Next.MadeAt, BeforeId: found.Next.ID}
@@ -186,4 +166,30 @@ func (h *Handlers) ListApps(c *gin.Context) {
 		ids = append(ids, app.ID)
 	}
 	c.JSON(http.StatusOK, AppList{Apps: AppNames(ids)})
+}
+
+// ToAPIBrowseWorks writes browse items as the site reads them on a card
+func ToAPIBrowseWorks(found []BrowseItem) []BrowseWork {
+	items := make([]BrowseWork, 0, len(found))
+	for _, item := range found {
+		var cover *BrowseCover
+		if item.Cover != nil {
+			cover = &BrowseCover{
+				Url: item.Cover.URL, Width: item.Cover.Width, Height: item.Cover.Height,
+			}
+		}
+		var ownerState *BrowseWorkOwnerState
+		if item.OwnerState != "" {
+			value := BrowseWorkOwnerState(item.OwnerState)
+			ownerState = &value
+		}
+		items = append(items, BrowseWork{
+			Apps: item.Apps,
+			Id:   item.ID, Name: item.Name, Creator: item.Creator,
+			Type: BrowseWorkType(item.Type), IsNsfw: item.IsNSFW, Cover: cover,
+			OwnerState: ownerState,
+			Takedown:   toAPITakedown(item.Takedown),
+		})
+	}
+	return items
 }

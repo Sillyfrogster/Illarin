@@ -2,6 +2,7 @@ import {
   LockKeyhole,
   LockKeyholeOpen,
   type LucideIcon,
+  Megaphone,
   ShieldCheck,
   ShieldOff,
   Sparkles,
@@ -22,6 +23,7 @@ const MARKS = {
   work_taken_down: { icon: LockKeyhole, tone: TAKEN_TONE },
   work_restored: { icon: LockKeyholeOpen, tone: GIVEN_BACK_TONE },
   work_updated: { icon: Sparkles, tone: NEWS_TONE },
+  work_published: { icon: Megaphone, tone: NEWS_TONE },
   profile_restricted: { icon: ShieldOff, tone: TAKEN_TONE },
   profile_restored: { icon: ShieldCheck, tone: GIVEN_BACK_TONE },
 } satisfies Record<Notification["type"], { icon: LucideIcon; tone: string }>;

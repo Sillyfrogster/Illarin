@@ -227,6 +227,12 @@ type ConnectionRequest struct {
 	PollIntervalSeconds int32
 }
 
+type CreatorFollow struct {
+	AccountID pgtype.UUID
+	CreatorID pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+}
+
 type DailyTotal struct {
 	Day    pgtype.Date
 	Kind   string
@@ -478,6 +484,12 @@ type PrivatePromptApp struct {
 	App    string
 }
 
+type ProfileFeaturedWork struct {
+	UserID   pgtype.UUID
+	Position int32
+	WorkID   pgtype.UUID
+}
+
 type ProfileMedium struct {
 	ID        pgtype.UUID
 	UserID    pgtype.UUID
@@ -495,6 +507,8 @@ type PublicProfile struct {
 	AvatarMediaID pgtype.UUID
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
+	BannerMediaID pgtype.UUID
+	BannerTint    pgtype.Text
 }
 
 type PublicProfileLink struct {

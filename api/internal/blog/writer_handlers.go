@@ -224,8 +224,8 @@ func toAPIWriter(found Writer, shown account.PublicProfile) WriterResponse {
 		Since:       found.Since,
 	}
 	if shown.Avatar != nil {
-		writer.Avatar = &profile.ProfileAvatar{
-			Url:    account.AvatarURL(shown.Avatar.MediaID, shown.Avatar.ImageSizeVersion),
+		writer.Avatar = &profile.ProfilePicture{
+			Url:    account.PictureURL(account.Avatar, shown.Avatar.MediaID, shown.Avatar.ImageSizeVersion),
 			Width:  shown.Avatar.Width,
 			Height: shown.Avatar.Height,
 		}
@@ -270,10 +270,10 @@ type WriterList struct {
 }
 
 type WriterResponse struct {
-	AccountId   uuid.UUID              `json:"accountId"`
-	Avatar      *profile.ProfileAvatar `json:"avatar,omitempty"`
-	DisplayName string                 `json:"displayName"`
-	Handle      string                 `json:"handle"`
-	Restricted  bool                   `json:"restricted"`
-	Since       time.Time              `json:"since"`
+	AccountId   uuid.UUID               `json:"accountId"`
+	Avatar      *profile.ProfilePicture `json:"avatar,omitempty"`
+	DisplayName string                  `json:"displayName"`
+	Handle      string                  `json:"handle"`
+	Restricted  bool                    `json:"restricted"`
+	Since       time.Time               `json:"since"`
 }

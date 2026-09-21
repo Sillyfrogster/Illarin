@@ -949,6 +949,87 @@ func (q *Queries) FailSend(ctx context.Context, arg FailSendParams) error {
 	return err
 }
 
+const featuredWorks = `-- name: FeaturedWorks :many
+select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
+       a.type, a.is_nsfw, a.created_at, a.lifecycle,
+       cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
+       a.visibility, a.taken_down_at, a.taken_down_reason,
+       array(select offered.format ->> 'format'
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+  from profile_featured_works featured
+  join works a on a.id = featured.work_id
+  left join work_summaries summary on summary.work_id = a.id
+  left join users owner on owner.id = a.owner_id
+  left join work_media cover
+    on cover.id = a.cover_media_id and cover.work_id = a.id
+   and cover.is_current
+   and cover.width is not null and cover.height is not null
+   and cover.blob_id is not null
+ where featured.user_id = $1::uuid
+   and a.owner_id = featured.user_id
+   and a.lifecycle = 'published' and a.visibility = 'listed'
+   and a.deleted_at is null and a.taken_down_at is null
+   and ($2::text <> 'hidden' or not a.is_nsfw)
+ order by featured.position
+`
+
+type FeaturedWorksParams struct {
+	CreatorID      pgtype.UUID
+	NsfwPreference string
+}
+
+type FeaturedWorksRow struct {
+	ID              pgtype.UUID
+	Name            string
+	Creator         string
+	Type            string
+	IsNsfw          pgtype.Bool
+	CreatedAt       pgtype.Timestamptz
+	Lifecycle       string
+	CoverID         pgtype.UUID
+	CoverWidth      pgtype.Int4
+	CoverHeight     pgtype.Int4
+	Visibility      string
+	TakenDownAt     pgtype.Timestamptz
+	TakenDownReason pgtype.Text
+	Formats         []string
+}
+
+func (q *Queries) FeaturedWorks(ctx context.Context, arg FeaturedWorksParams) ([]FeaturedWorksRow, error) {
+	rows, err := q.db.Query(ctx, featuredWorks, arg.CreatorID, arg.NsfwPreference)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FeaturedWorksRow
+	for rows.Next() {
+		var i FeaturedWorksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Creator,
+			&i.Type,
+			&i.IsNsfw,
+			&i.CreatedAt,
+			&i.Lifecycle,
+			&i.CoverID,
+			&i.CoverWidth,
+			&i.CoverHeight,
+			&i.Visibility,
+			&i.TakenDownAt,
+			&i.TakenDownReason,
+			&i.Formats,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const handleUnavailable = `-- name: HandleUnavailable :one
 select exists (
     select 1 from users where username = $1

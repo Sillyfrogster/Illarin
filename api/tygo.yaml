@@ -17,8 +17,12 @@ packages:
     output_path: "../web/src/lib/api/shapes/profile.ts"
     enum_style: "union"
     preserve_comments: "none"
+    frontmatter: |
+      import type { BrowseWork } from "./work";
     type_mappings:
+      time.Time: "string"
       uuid.UUID: "string"
+      page.BrowseWork: "BrowseWork"
     include_files:
       - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/notify"
@@ -187,13 +191,13 @@ packages:
       export type { PostMediaResponse as PostMedia };
       export type { PostSummaryResponse as PostSummary };
       export type { PublicPostResponse as PublicPost };
-      import type { ProfileAvatar } from "./profile";
+      import type { ProfilePicture } from "./profile";
       import type { BlogIntegrationChoice } from "./integration";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
       json.RawMessage: "unknown"
-      profile.ProfileAvatar: "ProfileAvatar"
+      profile.ProfilePicture: "ProfilePicture"
       announcements.BlogIntegrationChoice: "BlogIntegrationChoice"
     include_files:
       - "post_deletion_handlers.go"

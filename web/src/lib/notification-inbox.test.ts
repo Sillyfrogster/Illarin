@@ -119,6 +119,32 @@ test("an update without a version label leaves the label out", () => {
   ).toBe("Version 2: Fixed a typo in her greeting");
 });
 
+test("a creator's new work names the creator and opens the work", () => {
+  expect(
+    notificationWords(
+      entry({
+        type: "work_published",
+        reason: undefined,
+        creator: { handle: "wren", name: "Wren Ashdown" },
+      }),
+    ),
+  ).toEqual({
+    lead: "Wren Ashdown published",
+    subject: "Moonlit Archive",
+    detail: "",
+    href: "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive",
+  });
+  expect(
+    notificationWords(
+      entry({
+        type: "work_published",
+        reason: undefined,
+        creator: { handle: "wren", name: "" },
+      }),
+    ).lead,
+  ).toBe("@wren published");
+});
+
 test("a folded entry says how many updates arrived and still shows the latest", () => {
   const words = notificationWords(
     entry({

@@ -24,15 +24,35 @@ const (
 	profileLinkLimit = 6
 )
 
-const avatarSize = "grid"
-
 var (
 	ErrProfileMediaNotFound = errors.New("profile media does not exist")
-	ErrAvatarMissing        = errors.New("profile has no avatar")
+	ErrPictureMissing       = errors.New("profile has no such picture")
 )
 
-func AvatarURL(mediaID uuid.UUID, version uint32) string {
-	return fmt.Sprintf("/media/%s/%s/%d", mediaID, avatarSize, version)
+// Picture names one of the two pictures a profile carries.
+type Picture string
+
+const (
+	Avatar Picture = "avatar"
+	Banner Picture = "banner"
+)
+
+func (p Picture) column() string {
+	if p == Banner {
+		return "banner_media_id"
+	}
+	return "avatar_media_id"
+}
+
+func (p Picture) size() string {
+	if p == Banner {
+		return "detail"
+	}
+	return "grid"
+}
+
+func PictureURL(picture Picture, mediaID uuid.UUID, version uint32) string {
+	return fmt.Sprintf("/media/%s/%s/%d", mediaID, picture.size(), version)
 }
 
 type ProfileLink struct {
@@ -40,7 +60,7 @@ type ProfileLink struct {
 	Address string
 }
 
-type ProfileAvatar struct {
+type ProfilePicture struct {
 	MediaID          uuid.UUID
 	Width            int
 	Height           int
@@ -53,8 +73,12 @@ type PublicProfile struct {
 	DisplayName                    string
 	Biography                      string
 	ContactEmail                   string
-	Avatar                         *ProfileAvatar
+	Avatar                         *ProfilePicture
+	Banner                         *ProfilePicture
+	Tint                           string
 	Links                          []ProfileLink
+	FeaturedWorkIDs                []uuid.UUID
+	Works                          int
 	ShowNSFWContributionsOnProfile bool
 	Restricted                     bool
 }
@@ -68,24 +92,34 @@ type ProfileEdit struct {
 
 func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfile, error) {
 	var found PublicProfile
-	var avatarID *uuid.UUID
-	var width, height *int
+	var avatar, banner storedPicture
+	var tint *string
 	err := s.pool.QueryRow(ctx, `
 		select account.id, account.username, account.show_nsfw_contributions_on_profile,
 		       restricted.user_id is not null,
 		       coalesce(profile.display_name, ''), coalesce(profile.biography, ''),
-		       coalesce(profile.contact_email, ''),
-		       avatar.id, avatar.width, avatar.height
+		       coalesce(profile.contact_email, ''), profile.banner_tint,
+		       avatar.id, avatar.width, avatar.height,
+		       banner.id, banner.width, banner.height,
+		       (select count(*) from works
+		         where owner_id = account.id and lifecycle = 'published' and visibility = 'listed'
+		           and deleted_at is null and taken_down_at is null),
+		       array(select work_id from profile_featured_works
+		              where user_id = account.id order by position)
 		  from users account
 		  left join restricted_profiles restricted on restricted.user_id = account.id
 		  left join public_profiles profile on profile.user_id = account.id
 		  left join profile_media avatar
 		         on avatar.id = profile.avatar_media_id and avatar.blob_id is not null
+		  left join profile_media banner
+		         on banner.id = profile.banner_media_id and banner.blob_id is not null
 		 where account.username = $1
 	`, handle).Scan(
 		&found.ID, &found.Handle, &found.ShowNSFWContributionsOnProfile, &found.Restricted,
-		&found.DisplayName, &found.Biography, &found.ContactEmail,
-		&avatarID, &width, &height,
+		&found.DisplayName, &found.Biography, &found.ContactEmail, &tint,
+		&avatar.id, &avatar.width, &avatar.height,
+		&banner.id, &banner.width, &banner.height,
+		&found.Works, &found.FeaturedWorkIDs,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return PublicProfile{}, ErrProfileNotFound
@@ -99,16 +133,15 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 			Handle:                         found.Handle,
 			ShowNSFWContributionsOnProfile: found.ShowNSFWContributionsOnProfile,
 			Links:                          []ProfileLink{},
+			FeaturedWorkIDs:                []uuid.UUID{},
+			Works:                          found.Works,
 			Restricted:                     true,
 		}, nil
 	}
-	if avatarID != nil && width != nil && height != nil {
-		found.Avatar = &ProfileAvatar{
-			MediaID:          *avatarID,
-			Width:            *width,
-			Height:           *height,
-			ImageSizeVersion: mediaproc.ImageSizeVersion,
-		}
+	found.Avatar = avatar.picture()
+	found.Banner = banner.picture()
+	if found.Banner != nil && tint != nil {
+		found.Tint = *tint
 	}
 	links, err := s.profileLinks(ctx, found.ID)
 	if err != nil {
@@ -161,7 +194,8 @@ func (s *Service) SaveProfile(ctx context.Context, owner api.Account, in Profile
 	return s.PublicProfile(ctx, owner.Handle)
 }
 
-func (s *Service) SetAvatar(ctx context.Context, owner api.Account, file io.Reader) (PublicProfile, error) {
+// SetPicture stores an uploaded avatar or banner, retires the one it replaces and records a banner's tint.
+func (s *Service) SetPicture(ctx context.Context, owner api.Account, picture Picture, file io.Reader) (PublicProfile, error) {
 	if err := s.refuseWhileRestricted(ctx, owner.ID); err != nil {
 		return PublicProfile{}, err
 	}
@@ -171,7 +205,7 @@ func (s *Service) SetAvatar(ctx context.Context, owner api.Account, file io.Read
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return PublicProfile{}, fmt.Errorf("begin avatar change: %w", err)
+		return PublicProfile{}, fmt.Errorf("begin %s change: %w", picture, err)
 	}
 	defer tx.Rollback(ctx)
 	if err := lockProfileForEdit(ctx, tx, owner.ID); err != nil {
@@ -183,21 +217,27 @@ func (s *Service) SetAvatar(ctx context.Context, owner api.Account, file io.Read
 		values ($1, $2, $3, $4, $5)
 	`, mediaID, owner.ID, stored.ID, prepared.Width, prepared.Height)
 	if err != nil {
-		return PublicProfile{}, fmt.Errorf("record avatar: %w", err)
+		return PublicProfile{}, fmt.Errorf("record %s: %w", picture, err)
 	}
-	if err := replaceAvatar(ctx, tx, owner.ID, &mediaID); err != nil {
+	if err := replacePicture(ctx, tx, owner.ID, picture, &mediaID); err != nil {
 		return PublicProfile{}, err
 	}
+	if picture == Banner {
+		if _, err := tx.Exec(ctx, `update public_profiles set banner_tint = $2 where user_id = $1`,
+			owner.ID, nullable(prepared.Tint)); err != nil {
+			return PublicProfile{}, fmt.Errorf("record the banner tint: %w", err)
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
-		return PublicProfile{}, fmt.Errorf("commit avatar change: %w", err)
+		return PublicProfile{}, fmt.Errorf("commit %s change: %w", picture, err)
 	}
 	return s.PublicProfile(ctx, owner.Handle)
 }
 
-func (s *Service) RemoveAvatar(ctx context.Context, owner api.Account) (PublicProfile, error) {
+func (s *Service) RemovePicture(ctx context.Context, owner api.Account, picture Picture) (PublicProfile, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return PublicProfile{}, fmt.Errorf("begin avatar removal: %w", err)
+		return PublicProfile{}, fmt.Errorf("begin %s removal: %w", picture, err)
 	}
 	defer tx.Rollback(ctx)
 	if err := lockProfileForEdit(ctx, tx, owner.ID); err != nil {
@@ -205,21 +245,26 @@ func (s *Service) RemoveAvatar(ctx context.Context, owner api.Account) (PublicPr
 	}
 	var present uuid.UUID
 	err = tx.QueryRow(ctx, `
-		select avatar_media_id from public_profiles
-		 where user_id = $1 and avatar_media_id is not null
+		select `+picture.column()+` from public_profiles
+		 where user_id = $1 and `+picture.column()+` is not null
 		 for update
 	`, owner.ID).Scan(&present)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return PublicProfile{}, ErrAvatarMissing
+		return PublicProfile{}, ErrPictureMissing
 	}
 	if err != nil {
-		return PublicProfile{}, fmt.Errorf("read avatar: %w", err)
+		return PublicProfile{}, fmt.Errorf("read %s: %w", picture, err)
 	}
-	if err := replaceAvatar(ctx, tx, owner.ID, nil); err != nil {
+	if err := replacePicture(ctx, tx, owner.ID, picture, nil); err != nil {
 		return PublicProfile{}, err
 	}
+	if picture == Banner {
+		if _, err := tx.Exec(ctx, `update public_profiles set banner_tint = null where user_id = $1`, owner.ID); err != nil {
+			return PublicProfile{}, fmt.Errorf("clear the banner tint: %w", err)
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
-		return PublicProfile{}, fmt.Errorf("commit avatar removal: %w", err)
+		return PublicProfile{}, fmt.Errorf("commit %s removal: %w", picture, err)
 	}
 	return s.PublicProfile(ctx, owner.Handle)
 }
@@ -259,30 +304,51 @@ func (s *Service) AvatarImageSize(
 	return redirect, s.media.ImageSizeMediaType(), nil
 }
 
-func replaceAvatar(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID, mediaID *uuid.UUID) error {
+func replacePicture(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID, picture Picture, mediaID *uuid.UUID) error {
+	column := picture.column()
 	var superseded *uuid.UUID
-	err := tx.QueryRow(ctx, `
-		select avatar_media_id from public_profiles where user_id = $1
-	`, ownerID).Scan(&superseded)
+	err := tx.QueryRow(ctx, `select `+column+` from public_profiles where user_id = $1`, ownerID).Scan(&superseded)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("read the avatar being replaced: %w", err)
+		return fmt.Errorf("read the %s being replaced: %w", picture, err)
 	}
 	_, err = tx.Exec(ctx, `
-		insert into public_profiles (user_id, avatar_media_id)
+		insert into public_profiles (user_id, `+column+`)
 		values ($1, $2)
 		on conflict (user_id) do update
-		   set avatar_media_id = excluded.avatar_media_id, updated_at = now()
+		   set `+column+` = excluded.`+column+`, updated_at = now()
 	`, ownerID, mediaID)
 	if err != nil {
-		return fmt.Errorf("point the profile at its avatar: %w", err)
+		return fmt.Errorf("point the profile at its %s: %w", picture, err)
 	}
 	if superseded == nil {
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `delete from profile_media where id = $1`, *superseded); err != nil {
-		return fmt.Errorf("drop the superseded avatar: %w", err)
+		return fmt.Errorf("drop the superseded %s: %w", picture, err)
 	}
 	return nil
+}
+
+// storedPicture is one profile_media row as the profile query reads it, absent when every column is null.
+type storedPicture struct {
+	id            *uuid.UUID
+	width, height *int
+}
+
+func (p storedPicture) picture() *ProfilePicture {
+	if p.id == nil || p.width == nil || p.height == nil {
+		return nil
+	}
+	return &ProfilePicture{
+		MediaID: *p.id, Width: *p.width, Height: *p.height, ImageSizeVersion: mediaproc.ImageSizeVersion,
+	}
+}
+
+func nullable(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }
 
 func lockProfileForEdit(ctx context.Context, tx pgx.Tx, ownerID uuid.UUID) error {

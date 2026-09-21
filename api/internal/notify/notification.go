@@ -16,6 +16,7 @@ const (
 	WorkTakenDown     Type = "work_taken_down"
 	WorkRestored      Type = "work_restored"
 	WorkUpdated       Type = "work_updated"
+	WorkPublished     Type = "work_published"
 	ProfileRestricted Type = "profile_restricted"
 	ProfileRestored   Type = "profile_restored"
 )
@@ -27,9 +28,11 @@ type Words struct {
 	UpdateNumber int    `json:"updateNumber,omitempty"`
 	VersionLabel string `json:"versionLabel,omitempty"`
 	Summary      string `json:"summary,omitempty"`
+	Creator      string `json:"creator,omitempty"`
+	CreatorName  string `json:"creatorName,omitempty"`
 }
 
-// Event is one change to tell people about. Without an account, the fan-out works out who hears from the work.
+// Event is one change to tell people about. Without an account, the fan-out tells the work's followers about an update and the creator's followers about a first publication.
 type Event struct {
 	Type    Type
 	Account *uuid.UUID

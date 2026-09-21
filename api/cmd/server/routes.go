@@ -68,7 +68,7 @@ func registerRoutes(r *gin.Engine, s services, d api.Deadlines, ready readiness)
 	posts := blog.NewHandlers(s.Blog, s.Accounts, s.MaxUploadBytes)
 
 	account.Register(routes, account.NewHandlers(s.Accounts, s.Apps, s.Blog))
-	profile.Register(routes, profile.NewHandlers(s.Accounts, s.MaxUploadBytes))
+	profile.Register(routes, profile.NewHandlers(s.Accounts, s.Pages, s.Versions, s.Notifications, s.MaxUploadBytes))
 	notify.Register(routes, notify.NewHandlers(s.Notifications, s.Sends))
 	page.Register(routes, page.NewHandlers(s.Pages, s.Accounts, s.Sends, s.Notifications))
 	edit.Register(routes, edit.NewHandlers(s.Blocks))

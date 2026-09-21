@@ -114,6 +114,29 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
  order by a.created_at desc, a.id desc
  limit sqlc.arg('page_size');
 
+-- name: FeaturedWorks :many
+select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
+       a.type, a.is_nsfw, a.created_at, a.lifecycle,
+       cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
+       a.visibility, a.taken_down_at, a.taken_down_reason,
+       array(select offered.format ->> 'format'
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+  from profile_featured_works featured
+  join works a on a.id = featured.work_id
+  left join work_summaries summary on summary.work_id = a.id
+  left join users owner on owner.id = a.owner_id
+  left join work_media cover
+    on cover.id = a.cover_media_id and cover.work_id = a.id
+   and cover.is_current
+   and cover.width is not null and cover.height is not null
+   and cover.blob_id is not null
+ where featured.user_id = sqlc.arg('creator_id')::uuid
+   and a.owner_id = featured.user_id
+   and a.lifecycle = 'published' and a.visibility = 'listed'
+   and a.deleted_at is null and a.taken_down_at is null
+   and (sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
+ order by featured.position;
+
 -- name: CountBrowseWorks :one
 select count(*)
   from works a

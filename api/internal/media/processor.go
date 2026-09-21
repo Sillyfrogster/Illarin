@@ -94,6 +94,7 @@ type Rendered struct {
 type Prepared struct {
 	Width  int
 	Height int
+	Tint   string
 	Sizes  []Rendered
 }
 
@@ -135,6 +136,7 @@ func (p *Processor) Prepare(ctx context.Context, source io.Reader) (Prepared, er
 	prepared := Prepared{
 		Width:  width,
 		Height: height,
+		Tint:   Tint(decoded),
 		Sizes:  make([]Rendered, 0, len(imageSizes)),
 	}
 	for _, size := range imageSizes {

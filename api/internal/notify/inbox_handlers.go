@@ -203,6 +203,9 @@ func toAPINotification(
 		reason := entry.Words.Reason
 		shown.Reason = &reason
 	}
+	if entry.Words.Creator != "" {
+		shown.Creator = &NotificationCreator{Handle: entry.Words.Creator, Name: entry.Words.CreatorName}
+	}
 	if entry.Type == WorkUpdated {
 		shown.Update = &NotificationUpdate{
 			Number: entry.Words.UpdateNumber, Summary: entry.Words.Summary, Count: entry.Count,

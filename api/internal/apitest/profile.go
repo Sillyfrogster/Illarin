@@ -47,13 +47,23 @@ func SaveProfile(
 
 func AvatarUploadRequest(t *testing.T, file []byte) *http.Request {
 	t.Helper()
+	return profilePictureRequest(t, "/v1/account/profile/avatar", file)
+}
+
+func BannerUploadRequest(t *testing.T, file []byte) *http.Request {
+	t.Helper()
+	return profilePictureRequest(t, "/v1/account/profile/banner", file)
+}
+
+func profilePictureRequest(t *testing.T, path string, file []byte) *http.Request {
+	t.Helper()
 	var body bytes.Buffer
 	form := multipart.NewWriter(&body)
-	WriteFilePartNamed(t, form, "avatar.png", file)
+	WriteFilePartNamed(t, form, "picture.png", file)
 	if err := form.Close(); err != nil {
-		t.Fatalf("close avatar form: %v", err)
+		t.Fatalf("close picture form: %v", err)
 	}
-	request := httptest.NewRequest(http.MethodPut, "/v1/account/profile/avatar", &body)
+	request := httptest.NewRequest(http.MethodPut, path, &body)
 	request.Header.Set("Content-Type", form.FormDataContentType())
 	return request
 }

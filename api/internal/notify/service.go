@@ -124,6 +124,10 @@ func writeEntries(ctx context.Context, tx pgx.Tx, event recorded) error {
 		  from (
 			select $5::uuid where $5::uuid is not null
 			union all
+			select account_id from creator_follows
+			 where $5::uuid is null and $1 = 'work_published'
+			   and creator_id = (select owner_id from works where id = $2)
+			union all
 			select account_id from (
 				select account_id from work_follows
 				 where work_id = $2 and state = 'following'
@@ -138,7 +142,7 @@ func writeEntries(ctx context.Context, tx pgx.Tx, event recorded) error {
 				except
 				select owner_id from works where id = $2
 			) following
-			 where $5::uuid is null
+			 where $5::uuid is null and $1 <> 'work_published'
 		  ) hearer (account_id)
 		on conflict (account_id, work_id) where type = 'work_updated' and read_at is null
 		do update set words = excluded.words,
