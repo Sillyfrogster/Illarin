@@ -7,6 +7,10 @@ generate: site-types ## Regenerate the database code and the site's API types
 site-types: ## Write the site's API types from the Go request and response structs
 	cd api && $(TYGO) generate --config tygo.yaml
 
+.PHONY: copy-inventory
+copy-inventory: ## Print the site and API copy checklist as Markdown
+	@cd web && bun scripts/copy-inventory.ts
+
 .PHONY: refractive-assets
 refractive-assets: ## Generate the refractive art assets
 	cd web && bun scripts/generate-refractive-assets.mjs
