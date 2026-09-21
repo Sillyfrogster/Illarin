@@ -350,7 +350,7 @@ function excerptNoun(element: WorkElement): string {
     case "script_list":
       return "scripts";
     case "record_list":
-      return "Lumia";
+      return "characters";
     default:
       return "items";
   }
@@ -642,7 +642,7 @@ function PackItems({
             </div>
             <div className="min-w-0">
               <h4 className={ITEM_NAME}>
-                {record.lumiaName || `Lumia ${index + 1}`}
+                {record.lumiaName || `Character ${index + 1}`}
               </h4>
               <p className={cn(ITEM_META, "mt-0.5")}>
                 {PACK_PRONOUNS[record.genderIdentity]}

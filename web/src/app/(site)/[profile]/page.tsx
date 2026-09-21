@@ -28,7 +28,7 @@ export async function generateMetadata({
       ? `${profile.displayName} (@${profile.handle})`
       : `@${profile.handle}`,
     profile.biography ||
-      `Characters, lorebooks, presets, themes and packs published by ${profile.handle} on Illarin.`,
+      `Characters, lorebooks, presets, themes and extensions published by ${profile.handle} on Illarin.`,
   );
   return { ...metadata, alternates: { canonical: `/@${profile.handle}` } };
 }

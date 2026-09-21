@@ -77,13 +77,11 @@ test("an acknowledged first install waits for approval", () => {
     "done",
   ]);
   expect(track?.steps[2].label).toBe("Installed");
-  expect(track?.note).toBe(
-    "Installed on desk, switched off until you approve its permissions in Lumiverse.",
-  );
+  expect(track?.note).toBe("Installed on desk.");
   expect(track?.live).toBe(false);
 });
 
-test("an update keeps the extension on and says so", () => {
+test("an update says it updated rather than installed", () => {
   const track = installTrack(
     connectedApp({
       send: send({
@@ -95,9 +93,7 @@ test("an update keeps the extension on and says so", () => {
     }),
   );
   expect(track?.steps[2].label).toBe("Updated");
-  expect(track?.note).toBe(
-    "Updated on desk. It stays on, and Lumiverse asks only about permissions the update adds.",
-  );
+  expect(track?.note).toBe("Updated on desk.");
 });
 
 test("a stopped send shows its reason instead of progress", () => {

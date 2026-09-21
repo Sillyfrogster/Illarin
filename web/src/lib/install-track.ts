@@ -54,7 +54,6 @@ function libraryStanding(app: WorkConnectedApp): Standing | null {
 
 function sendStanding(app: WorkConnectedApp, send: QueuedSend): Standing {
   const here = app.name;
-  const named = app.appName;
   const quiet = { stopped: null, live: false };
   switch (send.state) {
     case "queued":
@@ -76,8 +75,8 @@ function sendStanding(app: WorkConnectedApp, send: QueuedSend): Standing {
         ...quiet,
         steps: steps(3, null, send.updatesInstall ? "Updated" : "Installed"),
         note: send.updatesInstall
-          ? `Updated on ${here}. It stays on, and ${named} asks only about permissions the update adds.`
-          : `Installed on ${here}, switched off until you approve its permissions in ${named}.`,
+          ? `Updated on ${here}.`
+          : `Installed on ${here}.`,
       };
     default:
       return {

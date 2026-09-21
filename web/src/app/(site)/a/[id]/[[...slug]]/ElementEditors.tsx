@@ -424,6 +424,6 @@ export function elementHint(type: WorkElement["type"]): string {
     case "script_list":
       return "Add scripts to find and replace matching text.";
     case "record_list":
-      return "Each Lumia keeps its identity, writing, and avatar together in Pack order.";
+      return "Each character keeps its writing and avatar together, in pack order.";
   }
 }

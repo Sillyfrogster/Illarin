@@ -31,7 +31,7 @@ const PRONOUNS: Array<{
 ];
 
 function recordName(record: LumiaRecord, position: number): string {
-  return record.lumiaName.trim() || `Lumia ${position + 1}`;
+  return record.lumiaName.trim() || `Character ${position + 1}`;
 }
 
 export function PackEditor({
@@ -58,8 +58,8 @@ export function PackEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="This pack has no Lumia yet."
-      noun="Lumia"
+      emptyMessage="This pack has no characters yet."
+      noun="Character"
       onAdd={() =>
         onChange({
           ...content,
@@ -85,7 +85,7 @@ export function PackEditor({
         onChange({ ...content, records: without(records, index) })
       }
       pending={pending}
-      plural="Lumia"
+      plural="Characters"
       rows={records.map((record, index) => ({
         detail: record.authorName.trim() || "No author named",
         id: record.id,
@@ -96,7 +96,7 @@ export function PackEditor({
       }))}
     >
       {(index) => (
-        <LumiaFields
+        <CharacterFields
           workId={workId}
           images={images}
           onChange={(changes) =>
@@ -114,7 +114,7 @@ export function PackEditor({
   );
 }
 
-function LumiaFields({
+function CharacterFields({
   workId,
   images,
   onChange,
