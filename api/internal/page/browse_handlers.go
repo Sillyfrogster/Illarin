@@ -134,6 +134,10 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 			Value: option.Value, Label: option.Label, Count: option.Count, Selected: option.Selected,
 		})
 	}
+	types := make([]BrowseTypeCount, 0, len(found.Types))
+	for _, option := range found.Types {
+		types = append(types, BrowseTypeCount{Value: option.Value, Count: option.Count})
+	}
 	facets := make([]BrowseFacet, 0, len(found.Facets))
 	for _, group := range found.Facets {
 		options := make([]BrowseOption, 0, len(group.Options))
@@ -146,7 +150,7 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, WorkList{
 		App:   app,
-		Types: found.Types,
+		Types: types, AllTypes: found.AllTypes,
 		Items: items, Total: found.Total, Suppressed: found.Suppressed,
 		NSFWPreference: WorkListNSFWPreference(preference),
 		NextCursor:     next, Apps: apps, Facets: facets, EmptyState: empty,

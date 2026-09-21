@@ -155,6 +155,11 @@ const (
 	WorkImageRolePerspectiveLayer WorkImageRole = "perspective_layer"
 )
 
+type BrowseTypeCount struct {
+	Value string `json:"value"`
+	Count int    `json:"count"`
+}
+
 type WorkList struct {
 	App            *string                `json:"app" tstype:"string | null,required"`
 	EmptyState     *WorkListEmptyState    `json:"emptyState" tstype:"WorkListEmptyState | null,required"`
@@ -162,7 +167,8 @@ type WorkList struct {
 	Items          []BrowseWork           `json:"items"`
 	NextCursor     *BrowseCursor          `json:"nextCursor,omitempty"`
 	Apps           []BrowseOption         `json:"apps"`
-	Types          []string               `json:"types"`
+	Types          []BrowseTypeCount      `json:"types"`
+	AllTypes       int                    `json:"allTypes"`
 	Suppressed     int                    `json:"suppressed"`
 	Total          int                    `json:"total"`
 	NSFWPreference WorkListNSFWPreference `json:"nsfwPreference"`

@@ -67,7 +67,8 @@ type BrowsePage struct {
 	Next       *Cursor
 	EmptyState string
 	Apps       []Option
-	Types      []string
+	Types      []Option
+	AllTypes   int
 	Facets     []Filter
 }
 
@@ -205,7 +206,10 @@ func (s *Service) Browse(
 	if err != nil {
 		return BrowsePage{}, err
 	}
-	page.Types = s.typesInView(app, f.Profile != nil)
+	page.Types, page.AllTypes, err = s.countedTypes(ctx, queries, countParams, f.Type, f.Profile != nil)
+	if err != nil {
+		return BrowsePage{}, err
+	}
 	page.Facets, err = countedFacets(ctx, queries, countParams, chosen, facetDefinitions)
 	if err != nil {
 		return BrowsePage{}, err
@@ -221,6 +225,43 @@ func (s *Service) Browse(
 		}
 	}
 	return page, nil
+}
+
+// countedTypes counts every type in view, and all of them together, under the search and app but without facets
+func (s *Service) countedTypes(
+	ctx context.Context,
+	queries *db.Queries,
+	base db.CountBrowseWorksParams,
+	asked string,
+	profile bool,
+) ([]Option, int, error) {
+	base.FacetKeys, base.FacetLows, base.FacetHighs = nil, nil, nil
+	all := base
+	all.Type = ""
+	if base.App == "" && !profile {
+		all.HiddenTypes = s.reg.OneAppTypes()
+	}
+	total, err := queries.CountBrowseWorks(ctx, all)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count every type: %w", err)
+	}
+	types := s.typesInView(base.App, profile)
+	if asked != "" && !slices.Contains(types, asked) && slices.Contains(block.Types(), asked) {
+		types = append(types, asked)
+		slices.Sort(types)
+	}
+	result := make([]Option, 0, len(types))
+	for _, workType := range types {
+		params := base
+		params.Type = workType
+		params.HiddenTypes = nil
+		count, err := queries.CountBrowseWorks(ctx, params)
+		if err != nil {
+			return nil, 0, fmt.Errorf("count type %s: %w", workType, err)
+		}
+		result = append(result, Option{Value: workType, Count: int(count), Selected: workType == asked})
+	}
+	return result, int(total), nil
 }
 
 // typesInView lists the types the reader can narrow to: what their app reads, or every type but those only one app reads

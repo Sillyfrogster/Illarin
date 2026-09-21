@@ -20,6 +20,7 @@ test("the landing gallery keeps public work links and respects adult cover prefe
     app: null,
     apps: [],
     types: [],
+    allTypes: 1,
     total: 1,
     suppressed: 0,
     emptyState: null,

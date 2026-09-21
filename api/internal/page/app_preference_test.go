@@ -2,6 +2,7 @@ package page_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -14,10 +15,16 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/page"
 )
 
+type typeCount struct {
+	Value string `json:"value"`
+	Count int    `json:"count"`
+}
+
 type appReading struct {
-	App   *string `json:"app"`
-	Types []string `json:"types"`
-	Items []struct {
+	App      *string     `json:"app"`
+	Types    []typeCount `json:"types"`
+	AllTypes int         `json:"allTypes"`
+	Items    []struct {
 		Name string   `json:"name"`
 		Apps []string `json:"apps"`
 	} `json:"items"`
@@ -30,6 +37,14 @@ func (r appReading) names() []string {
 		names = append(names, item.Name)
 	}
 	return names
+}
+
+func (r appReading) types() []string {
+	types := []string{}
+	for _, one := range r.Types {
+		types = append(types, fmt.Sprintf("%s:%d", one.Value, one.Count))
+	}
+	return types
 }
 
 func (r appReading) app() string {
@@ -110,8 +125,8 @@ func TestWithNoAppChosenBrowseMarksEveryWorkAndHoldsBackOneAppTypes(t *testing.T
 	if !slices.Equal(unset.Items[0].Apps, []string{"sillytavern", "risu", "lumiverse"}) {
 		t.Errorf("Ana is marked with %v, want every app that reads a card", unset.Items[0].Apps)
 	}
-	if slices.Contains(unset.Types, "theme") || !slices.Contains(unset.Types, "character") {
-		t.Errorf("types in view = %v, want characters and no themes", unset.Types)
+	if !slices.Contains(unset.types(), "character:1") || slices.Contains(unset.types(), "theme:1") || unset.AllTypes != 1 {
+		t.Errorf("types in view = %v of %d, want one character and no themes", unset.types(), unset.AllTypes)
 	}
 	for _, option := range unset.Apps {
 		if option.Value == "sillytavern" && option.Count != 2 {
@@ -122,6 +137,9 @@ func TestWithNoAppChosenBrowseMarksEveryWorkAndHoldsBackOneAppTypes(t *testing.T
 	asked := readApp(t, router, browseRequest("/v1/works?type=theme"))
 	if !slices.Equal(asked.names(), []string{"Midnight violet"}) {
 		t.Errorf("asking for themes returned %v, want the theme", asked.names())
+	}
+	if !slices.Contains(asked.types(), "character:1") || !slices.Contains(asked.types(), "theme:1") || asked.AllTypes != 1 {
+		t.Errorf("asking for themes offered %v of %d, want the theme beside the card", asked.types(), asked.AllTypes)
 	}
 
 	unknown := readApp(t, router, browseRequest("/v1/works?app=notepad"))
@@ -138,13 +156,13 @@ func TestAChosenAppNarrowsTheFeedAndTheTypesToWhatItReads(t *testing.T) {
 	if tavern.app() != "sillytavern" || !slices.Equal(tavern.names(), []string{"Midnight violet", "Ana"}) {
 		t.Errorf("SillyTavern saw %v, want the theme and the card", tavern.names())
 	}
-	if !slices.Equal(tavern.Types, []string{"character", "theme"}) {
-		t.Errorf("SillyTavern types = %v, want character and theme", tavern.Types)
+	if !slices.Equal(tavern.types(), []string{"character:1", "theme:1"}) || tavern.AllTypes != 2 {
+		t.Errorf("SillyTavern types = %v of %d, want a character and a theme", tavern.types(), tavern.AllTypes)
 	}
 
 	risu := readApp(t, router, browseRequest("/v1/works?app=risu"))
-	if !slices.Equal(risu.names(), []string{"Ana"}) || !slices.Equal(risu.Types, []string{"character"}) {
-		t.Errorf("RisuAI saw %v with types %v, want Ana and characters only", risu.names(), risu.Types)
+	if !slices.Equal(risu.names(), []string{"Ana"}) || !slices.Equal(risu.types(), []string{"character:1"}) {
+		t.Errorf("RisuAI saw %v with types %v, want Ana and characters only", risu.names(), risu.types())
 	}
 
 	remembered := &http.Cookie{Name: page.AppCookie, Value: "sillytavern"}
