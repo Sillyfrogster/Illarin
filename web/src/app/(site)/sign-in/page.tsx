@@ -27,8 +27,9 @@ export default async function SignInPage({
 
   return (
     <AuthPage
+      returnTo={returnTo}
+      switchTo={{ href: "/sign-up", label: "Create an account" }}
       title="Sign in to Illarin"
-      introduction="Use Discord or the email address and password on your account."
     >
       <AccountForm
         mode="sign-in"
