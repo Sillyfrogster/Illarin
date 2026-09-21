@@ -24,15 +24,17 @@ func TestTintFavorsTheSaturatedHueOverTheGreyMostOfThePictureIs(t *testing.T) {
 	}
 }
 
-func TestTintOfAGreyPictureIsItsMean(t *testing.T) {
+func TestTintKeepsAVeryDarkOrVeryLightPictureInTheMiddleLightnessBand(t *testing.T) {
 	t.Parallel()
-	picture := image.NewRGBA(image.Rect(0, 0, 10, 10))
-	for y := range 10 {
-		for x := range 10 {
-			picture.Set(x, y, color.RGBA{R: 30, G: 30, B: 30, A: 255})
+	for shade, want := range map[uint8]string{30: "#666666", 240: "#999999"} {
+		picture := image.NewRGBA(image.Rect(0, 0, 10, 10))
+		for y := range 10 {
+			for x := range 10 {
+				picture.Set(x, y, color.RGBA{R: shade, G: shade, B: shade, A: 255})
+			}
 		}
-	}
-	if got := Tint(picture); got != "#1e1e1e" {
-		t.Fatalf("tint = %s, want #1e1e1e", got)
+		if got := Tint(picture); got != want {
+			t.Errorf("tint of grey %d = %s, want %s", shade, got, want)
+		}
 	}
 }

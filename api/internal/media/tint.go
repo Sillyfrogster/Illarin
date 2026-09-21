@@ -12,6 +12,9 @@ const (
 	tintHueBins = 24
 	// A hue has to carry this share of the picture's weight before it counts as its color.
 	tintColorFloor = 0.02
+	// The tint's lightness stays in this band so the page it colors reads the same in both themes.
+	tintDarkest  = 0.4
+	tintLightest = 0.6
 )
 
 // Tint names the color a picture reads as, taking its most saturated hue over its greys.
@@ -62,12 +65,32 @@ func Tint(source image.Image) string {
 	if chosen.weight < plain.weight*tintColorFloor {
 		chosen = plain
 	}
-	mean := color.RGBA{
-		R: uint8(math.Round(chosen.r / chosen.weight)),
-		G: uint8(math.Round(chosen.g / chosen.weight)),
-		B: uint8(math.Round(chosen.b / chosen.weight)),
+	hue, saturation, lightness := hsl(chosen.r/chosen.weight, chosen.g/chosen.weight, chosen.b/chosen.weight)
+	tint := fromHSL(hue, saturation, min(max(lightness, tintDarkest), tintLightest))
+	return fmt.Sprintf("#%02x%02x%02x", tint.R, tint.G, tint.B)
+}
+
+func fromHSL(hue, saturation, lightness float64) color.RGBA {
+	chroma := (1 - math.Abs(2*lightness-1)) * saturation
+	second := chroma * (1 - math.Abs(math.Mod(hue/60, 2)-1))
+	var r, g, b float64
+	switch {
+	case hue < 60:
+		r, g = chroma, second
+	case hue < 120:
+		r, g = second, chroma
+	case hue < 180:
+		g, b = chroma, second
+	case hue < 240:
+		g, b = second, chroma
+	case hue < 300:
+		r, b = second, chroma
+	default:
+		r, b = chroma, second
 	}
-	return fmt.Sprintf("#%02x%02x%02x", mean.R, mean.G, mean.B)
+	lift := lightness - chroma/2
+	channel := func(value float64) uint8 { return uint8(math.Round((value + lift) * 255)) }
+	return color.RGBA{R: channel(r), G: channel(g), B: channel(b), A: 255}
 }
 
 func hsl(red, green, blue float64) (hue, saturation, lightness float64) {
