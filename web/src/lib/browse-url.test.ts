@@ -6,7 +6,6 @@ describe("browse URL state", () => {
     const expression = '  moon tag:"original character" mood:gentle  ';
     const href = buildBrowseHref({
       type: "character",
-      app: "raw",
       q: expression,
       facet: ["tone=gentle"],
     });
@@ -15,16 +14,9 @@ describe("browse URL state", () => {
     expect(url.searchParams.getAll("q")).toEqual([expression]);
     expect(readBrowseFilters(Object.fromEntries(url.searchParams))).toEqual({
       type: "character",
-      app: "raw",
       q: expression,
       facet: ["tone=gentle"],
     });
-  });
-
-  test("still reads a link that named the app under its old name", () => {
-    expect(readBrowseFilters({ platform: "sillytavern" }).app).toBe(
-      "sillytavern",
-    );
   });
 
   test("keeps creator profile filters on the creator profile", () => {

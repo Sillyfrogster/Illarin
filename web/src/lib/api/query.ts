@@ -11,6 +11,8 @@ import type {
   AddedBlogIntegration,
   AddMediaRequest,
   AppFormat,
+  AppList,
+  AppName,
   ArrangeWorkBlocksRequest,
   BlogAnnouncementAttempt,
   BlogAnnouncementAttemptState,
@@ -59,6 +61,7 @@ import type {
   PromptListContent,
   PublicPost,
   QueuedSend,
+  ReaderPreferences,
   ReadinessItem,
   RecordedVersion,
   RecordedVersionDownloads,
@@ -95,6 +98,8 @@ import type {
 } from "./shapes";
 export type {
   AddableBlock,
+  AppName,
+  ReaderPreferences,
   AddedBlogIntegration,
   AppFormat,
   ArrangeWorkBlocksRequest,
@@ -186,10 +191,7 @@ export type BrowsePage = WorkList;
 export type BrowseType = BrowseWork["type"];
 export type NsfwPreference = NsfwPreferenceRequest["preference"];
 
-export type BrowseFilters = Pick<
-  ListWorksParams,
-  "type" | "app" | "q" | "facet"
->;
+export type BrowseFilters = Pick<ListWorksParams, "type" | "q" | "facet">;
 
 export type WorkListParams = BrowseFilters &
   Pick<ListWorksParams, "creator" | "limit" | "before" | "beforeId" | "nsfw">;
@@ -310,6 +312,35 @@ export async function startWork(
     throw new Error("Could not start the work");
   }
   return data;
+}
+
+/** fetchApps lists the apps a reader can pick as theirs. */
+export async function fetchApps(): Promise<AppName[]> {
+  const { data, error } = await api<AppList>("GET", "/v1/apps");
+  if (error || !data) throw new Error("Could not load the apps");
+  return data.apps;
+}
+
+export async function fetchPreferences(): Promise<ReaderPreferences> {
+  const { data, error } = await api<ReaderPreferences>(
+    "GET",
+    "/v1/account/preferences",
+  );
+  if (error || !data) throw new Error("Could not load your preferences");
+  return data;
+}
+
+/** saveAppPreference keeps the reader's app on their account, or in this browser when they are signed out. */
+export async function saveAppPreference(app: string, signedIn: boolean) {
+  if (!signedIn) {
+    // biome-ignore lint/suspicious/noDocumentCookie: Safari has no Cookie Store API, and the server reads this cookie on the next request.
+    document.cookie = `illarin_app=${encodeURIComponent(app)}; path=/; max-age=31536000; samesite=lax`;
+    return;
+  }
+  const { response } = await api<void>("PUT", "/v1/account/app-preference", {
+    body: { app },
+  });
+  if (!response.ok) throw new Error("Could not save your app");
 }
 
 export async function saveNsfwPreference(preference: NsfwPreference) {

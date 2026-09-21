@@ -40,10 +40,12 @@ function groundFor(id: string) {
 }
 
 export function BrowsePoster({
+  apps,
   work,
   eager = false,
   preference,
 }: {
+  apps?: string[];
   work: BrowseWork;
   eager?: boolean;
   preference: NsfwPreference;
@@ -105,16 +107,12 @@ export function BrowsePoster({
         </div>
       )}
 
-      <div className="pt-4">
-        <h3 className="min-h-[2.6em] font-display text-[clamp(1.05rem,1.25vw,1.2rem)] leading-[1.3] font-medium tracking-[-0.02em] [overflow-wrap:anywhere] transition-colors duration-200 group-hover:text-accent motion-reduce:transition-none">
+      <div className="pt-3.5">
+        <h3 className="line-clamp-2 font-display text-[1.0625rem] leading-[1.3] font-medium tracking-[-0.015em] [overflow-wrap:anywhere] transition-colors duration-200 group-hover:text-accent motion-reduce:transition-none">
           {title}
         </h3>
 
-        <p
-          className={cn(
-            "mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-ui text-meta text-mute",
-          )}
-        >
+        <p className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-ui text-meta text-mute">
           <TypeMark
             className="size-3.5 shrink-0 text-accent"
             type={work.type}
@@ -122,12 +120,19 @@ export function BrowsePoster({
           {TYPE_LABELS[work.type]}
           <span aria-hidden="true">·</span>
           <Link
-            className="relative z-1 inline-flex min-h-11 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
+            className="relative z-1 -my-3 inline-flex min-h-11 min-w-0 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
             href={`/@${work.creator}`}
           >
             @{work.creator}
           </Link>
         </p>
+
+        {apps?.length ? (
+          <p className="mt-1.5 font-ui text-label text-mute">
+            <span className="sr-only">Works in </span>
+            {apps.join(" · ")}
+          </p>
+        ) : null}
 
         <div className="mt-2.5 flex flex-wrap gap-2 empty:hidden">
           {work.ownerState ? (

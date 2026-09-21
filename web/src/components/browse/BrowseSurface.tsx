@@ -1,9 +1,10 @@
 "use client";
 
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { SlidersHorizontal, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { Shell } from "@/components/layout/Shell";
+import { ANY_APP } from "@/components/preferences/PreferenceChoices";
 import { Button } from "@/components/ui/button";
 import {
   type BrowseCursor,
@@ -11,27 +12,27 @@ import {
   type BrowsePage,
   fetchWorks,
   type NsfwPreference,
+  saveAppPreference,
   saveNsfwPreference,
   workKeys,
 } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
-import { narrowingsInForce } from "@/lib/browse-narrowing";
 import { cn } from "@/lib/cn";
 import {
   readSessionPreference,
   writeSessionPreference,
 } from "@/lib/nsfw-preference";
-import { PHONE_WIDTH, useMediaQuery } from "@/lib/use-media-query";
 import { BrowsePoster } from "./BrowsePoster";
 import { BrowseSearch } from "./BrowseSearch";
-import { RefineDrawer, RefinePanel } from "./RefinePanel";
-import { TypeRail } from "./TypeRail";
+import { FeatureRow } from "./FeatureRow";
+import { ReaderLine } from "./ReaderLine";
+import { TypeIndex } from "./TypeIndex";
 import { useBrowseNavigation } from "./use-browse-navigation";
 
 const PAGE = 24;
 
 const GRID =
-  "m-0 grid list-none grid-cols-2 items-stretch gap-x-4 gap-y-9 p-0 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 xl:grid-cols-5";
+  "m-0 grid list-none grid-cols-2 items-start gap-x-4 gap-y-9 p-0 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-5";
 
 export function BrowseSurface({
   basePath = "/browse",
@@ -46,20 +47,19 @@ export function BrowseSurface({
   filters: BrowseFilters;
   heading: string;
   initialPage: BrowsePage | null;
-  search?: { label: string; placeholder: string };
+  search: { hint?: string; label: string; placeholder: string };
 }) {
   const queryClient = useQueryClient();
   const { account } = useAuth();
   const { navigate, pending } = useBrowseNavigation(basePath);
   const panel = useId();
-  const phone = useMediaQuery(PHONE_WIDTH);
-  const filtering = (filters.app ? 1 : 0) + (filters.facet?.length ?? 0);
 
-  const [refining, setRefining] = useState(false);
   const [preferenceOverride, setPreferenceOverride] =
     useState<NsfwPreference>();
-  const [preferenceError, setPreferenceError] = useState("");
-  const [savingPreference, setSavingPreference] = useState(false);
+  const [trouble, setTrouble] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [answered, setAnswered] = useState(false);
+  const [adultOpen, setAdultOpen] = useState(false);
   const [dismissedSuppression, setDismissedSuppression] = useState<string>();
 
   useEffect(() => {
@@ -97,38 +97,43 @@ export function BrowseSurface({
   );
   const preference =
     preferenceOverride ?? overview?.nsfwPreference ?? "blurred";
-  const narrowings = narrowingsInForce(filters, overview ?? null);
+  const narrowedTo = overview?.apps.find((app) => app.value === overview.app);
+  const appLabels = useMemo(
+    () => new Map(overview?.apps.map((app) => [app.value, app.label])),
+    [overview?.apps],
+  );
+  const asking = !creator && overview?.app === null && !answered;
   const suppressionKey =
     overview?.nsfwPreference === "hidden" && overview.suppressed > 0
       ? `${JSON.stringify(filters)}:${overview.suppressed}`
       : undefined;
 
-  const choices = {
-    account,
-    filters,
-    id: panel,
-    navigate,
-    overview,
-    preferenceError,
-    savingPreference,
-    setPreference: (next: NsfwPreference) => void setPreference(next),
-    preference,
-  };
+  async function save(write: () => Promise<void>, failed: string) {
+    if (account === undefined || saving) return false;
+    setTrouble("");
+    setSaving(true);
+    try {
+      await write();
+      return true;
+    } catch {
+      setTrouble(failed);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
 
-  function openContentSetting() {
-    setRefining(true);
-    requestAnimationFrame(() => {
-      const group = document.getElementById(`${panel}-adult`);
-      group?.scrollIntoView({ block: "center" });
-      group?.focus({ preventScroll: true });
-    });
+  async function setApp(app: string) {
+    setAnswered(true);
+    const saved = await save(async () => {
+      await saveAppPreference(app, Boolean(account));
+      await queryClient.invalidateQueries({ queryKey: workKeys.all });
+    }, "Your app could not be saved. Try again.");
+    if (!saved) setAnswered(false);
   }
 
   async function setPreference(next: NsfwPreference) {
-    if (account === undefined || savingPreference) return;
-    setPreferenceError("");
-    setSavingPreference(true);
-    try {
+    await save(async () => {
       if (account) {
         await saveNsfwPreference(next);
         await queryClient.invalidateQueries({ queryKey: workKeys.all });
@@ -136,134 +141,92 @@ export function BrowseSurface({
         writeSessionPreference(next);
         setPreferenceOverride(next);
       }
-    } catch {
-      setPreferenceError("That preference could not be saved. Try again.");
-    } finally {
-      setSavingPreference(false);
-    }
+    }, "That preference could not be saved. Try again.");
   }
 
   return (
-    <Shell as="section" aria-labelledby={`${panel}-heading`}>
+    <Shell
+      aria-labelledby={`${panel}-heading`}
+      as="section"
+      className={cn("pb-chapter", creator ? "pt-4" : "pt-6 lg:pt-10")}
+    >
       <h2 className="sr-only" id={`${panel}-heading`}>
         {heading}
       </h2>
 
-      <div className="flex min-w-0 items-center gap-3 border-b border-rule pt-6 pb-5 sm:gap-6">
-        <div className="min-w-0 flex-1">
-          <TypeRail basePath={basePath} filters={filters} navigate={navigate} />
+      <div className="grid gap-y-4 md:grid-cols-[minmax(0,1fr)_minmax(15rem,21rem)] md:gap-x-10">
+        <div className="min-w-0 md:col-span-2">
+          <TypeIndex
+            basePath={basePath}
+            compact={Boolean(creator)}
+            filters={filters}
+            navigate={navigate}
+            overview={overview}
+          />
         </div>
-        <FiltersButton
-          className="max-md:hidden"
-          controls={panel}
-          inUse={filtering}
-          onClick={() => setRefining((open) => !open)}
-          open={refining}
-        />
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-        <FiltersButton
-          className="order-2 ml-auto md:hidden"
-          controls={panel}
-          inUse={filtering}
-          onClick={() => setRefining(true)}
-          open={refining}
-        />
-        <p aria-live="polite" className="order-1 font-ui text-ui text-mute">
-          {overview ? (
-            <>
-              <span className="font-medium text-ink tabular-nums">
-                {overview.total}
-              </span>{" "}
-              {overview.total === 1 ? "work" : "works"}
-              <span aria-hidden="true"> · </span>Newest first
-            </>
-          ) : (
-            "Loading results…"
-          )}
-        </p>
-        {search ? (
-          <div className="order-3 w-full md:order-2 md:w-auto md:min-w-[17rem] md:max-w-[26rem] md:flex-1">
-            <BrowseSearch
-              id={`${panel}-search`}
-              label={search.label}
-              onSearch={(q) => navigate({ ...filters, q })}
-              placeholder={search.placeholder}
-              value={filters.q ?? ""}
+        <div className="min-w-0 md:col-start-1 md:row-start-2 md:self-center">
+          <ReaderLine
+            adultOpen={adultOpen}
+            asking={asking}
+            locked={account === undefined || saving}
+            overview={overview}
+            preference={preference}
+            setAdultOpen={setAdultOpen}
+            setApp={creator ? null : (app) => void setApp(app)}
+            setPreference={(next) => void setPreference(next)}
+            signedIn={Boolean(account)}
+          />
+          {trouble ? (
+            <p className="mt-1 font-ui text-meta text-stop" role="alert">
+              {trouble}
+            </p>
+          ) : null}
+        </div>
+        <div className="min-w-0 md:col-start-2 md:row-start-2 md:self-center">
+          <BrowseSearch
+            hint={search.hint}
+            id={`${panel}-search`}
+            label={search.label}
+            onSearch={(q) => navigate({ ...filters, q })}
+            placeholder={search.placeholder}
+            value={filters.q ?? ""}
+          />
+        </div>
+        {overview?.facets.length ? (
+          <div className="min-w-0 md:col-span-2">
+            <FeatureRow
+              facets={overview.facets}
+              filters={filters}
+              navigate={navigate}
             />
           </div>
         ) : null}
       </div>
 
-      {narrowings.length ? (
-        <ul className="mt-4 flex list-none flex-wrap items-center gap-2 p-0">
-          {narrowings.map((one) => (
-            <li key={one.id}>
-              <button
-                className="group inline-flex min-h-11 max-w-full items-center gap-2 rounded-control bg-accent-wash py-1 pr-2 pl-3 font-ui text-meta text-accent outline-offset-2 transition-colors duration-200 hover:bg-action hover:text-on-accent motion-reduce:transition-none"
-                onClick={() => navigate(one.without)}
-                type="button"
-              >
-                <span className="min-w-0 truncate">
-                  <span className="opacity-70">{one.group}: </span>
-                  <span className="font-medium">{one.label}</span>
-                </span>
-                <X aria-hidden="true" className="size-3.5 shrink-0" />
-                <span className="sr-only">Remove this</span>
-              </button>
-            </li>
-          ))}
-          {narrowings.length > 1 ? (
-            <li>
-              <button
-                className="inline-flex min-h-11 items-center rounded-control px-3 font-ui text-meta font-medium text-mute outline-offset-2 hover:text-ink"
-                onClick={() => navigate({})}
-                type="button"
-              >
-                Clear all
-              </button>
-            </li>
-          ) : null}
-        </ul>
-      ) : null}
-
-      {phone ? (
-        <RefineDrawer
-          {...choices}
-          clear={
-            filtering
-              ? () => navigate({ type: filters.type, q: filters.q })
-              : null
-          }
-          onOpenChange={setRefining}
-          open={refining}
-          pending={pending || query.isFetching}
-          total={overview?.total}
-        />
-      ) : (
-        <div className="mt-6">
-          <RefinePanel {...choices} open={refining} />
-        </div>
-      )}
-
-      <div aria-busy={pending || undefined} className="mt-6 pb-chapter">
+      <div
+        aria-busy={pending || query.isFetching || undefined}
+        className={cn(
+          "mt-10 transition-opacity duration-200 motion-reduce:transition-none",
+          (pending || (query.isFetching && !query.isFetchingNextPage)) &&
+            "opacity-60",
+        )}
+      >
         {suppressionKey && suppressionKey !== dismissedSuppression ? (
           <output className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-plate bg-deep px-5 py-4">
             <span className="font-ui text-ui text-ink">
               {overview.suppressed === 1
-                ? "1 matching creation is hidden by your adult-content preference."
-                : `${overview.suppressed} matching creations are hidden by your adult-content preference.`}
+                ? "1 matching work is hidden by your adult content setting."
+                : `${overview.suppressed} matching works are hidden by your adult content setting.`}
             </span>
             <button
               className="min-h-11 font-ui text-ui font-medium text-accent underline-offset-4 hover:underline"
-              onClick={openContentSetting}
+              onClick={() => setAdultOpen(true)}
               type="button"
             >
-              Change content preference
+              Change adult content
             </button>
             <button
-              aria-label="Dismiss the hidden-results notice"
+              aria-label="Dismiss"
               className="ml-auto grid size-11 place-items-center rounded-control text-mute hover:text-ink"
               onClick={() => setDismissedSuppression(suppressionKey)}
               type="button"
@@ -283,14 +246,23 @@ export function BrowseSurface({
               </Button>
             }
             body="Check your connection, then try again."
-            title="Browse could not load."
+            title="Browse could not load"
           />
         ) : null}
 
         {!query.isPending && !query.isError && overview?.total === 0 ? (
           <Nothing
+            app={
+              narrowedTo &&
+              !filters.type &&
+              !filters.q &&
+              !filters.facet?.length
+                ? narrowedTo.label
+                : undefined
+            }
             clear={() => navigate({})}
             creator={creator}
+            everything={() => void setApp(ANY_APP)}
             show={() => void setPreference("shown")}
             state={overview.emptyState}
             suppressed={overview.suppressed}
@@ -301,10 +273,15 @@ export function BrowseSurface({
           <ul className={GRID}>
             {works.map((work, index) => (
               <BrowsePoster
-                work={work}
+                apps={
+                  narrowedTo
+                    ? undefined
+                    : work.apps.map((app) => appLabels.get(app) ?? app)
+                }
                 eager={index < 5}
                 key={work.id}
                 preference={preference}
+                work={work}
               />
             ))}
           </ul>
@@ -324,43 +301,6 @@ export function BrowseSurface({
         ) : null}
       </div>
     </Shell>
-  );
-}
-
-function FiltersButton({
-  className,
-  controls,
-  inUse,
-  onClick,
-  open,
-}: {
-  className?: string;
-  controls: string;
-  inUse: number;
-  onClick: () => void;
-  open: boolean;
-}) {
-  return (
-    <Button
-      aria-controls={controls}
-      aria-expanded={open}
-      className={cn(
-        "shrink-0",
-        open && "bg-accent-wash text-accent",
-        className,
-      )}
-      onClick={onClick}
-      variant="secondary"
-    >
-      <SlidersHorizontal aria-hidden="true" />
-      Filters
-      {inUse ? (
-        <span className="grid min-w-5 place-items-center rounded-full bg-action px-1.5 text-label text-on-accent tabular-nums">
-          {inUse}
-          <span className="sr-only"> in use</span>
-        </span>
-      ) : null}
-    </Button>
   );
 }
 
@@ -386,7 +326,7 @@ function Message({
   title,
 }: {
   action?: React.ReactNode;
-  body: string;
+  body?: string;
   title: string;
 }) {
   return (
@@ -394,35 +334,38 @@ function Message({
       <h3 className="font-display text-title font-medium tracking-[-0.02em]">
         {title}
       </h3>
-      <p className="mx-auto mt-3 max-w-[46ch] text-prose text-mute">{body}</p>
+      {body ? (
+        <p className="mx-auto mt-3 max-w-[46ch] text-prose text-mute">{body}</p>
+      ) : null}
       {action ? <div className="mt-6 flex justify-center">{action}</div> : null}
     </div>
   );
 }
 
 function Nothing({
+  app,
   clear,
   creator,
+  everything,
   show,
   state,
   suppressed,
 }: {
+  app?: string;
   clear: () => void;
   creator?: string;
+  everything: () => void;
   show: () => void;
   state: BrowsePage["emptyState"];
   suppressed: number;
 }) {
   if (state === "nothing_published") {
     return creator ? (
-      <Message
-        body="This creator has no publicly listed work."
-        title="Nothing published yet."
-      />
+      <Message title="Nothing published yet" />
     ) : (
       <Message
-        body="New work shows here as it is published."
-        title="Nothing has been published yet."
+        body="Upload a character or a lorebook and it shows up here."
+        title="Nothing published yet"
       />
     );
   }
@@ -437,10 +380,23 @@ function Nothing({
         }
         body={
           suppressed === 1
-            ? "One matching work is hidden by your adult-content preference."
-            : `${suppressed} matching works are hidden by your adult-content preference.`
+            ? "1 matching work is hidden by your adult content setting."
+            : `${suppressed} matching works are hidden by your adult content setting.`
         }
-        title="Matching work is hidden."
+        title="Matching works are hidden"
+      />
+    );
+  }
+
+  if (app) {
+    return (
+      <Message
+        action={
+          <Button onClick={everything} variant="primary">
+            Show everything
+          </Button>
+        }
+        title={`Nothing for ${app} yet`}
       />
     );
   }
@@ -449,11 +405,11 @@ function Nothing({
     <Message
       action={
         <Button onClick={clear} variant="primary">
-          Clear the filters
+          Clear filters
         </Button>
       }
       body="Try a different search or remove filters."
-      title="No matches."
+      title="No matches"
     />
   );
 }
