@@ -227,6 +227,13 @@ type ConnectionRequest struct {
 	PollIntervalSeconds int32
 }
 
+type DailyTotal struct {
+	Day    pgtype.Date
+	Kind   string
+	WorkID pgtype.UUID
+	Count  int32
+}
+
 type DownloadRecord struct {
 	ID             int64
 	WorkID         pgtype.UUID
@@ -242,6 +249,12 @@ type EmailVerificationToken struct {
 	UserID    pgtype.UUID
 	Email     string
 	ExpiresAt pgtype.Timestamptz
+}
+
+type Event struct {
+	Kind   string
+	WorkID pgtype.UUID
+	Day    pgtype.Date
 }
 
 type InboxEntry struct {
@@ -319,10 +332,12 @@ type OauthIdentity struct {
 }
 
 type OauthState struct {
-	TokenHash []byte
-	Intent    string
-	UserID    pgtype.UUID
-	ExpiresAt pgtype.Timestamptz
+	TokenHash      []byte
+	Intent         string
+	UserID         pgtype.UUID
+	ExpiresAt      pgtype.Timestamptz
+	AppPreference  pgtype.Text
+	NsfwPreference pgtype.Text
 }
 
 type PasswordResetToken struct {
@@ -573,6 +588,7 @@ type User struct {
 	BannerUrl                      string
 	DefaultIncludeTags             []byte
 	DefaultExcludeTags             []byte
+	AppPreference                  pgtype.Text
 }
 
 type Work struct {

@@ -46,6 +46,52 @@ func AppLabel(id string) string {
 	return id
 }
 
+// KnownApp says whether the registry holds an app with this id
+func KnownApp(id string) bool {
+	return slices.ContainsFunc(Apps(), func(app App) bool { return app.ID == id })
+}
+
+// AppsReading lists the ids of the apps that read at least one of these formats
+func AppsReading(formats []string) []string {
+	ids := []string{}
+	for _, app := range Apps() {
+		if slices.ContainsFunc(formats, func(id string) bool { return slices.Contains(app.Reads, id) }) {
+			ids = append(ids, app.ID)
+		}
+	}
+	return ids
+}
+
+// TypesRead lists the types of the formats an app reads, sorted
+func (r *Registry) TypesRead(app App) []string {
+	types := []string{}
+	for _, id := range app.Reads {
+		if declaration, ok := r.Declaration(id); ok && !slices.Contains(types, declaration.Type) {
+			types = append(types, declaration.Type)
+		}
+	}
+	slices.Sort(types)
+	return types
+}
+
+// OneAppTypes lists the types only one app reads, which browse holds back until a reader picks that app
+func (r *Registry) OneAppTypes() []string {
+	readers := map[string]int{}
+	for _, app := range Apps() {
+		for _, workType := range r.TypesRead(app) {
+			readers[workType]++
+		}
+	}
+	types := []string{}
+	for workType, count := range readers {
+		if count == 1 {
+			types = append(types, workType)
+		}
+	}
+	slices.Sort(types)
+	return types
+}
+
 func reach(formatID string) int {
 	count := 0
 	for _, app := range Apps() {

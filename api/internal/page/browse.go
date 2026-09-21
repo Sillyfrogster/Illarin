@@ -14,11 +14,11 @@ import (
 	"github.com/google/uuid"
 )
 
+// ListFilter holds App as a registry app id, or empty for every app
 type ListFilter struct {
 	Type    string
 	Profile *ProfileListingScope
-	App     *string
-	AppSet  bool
+	App     string
 	Tags    []string
 	Facets  []FacetSelection
 	Query   string
@@ -49,6 +49,7 @@ type Takedown struct {
 }
 
 type BrowseItem struct {
+	Apps       []string
 	ID         uuid.UUID
 	Name       string
 	Creator    string
@@ -66,6 +67,7 @@ type BrowsePage struct {
 	Next       *Cursor
 	EmptyState string
 	Apps       []Option
+	Types      []string
 	Facets     []Filter
 }
 
@@ -107,11 +109,12 @@ func (s *Service) Browse(
 	search := parseBrowseQuery(f.Query)
 	facetDefinitions := block.Facets(f.Type)
 	chosen := declaredFacetSelections(f.Type, f.Facets)
-	app := ""
-	if f.App != nil {
-		app = normalizeBrowseText(*f.App)
-	}
+	app := f.App
 	formats := formatsForApp(app)
+	hidden := []string{}
+	if app == "" && f.Profile == nil && f.Type == "" {
+		hidden = s.reg.OneAppTypes()
+	}
 	facetKeys, facetLows, facetHighs := facetRanges(chosen)
 	creatorID, ownProfile := profileListingValues(f.Profile)
 	params := db.BrowseWorksParams{
@@ -119,7 +122,7 @@ func (s *Service) Browse(
 		CreatorID:  uuidToNullable(creatorID),
 		OwnProfile: ownProfile,
 		SearchText: search.Text, Author: search.Author, Tags: search.Tags,
-		App: app, Formats: formats,
+		App: app, Formats: formats, HiddenTypes: hidden,
 		FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
 		PageSize: int32(f.Limit + 1),
 	}
@@ -138,6 +141,7 @@ func (s *Service) Browse(
 		item := BrowseItem{
 			ID: uuidFromPgtype(row.ID), Name: row.Name, Creator: row.Creator,
 			Type: row.Type, IsNSFW: boolFromPgtype(row.IsNsfw),
+			Apps: format.AppsReading(row.Formats),
 		}
 		if ownProfile {
 			switch {
@@ -175,7 +179,7 @@ func (s *Service) Browse(
 		CreatorID:  uuidToNullable(creatorID),
 		OwnProfile: ownProfile,
 		SearchText: search.Text, Author: search.Author, Tags: search.Tags,
-		App: app, Formats: formats,
+		App: app, Formats: formats, HiddenTypes: hidden,
 		FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
 	}
 	count, err := queries.CountBrowseWorks(ctx, countParams)
@@ -188,7 +192,7 @@ func (s *Service) Browse(
 			ctx, db.CountSuppressedBrowseWorksParams{
 				Type: f.Type, SearchText: search.Text, Author: search.Author, Tags: search.Tags,
 				CreatorID: uuidToNullable(creatorID),
-				App:       app, Formats: formats,
+				App:       app, Formats: formats, HiddenTypes: hidden,
 				FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
 			},
 		)
@@ -201,6 +205,7 @@ func (s *Service) Browse(
 	if err != nil {
 		return BrowsePage{}, err
 	}
+	page.Types = s.typesInView(app, f.Profile != nil)
 	page.Facets, err = countedFacets(ctx, queries, countParams, chosen, facetDefinitions)
 	if err != nil {
 		return BrowsePage{}, err
@@ -209,13 +214,29 @@ func (s *Service) Browse(
 		if page.Suppressed > 0 {
 			page.EmptyState = "suppressed"
 		} else if f.Type == "" && search.Text == "" && search.Author == "" &&
-			len(search.Tags) == 0 && f.App == nil && len(chosen) == 0 {
+			len(search.Tags) == 0 && app == "" && len(chosen) == 0 {
 			page.EmptyState = "nothing_published"
 		} else {
 			page.EmptyState = "no_matches"
 		}
 	}
 	return page, nil
+}
+
+// typesInView lists the types the reader can narrow to: what their app reads, or every type but those only one app reads
+func (s *Service) typesInView(app string, profile bool) []string {
+	for _, known := range format.Apps() {
+		if known.ID == app {
+			return s.reg.TypesRead(known)
+		}
+	}
+	types := slices.Sorted(slices.Values(block.Types()))
+	if profile {
+		return types
+	}
+	return slices.DeleteFunc(types, func(workType string) bool {
+		return slices.Contains(s.reg.OneAppTypes(), workType)
+	})
 }
 
 func profileListingValues(scope *ProfileListingScope) (*uuid.UUID, bool) {
@@ -228,7 +249,7 @@ func profileListingValues(scope *ProfileListingScope) (*uuid.UUID, bool) {
 
 func formatsForApp(chosen string) []string {
 	for _, app := range format.Apps() {
-		if normalizeBrowseText(app.ID) == chosen {
+		if app.ID == chosen {
 			return app.Reads
 		}
 	}
@@ -285,6 +306,7 @@ func countedApps(
 		params := base
 		params.App = app.ID
 		params.Formats = app.Reads
+		params.HiddenTypes = nil
 		count, err := queries.CountBrowseWorks(ctx, params)
 		if err != nil {
 			return nil, fmt.Errorf("count app %s: %w", app.ID, err)

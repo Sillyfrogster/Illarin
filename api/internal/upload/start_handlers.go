@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
@@ -59,5 +60,9 @@ func appAnswerRefusal(workType string) string {
 	if len(apps) == 0 {
 		return "Nothing about this type depends on an app, so do not send one."
 	}
-	return "Say which app this is for: " + strings.Join(apps, " or ") + "."
+	labels := make([]string, len(apps))
+	for i, app := range apps {
+		labels[i] = format.AppLabel(app)
+	}
+	return "Pick the app this " + workType + " is for: " + strings.Join(labels, " or ") + "."
 }

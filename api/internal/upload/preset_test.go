@@ -22,7 +22,7 @@ func TestAPresetCannotBeStartedWithoutSayingWhichAppItIsFor(t *testing.T) {
 			t.Errorf("POST %s status = %d, want 400: %s",
 				body, response.Code, response.Body.String())
 		}
-		if !strings.Contains(response.Body.String(), "sillytavern") {
+		if !strings.Contains(response.Body.String(), "SillyTavern") {
 			t.Errorf("refusal of %s does not name the apps: %s", body, response.Body.String())
 		}
 	}

@@ -753,3 +753,61 @@ func assertDiscordProfile(t *testing.T, pool *pgxpool.Pool, name, avatar, banner
 			storedName, storedAvatar, storedBanner, name, avatar, banner)
 	}
 }
+
+func TestSignUpKeepsTheAppAndAdultContentPickedOnTheSignUpPage(t *testing.T) {
+	t.Parallel()
+	provider := &discordStub{profile: account.DiscordProfile{
+		Subject: "discord-reader-prefs", Username: "Wanderer",
+	}}
+	r := harness.NewRouterWithDiscord(t, provider)
+
+	refused := apitest.SendJSON(t, r, http.MethodPost, "/v1/auth/sign-up", `{
+		"email":"picky@example.com","password":"correct horse battery staple",
+		"handle":"picky","app":"notepad"
+	}`)
+	if refused.Code != http.StatusBadRequest || !strings.Contains(refused.Body.String(), `"app"`) {
+		t.Errorf("an unknown app answered %d %s, want a refusal on the app field", refused.Code, refused.Body.String())
+	}
+
+	byEmail := apitest.SendJSON(t, r, http.MethodPost, "/v1/auth/sign-up", `{
+		"email":"reader@example.com","password":"correct horse battery staple",
+		"handle":"reader","app":"lumiverse","nsfwPreference":"hidden"
+	}`)
+	if byEmail.Code != http.StatusCreated {
+		t.Fatalf("sign up status = %d, want 201: %s", byEmail.Code, byEmail.Body.String())
+	}
+	if got := readPreferences(t, r, byEmail.Result().Cookies()[0]); got != "lumiverse hidden" {
+		t.Errorf("email sign-up saved %s, want lumiverse hidden", got)
+	}
+
+	begin := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord?app=risu&nsfw=shown", nil))
+	if begin.Code != http.StatusSeeOther {
+		t.Fatalf("begin status = %d, want 303: %s", begin.Code, begin.Body.String())
+	}
+	created := apitest.Send(t, r, oauthCallbackRequest(t, begin, "accepted"))
+	session := responseCookie(t, created, api.SessionCookie)
+	if got := readPreferences(t, r, session); got != "risu shown" {
+		t.Errorf("Discord sign-up saved %s, want risu shown", got)
+	}
+
+	again := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/auth/discord?app=sillytavern&nsfw=hidden", nil))
+	returning := apitest.Send(t, r, oauthCallbackRequest(t, again, "accepted"))
+	if got := readPreferences(t, r, responseCookie(t, returning, api.SessionCookie)); got != "risu shown" {
+		t.Errorf("signing in again changed the preferences to %s", got)
+	}
+}
+
+func readPreferences(t *testing.T, r http.Handler, session *http.Cookie) string {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodGet, "/v1/account/preferences", nil)
+	request.AddCookie(session)
+	answer := apitest.Send(t, r, request)
+	var preferences struct {
+		App            *string `json:"app"`
+		NsfwPreference string  `json:"nsfwPreference"`
+	}
+	if err := json.Unmarshal(answer.Body.Bytes(), &preferences); err != nil || preferences.App == nil {
+		t.Fatalf("preferences = %s, want an app", answer.Body.String())
+	}
+	return *preferences.App + " " + preferences.NsfwPreference
+}

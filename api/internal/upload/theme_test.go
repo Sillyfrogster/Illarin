@@ -36,8 +36,8 @@ func TestAThemeAsksWhichAppsNamesItUsesAndSeedsThoseNames(t *testing.T) {
 	request.Header.Set("Content-Type", "application/json")
 	response := apitest.Send(t, r, apitest.Authorized(request, session))
 	if response.Code != http.StatusBadRequest ||
-		!strings.Contains(response.Body.String(), "sillytavern") ||
-		!strings.Contains(response.Body.String(), "lumiverse") {
+		!strings.Contains(response.Body.String(), "SillyTavern") ||
+		!strings.Contains(response.Body.String(), "Lumiverse") {
 		t.Fatalf("theme without an app = %d %s, want a refusal naming both apps",
 			response.Code, response.Body.String())
 	}

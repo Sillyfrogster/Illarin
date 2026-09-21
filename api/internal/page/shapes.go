@@ -156,11 +156,13 @@ const (
 )
 
 type WorkList struct {
+	App            *string                `json:"app" tstype:"string | null,required"`
 	EmptyState     *WorkListEmptyState    `json:"emptyState" tstype:"WorkListEmptyState | null,required"`
 	Facets         []BrowseFacet          `json:"facets"`
 	Items          []BrowseWork           `json:"items"`
 	NextCursor     *BrowseCursor          `json:"nextCursor,omitempty"`
 	Apps           []BrowseOption         `json:"apps"`
+	Types          []string               `json:"types"`
 	Suppressed     int                    `json:"suppressed"`
 	Total          int                    `json:"total"`
 	NSFWPreference WorkListNSFWPreference `json:"nsfwPreference"`
@@ -194,6 +196,7 @@ type WorkTakedown struct {
 }
 
 type BrowseWork struct {
+	Apps       []string              `json:"apps"`
 	Cover      *BrowseCover          `json:"cover" tstype:"BrowseCover | null,required"`
 	Creator    string                `json:"creator"`
 	Id         uuid.UUID             `json:"id"`
@@ -245,6 +248,10 @@ type BrowseOption struct {
 	Label    string `json:"label"`
 	Selected bool   `json:"selected"`
 	Value    string `json:"value"`
+}
+
+type AppList struct {
+	Apps []AppName `json:"apps"`
 }
 
 type DeletedWork struct {

@@ -9,6 +9,7 @@ test("the landing gallery keeps public work links and respects adult cover prefe
       {
         id: "00000000-0000-4000-8000-000000000001",
         name: "Test character",
+        apps: [],
         creator: "example_creator",
         type: "character",
         isNsfw: true,
@@ -16,7 +17,9 @@ test("the landing gallery keeps public work links and respects adult cover prefe
       },
     ],
     facets: [],
+    app: null,
     apps: [],
+    types: [],
     total: 1,
     suppressed: 0,
     emptyState: null,

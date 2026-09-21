@@ -202,7 +202,9 @@ const browseWorks = `-- name: BrowseWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        a.type, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.visibility, a.taken_down_at, a.taken_down_reason
+       a.visibility, a.taken_down_at, a.taken_down_reason,
+       array(select offered.format ->> 'format'
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
   from works a
   left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
@@ -224,19 +226,20 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
              or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
    and ($3::text = '' or a.type = $3::text)
+   and a.type <> all(coalesce($4::text[], '{}'))
    and ($1::boolean
-        or $4::text <> 'hidden' or not a.is_nsfw)
-   and ($5::text = '' or exists (
+        or $5::text <> 'hidden' or not a.is_nsfw)
+   and ($6::text = '' or exists (
         select 1
           from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
-         where offered.format ->> 'format' = any($6::text[])
+         where offered.format ->> 'format' = any($7::text[])
    ))
-   and (cardinality($7::text[]) = 0 or not exists (
+   and (cardinality($8::text[]) = 0 or not exists (
         select 1
-          from unnest($7::text[]) with ordinality as chosen(key, at)
-          join unnest($8::int[]) with ordinality as lows(low, at)
+          from unnest($8::text[]) with ordinality as chosen(key, at)
+          join unnest($9::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($9::int[]) with ordinality as highs(high, at)
+          join unnest($10::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
@@ -244,29 +247,30 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
                  and (highs.high < 0
                       or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($10::text = ''
-        or position($10::text in lower(a.name)) > 0
-        or position($10::text in lower(a.blurb)) > 0
-        or position($10::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($11::text = '' or lower(coalesce(owner.username, '')) = $11::text)
-   and (cardinality($12::text[]) = 0 or not exists (
-        select 1 from unnest($12::text[]) wanted(tag)
+   and ($11::text = ''
+        or position($11::text in lower(a.name)) > 0
+        or position($11::text in lower(a.blurb)) > 0
+        or position($11::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($12::text = '' or lower(coalesce(owner.username, '')) = $12::text)
+   and (cardinality($13::text[]) = 0 or not exists (
+        select 1 from unnest($13::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
          )
    ))
-   and ($13::timestamptz is null
+   and ($14::timestamptz is null
         or (a.created_at, a.id)
-           < ($13::timestamptz, $14::uuid))
+           < ($14::timestamptz, $15::uuid))
  order by a.created_at desc, a.id desc
- limit $15
+ limit $16
 `
 
 type BrowseWorksParams struct {
 	OwnProfile     bool
 	CreatorID      pgtype.UUID
 	Type           string
+	HiddenTypes    []string
 	NsfwPreference string
 	App            string
 	Formats        []string
@@ -295,6 +299,7 @@ type BrowseWorksRow struct {
 	Visibility      string
 	TakenDownAt     pgtype.Timestamptz
 	TakenDownReason pgtype.Text
+	Formats         []string
 }
 
 func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]BrowseWorksRow, error) {
@@ -302,6 +307,7 @@ func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]Bro
 		arg.OwnProfile,
 		arg.CreatorID,
 		arg.Type,
+		arg.HiddenTypes,
 		arg.NsfwPreference,
 		arg.App,
 		arg.Formats,
@@ -336,6 +342,7 @@ func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]Bro
 			&i.Visibility,
 			&i.TakenDownAt,
 			&i.TakenDownReason,
+			&i.Formats,
 		); err != nil {
 			return nil, err
 		}
@@ -472,19 +479,20 @@ select count(*)
              or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
    and ($3::text = '' or a.type = $3::text)
+   and a.type <> all(coalesce($4::text[], '{}'))
    and ($1::boolean
-        or $4::text <> 'hidden' or not a.is_nsfw)
-   and ($5::text = '' or exists (
+        or $5::text <> 'hidden' or not a.is_nsfw)
+   and ($6::text = '' or exists (
         select 1
           from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
-         where offered.format ->> 'format' = any($6::text[])
+         where offered.format ->> 'format' = any($7::text[])
    ))
-   and (cardinality($7::text[]) = 0 or not exists (
+   and (cardinality($8::text[]) = 0 or not exists (
         select 1
-          from unnest($7::text[]) with ordinality as chosen(key, at)
-          join unnest($8::int[]) with ordinality as lows(low, at)
+          from unnest($8::text[]) with ordinality as chosen(key, at)
+          join unnest($9::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($9::int[]) with ordinality as highs(high, at)
+          join unnest($10::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
@@ -492,13 +500,13 @@ select count(*)
                  and (highs.high < 0
                       or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($10::text = ''
-        or position($10::text in lower(a.name)) > 0
-        or position($10::text in lower(a.blurb)) > 0
-        or position($10::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($11::text = '' or lower(coalesce(owner.username, '')) = $11::text)
-   and (cardinality($12::text[]) = 0 or not exists (
-        select 1 from unnest($12::text[]) wanted(tag)
+   and ($11::text = ''
+        or position($11::text in lower(a.name)) > 0
+        or position($11::text in lower(a.blurb)) > 0
+        or position($11::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($12::text = '' or lower(coalesce(owner.username, '')) = $12::text)
+   and (cardinality($13::text[]) = 0 or not exists (
+        select 1 from unnest($13::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
@@ -510,6 +518,7 @@ type CountBrowseWorksParams struct {
 	OwnProfile     bool
 	CreatorID      pgtype.UUID
 	Type           string
+	HiddenTypes    []string
 	NsfwPreference string
 	App            string
 	Formats        []string
@@ -526,6 +535,7 @@ func (q *Queries) CountBrowseWorks(ctx context.Context, arg CountBrowseWorksPara
 		arg.OwnProfile,
 		arg.CreatorID,
 		arg.Type,
+		arg.HiddenTypes,
 		arg.NsfwPreference,
 		arg.App,
 		arg.Formats,
@@ -565,17 +575,18 @@ select count(*)
    and a.deleted_at is null
    and ($1::uuid is null or a.owner_id = $1::uuid)
    and ($2::text = '' or a.type = $2::text)
-   and ($3::text = '' or exists (
+   and a.type <> all(coalesce($3::text[], '{}'))
+   and ($4::text = '' or exists (
         select 1
           from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
-         where offered.format ->> 'format' = any($4::text[])
+         where offered.format ->> 'format' = any($5::text[])
    ))
-   and (cardinality($5::text[]) = 0 or not exists (
+   and (cardinality($6::text[]) = 0 or not exists (
         select 1
-          from unnest($5::text[]) with ordinality as chosen(key, at)
-          join unnest($6::int[]) with ordinality as lows(low, at)
+          from unnest($6::text[]) with ordinality as chosen(key, at)
+          join unnest($7::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($7::int[]) with ordinality as highs(high, at)
+          join unnest($8::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
@@ -583,13 +594,13 @@ select count(*)
                  and (highs.high < 0
                       or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($8::text = ''
-        or position($8::text in lower(a.name)) > 0
-        or position($8::text in lower(a.blurb)) > 0
-        or position($8::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($9::text = '' or lower(coalesce(owner.username, '')) = $9::text)
-   and (cardinality($10::text[]) = 0 or not exists (
-        select 1 from unnest($10::text[]) wanted(tag)
+   and ($9::text = ''
+        or position($9::text in lower(a.name)) > 0
+        or position($9::text in lower(a.blurb)) > 0
+        or position($9::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($10::text = '' or lower(coalesce(owner.username, '')) = $10::text)
+   and (cardinality($11::text[]) = 0 or not exists (
+        select 1 from unnest($11::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
@@ -599,22 +610,24 @@ select count(*)
 `
 
 type CountSuppressedBrowseWorksParams struct {
-	CreatorID  pgtype.UUID
-	Type       string
-	App        string
-	Formats    []string
-	FacetKeys  []string
-	FacetLows  []int32
-	FacetHighs []int32
-	SearchText string
-	Author     string
-	Tags       []string
+	CreatorID   pgtype.UUID
+	Type        string
+	HiddenTypes []string
+	App         string
+	Formats     []string
+	FacetKeys   []string
+	FacetLows   []int32
+	FacetHighs  []int32
+	SearchText  string
+	Author      string
+	Tags        []string
 }
 
 func (q *Queries) CountSuppressedBrowseWorks(ctx context.Context, arg CountSuppressedBrowseWorksParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countSuppressedBrowseWorks,
 		arg.CreatorID,
 		arg.Type,
+		arg.HiddenTypes,
 		arg.App,
 		arg.Formats,
 		arg.FacetKeys,
@@ -1243,15 +1256,17 @@ func (q *Queries) InsertOAuthIdentity(ctx context.Context, arg InsertOAuthIdenti
 }
 
 const insertOAuthState = `-- name: InsertOAuthState :exec
-insert into oauth_states (token_hash, intent, user_id, expires_at)
-values ($1, $2, $3, $4)
+insert into oauth_states (token_hash, intent, user_id, expires_at, app_preference, nsfw_preference)
+values ($1, $2, $3, $4, $5, $6)
 `
 
 type InsertOAuthStateParams struct {
-	TokenHash []byte
-	Intent    string
-	UserID    pgtype.UUID
-	ExpiresAt pgtype.Timestamptz
+	TokenHash      []byte
+	Intent         string
+	UserID         pgtype.UUID
+	ExpiresAt      pgtype.Timestamptz
+	AppPreference  pgtype.Text
+	NsfwPreference pgtype.Text
 }
 
 func (q *Queries) InsertOAuthState(ctx context.Context, arg InsertOAuthStateParams) error {
@@ -1260,6 +1275,8 @@ func (q *Queries) InsertOAuthState(ctx context.Context, arg InsertOAuthStatePara
 		arg.Intent,
 		arg.UserID,
 		arg.ExpiresAt,
+		arg.AppPreference,
+		arg.NsfwPreference,
 	)
 	return err
 }
@@ -2118,6 +2135,25 @@ func (q *Queries) OriginalFileLocation(ctx context.Context, arg OriginalFileLoca
 	return i, err
 }
 
+const preferencesBySessionHash = `-- name: PreferencesBySessionHash :one
+select u.app_preference, u.nsfw_preference
+  from sessions session
+  join users u on u.id = session.user_id
+ where session.token_hash = $1 and session.expires_at > now()
+`
+
+type PreferencesBySessionHashRow struct {
+	AppPreference  pgtype.Text
+	NsfwPreference string
+}
+
+func (q *Queries) PreferencesBySessionHash(ctx context.Context, tokenHash []byte) (PreferencesBySessionHashRow, error) {
+	row := q.db.QueryRow(ctx, preferencesBySessionHash, tokenHash)
+	var i PreferencesBySessionHashRow
+	err := row.Scan(&i.AppPreference, &i.NsfwPreference)
+	return i, err
+}
+
 const profileByHandle = `-- name: ProfileByHandle :one
 select id, username, show_nsfw_contributions_on_profile
   from users where username = $1
@@ -2623,6 +2659,27 @@ func (q *Queries) SendableWorkVersion(ctx context.Context, workID pgtype.UUID) (
 	return number, err
 }
 
+const setAppPreferenceBySessionHash = `-- name: SetAppPreferenceBySessionHash :execrows
+update users u
+   set app_preference = $1, updated_at = now()
+  from sessions session
+ where session.user_id = u.id and session.token_hash = $2
+   and session.expires_at > now()
+`
+
+type SetAppPreferenceBySessionHashParams struct {
+	AppPreference pgtype.Text
+	TokenHash     []byte
+}
+
+func (q *Queries) SetAppPreferenceBySessionHash(ctx context.Context, arg SetAppPreferenceBySessionHashParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setAppPreferenceBySessionHash, arg.AppPreference, arg.TokenHash)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setFirstPassword = `-- name: SetFirstPassword :one
 update users
    set password_hash = $2, updated_at = now()
@@ -2673,6 +2730,24 @@ func (q *Queries) SetNSFWPreferenceBySessionHash(ctx context.Context, arg SetNSF
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const setNewAccountPreferences = `-- name: SetNewAccountPreferences :exec
+update users
+   set app_preference = $1::text,
+       nsfw_preference = coalesce($2::text, nsfw_preference)
+ where id = $3
+`
+
+type SetNewAccountPreferencesParams struct {
+	AppPreference  pgtype.Text
+	NsfwPreference pgtype.Text
+	ID             pgtype.UUID
+}
+
+func (q *Queries) SetNewAccountPreferences(ctx context.Context, arg SetNewAccountPreferencesParams) error {
+	_, err := q.db.Exec(ctx, setNewAccountPreferences, arg.AppPreference, arg.NsfwPreference, arg.ID)
+	return err
 }
 
 const setOriginalFile = `-- name: SetOriginalFile :exec
@@ -2828,18 +2903,25 @@ func (q *Queries) TakeDownWork(ctx context.Context, arg TakeDownWorkParams) (Tak
 const takeOAuthState = `-- name: TakeOAuthState :one
 delete from oauth_states
  where token_hash = $1 and expires_at > now()
-returning intent, user_id
+returning intent, user_id, app_preference, nsfw_preference
 `
 
 type TakeOAuthStateRow struct {
-	Intent string
-	UserID pgtype.UUID
+	Intent         string
+	UserID         pgtype.UUID
+	AppPreference  pgtype.Text
+	NsfwPreference pgtype.Text
 }
 
 func (q *Queries) TakeOAuthState(ctx context.Context, tokenHash []byte) (TakeOAuthStateRow, error) {
 	row := q.db.QueryRow(ctx, takeOAuthState, tokenHash)
 	var i TakeOAuthStateRow
-	err := row.Scan(&i.Intent, &i.UserID)
+	err := row.Scan(
+		&i.Intent,
+		&i.UserID,
+		&i.AppPreference,
+		&i.NsfwPreference,
+	)
 	return i, err
 }
 

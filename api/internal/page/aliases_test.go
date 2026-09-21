@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
@@ -104,6 +103,7 @@ func TestBrowseAndTheWorkPageStillAnswerToTheOldAppNames(t *testing.T) {
 	}`)))
 
 	var listed struct {
+		App       *string          `json:"app"`
 		Items     []map[string]any `json:"items"`
 		Platforms []map[string]any `json:"platforms"`
 		Apps      []map[string]any `json:"apps"`
@@ -112,12 +112,9 @@ func TestBrowseAndTheWorkPageStillAnswerToTheOldAppNames(t *testing.T) {
 	if err := json.Unmarshal(answer.Body.Bytes(), &listed); err != nil {
 		t.Fatalf("decode browse: %v", err)
 	}
-	if len(listed.Items) != 1 || len(listed.Platforms) == 0 || len(listed.Platforms) != len(listed.Apps) {
-		t.Fatalf("browse by platform = %s, want Ana and the app control under both names", answer.Body.String())
-	}
-	if none := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/v1/works?platform=notepad", nil)); !json.Valid(none.Body.Bytes()) ||
-		strings.Contains(none.Body.String(), `"name":"Ana"`) {
-		t.Fatalf("an unknown platform answered %s, want nothing", none.Body.String())
+	if len(listed.Items) != 1 || len(listed.Platforms) == 0 || len(listed.Platforms) != len(listed.Apps) ||
+		listed.App == nil || *listed.App != "sillytavern" {
+		t.Fatalf("browse by platform = %s, want SillyTavern's feed and the app control under both names", answer.Body.String())
 	}
 
 	var page struct {

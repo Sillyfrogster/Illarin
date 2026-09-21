@@ -51,7 +51,9 @@ select a.id, a.type, original.format, a.original_format,
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        a.type, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.visibility, a.taken_down_at, a.taken_down_reason
+       a.visibility, a.taken_down_at, a.taken_down_reason,
+       array(select offered.format ->> 'format'
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
   from works a
   left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
@@ -73,6 +75,7 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
              or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
    and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
+   and a.type <> all(coalesce(sqlc.arg('hidden_types')::text[], '{}'))
    and (sqlc.arg('own_profile')::boolean
         or sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
    and (sqlc.arg('app')::text = '' or exists (
@@ -129,6 +132,7 @@ select count(*)
              or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
    and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
+   and a.type <> all(coalesce(sqlc.arg('hidden_types')::text[], '{}'))
    and (sqlc.arg('own_profile')::boolean
         or sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
    and (sqlc.arg('app')::text = '' or exists (
@@ -173,6 +177,7 @@ select count(*)
    and a.deleted_at is null
    and (sqlc.narg('creator_id')::uuid is null or a.owner_id = sqlc.narg('creator_id')::uuid)
    and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
+   and a.type <> all(coalesce(sqlc.arg('hidden_types')::text[], '{}'))
    and (sqlc.arg('app')::text = '' or exists (
         select 1
           from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
@@ -409,6 +414,25 @@ update users u
  where session.user_id = u.id and session.token_hash = $2
    and session.expires_at > now();
 
+-- name: PreferencesBySessionHash :one
+select u.app_preference, u.nsfw_preference
+  from sessions session
+  join users u on u.id = session.user_id
+ where session.token_hash = $1 and session.expires_at > now();
+
+-- name: SetAppPreferenceBySessionHash :execrows
+update users u
+   set app_preference = $1, updated_at = now()
+  from sessions session
+ where session.user_id = u.id and session.token_hash = $2
+   and session.expires_at > now();
+
+-- name: SetNewAccountPreferences :exec
+update users
+   set app_preference = sqlc.narg('app_preference')::text,
+       nsfw_preference = coalesce(sqlc.narg('nsfw_preference')::text, nsfw_preference)
+ where id = sqlc.arg('id');
+
 -- name: VerificationByHash :one
 select user_id, email
   from email_verification_tokens
@@ -481,13 +505,13 @@ update users
 returning id, username, email, email_verified_at;
 
 -- name: InsertOAuthState :exec
-insert into oauth_states (token_hash, intent, user_id, expires_at)
-values ($1, $2, $3, $4);
+insert into oauth_states (token_hash, intent, user_id, expires_at, app_preference, nsfw_preference)
+values ($1, $2, $3, $4, $5, $6);
 
 -- name: TakeOAuthState :one
 delete from oauth_states
  where token_hash = $1 and expires_at > now()
-returning intent, user_id;
+returning intent, user_id, app_preference, nsfw_preference;
 
 -- name: LockOAuthIdentity :one
 select 1 from pg_advisory_xact_lock(

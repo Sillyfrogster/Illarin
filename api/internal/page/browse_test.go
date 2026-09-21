@@ -90,7 +90,7 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	}
 	wantKeys := map[string]bool{
 		"id": true, "name": true, "creator": true, "type": true,
-		"isNsfw": true, "cover": true, "kind": true,
+		"isNsfw": true, "cover": true, "kind": true, "apps": true,
 	}
 	for key := range body.Items[0] {
 		if !wantKeys[key] {
@@ -407,8 +407,8 @@ func TestTheAppControlNamesAppsAndMatchesThroughOfferedFormats(t *testing.T) {
 		t.Fatalf("SillyTavern returned %v, want Ana", named.Names)
 	}
 	unknown := readBrowse(t, router, "/v1/works?app=notepad")
-	if len(unknown.Names) != 0 {
-		t.Fatalf("an app Illarin does not name returned %v", unknown.Names)
+	if !slices.Equal(unknown.Names, []string{"Ana"}) {
+		t.Fatalf("an app Illarin does not name returned %v, want it ignored", unknown.Names)
 	}
 }
 

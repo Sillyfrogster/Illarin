@@ -125,6 +125,12 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (api.Account, stri
 			Message: "Enter a password.",
 		}
 	}
+	if in.App != "" && !ValidApp(in.App) {
+		return api.Account{}, "", time.Time{}, FieldError{Field: "app", Message: "Choose one of the apps listed, or any."}
+	}
+	if in.NSFW != "" && !in.NSFW.valid() {
+		return api.Account{}, "", time.Time{}, FieldError{Field: "nsfwPreference", Message: "Choose hidden, blurred or shown."}
+	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword(passwordMaterial(in.Password), s.passwordCost)
 	if err != nil {
@@ -185,6 +191,9 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (api.Account, stri
 	})
 	if err != nil {
 		return api.Account{}, "", time.Time{}, fmt.Errorf("create account: %w", err)
+	}
+	if err := queries.SetNewAccountPreferences(ctx, newAccountPreferences(row.ID, in.App, in.NSFW)); err != nil {
+		return api.Account{}, "", time.Time{}, fmt.Errorf("save preferences: %w", err)
 	}
 	if err := queries.InsertEmailVerificationToken(ctx, db.InsertEmailVerificationTokenParams{
 		TokenHash: verificationHash,
@@ -256,7 +265,7 @@ func (s *Service) SetNSFWPreference(
 	token string,
 	preference NSFWPreference,
 ) error {
-	if preference != NSFWHidden && preference != NSFWBlurred && preference != NSFWShown {
+	if !preference.valid() {
 		return FieldError{Field: "visibility", Message: "Choose hidden, blurred or shown."}
 	}
 	hash, ok := credentialHash(token)
@@ -277,6 +286,56 @@ func (s *Service) SetNSFWPreference(
 		return ErrUnauthorized
 	}
 	return nil
+}
+
+// Preferences reads the signed-in reader's choices, or the defaults for a reader signed out
+func (s *Service) Preferences(ctx context.Context, token string) (Preferences, error) {
+	signedOut := Preferences{NSFW: NSFWBlurred}
+	hash, ok := credentialHash(token)
+	if !ok {
+		return signedOut, nil
+	}
+	row, err := db.New(s.pool).PreferencesBySessionHash(ctx, hash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return signedOut, nil
+	}
+	if err != nil {
+		return Preferences{}, fmt.Errorf("read preferences: %w", err)
+	}
+	preferences := Preferences{NSFW: NSFWPreference(row.NsfwPreference)}
+	if row.AppPreference.Valid && ValidApp(row.AppPreference.String) {
+		preferences.App = &row.AppPreference.String
+	}
+	return preferences, nil
+}
+
+func (s *Service) SetAppPreference(ctx context.Context, token string, app string) error {
+	if !ValidApp(app) {
+		return FieldError{Field: "app", Message: "Choose one of the apps listed, or any."}
+	}
+	hash, ok := credentialHash(token)
+	if !ok {
+		return ErrUnauthorized
+	}
+	changed, err := db.New(s.pool).SetAppPreferenceBySessionHash(ctx, db.SetAppPreferenceBySessionHashParams{
+		AppPreference: text(app),
+		TokenHash:     hash,
+	})
+	if err != nil {
+		return fmt.Errorf("save app preference: %w", err)
+	}
+	if changed == 0 {
+		return ErrUnauthorized
+	}
+	return nil
+}
+
+func newAccountPreferences(id pgtype.UUID, app string, nsfw NSFWPreference) db.SetNewAccountPreferencesParams {
+	return db.SetNewAccountPreferencesParams{
+		ID:             id,
+		AppPreference:  pgtype.Text{String: app, Valid: app != ""},
+		NsfwPreference: pgtype.Text{String: string(nsfw), Valid: nsfw != ""},
+	}
 }
 
 func (s *Service) VerifyEmail(ctx context.Context, token string) (api.Account, error) {

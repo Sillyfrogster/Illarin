@@ -3,6 +3,7 @@ package page
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
@@ -28,6 +29,30 @@ func ReaderNSFWPreference(
 		return "", false
 	}
 	return work.NSFWPreference(preference), true
+}
+
+// AppCookie remembers a signed-out reader's app preference in their browser
+const AppCookie = "illarin_app"
+
+// ReaderApp picks the reader's app from the request, then their account, then their browser, returning nil when none says
+func ReaderApp(c *gin.Context, accounts *account.Service, requested *string) (*string, bool) {
+	if requested != nil {
+		if chosen := strings.ToLower(strings.TrimSpace(*requested)); account.ValidApp(chosen) {
+			return &chosen, true
+		}
+	}
+	preferences, err := accounts.Preferences(c.Request.Context(), api.SessionToken(c))
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "could not read the app preference")
+		return nil, false
+	}
+	if preferences.App != nil {
+		return preferences.App, true
+	}
+	if remembered, err := c.Cookie(AppCookie); err == nil && account.ValidApp(remembered) {
+		return &remembered, true
+	}
+	return nil, true
 }
 
 func (h *Handlers) GetWork(c *gin.Context) {

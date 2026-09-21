@@ -7,6 +7,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -54,9 +55,6 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	if params.Type != nil {
 		f.Type = string(*params.Type)
 	}
-	if params.App != nil {
-		f.App, f.AppSet = params.App, true
-	}
 	if params.Q != nil {
 		f.Query = *params.Q
 	}
@@ -83,6 +81,17 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	if !ok {
 		return
 	}
+	var app *string
+	if f.Profile == nil {
+		if app, ok = ReaderApp(c, h.accounts, params.App); !ok {
+			return
+		}
+	} else if params.App != nil && account.ValidApp(*params.App) {
+		app = params.App
+	}
+	if app != nil && *app != account.AppAny {
+		f.App = *app
+	}
 	found, err := h.works.Browse(c.Request.Context(), f, preference)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "could not list works")
@@ -103,7 +112,8 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 			ownerState = &value
 		}
 		items = append(items, BrowseWork{
-			Id: item.ID, Name: item.Name, Creator: item.Creator,
+			Apps: item.Apps,
+			Id:   item.ID, Name: item.Name, Creator: item.Creator,
 			Type: BrowseWorkType(item.Type), IsNsfw: item.IsNSFW, Cover: cover,
 			OwnerState: ownerState,
 			Takedown:   toAPITakedown(item.Takedown),
@@ -135,6 +145,8 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 		facets = append(facets, BrowseFacet{Key: group.Key, Label: group.Label, Options: options})
 	}
 	c.JSON(http.StatusOK, WorkList{
+		App:   app,
+		Types: found.Types,
 		Items: items, Total: found.Total, Suppressed: found.Suppressed,
 		NSFWPreference: WorkListNSFWPreference(preference),
 		NextCursor:     next, Apps: apps, Facets: facets, EmptyState: empty,
@@ -161,4 +173,13 @@ func parseFacets(raw []string) []FacetSelection {
 		out = append(out, FacetSelection{Key: key, Value: value})
 	}
 	return out
+}
+
+// ListApps lists the apps a reader can pick as theirs
+func (h *Handlers) ListApps(c *gin.Context) {
+	ids := make([]string, 0, len(format.Apps()))
+	for _, app := range format.Apps() {
+		ids = append(ids, app.ID)
+	}
+	c.JSON(http.StatusOK, AppList{Apps: AppNames(ids)})
 }

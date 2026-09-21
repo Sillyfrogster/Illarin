@@ -35,11 +35,14 @@ func (h *Handlers) SignUp(c *gin.Context) {
 		return
 	}
 
-	created, token, expires, err := h.accounts.SignUp(c.Request.Context(), SignUpInput{
-		Email:    string(request.Email),
-		Password: request.Password,
-		Handle:   request.Handle,
-	})
+	input := SignUpInput{Email: request.Email, Password: request.Password, Handle: request.Handle}
+	if request.App != nil {
+		input.App = *request.App
+	}
+	if request.NsfwPreference != nil {
+		input.NSFW = NSFWPreference(*request.NsfwPreference)
+	}
+	created, token, expires, err := h.accounts.SignUp(c.Request.Context(), input)
 	if err != nil {
 		h.accountError(c, err)
 		return
@@ -77,6 +80,8 @@ func (h *Handlers) BeginDiscord(c *gin.Context) {
 	params := BeginDiscordParams{
 		Intent:   api.QueryText[BeginDiscordParamsIntent](q, "intent"),
 		ReturnTo: api.QueryText[string](q, "returnTo"),
+		App:      api.QueryText[string](q, "app"),
+		Nsfw:     api.QueryText[string](q, "nsfw"),
 	}
 	if q.Refused(c) {
 		return
@@ -85,8 +90,20 @@ func (h *Handlers) BeginDiscord(c *gin.Context) {
 	if params.Intent != nil && *params.Intent == BeginDiscordParamsIntentAttach {
 		intent = DiscordAttach
 	}
+	app, nsfw := "", NSFWPreference("")
+	if params.App != nil {
+		app = *params.App
+	}
+	if params.Nsfw != nil {
+		nsfw = NSFWPreference(*params.Nsfw)
+	}
 	token := api.SessionToken(c)
-	authorization, err := h.accounts.BeginDiscord(c.Request.Context(), token, intent)
+	authorization, err := h.accounts.BeginDiscord(c.Request.Context(), token, intent, app, nsfw)
+	var field FieldError
+	if errors.As(err, &field) {
+		api.Refuse(c, http.StatusBadRequest, field.Message)
+		return
+	}
 	if errors.Is(err, ErrDiscordUnavailable) {
 		api.Refuse(c, http.StatusServiceUnavailable, "Discord sign-in is not available.")
 		return
@@ -386,6 +403,47 @@ func (h *Handlers) SetNsfwPreference(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+func (h *Handlers) GetPreferences(c *gin.Context) {
+	current, err := api.Current(c)
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
+		return
+	}
+	if current == nil {
+		api.Refuse(c, http.StatusUnauthorized, "Sign in to see your preferences.")
+		return
+	}
+	preferences, err := h.accounts.Preferences(c.Request.Context(), api.SessionToken(c))
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read your preferences.")
+		return
+	}
+	c.JSON(http.StatusOK, ReaderPreferences{
+		App:            preferences.App,
+		NsfwPreference: NsfwPreferenceRequestPreference(preferences.NSFW),
+	})
+}
+
+func (h *Handlers) SetAppPreference(c *gin.Context) {
+	var request AppPreferenceRequest
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send the app as JSON.")
+		return
+	}
+	err := h.accounts.SetAppPreference(c.Request.Context(), api.SessionToken(c), request.App)
+	var field FieldError
+	switch {
+	case errors.As(err, &field):
+		api.RefuseField(c, http.StatusBadRequest, field.Field, field.Message)
+	case errors.Is(err, ErrUnauthorized):
+		api.Refuse(c, http.StatusUnauthorized, "Sign in before saving an app preference.")
+	case err != nil:
+		api.Refuse(c, http.StatusInternalServerError, "Could not save the app preference.")
+	default:
+		c.Status(http.StatusNoContent)
+	}
 }
 
 func (h *Handlers) DetachDiscord(c *gin.Context) {

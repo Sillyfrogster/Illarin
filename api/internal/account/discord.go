@@ -14,13 +14,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// BeginDiscord keeps the app and NSFW preferences for the account a first Discord sign-in creates
 func (s *Service) BeginDiscord(
 	ctx context.Context,
 	sessionToken string,
 	intent DiscordIntent,
+	app string,
+	nsfw NSFWPreference,
 ) (DiscordAuthorization, error) {
 	if s.discord == nil {
 		return DiscordAuthorization{}, ErrDiscordUnavailable
+	}
+	if app != "" && !ValidApp(app) {
+		return DiscordAuthorization{}, FieldError{Field: "app", Message: "Choose one of the apps listed, or any."}
+	}
+	if nsfw != "" && !nsfw.valid() {
+		return DiscordAuthorization{}, FieldError{Field: "nsfw", Message: "Choose hidden, blurred or shown."}
 	}
 	userID := pgtype.UUID{}
 	if intent == DiscordAttach {
@@ -39,6 +48,7 @@ func (s *Service) BeginDiscord(
 			return DiscordAuthorization{}, ErrEmailUnverified
 		}
 		userID = current.ID
+		app, nsfw = "", ""
 	} else {
 		intent = DiscordSignIn
 	}
@@ -47,11 +57,14 @@ func (s *Service) BeginDiscord(
 		return DiscordAuthorization{}, err
 	}
 	expires := time.Now().Add(oauthStateLifetime)
+	chosen := newAccountPreferences(pgtype.UUID{}, app, nsfw)
 	if err := db.New(s.pool).InsertOAuthState(ctx, db.InsertOAuthStateParams{
-		TokenHash: hash,
-		Intent:    string(intent),
-		UserID:    userID,
-		ExpiresAt: timestamptz(expires),
+		TokenHash:      hash,
+		Intent:         string(intent),
+		UserID:         userID,
+		ExpiresAt:      timestamptz(expires),
+		AppPreference:  chosen.AppPreference,
+		NsfwPreference: chosen.NsfwPreference,
 	}); err != nil {
 		return DiscordAuthorization{}, fmt.Errorf("store Discord sign-in state: %w", err)
 	}
@@ -93,13 +106,15 @@ func (s *Service) CompleteDiscord(
 		result.Account, err = s.attachDiscord(ctx, flow.UserID, profile)
 		return result, err
 	}
-	result.Account, result.SessionToken, result.SessionExpires, err = s.signInDiscord(ctx, profile)
+	chosen := db.SetNewAccountPreferencesParams{AppPreference: flow.AppPreference, NsfwPreference: flow.NsfwPreference}
+	result.Account, result.SessionToken, result.SessionExpires, err = s.signInDiscord(ctx, profile, chosen)
 	return result, err
 }
 
 func (s *Service) signInDiscord(
 	ctx context.Context,
 	profile DiscordProfile,
+	chosen db.SetNewAccountPreferencesParams,
 ) (api.Account, string, time.Time, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -129,6 +144,12 @@ func (s *Service) signInDiscord(
 	case errors.Is(findErr, pgx.ErrNoRows):
 		current, userID, err = createDiscordAccount(ctx, queries, profile)
 		commitAction = "sign-up"
+		if err == nil {
+			chosen.ID = userID
+			if err = queries.SetNewAccountPreferences(ctx, chosen); err != nil {
+				err = fmt.Errorf("save preferences: %w", err)
+			}
+		}
 	default:
 		err = fmt.Errorf("find Discord identity: %w", findErr)
 	}

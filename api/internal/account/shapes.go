@@ -79,9 +79,21 @@ type SignInRequest struct {
 }
 
 type SignUpRequest struct {
-	Email    string `json:"email"`
-	Handle   string `json:"handle"`
-	Password string `json:"password"`
+	Email          string  `json:"email"`
+	Handle         string  `json:"handle"`
+	Password       string  `json:"password"`
+	App            *string `json:"app,omitempty"`
+	NsfwPreference *string `json:"nsfwPreference,omitempty"`
+}
+
+type AppPreferenceRequest struct {
+	App string `json:"app"`
+}
+
+// ReaderPreferences holds an app id, "any", or null when the reader has not said
+type ReaderPreferences struct {
+	App            *string                         `json:"app" tstype:"string | null,required"`
+	NsfwPreference NsfwPreferenceRequestPreference `json:"nsfwPreference"`
 }
 
 type VerifyEmailRequest struct {
@@ -91,6 +103,8 @@ type VerifyEmailRequest struct {
 type BeginDiscordParams struct {
 	Intent   *BeginDiscordParamsIntent `json:"intent,omitempty"`
 	ReturnTo *string                   `json:"returnTo,omitempty"`
+	App      *string                   `json:"app,omitempty"`
+	Nsfw     *string                   `json:"nsfw,omitempty"`
 }
 
 type CompleteDiscordParams struct {

@@ -9,6 +9,7 @@ function work(id: string, name: string): BrowseWork {
   return {
     id,
     name,
+    apps: [],
     creator: "garden.keeper",
     type: "theme",
     isNsfw: false,
