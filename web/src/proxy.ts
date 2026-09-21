@@ -10,7 +10,7 @@ export const config = { matcher: ["/((?!_next/).*)"] };
 
 export async function proxy(request: NextRequest) {
   const route = await routeRequest(
-    { pathname: request.nextUrl.pathname },
+    request.nextUrl.pathname,
     fetchUnpublishedPost,
   );
   switch (route.kind) {

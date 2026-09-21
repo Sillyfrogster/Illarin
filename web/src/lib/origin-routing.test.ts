@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { type Asked, routeRequest } from "./origin-routing";
+import { routeRequest } from "./origin-routing";
 import type { UnpublishedPost } from "./post-unpublishing";
 
 const nothingUnpublished = async () => null;
@@ -10,22 +10,15 @@ function unpublished(current: string, ...former: string[]) {
     slug === current || former.includes(slug) ? post : null;
 }
 
-function asked(pathname: string): Asked {
-  return { pathname };
-}
-
 test("an unpublished post answers gone under the blog", async () => {
-  expect(
-    await routeRequest(asked("/blog/gone-now"), unpublished("gone-now")),
-  ).toEqual({ kind: "unpublished", slug: "gone-now" });
+  expect(await routeRequest("/blog/gone-now", unpublished("gone-now"))).toEqual(
+    { kind: "unpublished", slug: "gone-now" },
+  );
 });
 
 test("an unpublished post's former address goes to its current permalink", async () => {
   expect(
-    await routeRequest(
-      asked("/blog/old-name"),
-      unpublished("gone-now", "old-name"),
-    ),
+    await routeRequest("/blog/old-name", unpublished("gone-now", "old-name")),
   ).toEqual({
     kind: "redirect",
     to: "http://localhost:8000/blog/gone-now",
@@ -45,16 +38,16 @@ test("only a single post address is checked for unpublishing", async () => {
     "/blog/first-post/card.png",
     "/blog/feed.xml",
   ]) {
-    await routeRequest(asked(path), noting);
+    await routeRequest(path, noting);
   }
   expect(lookedUp).toEqual([]);
-  await routeRequest(asked("/blog/first-post"), noting);
+  await routeRequest("/blog/first-post", noting);
   expect(lookedUp).toEqual(["first-post"]);
 });
 
 test("a published post and every non-blog page pass through", async () => {
   for (const path of ["/", "/browse", "/blog/first-post", "/posts"]) {
-    expect(await routeRequest(asked(path), nothingUnpublished)).toEqual({
+    expect(await routeRequest(path, nothingUnpublished)).toEqual({
       kind: "pass",
     });
   }

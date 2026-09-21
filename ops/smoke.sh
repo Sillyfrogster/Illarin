@@ -16,9 +16,8 @@ compose exec -T gateway wget -q -T 5 -O /dev/null http://127.0.0.1:8080/gateway-
 compose exec -T gateway wget -q -T 10 -O /dev/null http://127.0.0.1:8080/api/readyz
 compose exec -T gateway wget -q -T 15 -O /dev/null http://127.0.0.1:8080/
 
-# The site and the blog are told apart by hostname alone, so every check
-# below names the hostname it speaks to and reads the answer without
-# following redirects.
+# Every check names the hostname it speaks to and reads the answer without
+# following redirects, including redirects from the old blog hostname.
 through_gateway() {
   compose exec -T \
     -e "SMOKE_HOST=$1" -e "SMOKE_METHOD=$2" -e "SMOKE_PATH=$3" \

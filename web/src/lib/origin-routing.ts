@@ -6,13 +6,11 @@ export type Route =
   | { kind: "redirect"; to: string }
   | { kind: "unpublished"; slug: string };
 
-export type Asked = { pathname: string };
-
 export async function routeRequest(
-  asked: Asked,
+  pathname: string,
   unpublishedPost: (slug: string) => Promise<UnpublishedPost | null>,
 ): Promise<Route> {
-  const slug = postAddressIn(asked.pathname);
+  const slug = postAddressIn(pathname);
   if (!slug) return { kind: "pass" };
   const unpublished = slug ? await unpublishedPost(slug) : null;
   if (unpublished && slug !== unpublished.slug) {
