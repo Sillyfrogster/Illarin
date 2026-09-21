@@ -17,7 +17,7 @@ const account: SignedInAccount = {
 test("account navigation names each task and keeps icons when labels change", () => {
   const destinations = accountDestinations({ ...account, role: "admin" }, true);
   expect(destinations.map(({ label, href }) => [label, href])).toEqual([
-    ["Your work", "/@copy_fixture"],
+    ["Your profile", "/@copy_fixture"],
     ["Account settings", "/settings"],
     ["Your posts", "/posts"],
     ["Blog administration", "/admin/blog"],
@@ -57,7 +57,7 @@ test("sign-in and verification destinations keep their labels and icons", () => 
     false,
   );
   expect(destinations.map(({ label }) => label)).toEqual([
-    "Your work",
+    "Your profile",
     "Account settings",
     "Verify email",
   ]);
@@ -65,7 +65,7 @@ test("sign-in and verification destinations keep their labels and icons", () => 
     accountDestinations({ ...account, role: "moderator" }, false).map(
       ({ label }) => label,
     ),
-  ).toEqual(["Your work", "Account settings", "Staff"]);
+  ).toEqual(["Your profile", "Account settings", "Staff"]);
   expect(
     renderToStaticMarkup(<DestinationIcon id={destinations[2].id} />),
   ).toContain("lucide-mail");

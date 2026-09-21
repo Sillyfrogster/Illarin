@@ -51,7 +51,7 @@ export function accountDestinations(
     ];
 
   return [
-    { id: "profile", label: "Your work", href: `/@${account.handle}` },
+    { id: "profile", label: "Your profile", href: `/@${account.handle}` },
     { id: "settings", label: "Account settings", href: "/settings" },
     ...(writer
       ? [{ id: "posts" as const, label: "Your posts", href: "/posts" }]
