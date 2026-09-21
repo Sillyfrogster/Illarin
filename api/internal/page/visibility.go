@@ -81,9 +81,9 @@ func (s *Service) Publish(
 	var isNSFW *bool
 	err = tx.QueryRow(ctx, `
 		select owned.type, owned.name, owned.is_nsfw, owned.lifecycle, owned.visibility,
-		       owner.username, coalesce(profile.display_name, '')
+		       coalesce(owner.username, ''), coalesce(profile.display_name, '')
 		  from works owned
-		  join users owner on owner.id = owned.owner_id
+		  left join users owner on owner.id = owned.owner_id
 		  left join public_profiles profile on profile.user_id = owner.id
 		 where owned.id = $1
 	`, workID).Scan(&workType, &name, &isNSFW, &lifecycle, &visibility, &creator, &creatorName)
