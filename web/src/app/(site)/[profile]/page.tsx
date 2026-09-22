@@ -4,8 +4,9 @@ import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { fetchDeletedWorks, fetchProfile, fetchWorks } from "@/lib/api/query";
 import { buildBrowseHref, readBrowseFilters } from "@/lib/browse-url";
-import { readProfileAddress } from "@/lib/profile-address";
+import { profilePath, readProfileAddress } from "@/lib/profile-address";
 import {
+  CARD_SIZE,
   pageMetadata,
   readableForMetadata,
   siteUrl,
@@ -34,7 +35,20 @@ export async function generateMetadata({
     profile.biography ||
       `Characters, lorebooks, presets, themes and extensions published by ${profile.handle} on Illarin.`,
   );
-  return { ...metadata, alternates: { canonical: `/@${profile.handle}` } };
+  const canonical = profilePath(profile.handle);
+  const card = `${canonical}/card.png`;
+  return {
+    ...metadata,
+    alternates: { canonical },
+    openGraph: {
+      ...metadata.openGraph,
+      url: canonical,
+      images: [
+        { url: card, alt: profile.displayName || profile.handle, ...CARD_SIZE },
+      ],
+    },
+    twitter: { ...metadata.twitter, images: [card] },
+  };
 }
 
 export default async function CreatorProfileListing({

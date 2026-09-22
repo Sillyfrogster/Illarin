@@ -6,6 +6,8 @@ export const mediaUrl = process.env.MEDIA_URL ?? siteUrl;
 
 export const SITE_NAME = "Illarin";
 
+export const CARD_SIZE = { width: 1200, height: 630 } as const;
+
 export const SITE_DESCRIPTION =
   "Discover characters, lorebooks, presets and themes while keeping every creator's source file intact.";
 

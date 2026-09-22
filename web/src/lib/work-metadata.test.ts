@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import type { WorkDetail } from "./api/query";
-import { SITE_CARD } from "./site-metadata";
 import { workMetadata } from "./work-metadata";
 
 const ID = "0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a";
@@ -62,18 +61,26 @@ test("points the preview at the canonical address", () => {
   );
 });
 
-test("uses the composed social preview, and the site card without it", () => {
+test("uses the work card with or without a cover", () => {
   expect(workMetadata(work()).openGraph?.images).toEqual([
     {
-      url: "/media/aaaa/og/1",
+      url: `/a/${ID}/card.png`,
       alt: "Christine Novak",
       width: 1200,
       height: 630,
     },
   ]);
-  expect(workMetadata(work({ preview: null })).openGraph?.images).toEqual([
-    SITE_CARD,
-  ]);
+  expect(workMetadata(work({ preview: null })).openGraph?.images).toEqual(
+    workMetadata(work()).openGraph?.images,
+  );
+  expect(workMetadata(work()).twitter?.images).toEqual([`/a/${ID}/card.png`]);
+});
+
+test("draft metadata exposes neither its name nor a card", () => {
+  const metadata = workMetadata(work({ lifecycle: "draft", isOwner: true }));
+  expect(metadata.robots).toEqual({ index: false, follow: false });
+  expect(JSON.stringify(metadata)).not.toContain("Christine");
+  expect(metadata.openGraph).toBeUndefined();
 });
 
 test("stands in a description when the creator wrote no blurb", () => {

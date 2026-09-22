@@ -4,9 +4,12 @@ import { blogAddress, postPermalink } from "@/lib/blog-address";
 import { BLOG_HOME, feedAddresses, postPath } from "@/lib/blog-paths";
 import { bylineName } from "@/lib/byline";
 import { bylineProfile } from "@/lib/site-address";
-import { pageMetadata, SITE_NAME, siteUrl } from "@/lib/site-metadata";
-
-export const CARD_SIZE = { width: 1200, height: 630 } as const;
+import {
+  CARD_SIZE,
+  pageMetadata,
+  SITE_NAME,
+  siteUrl,
+} from "@/lib/site-metadata";
 
 export const BLOG_TITLE = "Illarin Blog";
 
@@ -109,13 +112,9 @@ export function linkCard(post: PublicPost): {
   height: number;
   alt: string;
 } {
-  const override = post.linkCardImage;
   return {
-    url: override
-      ? blogAddress(override.url)
-      : blogAddress(`${postPath(post.slug)}/card.png`),
-    width: override?.width ?? CARD_SIZE.width,
-    height: override?.height ?? CARD_SIZE.height,
+    url: blogAddress(`${postPath(post.slug)}/card.png`),
+    ...CARD_SIZE,
     alt: post.title,
   };
 }

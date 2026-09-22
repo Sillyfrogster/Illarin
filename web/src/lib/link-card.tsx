@@ -1,140 +1,249 @@
-import type { ReactElement } from "react";
-import { MARK_PATH } from "@/components/brand/BrandMark";
-import { CARD_SIZE } from "@/lib/blog-metadata";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { ImageResponse } from "next/og";
+import type { CSSProperties } from "react";
+import { CARD_SIZE, mediaUrl } from "@/lib/site-metadata";
 
-export type CardSubject = {
+type CardSubject = {
   title: string;
-  plate: string | null;
+  image?: CardImage | null;
+  eyebrow?: string;
+  byline: string;
+  description?: string;
+  footer?: string;
+  avatar?: CardImage;
+  initials?: string;
 };
 
-const FIELD = "#0a0a0a";
+type CardImage = { url: string; width: number; height: number };
 
-const INK = "#ffffff";
+const resources = Promise.all([
+  Promise.all(
+    (
+      [
+        { name: "Outfit", file: "Outfit-SemiBold.ttf", weight: 600 },
+        { name: "DM Sans", file: "DMSans-Medium.ttf", weight: 500 },
+      ] as const
+    ).map(async (face) => ({
+      name: face.name,
+      data: await readFile(join(process.cwd(), "assets/fonts", face.file)),
+      weight: face.weight,
+      style: "normal" as const,
+    })),
+  ),
+  readFile(
+    join(process.cwd(), "public/brand/illarin-horizontal-white.svg"),
+    "utf8",
+  ).then((svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`),
+  readFile(join(process.cwd(), "public/brand/link-card-fallback.png")).then(
+    (bytes) => `data:image/png;base64,${bytes.toString("base64")}`,
+  ),
+]);
 
-const PLATE_WIDTH = 480;
+const clipped: CSSProperties = {
+  display: "block",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  wordBreak: "break-word",
+  flexShrink: 0,
+};
 
-const TITLE_STEPS = [
-  { upTo: 52, size: 74 },
-  { upTo: 92, size: 58 },
-  { upTo: Number.POSITIVE_INFINITY, size: 46 },
-];
-
-export function cardTitleSize(title: string): number {
-  const step = TITLE_STEPS.find(({ upTo }) => title.length <= upTo);
-  return (step ?? TITLE_STEPS[TITLE_STEPS.length - 1]).size;
-}
-
-export function markImage(fill: string): string {
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 440">` +
-    `<g fill="${fill}" transform="translate(0 70)"><path d="${MARK_PATH}"/>` +
-    `</g></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
-
-export function PostCard({
-  title,
-  plate,
-  logo,
-}: CardSubject & { logo: string }): ReactElement {
-  return (
+export async function renderLinkCard(subject: CardSubject): Promise<Response> {
+  const [[fonts, logo, fallback], image, avatar] = await Promise.all([
+    resources,
+    drawable(subject.image?.url),
+    drawable(subject.avatar?.url),
+  ]);
+  const supplied = image ?? avatar;
+  const picture = image ? subject.image : subject.avatar;
+  const portrait = supplied && picture && picture.width / picture.height < 1.3;
+  const profile = subject.initials !== undefined;
+  return new ImageResponse(
     <div
       style={{
-        backgroundColor: FIELD,
-        color: INK,
         display: "flex",
-        fontFamily: "DM Sans",
-        height: "100%",
-        position: "relative",
         width: "100%",
-      }}
-    >
-      {plate ? <Plate source={plate} /> : <CornerMark />}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
-          padding: "62px 0 68px 76px",
-          position: "relative",
-          width: plate ? CARD_SIZE.width - PLATE_WIDTH : 940,
-        }}
-      >
-        <div style={{ alignItems: "center", display: "flex", gap: 15 }}>
-          <img alt="Illarin" height={57} src={logo} width={170} />
-          <span
-            style={{
-              fontSize: 27,
-              fontWeight: 500,
-              opacity: 0.72,
-            }}
-          >
-            Blog
-          </span>
-        </div>
-
-        <div style={{ alignItems: "center", display: "flex", flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              fontFamily: "Outfit",
-              fontSize: cardTitleSize(title),
-              fontWeight: 600,
-              letterSpacing: "-0.022em",
-              lineHeight: 1.16,
-              paddingRight: 28,
-              wordBreak: "break-word",
-            }}
-          >
-            {title}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Plate({ source }: { source: string }): ReactElement {
-  return (
-    <div
-      style={{
-        display: "flex",
         height: "100%",
-        position: "absolute",
-        right: 0,
-        top: 0,
-        width: PLATE_WIDTH,
+        background: "#0a0a0a",
+        color: "#fff",
+        fontFamily: "DM Sans",
+        position: "relative",
       }}
     >
       <img
         alt=""
-        height={CARD_SIZE.height}
-        src={source}
-        style={{ height: "100%", objectFit: "cover", width: "100%" }}
-        width={PLATE_WIDTH}
+        src={supplied ?? fallback}
+        width={portrait ? 720 : 1200}
+        height={630}
+        style={{
+          position: "absolute",
+          right: 0,
+          top: 0,
+          width: portrait ? 720 : "100%",
+          height: "100%",
+          objectFit: portrait ? "contain" : "cover",
+        }}
       />
       <div
         style={{
-          backgroundImage: `linear-gradient(to right, ${FIELD}, rgba(10, 10, 10, 0.35) 62%, rgba(10, 10, 10, 0))`,
-          height: "100%",
-          left: 0,
           position: "absolute",
           top: 0,
-          width: 260,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backgroundImage:
+            "linear-gradient(90deg, rgba(6,6,8,0.97) 0%, rgba(6,6,8,0.90) 30%, rgba(6,6,8,0.55) 52%, rgba(6,6,8,0.04) 80%)",
         }}
       />
-    </div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          width: 700,
+          height: "100%",
+          padding: "44px 0 40px 48px",
+        }}
+      >
+        <img alt="Illarin" src={logo} width={228} height={76} />
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            marginTop: profile ? 22 : 64,
+            width: 620,
+          }}
+        >
+          {profile ? (
+            <div
+              style={{
+                display: "flex",
+                width: 130,
+                height: 130,
+                borderRadius: "50%",
+                border: "3px solid #b89aff",
+                background: "#202022",
+                overflow: "hidden",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 16,
+                fontSize: 48,
+                fontFamily: "Outfit",
+              }}
+            >
+              {avatar ? (
+                <img
+                  alt=""
+                  src={avatar}
+                  width={124}
+                  height={124}
+                  style={{ objectFit: "cover" }}
+                />
+              ) : (
+                subject.initials
+              )}
+            </div>
+          ) : (
+            <div style={{ fontSize: 25, color: "#b89aff", marginBottom: 14 }}>
+              {subject.eyebrow}
+            </div>
+          )}
+          <div
+            style={{
+              ...clipped,
+              fontFamily: "Outfit",
+              fontWeight: 600,
+              fontSize: profile ? 44 : subject.title.length > 90 ? 46 : 52,
+              lineHeight: 1.1,
+              letterSpacing: "-0.02em",
+              lineClamp: profile ? 2 : 3,
+            }}
+          >
+            {subject.title}
+          </div>
+          <div
+            style={{
+              ...clipped,
+              lineClamp: 1,
+              fontSize: 26,
+              color: "#b89aff",
+              marginTop: 12,
+            }}
+          >
+            {subject.byline}
+          </div>
+          {subject.description ? (
+            <div
+              style={{
+                ...clipped,
+                lineClamp: 2,
+                fontSize: 25,
+                lineHeight: 1.3,
+                marginTop: 20,
+                color: "#ededf0",
+              }}
+            >
+              {subject.description}
+            </div>
+          ) : null}
+        </div>
+        {subject.footer ? (
+          <div
+            style={{
+              ...clipped,
+              lineClamp: 1,
+              marginTop: "auto",
+              paddingTop: 16,
+              fontSize: 23,
+              color: "#dedee3",
+            }}
+          >
+            {subject.footer}
+          </div>
+        ) : null}
+      </div>
+      {!supplied ? (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 25,
+            right: 30,
+            fontSize: 17,
+            color: "#dedee3",
+          }}
+        >
+          Illarin artwork
+        </div>
+      ) : null}
+    </div>,
+    {
+      ...CARD_SIZE,
+      fonts,
+      headers: {
+        "cache-control": "public, max-age=300",
+        "content-type": "image/png",
+      },
+    },
   );
 }
 
-function CornerMark(): ReactElement {
-  return (
-    <img
-      alt=""
-      height={34}
-      src={markImage("#b89aff")}
-      style={{ opacity: 0.55, position: "absolute", right: 76, top: 62 }}
-      width={34}
-    />
-  );
+async function drawable(address?: string | null): Promise<string | null> {
+  if (!address) return null;
+  try {
+    const url = new URL(address, mediaUrl);
+    if (
+      url.origin !== new URL(mediaUrl).origin ||
+      !url.pathname.startsWith("/media/")
+    )
+      return null;
+    const response = await fetch(url, {
+      redirect: "error",
+      signal: AbortSignal.timeout(5000),
+    });
+    const type = response.headers.get("content-type") ?? "";
+    if (!response.ok || !type.startsWith("image/")) return null;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    return `data:${type};base64,${bytes.toString("base64")}`;
+  } catch {
+    return null;
+  }
 }

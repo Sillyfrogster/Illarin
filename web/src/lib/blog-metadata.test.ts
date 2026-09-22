@@ -92,11 +92,11 @@ test("a post with no override gets the card Illarin composes for it", () => {
   ]);
 });
 
-test("an uploaded override is the preview instead", () => {
+test("uploaded artwork still uses the branded composition", () => {
   const metadata = postMetadata({ ...POST, linkCardImage: OVERRIDE });
   expect(metadata.openGraph?.images).toEqual([
     {
-      url: "http://localhost:8000/media/5d31391b-cf7e-478f-814b-c6b28639e5a3/og/1",
+      url: "http://localhost:8000/blog/first-post/card.png",
       width: 1200,
       height: 630,
       alt: "Illarin keeps its own writing",
