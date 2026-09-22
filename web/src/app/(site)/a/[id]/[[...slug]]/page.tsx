@@ -10,6 +10,7 @@ import { readableForMetadata } from "@/lib/site-metadata";
 import { workMetadata } from "@/lib/work-metadata";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { isWorkId, workRedirect } from "@/lib/work-url";
+import { GitHubReleases } from "./GitHubReleases";
 import { WorkBlocks } from "./WorkBlocks";
 import { WorkHeader } from "./WorkHeader";
 import { WorkspaceProvider } from "./workspace/state";
@@ -85,6 +86,9 @@ export default async function WorkPage({
                 type={work.type}
                 shellClassName={shellClasses}
               />
+              {work.isOwner && !isDraft && work.type === "extension" ? (
+                <GitHubReleases workId={work.id} />
+              ) : null}
             </article>
           </div>
         </ExtensionDependenciesProvider>

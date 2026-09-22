@@ -54,6 +54,7 @@ const (
 	NotificationTypeWorkTakenDown     NotificationType = "work_taken_down"
 	NotificationTypeProfileRestored   NotificationType = "profile_restored"
 	NotificationTypeProfileRestricted NotificationType = "profile_restricted"
+	NotificationTypeGitHubReleaseHeld NotificationType = "github_release_held"
 )
 
 type NotificationUpdate struct {

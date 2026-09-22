@@ -40,6 +40,26 @@ func (s *Service) PublishVersion(
 	in PublishRequest,
 	candidate *work.Candidate,
 ) (Version, []work.ReadinessItem, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return Version{}, nil, err
+	}
+	defer tx.Rollback(ctx)
+	if _, err := candidate.Lock(ctx, tx, in.OwnerID, in.WorkID); err != nil {
+		return Version{}, nil, err
+	}
+	recorded, items, err := s.PublishLocked(ctx, tx, in)
+	if err != nil {
+		return Version{}, items, err
+	}
+	if err := candidate.Commit(ctx, tx, in.WorkID); err != nil {
+		return Version{}, nil, err
+	}
+	return recorded, items, nil
+}
+
+// PublishLocked publishes a work while its editable row is locked by the caller.
+func (s *Service) PublishLocked(ctx context.Context, tx pgx.Tx, in PublishRequest) (Version, []work.ReadinessItem, error) {
 	in.Summary = strings.TrimSpace(in.Summary)
 	in.Notes = strings.TrimSpace(in.Notes)
 	in.VersionLabel = strings.TrimSpace(in.VersionLabel)
@@ -52,13 +72,8 @@ func (s *Service) PublishVersion(
 		return Version{}, nil, ErrSummaryTooLong
 	}
 
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return Version{}, nil, err
-	}
-	defer tx.Rollback(ctx)
-
-	workType, err := candidate.Lock(ctx, tx, in.OwnerID, in.WorkID)
+	var workType string
+	err := tx.QueryRow(ctx, `select type from works where id = $1 and owner_id = $2`, in.WorkID, in.OwnerID).Scan(&workType)
 	if err != nil {
 		return Version{}, nil, err
 	}
@@ -102,9 +117,6 @@ func (s *Service) PublishVersion(
 		if err := listen(ctx, tx, recorded, in.Announcement); err != nil {
 			return Version{}, nil, err
 		}
-	}
-	if err := candidate.Commit(ctx, tx, in.WorkID); err != nil {
-		return Version{}, nil, err
 	}
 	return recorded, items, nil
 }

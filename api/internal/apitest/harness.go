@@ -37,6 +37,7 @@ type Services struct {
 	Blocks         *edit.Service
 	Versions       *version.Service
 	Uploads        *upload.Service
+	GitHubReleases *upload.GitHubReleases
 	Downloads      *download.Service
 	Accounts       *account.Service
 	Apps           *connect.Apps
@@ -141,12 +142,14 @@ func NewServicesWithSends(
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
 	pages := page.NewService(pool, works)
 	pages.OnFirstPublication(integrations.AnnounceFirst)
+	uploads := upload.NewService(pool, works)
 	return Services{
 		Works:          works,
 		Pages:          pages,
 		Blocks:         edit.NewService(pool, works),
 		Versions:       versions,
-		Uploads:        upload.NewService(pool, works),
+		Uploads:        uploads,
+		GitHubReleases: upload.NewGitHubReleases(uploads, versions),
 		Downloads:      download.NewService(pool, works),
 		Accounts:       accounts,
 		Apps:           apps,
@@ -172,12 +175,14 @@ func NewServicesOver(
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
 	pages := page.NewService(pool, works)
 	pages.OnFirstPublication(integrations.AnnounceFirst)
+	uploads := upload.NewService(pool, works)
 	return Services{
 		Works:          works,
 		Pages:          pages,
 		Blocks:         edit.NewService(pool, works),
 		Versions:       versions,
-		Uploads:        upload.NewService(pool, works),
+		Uploads:        uploads,
+		GitHubReleases: upload.NewGitHubReleases(uploads, versions),
 		Downloads:      download.NewService(pool, works),
 		Accounts:       NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
 		Apps:           apps,

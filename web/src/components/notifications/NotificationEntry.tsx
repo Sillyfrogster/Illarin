@@ -1,4 +1,5 @@
 import {
+  Clock,
   LockKeyhole,
   LockKeyholeOpen,
   type LucideIcon,
@@ -26,6 +27,7 @@ const MARKS = {
   work_published: { icon: Megaphone, tone: NEWS_TONE },
   profile_restricted: { icon: ShieldOff, tone: TAKEN_TONE },
   profile_restored: { icon: ShieldCheck, tone: GIVEN_BACK_TONE },
+  github_release_held: { icon: Clock, tone: NEWS_TONE },
 } satisfies Record<Notification["type"], { icon: LucideIcon; tone: string }>;
 
 /** One inbox entry, tinted while unread, that opens what it is about and can be removed. */

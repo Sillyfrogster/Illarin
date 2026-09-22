@@ -156,6 +156,12 @@ func run() error {
 	posts := blog.NewService(pool, images, integrations, cfg.SiteURL)
 	versions := version.NewService(pool, svc)
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
+	githubReleases := upload.NewGitHubReleases(uploads, versions)
+	background.Add(1)
+	go func() {
+		defer background.Done()
+		githubReleases.Run(runtimeContext, func(err error) { log.Printf("GitHub release import: %v", err) })
+	}()
 	pages := page.NewService(pool, svc)
 	pages.OnFirstPublication(integrations.AnnounceFirst)
 	apps := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
@@ -213,6 +219,7 @@ func run() error {
 		Blocks:         edit.NewService(pool, svc),
 		Versions:       versions,
 		Uploads:        uploads,
+		GitHubReleases: githubReleases,
 		Downloads:      download.NewService(pool, svc),
 		Accounts:       accounts,
 		Apps:           apps,

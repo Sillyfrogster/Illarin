@@ -32,6 +32,7 @@ type services struct {
 	Blocks         *edit.Service
 	Versions       *version.Service
 	Uploads        *upload.Service
+	GitHubReleases *upload.GitHubReleases
 	Downloads      *download.Service
 	Accounts       *account.Service
 	Apps           *connect.Apps
@@ -74,6 +75,7 @@ func registerRoutes(r *gin.Engine, s services, d api.Deadlines, ready readiness)
 	edit.Register(routes, edit.NewHandlers(s.Blocks))
 	version.Register(routes, version.NewHandlers(s.Versions, s.Accounts))
 	upload.Register(routes, upload.NewHandlers(s.Uploads, s.Pages, s.MaxUploadBytes))
+	upload.RegisterGitHubReleases(routes, s.GitHubReleases)
 	download.Register(routes, downloads)
 	image.Register(routes, image.NewHandlers(s.Works, s.Accounts, s.Blog, s.MaxUploadBytes))
 	private.Register(routes, private.NewHandlers(private.NewService(s.Works.Pool())))

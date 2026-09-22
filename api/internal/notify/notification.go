@@ -19,6 +19,7 @@ const (
 	WorkPublished     Type = "work_published"
 	ProfileRestricted Type = "profile_restricted"
 	ProfileRestored   Type = "profile_restored"
+	GitHubReleaseHeld Type = "github_release_held"
 )
 
 // Words is what a notification shows, kept as it read when the change happened.

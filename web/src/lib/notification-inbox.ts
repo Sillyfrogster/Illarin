@@ -71,6 +71,13 @@ export function notificationWords(entry: Notification): NotificationWords {
         detail: "You can edit it again.",
         href: PROFILE_SETTINGS,
       };
+    case "github_release_held":
+      return {
+        lead: "GitHub release waiting for",
+        subject: workName,
+        detail: "Publish or discard your edits, then resume the import.",
+        href: workPage ? `${workPage}#github-releases` : null,
+      };
   }
 }
 
