@@ -7,6 +7,7 @@ SHADCN := bunx --bun shadcn@4.21.0
 COMPONENT ?=
 WEB_PORT ?= 3000
 TEST ?= ./...
+WEB_TEST ?=
 VERSION ?=
 SERVICE ?=
 OUTPUT ?= illarin-release.tar.gz

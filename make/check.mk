@@ -31,7 +31,7 @@ test-postgres-stop: ## Remove the in-memory test Postgres and every database in 
 
 .PHONY: test-web
 test-web: ## Run the site tests
-	cd web && bun test
+	cd web && bun test $(WEB_TEST)
 
 .PHONY: cover
 cover: test-postgres ## Report Go test coverage per package

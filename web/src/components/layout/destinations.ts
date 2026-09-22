@@ -9,6 +9,7 @@ export function primaryDestinations(): Destination[] {
   return [
     { label: "Browse", href: "/browse" },
     { label: "Blog", href: BLOG_HOME },
+    { label: "Docs", href: "/docs" },
   ];
 }
 export type AccountDestination = Destination & {

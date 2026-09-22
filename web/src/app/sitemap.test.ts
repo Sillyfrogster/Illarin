@@ -43,6 +43,9 @@ test("sitemap follows the whole browse listing", async () => {
   expect(entries.map((entry) => entry.url)).toEqual([
     "http://localhost:8000/",
     "http://localhost:8000/browse",
+    "http://localhost:8000/docs",
+    "http://localhost:8000/docs/app-integration",
+    "http://localhost:8000/docs/extension-publishing",
     `http://localhost:8000/a/${FIRST_ID}/first-garden`,
     `http://localhost:8000/a/${SECOND_ID}/second-garden`,
   ]);

@@ -4,6 +4,7 @@ import {
   fetchWorks,
   type WorkListParams,
 } from "@/lib/api/query";
+import { DOCS } from "@/lib/docs";
 import { siteUrl } from "@/lib/site-metadata";
 import { workHref } from "@/lib/work-url";
 
@@ -19,6 +20,10 @@ export async function buildSitemap(
   const entries: MetadataRoute.Sitemap = [
     { url: new URL("/", siteUrl).href },
     { url: new URL("/browse", siteUrl).href },
+    { url: new URL("/docs", siteUrl).href },
+    ...DOCS.map(({ slug }) => ({
+      url: new URL(`/docs/${slug}`, siteUrl).href,
+    })),
   ];
   let cursor: BrowsePage["nextCursor"];
 

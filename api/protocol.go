@@ -2,7 +2,7 @@ package api
 
 import _ "embed"
 
-// Protocol is the guide for apps that connect to Illarin, served at /protocol
+// Protocol points older /protocol readers to the maintained documentation.
 //
 //go:embed protocol.md
 var Protocol []byte
