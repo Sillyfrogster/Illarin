@@ -1,11 +1,10 @@
-import { ArrowUpRight, Compass, KeyRound, Plug, Send } from "lucide-react";
-import Link from "next/link";
+import { Compass, KeyRound, Plug, Send } from "lucide-react";
 import { AccountSettings } from "@/components/auth/AccountSettings";
 import { ConnectedApps } from "@/components/connect/ConnectedApps";
 import { Shell } from "@/components/layout/Shell";
 import { BrowsePreferences } from "@/components/preferences/BrowsePreferences";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
-import { Button } from "@/components/ui/button";
+import { DiscordChannel } from "@/components/updates/DiscordChannel";
 import { pageMetadata } from "@/lib/site-metadata";
 
 const DISCORD_NOTICES: Record<string, string> = {
@@ -73,10 +72,10 @@ export default async function SettingsPage({
             </a>
             <a
               className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
-              href="#update-integrations"
+              href="#discord-channel"
             >
               <Send aria-hidden="true" className="size-4 text-accent" />
-              Update integrations
+              Discord channel
             </a>
           </nav>
         </aside>
@@ -113,25 +112,20 @@ export default async function SettingsPage({
             <ConnectedApps />
           </div>
           <section
-            aria-labelledby="update-integrations"
+            aria-labelledby="discord-channel"
             className="mt-12 border-t border-rule pt-8"
           >
             <h2
               className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
-              id="update-integrations"
+              id="discord-channel"
             >
-              Integrations
+              Discord channel
             </h2>
-            <p className="mt-2 max-w-[52ch] font-prose text-ui text-mute">
-              A Discord channel or webhook Illarin announces your new versions
-              to, and which one each work uses.
+            <p className="mt-2 mb-5 max-w-[52ch] font-prose text-ui text-mute">
+              When you publish a new version of a public work, Illarin can post
+              its summary and a link here.
             </p>
-            <Button asChild className="mt-5" variant="secondary">
-              <Link href="/settings/integrations">
-                Manage integrations
-                <ArrowUpRight aria-hidden="true" />
-              </Link>
-            </Button>
+            <DiscordChannel scope="account" />
           </section>
         </div>
       </div>

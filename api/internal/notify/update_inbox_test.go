@@ -83,12 +83,12 @@ func TestAQuietUpdateOrLiveArrangementTellsNoOne(t *testing.T) {
 	}
 
 	s.describe(t, "A change everyone should hear about.")
-	s.publishUpdate(t, `{"summary":"No integrations, still told","integrationIds":[]}`)
+	s.publishUpdate(t, `{"summary":"Not on Discord, still told","discord":false}`)
 	s.fanOut(t, time.Now())
 	page := s.inbox(t, follower, "")
 	if len(page.Items) != 1 || page.Items[0].Update == nil || page.Items[0].Update.Number != 3 ||
-		page.Items[0].Update.Summary != "No integrations, still told" {
-		t.Fatalf("an update with no integrations gave the follower %+v, want update 3", page.Items)
+		page.Items[0].Update.Summary != "Not on Discord, still told" {
+		t.Fatalf("an update kept off Discord gave the follower %+v, want update 3", page.Items)
 	}
 }
 

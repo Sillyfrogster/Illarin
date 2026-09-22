@@ -165,9 +165,6 @@ func TestAContributorDeletesTheirOwnDraftAndGetsItBack(t *testing.T) {
 	if len(waiting) != 1 || waiting[0].ID != draft.ID {
 		t.Fatalf("the deleted listing holds %v", postTitles(waiting))
 	}
-	if announced := stack.events(t, draft.ID); len(announced) != 0 {
-		t.Errorf("deleting a post announced %v", announced)
-	}
 
 	back := stack.recovered(t, writer.session, written.ID, gone.Version)
 	if back.Deletion != nil || back.Status != "draft" {

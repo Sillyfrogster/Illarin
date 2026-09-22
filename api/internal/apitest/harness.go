@@ -118,7 +118,7 @@ func NewServicesWithPool(
 	sender account.EmailSender,
 ) Services {
 	t.Helper()
-	return NewServicesWithSends(t, pool, maxUploadBytes, sender, SendSettings(), nil)
+	return NewServicesWithSends(t, pool, maxUploadBytes, sender, SendSettings())
 }
 
 func NewServicesWithSends(
@@ -127,7 +127,6 @@ func NewServicesWithSends(
 	maxUploadBytes int64,
 	sender account.EmailSender,
 	settings connect.Settings,
-	to blog.Sender,
 ) Services {
 	t.Helper()
 	blob, err := storage.NewStore(pool, t.TempDir())
@@ -137,9 +136,7 @@ func NewServicesWithSends(
 	works := work.NewService(pool, Registry(t), blob)
 	accounts := NewAccounts(pool, sender, nil, MediaLibrary(blob))
 	apps := NewAppsService(pool)
-	integrations := integration.NewService(
-		pool, SealingKey(), Publishing(to).Sender, "http://localhost:3000",
-	)
+	integrations := NewIntegrations(pool, nil)
 	versions := version.NewService(pool, works)
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
 	return Services{
@@ -152,7 +149,7 @@ func NewServicesWithSends(
 		Accounts:       accounts,
 		Apps:           apps,
 		Sends:          connect.NewSends(pool, works, apps, settings),
-		Blog:           blog.NewService(pool, MediaLibrary(blob), Publishing(to)),
+		Blog:           blog.NewService(pool, MediaLibrary(blob), integrations, Site),
 		Integrations:   integrations,
 		Notifications:  NewNotifications(pool),
 		MaxUploadBytes: maxUploadBytes,
@@ -168,7 +165,7 @@ func NewServicesOver(
 	provider account.DiscordProvider,
 ) Services {
 	apps := NewAppsService(pool)
-	integrations := NewIntegrations(pool)
+	integrations := NewIntegrations(pool, nil)
 	versions := version.NewService(pool, works)
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
 	return Services{
@@ -181,7 +178,7 @@ func NewServicesOver(
 		Accounts:       NewAccounts(pool, sender, provider, MediaLibrary(blobs)),
 		Apps:           apps,
 		Sends:          NewSendsService(pool, works, apps),
-		Blog:           NewBlogService(pool, blobs),
+		Blog:           blog.NewService(pool, MediaLibrary(blobs), integrations, Site),
 		Integrations:   integrations,
 		Notifications:  NewNotifications(pool),
 		MaxUploadBytes: 1 << 20,

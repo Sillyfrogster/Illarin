@@ -82,7 +82,7 @@ func (h Harness) NewConnectRouterWith(
 	t.Helper()
 	pool := testdb.Connect(t)
 	outbox := &VerificationOutbox{}
-	handlers := NewServicesWithSends(t, pool, 1<<20, outbox, settings, nil)
+	handlers := NewServicesWithSends(t, pool, 1<<20, outbox, settings)
 	router := h.RegisterRouter(t, handlers, api.DefaultDeadlines())
 
 	session := SignUp(t, router, "creator@example.com", "connect.creator")

@@ -8,7 +8,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 func (h *Handlers) PublishWorkVersion(c *gin.Context) {
@@ -39,11 +38,6 @@ func (h *Handlers) PublishWorkVersion(c *gin.Context) {
 		return
 	}
 	switch {
-	case errors.Is(err, ErrUnlistedConsentRequired):
-		refuseInvalid(c, "announceUnlisted",
-			"This work is unlisted. Confirm that its direct link may be sent, or publish quietly.")
-	case errors.Is(err, ErrIntegrationIneligible):
-		refuseInvalid(c, "integrationIds", "Choose only your own verified, active integrations.")
 	case errors.Is(err, ErrSummaryRequired):
 		api.Refuse(c, http.StatusBadRequest, "Say what changed in this version.")
 	case errors.Is(err, ErrSummaryTooLong):
@@ -77,20 +71,10 @@ func (h *Handlers) PublishWorkVersion(c *gin.Context) {
 }
 
 func announcementChoice(request WorkVersionRequest) Announcement {
-	choice := Announcement{Notify: request.Notify == nil || *request.Notify}
-	if request.IntegrationIds != nil {
-		chosen := append([]uuid.UUID(nil), *request.IntegrationIds...)
-		choice.IntegrationIDs = &chosen
+	return Announcement{
+		Notify:  request.Notify == nil || *request.Notify,
+		Discord: request.Discord == nil || *request.Discord,
 	}
-	if request.AnnounceUnlisted != nil {
-		choice.AnnounceUnlisted = *request.AnnounceUnlisted
-	}
-	return choice
-}
-
-// refuseInvalid answers with the error body the blog's publish refusals use, naming the field at fault
-func refuseInvalid(c *gin.Context, field, message string) {
-	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": message, "code": "invalid", "field": field})
 }
 
 func valueOrEmpty(value *string) string {

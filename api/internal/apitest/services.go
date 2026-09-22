@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/integration"
-	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/notify"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
@@ -55,24 +55,18 @@ func MediaLibrary(store storage.Store) *mediaproc.Library {
 }
 
 func NewBlogService(pool *pgxpool.Pool, store storage.Store) *blog.Service {
-	return blog.NewService(
-		pool, MediaLibrary(store), Publishing(nil),
-	)
+	return blog.NewService(pool, MediaLibrary(store), NewIntegrations(pool, nil), Site)
 }
 
-func NewIntegrations(pool *pgxpool.Pool) *integration.Service {
-	return integration.NewService(pool, SealingKey(), Publishing(nil).Sender, "http://localhost:3000")
-}
+// Site is the address the test stacks put in the links they write
+const Site = "http://localhost:3000"
 
-func Publishing(to blog.Sender) blog.Publishing {
-	if to == nil {
-		to = ClosedSender{}
+// NewIntegrations posts to Discord through the given client; nil refuses every post
+func NewIntegrations(pool *pgxpool.Pool, client *http.Client) *integration.Service {
+	if client == nil {
+		client = &http.Client{Transport: closedTransport{}}
 	}
-	return blog.Publishing{
-		Sealing: SealingKey(),
-		Sender:  to,
-		Site:    "http://localhost:3000",
-	}
+	return integration.NewService(pool, SealingKey(), client, Site)
 }
 
 func SealingKey() secrets.Key {
@@ -83,20 +77,10 @@ func SealingKey() secrets.Key {
 	return key
 }
 
-type ClosedSender struct{}
+type closedTransport struct{}
 
-func (ClosedSender) Check(address string) (string, error) {
-	return dispatch.NewCaller(dispatch.DefaultLimits()).Check(address)
-}
-
-func (ClosedSender) Get(context.Context, string) (dispatch.Answer, error) {
-	return dispatch.Answer{}, errors.New("this test stack sends nowhere")
-}
-
-func (ClosedSender) Post(
-	context.Context, string, map[string]string, []byte,
-) (dispatch.Answer, error) {
-	return dispatch.Answer{}, errors.New("this test stack sends nowhere")
+func (closedTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("this test stack sends nowhere")
 }
 
 func NewAppsService(pool *pgxpool.Pool) *connect.Apps {

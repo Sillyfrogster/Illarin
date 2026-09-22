@@ -9,14 +9,9 @@ import (
 	"time"
 
 	postbody "github.com/Sillyfrogster/Illarin/api/internal/blog/body"
-	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration/discord"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-)
-
-const (
-	PostPublished = "blog.post.published.v1"
-	PostUpdated   = "blog.post.updated.v1"
 )
 
 type PublicPost struct {
@@ -51,10 +46,6 @@ func (s *Service) PublishPost(
 	if err := s.mayManage(ctx, editor, current); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.Chosen(ctx, announcement)
-	if err != nil {
-		return Post{}, err
-	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Post{}, fmt.Errorf("begin publishing: %w", err)
@@ -80,9 +71,7 @@ func (s *Service) PublishPost(
 	if err := carryUsesForward(ctx, tx, id, revisionID); err != nil {
 		return Post{}, err
 	}
-	err = s.makePublic(ctx, tx, locked, revisionID, editor.ID, locked.Slug, captured{
-		Chosen: chosen, Note: note,
-	})
+	err = s.makePublic(ctx, tx, locked, revisionID, editor.ID, locked.Slug, announcement)
 	if err != nil {
 		return Post{}, err
 	}
@@ -103,11 +92,6 @@ func (s *Service) PublishPost(
 	return s.post(ctx, id)
 }
 
-type captured struct {
-	Chosen []announcements.Sending
-	Note   string
-}
-
 func (s *Service) makePublic(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -115,7 +99,7 @@ func (s *Service) makePublic(
 	revisionID uuid.UUID,
 	actor uuid.UUID,
 	address string,
-	choice captured,
+	announcement Announcement,
 ) error {
 	firstTime := locked.PublishedAt == nil
 	_, err := tx.Exec(ctx, `
@@ -138,19 +122,45 @@ func (s *Service) makePublic(
 			return err
 		}
 	}
-	event := PostUpdated
-	if firstTime {
-		event = PostPublished
+	if !firstTime || !announcement.Discord {
+		return nil
 	}
-	eventID := uuid.New()
-	_, err = tx.Exec(ctx, `
-		insert into blog_announcements (id, post_id, revision_id, type, note)
-		values ($1, $2, $3, $4, $5)
-	`, eventID, locked.ID, revisionID, event, choice.Note)
+	said, err := s.discordAnnouncement(ctx, tx, locked.ID, revisionID, address)
 	if err != nil {
-		return fmt.Errorf("record the announcement: %w", err)
+		return err
 	}
-	return s.QueueAttempts(ctx, tx, locked.ID, eventID, event, choice.Chosen)
+	return s.discord.Queue(ctx, tx, nil, said)
+}
+
+func (s *Service) discordAnnouncement(
+	ctx context.Context,
+	tx pgx.Tx,
+	postID, revisionID uuid.UUID,
+	address string,
+) (discord.Announcement, error) {
+	said := discord.Announcement{URL: s.postAddress(address), At: s.now()}
+	var linkCard *uuid.UUID
+	err := tx.QueryRow(ctx, `
+		select revision.title, revision.summary, category.label, revision.link_card_media_id
+		  from post_revisions revision
+		  join blog_categories category on category.id = revision.category_id
+		 where revision.id = $1
+	`, revisionID).Scan(&said.Title, &said.Summary, &said.Category, &linkCard)
+	if err != nil {
+		return said, fmt.Errorf("read the post to announce: %w", err)
+	}
+	if linkCard != nil {
+		said.Image = said.URL + "/card.png"
+	}
+	byline, err := readByline(ctx, tx, postID)
+	if err != nil {
+		return said, err
+	}
+	said.Author = discord.Author{Name: byline.DisplayName, URL: s.profileAddress(byline.Handle)}
+	if said.Author.Name == "" {
+		said.Author.Name = byline.Handle
+	}
+	return said, nil
 }
 
 func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, error) {
@@ -580,8 +590,6 @@ func (s *Service) retiredAddress(ctx context.Context, slug string) (Tombstone, e
 	return found, nil
 }
 
-const PostUnpublished = "blog.post.unpublished.v1"
-
 const StatusUnpublished = "unpublished"
 
 const unpublishingTextLimit = 500
@@ -610,7 +618,6 @@ func (s *Service) UnpublishPost(
 	id uuid.UUID,
 	version int,
 	reason, explanation string,
-	announcement Announcement,
 ) (Post, error) {
 	said, err := checkUnpublishing(reason, explanation)
 	if err != nil {
@@ -621,10 +628,6 @@ func (s *Service) UnpublishPost(
 		return Post{}, err
 	}
 	if err := s.mayManage(ctx, editor, current); err != nil {
-		return Post{}, err
-	}
-	chosen, note, err := s.Chosen(ctx, announcement)
-	if err != nil {
 		return Post{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -662,17 +665,6 @@ func (s *Service) UnpublishPost(
 	if err != nil {
 		return Post{}, fmt.Errorf("take the post out of public view: %w", err)
 	}
-	eventID := uuid.New()
-	_, err = tx.Exec(ctx, `
-		insert into blog_announcements (id, post_id, revision_id, type, note)
-		values ($1, $2, $3, $4, $5)
-	`, eventID, id, public, PostUnpublished, note)
-	if err != nil {
-		return Post{}, fmt.Errorf("record the unpublishing announcement: %w", err)
-	}
-	if err := s.QueueAttempts(ctx, tx, id, eventID, PostUnpublished, chosen); err != nil {
-		return Post{}, err
-	}
 	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.unpublished",
 		PostID: &id, RevisionID: &public,
@@ -692,17 +684,12 @@ func (s *Service) RepublishPost(
 	editor Editor,
 	id, revisionID uuid.UUID,
 	version int,
-	announcement Announcement,
 ) (Post, error) {
 	current, err := s.post(ctx, id)
 	if err != nil {
 		return Post{}, err
 	}
 	if err := s.mayManage(ctx, editor, current); err != nil {
-		return Post{}, err
-	}
-	chosen, note, err := s.Chosen(ctx, announcement)
-	if err != nil {
 		return Post{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -736,17 +723,6 @@ func (s *Service) RepublishPost(
 	`, id, StatusPublished, revisionID, revisionID != unpublished)
 	if err != nil {
 		return Post{}, fmt.Errorf("put the post back in public view: %w", err)
-	}
-	eventID := uuid.New()
-	_, err = tx.Exec(ctx, `
-		insert into blog_announcements (id, post_id, revision_id, type, note)
-		values ($1, $2, $3, $4, $5)
-	`, eventID, id, revisionID, PostPublished, note)
-	if err != nil {
-		return Post{}, fmt.Errorf("record the republishing announcement: %w", err)
-	}
-	if err := s.QueueAttempts(ctx, tx, id, eventID, PostPublished, chosen); err != nil {
-		return Post{}, err
 	}
 	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.republished",

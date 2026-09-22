@@ -12,7 +12,6 @@ const Publication = "Illarin Blog"
 const Stripe = 0xE2E2DD
 
 const (
-	ContentLimit     = 2000
 	TitleLimit       = 256
 	DescriptionLimit = 4096
 	FieldLimit       = 1024
@@ -39,43 +38,20 @@ type Announcement struct {
 	Image    string
 	Category string
 	Update   string
-	Note     string
-	Role     string
 	Author   Author
 	At       time.Time
 	Footer   string
 }
 
 func (a Announcement) Body() ([]byte, error) {
-	if a.Role != "" {
-		if err := CheckRole(a.Role); err != nil {
-			return nil, err
-		}
-	}
 	body, err := json.Marshal(message{
-		Content:  a.content(),
 		Embeds:   []embed{a.embed()},
-		Mentions: mentions{Parse: []string{}, Roles: a.roles(), Users: []string{}},
+		Mentions: mentions{Parse: []string{}, Roles: []string{}, Users: []string{}},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("write the Discord announcement: %w", err)
 	}
 	return body, nil
-}
-
-func (a Announcement) content() string {
-	said := strings.TrimSpace(a.Note)
-	if a.Role != "" {
-		said = strings.TrimSpace("<@&" + a.Role + "> " + said)
-	}
-	return cut(said, ContentLimit)
-}
-
-func (a Announcement) roles() []string {
-	if a.Role == "" {
-		return []string{}
-	}
-	return []string{a.Role}
 }
 
 func (a Announcement) embed() embed {
@@ -155,7 +131,7 @@ func textLength(said string) int {
 }
 
 type message struct {
-	Content  string   `json:"content"`
+	Content  string   `json:"content,omitempty"`
 	Embeds   []embed  `json:"embeds"`
 	Mentions mentions `json:"allowed_mentions"`
 }

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
-	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -41,7 +40,7 @@ func DefaultSettings() Settings {
 		HoldFloor:         25 * time.Second,
 		HoldCeiling:       30 * time.Second,
 		Recheck:           5 * time.Second,
-		Lease:             dispatch.Life,
+		Lease:             15 * time.Minute,
 		Retention:         7 * 24 * time.Hour,
 		CleanupInterval:   5 * time.Minute,
 		Batch:             10,

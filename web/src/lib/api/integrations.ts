@@ -1,70 +1,21 @@
 import { ask } from "./request";
+import type { DiscordChannel } from "./shapes";
 
-import type {
-  AddedWorkIntegration,
-  AddWorkIntegrationRequest,
-  UpdateWorkIntegrationRequest,
-  WorkAnnouncementAttempt,
-  WorkAnnouncementAttemptList,
-  WorkIntegration,
-  WorkIntegrationChoice,
-} from "./shapes";
-export type { WorkAnnouncementAttempt, WorkIntegration, WorkIntegrationChoice };
+export type { DiscordChannel };
 
-type AddedIntegration = AddedWorkIntegration;
-type NewIntegration = AddWorkIntegrationRequest;
-type IntegrationChange = UpdateWorkIntegrationRequest;
+/** Whose Discord channel: the signed-in account's or the blog's. */
+export type DiscordScope = "account" | "blog";
 
-const base = "/account/integrations";
+const path = (scope: DiscordScope) => `/${scope}/discord-channel`;
 
-export function readIntegrations(signal?: AbortSignal) {
-  return ask<{ integrations: WorkIntegration[] }>("GET", base, {
-    signal,
-  });
+export function readDiscordChannel(scope: DiscordScope, signal?: AbortSignal) {
+  return ask<DiscordChannel>("GET", path(scope), { signal });
 }
 
-export function addIntegration(body: NewIntegration) {
-  return ask<AddedIntegration>("POST", base, { body });
+export function connectDiscordChannel(scope: DiscordScope, address: string) {
+  return ask<DiscordChannel>("PUT", path(scope), { body: { address } });
 }
 
-export function changeIntegration(id: string, body: IntegrationChange) {
-  return ask<WorkIntegration>("PATCH", `${base}/${id}`, { body });
-}
-
-export function verifyIntegration(id: string) {
-  return ask<WorkIntegration>("POST", `${base}/${id}/verification`);
-}
-
-export function disableIntegration(id: string) {
-  return ask<WorkIntegration>("DELETE", `${base}/${id}/verification`);
-}
-
-export function rotateIntegrationSecret(id: string) {
-  return ask<AddedIntegration>("POST", `${base}/${id}/secret`);
-}
-
-export function removeIntegration(id: string) {
-  return ask<void>("DELETE", `${base}/${id}`);
-}
-
-export function readWorkIntegrationChoices(
-  workId: string,
-  signal?: AbortSignal,
-) {
-  return ask<{ integrations: WorkIntegrationChoice[] }>(
-    "GET",
-    `/works/${workId}/integrations`,
-    { signal },
-  );
-}
-
-export function readWorkAnnouncementAttempts(
-  workId: string,
-  signal?: AbortSignal,
-) {
-  return ask<WorkAnnouncementAttemptList>(
-    "GET",
-    `/works/${workId}/announcement-attempts`,
-    { signal },
-  );
+export function disconnectDiscordChannel(scope: DiscordScope) {
+  return ask<DiscordChannel>("DELETE", path(scope));
 }

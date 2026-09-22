@@ -27,7 +27,7 @@ func (h *Handlers) SchedulePost(c *gin.Context) {
 	}
 	scheduled, err := h.blog.SchedulePost(
 		c.Request.Context(), editor, id, request.Version, request.At,
-		announcementOf(request.IntegrationIds, request.RoleIntegrationIds, request.Note),
+		announcementOf(request.Discord),
 	)
 	if err != nil {
 		h.scheduleError(c, err)
@@ -53,7 +53,7 @@ func (h *Handlers) ReplacePostSchedule(c *gin.Context) {
 	}
 	replaced, err := h.blog.ReplaceSchedule(
 		c.Request.Context(), editor, id, request.RevisionId, request.At,
-		announcementOf(request.IntegrationIds, request.RoleIntegrationIds, request.Note),
+		announcementOf(request.Discord),
 	)
 	if err != nil {
 		h.scheduleError(c, err)
@@ -135,44 +135,18 @@ const (
 )
 
 type ReplacePostScheduleRequest struct {
-	At                 time.Time    `json:"at"`
-	IntegrationIds     *[]uuid.UUID `json:"integrationIds,omitempty"`
-	Note               *string      `json:"note,omitempty"`
-	RevisionId         uuid.UUID    `json:"revisionId"`
-	RoleIntegrationIds *[]uuid.UUID `json:"roleIntegrationIds,omitempty"`
+	At         time.Time `json:"at"`
+	Discord    *bool     `json:"discord,omitempty"`
+	RevisionId uuid.UUID `json:"revisionId"`
 }
 
 type SchedulePostRequest struct {
-	At                 time.Time    `json:"at"`
-	IntegrationIds     *[]uuid.UUID `json:"integrationIds,omitempty"`
-	Note               *string      `json:"note,omitempty"`
-	RoleIntegrationIds *[]uuid.UUID `json:"roleIntegrationIds,omitempty"`
-	Version            int          `json:"version"`
+	At      time.Time `json:"at"`
+	Discord *bool     `json:"discord,omitempty"`
+	Version int       `json:"version"`
 }
 
-func announcementOf(
-	integrations *[]uuid.UUID,
-	roles *[]uuid.UUID,
-	note *string,
-) Announcement {
-	made := Announcement{Ping: readIDs(roles)}
-	if integrations != nil {
-		chosen := readIDs(integrations)
-		made.Integrations = &chosen
-	}
-	if note != nil {
-		made.Note = *note
-	}
-	return made
-}
-
-func readIDs(listed *[]uuid.UUID) []uuid.UUID {
-	if listed == nil {
-		return nil
-	}
-	held := make([]uuid.UUID, 0, len(*listed))
-	for _, one := range *listed {
-		held = append(held, one)
-	}
-	return held
+// announcementOf posts to Discord unless the request turned it off
+func announcementOf(discord *bool) Announcement {
+	return Announcement{Discord: discord == nil || *discord}
 }

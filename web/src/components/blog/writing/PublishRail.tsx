@@ -2,14 +2,11 @@
 
 import type { LucideIcon } from "lucide-react";
 import { CalendarClock, Eye, EyeOff, Send, Undo2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trouble } from "@/components/ui/field";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
-import { readPostDeliveries } from "@/lib/api/posts";
-import type { BlogAnnouncementAttempt, Post } from "@/lib/api/query";
-import { attemptStanding, attemptState } from "@/lib/attempt-standing";
-import { announcementWord } from "@/lib/blog-announcement-attempt";
+import type { Post } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
 import { remainingDeletionWindow } from "@/lib/deletion-window";
@@ -69,13 +66,11 @@ export function PublishRail({
   onSaveFirst,
   onSettled,
   post,
-  stamp,
 }: {
   onFailure: (message: string) => void;
   onSaveFirst: () => Promise<number>;
   onSettled: (post: Post) => void;
   post: Post;
-  stamp: number;
 }) {
   const [step, setStep] = useState<Step>("home");
   const [refusal, setRefusal] = useState("");
@@ -102,9 +97,7 @@ export function PublishRail({
   };
 
   if (step === "home") {
-    return (
-      <Home onStep={setStep} post={post} refusal={refusal} stamp={stamp} />
-    );
+    return <Home onStep={setStep} post={post} refusal={refusal} />;
   }
 
   return (
@@ -126,12 +119,10 @@ function Home({
   onStep,
   post,
   refusal,
-  stamp,
 }: {
   onStep: (step: Step) => void;
   post: Post;
   refusal: string;
-  stamp: number;
 }) {
   const blogAddress = useBlogAddress();
   const schedule = post.schedule;
@@ -205,8 +196,6 @@ function Home({
           <Offer action={action} key={action} onChoose={() => onStep(action)} />
         ))}
       </section>
-
-      <Sent key={stamp} postId={post.id} />
     </div>
   );
 }
@@ -249,51 +238,4 @@ function readersHave(post: Post): string {
       : "Readers have this post.";
   }
   return "Private draft. Not visible to readers.";
-}
-
-function Sent({ postId }: { postId: string }) {
-  const [sent, setSent] = useState<BlogAnnouncementAttempt[]>([]);
-
-  useEffect(() => {
-    let live = true;
-    void readPostDeliveries(postId).then((answer) => {
-      if (live && answer.value) setSent(answer.value.attempts);
-    });
-    return () => {
-      live = false;
-    };
-  }, [postId]);
-
-  if (sent.length === 0) return null;
-
-  return (
-    <section aria-labelledby="sent-to" className="flex flex-col gap-2">
-      <h3 className="font-display text-ui font-medium text-ink" id="sent-to">
-        Sent
-      </h3>
-      <ul className="flex list-none flex-col gap-1.5">
-        {sent.map((one) => (
-          <li
-            className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-control bg-deep px-3 py-2 font-prose text-meta"
-            key={one.id}
-          >
-            <span className="min-w-0 text-ink wrap-anywhere">
-              {one.integration}
-            </span>
-            <span className="text-mute">
-              {announcementWord(one.announcementType)}
-            </span>
-            <span className={cn(troubled(one) ? "text-stop" : "text-mute")}>
-              {attemptStanding(one)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function troubled(one: BlogAnnouncementAttempt): boolean {
-  const state = attemptState(one);
-  return state === "gaveUp" || state === "stopped";
 }

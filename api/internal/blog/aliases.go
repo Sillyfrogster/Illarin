@@ -35,35 +35,3 @@ func registerAliases(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPut, "/v1/publication/posts/:id/byline", d.JSON, h.CorrectPostByline)
 	routes.Handle(http.MethodPost, "/v1/blog/posts/:id/withdraw", d.JSON, h.UnpublishPost)
 }
-
-// The field names a post's requests answered to before the rename, kept for sixty days
-var (
-	postIntegrationAliases = map[string]string{
-		"integrationIds": "destinationIds", "roleIntegrationIds": "roleDestinationIds",
-	}
-)
-
-func (r *PublishPostRequest) UnmarshalJSON(data []byte) error {
-	type plain PublishPostRequest
-	return api.UnmarshalAliasedLoosely(data, (*plain)(r), postIntegrationAliases)
-}
-
-func (r *RepublishPostRequest) UnmarshalJSON(data []byte) error {
-	type plain RepublishPostRequest
-	return api.UnmarshalAliasedLoosely(data, (*plain)(r), postIntegrationAliases)
-}
-
-func (r *UnpublishPostRequest) UnmarshalJSON(data []byte) error {
-	type plain UnpublishPostRequest
-	return api.UnmarshalAliasedLoosely(data, (*plain)(r), postIntegrationAliases)
-}
-
-func (r *SchedulePostRequest) UnmarshalJSON(data []byte) error {
-	type plain SchedulePostRequest
-	return api.UnmarshalAliasedLoosely(data, (*plain)(r), postIntegrationAliases)
-}
-
-func (r *ReplacePostScheduleRequest) UnmarshalJSON(data []byte) error {
-	type plain ReplacePostScheduleRequest
-	return api.UnmarshalAliasedLoosely(data, (*plain)(r), postIntegrationAliases)
-}

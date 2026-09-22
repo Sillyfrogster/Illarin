@@ -75,7 +75,6 @@ export function PostWriter({ id }: { id: string }) {
   const [keeping, setKeeping] = useState(false);
   const [said, setSaid] = useState("");
   const [edition, setEdition] = useState(0);
-  const [stamp, setStamp] = useState(0);
   const version = useRef(0);
   const writing = useRef<HTMLElement | null>(null);
   const place = useRef(0);
@@ -182,7 +181,6 @@ export function PostWriter({ id }: { id: string }) {
     }
     setRefusal("");
     setSaid(`Saved as revision ${answer.value.number}.`);
-    setStamp((count) => count + 1);
   }
 
   if (account === undefined) {
@@ -463,10 +461,8 @@ export function PostWriter({ id }: { id: string }) {
               onSettled={(settled) => {
                 settle(settled, false);
                 setSaid("");
-                setStamp((count) => count + 1);
               }}
               post={post}
-              stamp={stamp}
             />
           </WorkspaceRail>
         ) : null}

@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	announcements "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -69,10 +67,6 @@ func (s *Service) SchedulePost(
 	if err := s.checkInstant(at); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.Chosen(ctx, announcement)
-	if err != nil {
-		return Post{}, err
-	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Post{}, fmt.Errorf("begin scheduling: %w", err)
@@ -100,17 +94,14 @@ func (s *Service) SchedulePost(
 	}
 	scheduleID := uuid.New()
 	_, err = tx.Exec(ctx, `
-		insert into post_schedules (id, post_id, revision_id, due_at, created_by, note)
+		insert into post_schedules (id, post_id, revision_id, due_at, created_by, post_to_discord)
 		values ($1, $2, $3, $4, $5, $6)
-	`, scheduleID, id, revisionID, at.UTC(), editor.ID, note)
+	`, scheduleID, id, revisionID, at.UTC(), editor.ID, announcement.Discord)
 	if isUniqueViolation(err) {
 		return Post{}, ErrAlreadyScheduled
 	}
 	if err != nil {
 		return Post{}, fmt.Errorf("keep the schedule: %w", err)
-	}
-	if err := keepScheduleChoice(ctx, tx, scheduleID, chosen); err != nil {
-		return Post{}, err
 	}
 	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.scheduled",
@@ -143,10 +134,6 @@ func (s *Service) ReplaceSchedule(
 	if err := s.checkInstant(at); err != nil {
 		return Post{}, err
 	}
-	chosen, note, err := s.Chosen(ctx, announcement)
-	if err != nil {
-		return Post{}, err
-	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Post{}, fmt.Errorf("begin schedule replacement: %w", err)
@@ -165,20 +152,12 @@ func (s *Service) ReplaceSchedule(
 	}
 	_, err = tx.Exec(ctx, `
 		update post_schedules
-		   set revision_id = $2, due_at = $3, note = $4, attempts = 0,
+		   set revision_id = $2, due_at = $3, post_to_discord = $4, attempts = 0,
 		       lease_token = null, lease_expires_at = null, updated_at = now()
 		 where id = $1
-	`, waiting, revisionID, at.UTC(), note)
+	`, waiting, revisionID, at.UTC(), announcement.Discord)
 	if err != nil {
 		return Post{}, fmt.Errorf("replace the scheduled edition: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `
-		delete from post_schedule_integrations where schedule_id = $1
-	`, waiting); err != nil {
-		return Post{}, fmt.Errorf("clear the scheduled delivery choice: %w", err)
-	}
-	if err := keepScheduleChoice(ctx, tx, waiting, chosen); err != nil {
-		return Post{}, err
 	}
 	err = recordActivity(ctx, tx, change{
 		Actor: editor.ID, Action: "post.schedule.replaced",
@@ -270,7 +249,7 @@ type leased struct {
 	PostID     uuid.UUID
 	RevisionID uuid.UUID
 	CreatedBy  *uuid.UUID
-	Note       string
+	Discord    bool
 	Token      uuid.UUID
 	Tries      int
 }
@@ -295,9 +274,9 @@ func (s *Service) leaseDueSchedule(ctx context.Context, now time.Time) (leased, 
 		  from candidate
 		 where schedule.id = candidate.id
 		returning schedule.id, schedule.post_id, schedule.revision_id,
-		          schedule.created_by, schedule.note, schedule.attempts
+		          schedule.created_by, schedule.post_to_discord, schedule.attempts
 	`, now, held.Token, now.Add(ScheduleLease), SchedulePending, SchedulePublishing).Scan(
-		&held.ID, &held.PostID, &held.RevisionID, &held.CreatedBy, &held.Note, &held.Tries,
+		&held.ID, &held.PostID, &held.RevisionID, &held.CreatedBy, &held.Discord, &held.Tries,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return leased{}, false, nil
@@ -340,13 +319,8 @@ func (s *Service) publishLeased(ctx context.Context, held leased) error {
 		}
 		return commitScheduleRun(ctx, tx)
 	}
-	chosen, err := scheduledChoice(ctx, tx, held.ID)
-	if err != nil {
-		return err
-	}
-	err = s.makePublic(ctx, tx, locked, held.RevisionID, actorOf(held, locked), kept.Slug, captured{
-		Chosen: chosen, Note: held.Note,
-	})
+	err = s.makePublic(ctx, tx, locked, held.RevisionID, actorOf(held, locked), kept.Slug,
+		Announcement{Discord: held.Discord})
 	if err != nil {
 		return err
 	}
@@ -434,39 +408,6 @@ func lockWaitingSchedule(ctx context.Context, tx pgx.Tx, postID uuid.UUID) (uuid
 		return uuid.Nil, ErrSchedulePublishing
 	}
 	return id, nil
-}
-
-func keepScheduleChoice(
-	ctx context.Context,
-	tx pgx.Tx,
-	scheduleID uuid.UUID,
-	chosen []announcements.Sending,
-) error {
-	for _, one := range chosen {
-		_, err := tx.Exec(ctx, `
-			insert into post_schedule_integrations (schedule_id, integration_id, mention_role)
-			values ($1, $2, $3) on conflict do nothing
-		`, scheduleID, one.ID, one.Ping)
-		if err != nil {
-			return fmt.Errorf("keep the scheduled delivery choice: %w", err)
-		}
-	}
-	return nil
-}
-
-func scheduledChoice(ctx context.Context, tx pgx.Tx, scheduleID uuid.UUID) ([]announcements.Sending, error) {
-	rows, err := tx.Query(ctx, `
-		select integration.id, integration.name, integration.type, integration.state,
-		       integration.announcements, integration.role_name, chosen.mention_role
-		  from post_schedule_integrations chosen
-		  join blog_integrations integration on integration.id = chosen.integration_id
-		 where chosen.schedule_id = $1 and integration.state = $2
-		 order by integration.name, integration.created_at
-	`, scheduleID, IntegrationActive)
-	if err != nil {
-		return nil, fmt.Errorf("read the scheduled delivery choice: %w", err)
-	}
-	return announcements.CollectSending(rows)
 }
 
 func settleSchedule(ctx context.Context, tx pgx.Tx, id uuid.UUID, state, because string) error {

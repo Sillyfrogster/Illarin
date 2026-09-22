@@ -66,46 +66,6 @@ type BlogActivityLog struct {
 	AttemptID     pgtype.UUID
 }
 
-type BlogAnnouncement struct {
-	ID         pgtype.UUID
-	PostID     pgtype.UUID
-	RevisionID pgtype.UUID
-	Type       string
-	OccurredAt pgtype.Timestamptz
-	Note       string
-}
-
-type BlogAnnouncementAttempt struct {
-	ID              pgtype.UUID
-	AnnouncementID  pgtype.UUID
-	IntegrationID   pgtype.UUID
-	IntegrationName string
-	State           string
-	Tries           int32
-	LeaseToken      pgtype.UUID
-	LeaseExpiresAt  pgtype.Timestamptz
-	DueAt           pgtype.Timestamptz
-	SettledAt       pgtype.Timestamptz
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
-	Run             int32
-	SettledReason   pgtype.Text
-	MentionRole     bool
-	MessageID       pgtype.Text
-}
-
-type BlogAnnouncementTry struct {
-	ID          pgtype.UUID
-	AttemptID   pgtype.UUID
-	Number      int32
-	Outcome     string
-	Status      pgtype.Int4
-	Detail      string
-	TookMs      int32
-	AttemptedAt pgtype.Timestamptz
-	Run         int32
-}
-
 type BlogCategory struct {
 	ID        pgtype.UUID
 	Slug      string
@@ -124,30 +84,6 @@ type BlogDiscordRepair struct {
 	Fingerprint     string
 	Result          []byte
 	CreatedAt       pgtype.Timestamptz
-}
-
-type BlogIntegration struct {
-	ID                  pgtype.UUID
-	Type                string
-	Name                string
-	Host                string
-	Address             []byte
-	SigningSecret       []byte
-	State               string
-	VerifiedAt          pgtype.Timestamptz
-	DisabledAt          pgtype.Timestamptz
-	CreatedBy           pgtype.UUID
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	Announcements       []string
-	PreviousSecret      []byte
-	PreviousSecretUntil pgtype.Timestamptz
-	SigningSecretSetAt  pgtype.Timestamptz
-	GuildID             pgtype.Text
-	ChannelID           pgtype.Text
-	WebhookName         pgtype.Text
-	RoleID              pgtype.Text
-	RoleName            pgtype.Text
 }
 
 type BlogWriter struct {
@@ -238,6 +174,24 @@ type DailyTotal struct {
 	Kind   string
 	WorkID pgtype.UUID
 	Count  int32
+}
+
+type DiscordPost struct {
+	ID        pgtype.UUID
+	WebhookID pgtype.UUID
+	Body      []byte
+	Tries     int32
+	DueAt     pgtype.Timestamptz
+	SentAt    pgtype.Timestamptz
+	FailedAt  pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
+type DiscordWebhook struct {
+	ID        pgtype.UUID
+	OwnerID   pgtype.UUID
+	Address   []byte
+	UpdatedAt pgtype.Timestamptz
 }
 
 type DownloadRecord struct {
@@ -444,12 +398,7 @@ type PostSchedule struct {
 	UpdatedAt      pgtype.Timestamptz
 	SettledAt      pgtype.Timestamptz
 	Note           string
-}
-
-type PostScheduleIntegration struct {
-	ScheduleID    pgtype.UUID
-	IntegrationID pgtype.UUID
-	MentionRole   bool
+	PostToDiscord  bool
 }
 
 type PostSlug struct {
@@ -633,47 +582,6 @@ type Work struct {
 	DraftedChangesVersion int64
 }
 
-type WorkAnnouncement struct {
-	ID              pgtype.UUID
-	WorkID          pgtype.UUID
-	VersionID       pgtype.UUID
-	Type            string
-	OccurredAt      pgtype.Timestamptz
-	UnlistedConsent bool
-	Payload         []byte
-}
-
-type WorkAnnouncementAttempt struct {
-	ID              pgtype.UUID
-	AnnouncementID  pgtype.UUID
-	IntegrationID   pgtype.UUID
-	IntegrationName string
-	IntegrationType string
-	State           string
-	SettledReason   pgtype.Text
-	MessageID       pgtype.Text
-	Run             int32
-	Tries           int32
-	LeaseToken      pgtype.UUID
-	LeaseExpiresAt  pgtype.Timestamptz
-	DueAt           pgtype.Timestamptz
-	SettledAt       pgtype.Timestamptz
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
-}
-
-type WorkAnnouncementTry struct {
-	ID          pgtype.UUID
-	AttemptID   pgtype.UUID
-	Run         int32
-	Number      int32
-	Outcome     string
-	Status      pgtype.Int4
-	Detail      string
-	TookMs      int32
-	AttemptedAt pgtype.Timestamptz
-}
-
 type WorkBlock struct {
 	ID         pgtype.UUID
 	WorkID     pgtype.UUID
@@ -703,32 +611,6 @@ type WorkFoundImage struct {
 	Section   string
 	Position  int32
 	CreatedAt pgtype.Timestamptz
-}
-
-type WorkIntegration struct {
-	ID                  pgtype.UUID
-	OwnerID             pgtype.UUID
-	Type                string
-	Name                string
-	Host                string
-	Address             []byte
-	SigningSecret       []byte
-	SigningSecretSetAt  pgtype.Timestamptz
-	PreviousSecret      []byte
-	PreviousSecretUntil pgtype.Timestamptz
-	GuildID             pgtype.Text
-	ChannelID           pgtype.Text
-	State               string
-	VerifiedAt          pgtype.Timestamptz
-	DisabledAt          pgtype.Timestamptz
-	Version             int64
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-}
-
-type WorkIntegrationDefault struct {
-	WorkID        pgtype.UUID
-	IntegrationID pgtype.UUID
 }
 
 type WorkLegacyPath struct {

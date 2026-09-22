@@ -1,4 +1,4 @@
-package dispatch
+package api
 
 import (
 	"net/url"
@@ -22,7 +22,7 @@ func parse(t *testing.T, signed string) (string, string, string) {
 
 func TestASignedURLIsGoodUntilItRunsOut(t *testing.T) {
 	t.Parallel()
-	key := NewKey()
+	key := NewURLSigner()
 	now := time.Unix(1_700_000_000, 0)
 
 	path, expires, signature := parse(t, key.Sign("/media/abc/detail/1", now))
@@ -30,18 +30,18 @@ func TestASignedURLIsGoodUntilItRunsOut(t *testing.T) {
 	if !key.Valid(path, expires, signature, now) {
 		t.Error("a fresh signature is refused")
 	}
-	if !key.Valid(path, expires, signature, now.Add(Life-time.Second)) {
+	if !key.Valid(path, expires, signature, now.Add(SignedURLLife-time.Second)) {
 		t.Error("a signature is refused before it runs out")
 	}
-	if key.Valid(path, expires, signature, now.Add(Life+time.Second)) {
+	if key.Valid(path, expires, signature, now.Add(SignedURLLife+time.Second)) {
 		t.Error("a signature outlives its deadline")
 	}
 }
 
 func TestASignatureIsGoodForOnePathAndOneKey(t *testing.T) {
 	t.Parallel()
-	key := NewKey()
-	other := NewKey()
+	key := NewURLSigner()
+	other := NewURLSigner()
 	now := time.Unix(1_700_000_000, 0)
 
 	path, expires, signature := parse(t, key.Sign("/media/abc/detail/1", now))

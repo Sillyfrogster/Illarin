@@ -95,26 +95,6 @@ func (s blogStack) gone(t *testing.T, slug string) (tombstone, string) {
 	return found, response.Body.String()
 }
 
-func (s blogStack) events(t *testing.T, postID string) []string {
-	t.Helper()
-	rows, err := s.pool.Query(context.Background(), `
-		select type from blog_announcements where post_id = $1 order by occurred_at, id
-	`, postID)
-	if err != nil {
-		t.Fatalf("read the announcements: %v", err)
-	}
-	defer rows.Close()
-	recorded := make([]string, 0, 4)
-	for rows.Next() {
-		var one string
-		if err := rows.Scan(&one); err != nil {
-			t.Fatalf("read an announcement: %v", err)
-		}
-		recorded = append(recorded, one)
-	}
-	return recorded
-}
-
 func TestWithdrawingAPostLeavesATombstoneAndKeepsEverythingElse(t *testing.T) {
 	t.Parallel()
 	stack := newBlogStack(t)
@@ -238,14 +218,6 @@ func TestRepublishingReturnsTheSamePostToTheSameAddress(t *testing.T) {
 	}
 	if whole := stack.archive(t, ""); whole.Total != 1 {
 		t.Errorf("the archive holds %d posts after republication, want 1", whole.Total)
-	}
-	want := []string{
-		"blog.post.published.v1",
-		"blog.post.unpublished.v1",
-		"blog.post.published.v1",
-	}
-	if got := stack.events(t, live.ID); !slices.Equal(got, want) {
-		t.Errorf("events = %v, want %v", got, want)
 	}
 }
 

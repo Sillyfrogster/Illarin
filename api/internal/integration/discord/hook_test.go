@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 )
 
 const capability = "https://discord.com/api/webhooks/1234567890123456789/a-long-webhook-token"
@@ -39,84 +37,6 @@ func TestOnlyADiscordWebhookAddressIsACapability(t *testing.T) {
 	} {
 		if _, err := ReadCapability(raw); err == nil {
 			t.Errorf("%q was accepted", raw)
-		}
-	}
-}
-
-func TestConfirmingModeAsksDiscordForTheMessage(t *testing.T) {
-	t.Parallel()
-	read, err := ReadCapability(capability)
-	if err != nil {
-		t.Fatalf("read capability: %v", err)
-	}
-
-	if got := read.Confirming(); got != capability+"?wait=true" {
-		t.Errorf("confirming address = %q", got)
-	}
-}
-
-func TestAWebhookReadKeepsOnlySafeIdentity(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{
-		"id": "1234567890123456789",
-		"token": "a-long-webhook-token",
-		"guild_id": "111111111111111111",
-		"channel_id": "222222222222222222",
-		"name": "Illarin Blog",
-		"avatar": "abc",
-		"user": {"id": "333", "username": "aaron"}
-	}`)
-
-	found, err := ReadWebhook(body)
-
-	if err != nil {
-		t.Fatalf("read webhook: %v", err)
-	}
-	want := Webhook{
-		ID:        "1234567890123456789",
-		GuildID:   "111111111111111111",
-		ChannelID: "222222222222222222",
-		Name:      "Illarin Blog",
-	}
-	if found != want {
-		t.Errorf("webhook = %+v, want %+v", found, want)
-	}
-}
-
-func TestAWebhookWithoutAGuildOrChannelIsRefused(t *testing.T) {
-	t.Parallel()
-	for _, body := range []string{
-		`{"id":"1","channel_id":"2"}`,
-		`{"id":"1","guild_id":"2"}`,
-		`{"guild_id":"1","channel_id":"2"}`,
-		`not json`,
-	} {
-		if _, err := ReadWebhook([]byte(body)); err == nil {
-			t.Errorf("%q was accepted", body)
-		}
-	}
-}
-
-func TestAMessageIdIsReadBackFromAConfirmedSend(t *testing.T) {
-	t.Parallel()
-	if got := dispatch.MessageID([]byte(`{"id":"444444444444444444","channel_id":"2"}`)); got != "444444444444444444" {
-		t.Errorf("message id = %q", got)
-	}
-	for _, body := range []string{`{}`, `{"id":""}`, `{"id":"nope"}`, ``, `[]`} {
-		if got := dispatch.MessageID([]byte(body)); got != "" {
-			t.Errorf("%q gave a message id of %q", body, got)
-		}
-	}
-}
-
-func TestARoleIsOnlyEverASnowflake(t *testing.T) {
-	t.Parallel()
-	if err := CheckRole("111111111111111111"); err != nil {
-		t.Errorf("a snowflake was refused: %v", err)
-	}
-	for _, raw := range []string{"", "everyone", "@everyone", "123", strings.Repeat("1", 21)} {
-		if err := CheckRole(raw); err == nil {
-			t.Errorf("%q was accepted as a role", raw)
 		}
 	}
 }
@@ -226,22 +146,10 @@ func TestAnAnnouncementWithoutAPictureLeavesItOut(t *testing.T) {
 	}
 }
 
-func TestTheNoteIsTheOnlyTextAContributorPutsInTheMessage(t *testing.T) {
-	t.Parallel()
-	one := aRelease()
-	one.Note = "Worth a read if you keep worldbooks."
-
-	read := announced(t, one)
-
-	if read.Content != "Worth a read if you keep worldbooks." {
-		t.Errorf("content = %q", read.Content)
-	}
-}
-
 func TestNoAnnouncementParsesAMentionOutOfItsText(t *testing.T) {
 	t.Parallel()
 	one := aRelease()
-	one.Note = "@everyone <@&999999999999999999> <@111111111111111111>"
+	one.Title = "@everyone <@&999999999999999999> <@111111111111111111>"
 
 	read := announced(t, one)
 
@@ -250,25 +158,6 @@ func TestNoAnnouncementParsesAMentionOutOfItsText(t *testing.T) {
 	}
 	if len(read.Mentions.Roles) != 0 || len(read.Mentions.Users) != 0 {
 		t.Errorf("mentions = %+v, want nobody named", read.Mentions)
-	}
-}
-
-func TestOnlyTheConfiguredRoleIsEverMentioned(t *testing.T) {
-	t.Parallel()
-	one := aRelease()
-	one.Note = "<@&999999999999999999>"
-	one.Role = "111111111111111111"
-
-	read := announced(t, one)
-
-	if len(read.Mentions.Roles) != 1 || read.Mentions.Roles[0] != "111111111111111111" {
-		t.Errorf("roles = %v", read.Mentions.Roles)
-	}
-	if !strings.HasPrefix(read.Content, "<@&111111111111111111>") {
-		t.Errorf("content = %q, want the role named at the front", read.Content)
-	}
-	if len(read.Mentions.Parse) != 0 {
-		t.Errorf("parse = %v, want nothing parsed", read.Mentions.Parse)
 	}
 }
 
@@ -286,7 +175,6 @@ func TestAnAnnouncementIsCutToWhatDiscordAccepts(t *testing.T) {
 	one := aRelease()
 	one.Title = strings.Repeat("t", TitleLimit+50)
 	one.Summary = strings.Repeat("s", DescriptionLimit+50)
-	one.Note = strings.Repeat("n", ContentLimit+50)
 	one.Category = strings.Repeat("c", FieldLimit+50)
 	one.Update = strings.Repeat("u", FieldLimit+50)
 	one.Footer = strings.Repeat("f", FooterLimit+50)
@@ -300,9 +188,6 @@ func TestAnAnnouncementIsCutToWhatDiscordAccepts(t *testing.T) {
 	if len([]rune(read.Embeds[0].Description)) > DescriptionLimit {
 		t.Errorf("description is %d runes", len([]rune(read.Embeds[0].Description)))
 	}
-	if len([]rune(read.Content)) > ContentLimit {
-		t.Errorf("content is %d runes", len([]rune(read.Content)))
-	}
 	shown := read.Embeds[0]
 	total := textLength(shown.Title) + textLength(shown.Description) + textLength(shown.Author.Name) + textLength(shown.Footer.Text)
 	for _, field := range shown.Fields {
@@ -311,7 +196,7 @@ func TestAnAnnouncementIsCutToWhatDiscordAccepts(t *testing.T) {
 	if total > EmbedLimit {
 		t.Errorf("embed is %d characters", total)
 	}
-	if textLength(cut(strings.Repeat("🐦", ContentLimit), ContentLimit)) > ContentLimit {
-		t.Fatal("emoji content exceeds Discord's limit")
+	if textLength(cut(strings.Repeat("🐦", TitleLimit), TitleLimit)) > TitleLimit {
+		t.Fatal("emoji text exceeds Discord's limit")
 	}
 }

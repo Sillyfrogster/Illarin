@@ -1,9 +1,7 @@
 package discord
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -17,8 +15,6 @@ var tokenShape = regexp.MustCompile(`^[A-Za-z0-9_-]{16,120}$`)
 var ErrNotACapability = errors.New(
 	"a Discord integration is an incoming webhook address on discord.com",
 )
-
-var ErrNotAWebhook = errors.New("Discord did not answer with a channel webhook")
 
 type Capability struct {
 	ID    string
@@ -37,40 +33,4 @@ func ReadCapability(raw string) (Capability, error) {
 		return Capability{}, ErrNotACapability
 	}
 	return Capability{ID: id, Token: token, URL: address}, nil
-}
-
-func (c Capability) Confirming() string { return c.URL + "?wait=true" }
-
-type Webhook struct {
-	ID        string
-	GuildID   string
-	ChannelID string
-	Name      string
-}
-
-func ReadWebhook(body []byte) (Webhook, error) {
-	var said struct {
-		ID        string `json:"id"`
-		GuildID   string `json:"guild_id"`
-		ChannelID string `json:"channel_id"`
-		Name      string `json:"name"`
-	}
-	if err := json.Unmarshal(body, &said); err != nil {
-		return Webhook{}, ErrNotAWebhook
-	}
-	if !snowflake.MatchString(said.ID) ||
-		!snowflake.MatchString(said.GuildID) ||
-		!snowflake.MatchString(said.ChannelID) {
-		return Webhook{}, ErrNotAWebhook
-	}
-	return Webhook{
-		ID: said.ID, GuildID: said.GuildID, ChannelID: said.ChannelID, Name: said.Name,
-	}, nil
-}
-
-func CheckRole(raw string) error {
-	if !snowflake.MatchString(strings.TrimSpace(raw)) {
-		return fmt.Errorf("a Discord role id is 17 to 20 digits")
-	}
-	return nil
 }

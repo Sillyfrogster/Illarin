@@ -79,8 +79,7 @@ func registerRoutes(r *gin.Engine, s services, d api.Deadlines, ready readiness)
 	private.Register(routes, private.NewHandlers(private.NewService(s.Works.Pool())))
 	connect.Register(routes, connect.NewHandlers(s.Apps, s.Sends, downloads))
 	blog.Register(routes, posts)
-	integration.Register(routes, integration.NewHandlers(
-		s.Blog, s.Integrations, posts.IntegrationAccess()))
+	integration.Register(routes, integration.NewHandlers(s.Integrations))
 	staff.Register(routes, staff.NewHandlers(staff.NewService(s.Works)))
 	return nil
 }

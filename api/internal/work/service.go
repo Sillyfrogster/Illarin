@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/summary"
@@ -35,7 +35,7 @@ type Service struct {
 	store   storage.Store
 	media   *mediaproc.Library
 	upload  UploadSettings
-	signer  dispatch.Key
+	signer  api.URLSigner
 	now     func() time.Time
 	siteURL string
 }
@@ -144,7 +144,7 @@ func NewServiceWithMediaProcessor(
 	return &Service{
 		pool: pool, reg: reg, store: store,
 		media:  mediaproc.NewLibrary(store, processor, workers),
-		upload: settings, signer: dispatch.NewKey(), now: time.Now,
+		upload: settings, signer: api.NewURLSigner(), now: time.Now,
 	}
 }
 

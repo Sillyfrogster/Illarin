@@ -1,39 +1,31 @@
 package integration
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"time"
 
-	"github.com/Sillyfrogster/Illarin/api/internal/integration/discord"
-	"github.com/Sillyfrogster/Illarin/api/internal/integration/dispatch"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
 const (
-	SettledTakenDown = "taken_down"
-	SettledWithdrawn = "withdrawn"
-	SettledUnlisted  = "unlisted"
-	SettledDeleted   = "deleted"
+	poll     = 5 * time.Second
+	lease    = time.Minute
+	maxTries = 8
 )
 
-var whyCancelled = map[string]string{
-	SettledTakenDown: "The work is taken down.",
-	SettledWithdrawn: "The update was withdrawn.",
-	SettledUnlisted:  "The work is unlisted and this update was not cleared to send its link.",
-	SettledDeleted:   "The work is no longer published.",
-}
-
-// RunAnnouncements sends due announcements until the context ends.
+// RunAnnouncements posts due announcements until the context ends
 func (s *Service) RunAnnouncements(ctx context.Context, onError func(error)) {
-	ticker := time.NewTicker(dispatch.Poll)
+	ticker := time.NewTicker(poll)
 	defer ticker.Stop()
 	for {
-		_, err := s.SendDueAnnouncements(ctx, s.now())
-		if err != nil && ctx.Err() == nil && onError != nil {
+		if _, err := s.SendDue(ctx); err != nil && ctx.Err() == nil && onError != nil {
 			onError(err)
 		}
 		select {
@@ -44,215 +36,95 @@ func (s *Service) RunAnnouncements(ctx context.Context, onError func(error)) {
 	}
 }
 
-// SendDueAnnouncements makes one attempt on every announcement due at the given time.
-func (s *Service) SendDueAnnouncements(ctx context.Context, now time.Time) (int, error) {
-	made := 0
+// SendDue makes one try at every post that is due and reports how many it tried
+func (s *Service) SendDue(ctx context.Context) (int, error) {
+	tried := 0
 	for {
-		held, taken, err := s.ledger.Lease(ctx, now)
-		if err != nil || !taken {
-			return made, err
+		held, found, err := s.lease(ctx)
+		if err != nil || !found {
+			return tried, err
 		}
-		if err := s.sendLeased(ctx, held, now); err != nil {
-			return made, err
+		if err := s.send(ctx, held); err != nil {
+			return tried, err
 		}
-		made++
+		tried++
 	}
 }
 
-type standing struct {
-	unpublished     bool
-	takenDown       bool
-	unlisted        bool
-	withdrawn       bool
-	consent         bool
-	payload         []byte
-	integrationType string
-	state           string
-	sameOwner       bool
-	hasIntegration  bool
+type leased struct {
+	id      uuid.UUID
+	address []byte
+	body    []byte
+	tries   int
 }
 
-func (s *Service) sendLeased(ctx context.Context, held dispatch.Work, now time.Time) error {
-	found, err := s.recheck(ctx, held)
-	if err != nil {
-		return err
-	}
-	if said, cancelled := found.cancels(); cancelled {
-		return s.ledger.Record(ctx, held, said, now)
-	}
-	if found.integrationType == Discord {
-		return s.announceOnDiscord(ctx, held, *held.IntegrationID, found.payload, now)
-	}
-	endpoint, err := s.configurationByID(ctx, *held.IntegrationID)
-	if err != nil {
-		return err
-	}
-	headers, err := dispatch.Headers(endpoint.secrets, held.ID.String(), now.UTC(), found.payload)
-	if err != nil {
-		return err
-	}
-	answer, err := s.sender.Post(ctx, endpoint.address, headers, found.payload)
-	if err != nil {
-		return s.ledger.Record(ctx, held, dispatch.Unreachable, now)
-	}
-	said := dispatch.ReadAnswer(answer)
-	said.Status, said.Took = &answer.Status, answer.Took
-	if err := s.ledger.Record(ctx, held, said, now); err != nil {
-		return err
-	}
-	if !said.Gone {
-		return nil
-	}
-	return s.retire(ctx, *held.IntegrationID)
-}
-
-func (s *Service) recheck(ctx context.Context, held dispatch.Work) (standing, error) {
-	var found standing
-	var integrationType, state *string
-	var sameOwner *bool
+func (s *Service) lease(ctx context.Context) (leased, bool, error) {
+	var held leased
+	now := s.now()
 	err := s.pool.QueryRow(ctx, `
-		select owned.deleted_at is not null or owned.lifecycle <> 'published',
-		       owned.taken_down_at is not null, owned.visibility = 'unlisted',
-		       version.withdrawn_at is not null, event.unlisted_consent, event.payload::text,
-		       integration.type, integration.state, integration.owner_id = owned.owner_id
-		  from work_announcements event
-		  join works owned on owned.id = event.work_id
-		  join work_versions version on version.id = event.version_id
-		  left join work_integrations integration on integration.id = $2
-		 where event.id = $1
-	`, held.AnnouncementID, held.IntegrationID).Scan(
-		&found.unpublished, &found.takenDown, &found.unlisted, &found.withdrawn, &found.consent,
-		&found.payload, &integrationType, &state, &sameOwner,
-	)
+		update discord_posts post
+		   set tries = post.tries + 1, due_at = $2
+		  from discord_webhooks hook
+		 where hook.id = post.webhook_id
+		   and post.id = (
+		       select id from discord_posts
+		        where sent_at is null and failed_at is null and due_at <= $1
+		        order by due_at
+		        for update skip locked
+		        limit 1)
+		returning post.id, hook.address, post.body::text, post.tries
+	`, now, now.Add(lease)).Scan(&held.id, &held.address, &held.body, &held.tries)
 	if errors.Is(err, pgx.ErrNoRows) {
-		found.unpublished = true
-		return found, nil
+		return leased{}, false, nil
 	}
 	if err != nil {
-		return found, fmt.Errorf("recheck an announcement before sending it: %w", err)
+		return leased{}, false, fmt.Errorf("lease a Discord post: %w", err)
 	}
-	if integrationType != nil && state != nil && sameOwner != nil {
-		found.hasIntegration, found.integrationType, found.state, found.sameOwner = true, *integrationType, *state, *sameOwner
-	}
-	return found, nil
+	return held, true, nil
 }
 
-func (f standing) cancels() (dispatch.Verdict, bool) {
+func (s *Service) send(ctx context.Context, held leased) error {
+	address, err := s.sealing.Open(held.address)
+	if err != nil {
+		return fmt.Errorf("open the Discord address: %w", err)
+	}
+	status := s.post(ctx, string(address), held.body)
 	switch {
-	case f.unpublished:
-		return cancelled(SettledDeleted), true
-	case f.takenDown:
-		return cancelled(SettledTakenDown), true
-	case f.withdrawn:
-		return cancelled(SettledWithdrawn), true
-	case f.unlisted && !f.consent:
-		return cancelled(SettledUnlisted), true
-	case !f.hasIntegration || !f.sameOwner:
-		return dispatch.Stopped(dispatch.Removed), true
-	case f.state != Active:
-		return dispatch.Stopped(dispatch.Disabled), true
-	}
-	return dispatch.Verdict{}, false
-}
-
-func cancelled(reason string) dispatch.Verdict {
-	return dispatch.Cancelled(reason, whyCancelled[reason])
-}
-
-func (s *Service) announceOnDiscord(
-	ctx context.Context,
-	held dispatch.Work,
-	integrationID uuid.UUID,
-	payload []byte,
-	now time.Time,
-) error {
-	if held.Reclaimed {
-		return s.ledger.Record(ctx, held, dispatch.DiscordUnconfirmed, now)
-	}
-	var summary sent
-	if err := json.Unmarshal(payload, &summary); err != nil {
-		return fmt.Errorf("read the announcement to render: %w", err)
-	}
-	endpoint, err := s.configurationByID(ctx, integrationID)
-	if err != nil {
-		return err
-	}
-	capability, err := discord.ReadCapability(endpoint.address)
-	if err != nil {
-		return fmt.Errorf("read the Discord capability: %w", err)
-	}
-	body, err := noticeOf(summary).Body()
-	if err != nil {
-		return err
-	}
-	answer, err := s.sender.Post(ctx, capability.Confirming(), nil, body)
-	if err != nil {
-		return s.ledger.Record(ctx, held, dispatch.DiscordUnconfirmed, now)
-	}
-	said, message := dispatch.ReadAnnouncement(answer)
-	said.Status, said.Took = &answer.Status, answer.Took
-	if message != "" {
-		if err := s.ledger.KeepMessage(ctx, held.ID, message); err != nil {
-			return err
+	case status >= 200 && status < 300:
+		return s.settle(ctx, held.id, "sent_at = now()")
+	case status == 0 || status == http.StatusTooManyRequests || status >= 500:
+		if held.tries < maxTries {
+			return s.settle(ctx, held.id, "due_at = now() + $2::interval", backoff(held.tries).String())
 		}
 	}
-	if err := s.ledger.Record(ctx, held, said, now); err != nil {
-		return err
+	// ponytail: a failed post is only logged; show it to its owner if creators ask
+	log.Printf("Discord post %s failed after %d tries with status %d", held.id, held.tries, status)
+	return s.settle(ctx, held.id, "failed_at = now()")
+}
+
+// post answers Discord's status, or 0 when Discord could not be reached
+func (s *Service) post(ctx context.Context, address string, body []byte) int {
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, address, bytes.NewReader(body))
+	if err != nil {
+		return 0
 	}
-	if said.Gone {
-		return s.retire(ctx, integrationID)
+	request.Header.Set("Content-Type", "application/json")
+	answer, err := s.client.Do(request)
+	if err != nil {
+		return 0
+	}
+	defer answer.Body.Close()
+	io.Copy(io.Discard, io.LimitReader(answer.Body, 64<<10))
+	return answer.StatusCode
+}
+
+func (s *Service) settle(ctx context.Context, id uuid.UUID, set string, args ...any) error {
+	if _, err := s.pool.Exec(ctx, `update discord_posts set `+set+` where id = $1`, append([]any{id}, args...)...); err != nil {
+		return fmt.Errorf("settle the Discord post: %w", err)
 	}
 	return nil
 }
 
-func noticeOf(said sent) discord.Announcement {
-	update := fmt.Sprintf("#%d", said.Update.Number)
-	if said.Update.VersionLabel != "" {
-		update = said.Update.VersionLabel
-	}
-	return discord.Announcement{
-		Title:   said.Work.Name,
-		Summary: said.Update.Summary,
-		URL:     said.Update.HistoryURL,
-		Update:  update,
-		At:      said.OccurredAt,
-		Footer:  discord.Site,
-	}
-}
-
-func (s *Service) configurationByID(ctx context.Context, id uuid.UUID) (configuration, error) {
-	var owner uuid.UUID
-	err := s.pool.QueryRow(ctx, `
-		select owner_id from work_integrations where id = $1
-	`, id).Scan(&owner)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return configuration{}, ErrNotFound
-	}
-	if err != nil {
-		return configuration{}, err
-	}
-	return s.configuration(ctx, owner, id)
-}
-
-func (s *Service) retire(ctx context.Context, id uuid.UUID) error {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin retiring a integration: %w", err)
-	}
-	defer tx.Rollback(ctx)
-	_, err = tx.Exec(ctx, `
-		update work_integrations
-		   set state = $2, disabled_at = now(), version = version + 1, updated_at = now()
-		 where id = $1 and state <> $2
-	`, id, Disabled)
-	if err != nil {
-		return fmt.Errorf("retire the integration: %w", err)
-	}
-	if err := s.ledger.StopTo(ctx, tx, id, dispatch.Stopped(dispatch.Gone)); err != nil {
-		return err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit retiring a integration: %w", err)
-	}
-	return nil
+func backoff(tries int) time.Duration {
+	return time.Duration(1<<tries) * 15 * time.Second
 }

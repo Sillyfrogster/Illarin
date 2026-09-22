@@ -152,15 +152,14 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("integration secret key: %w", err)
 	}
-	publishing := blog.DefaultPublishing(sealing, cfg.SiteURL)
-	posts := blog.NewService(pool, images, publishing)
-	integrations := integration.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
+	integrations := integration.NewService(pool, sealing, &http.Client{Timeout: 10 * time.Second}, cfg.SiteURL)
+	posts := blog.NewService(pool, images, integrations, cfg.SiteURL)
 	versions := version.NewService(pool, svc)
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
 	apps := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	sends := connect.NewSends(pool, svc, apps, connect.DefaultSettings())
 	notifications := notify.NewService(pool)
-	background.Add(9)
+	background.Add(7)
 	go func() {
 		defer background.Done()
 		staff.NewService(svc).RunRollup(runtimeContext, func(err error) {
@@ -181,14 +180,8 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		integrations.RunCleanup(runtimeContext, func(err error) {
-			log.Printf("integration cleanup: %v", err)
-		})
-	}()
-	go func() {
-		defer background.Done()
 		integrations.RunAnnouncements(runtimeContext, func(err error) {
-			log.Printf("update announcement: %v", err)
+			log.Printf("Discord announcements: %v", err)
 		})
 	}()
 	go func() {
@@ -207,12 +200,6 @@ func run() error {
 		defer background.Done()
 		posts.RunRecovery(runtimeContext, func(err error) {
 			log.Printf("blog recovery: %v", err)
-		})
-	}()
-	go func() {
-		defer background.Done()
-		posts.RunAttempts(runtimeContext, func(err error) {
-			log.Printf("blog announcements: %v", err)
 		})
 	}()
 

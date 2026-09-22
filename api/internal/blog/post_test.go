@@ -538,7 +538,7 @@ func TestABylineIsCopiedOnceAndSurvivesAProfileChange(t *testing.T) {
 	}
 }
 
-func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
+func TestPublishingRecordsOneAuditWithoutTheBody(t *testing.T) {
 	t.Parallel()
 	stack := newBlogStack(t)
 	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
@@ -546,19 +546,9 @@ func TestPublishingRecordsOneEventAndOneAuditWithoutTheBody(t *testing.T) {
 	stack.saved(t, session, draft.ID, finished(draft, nil))
 	stack.published(t, session, draft.ID)
 
-	var announcementType string
-	err := stack.pool.QueryRow(context.Background(),
-		`select type from blog_announcements where post_id = $1`, draft.ID).Scan(&announcementType)
-	if err != nil {
-		t.Fatalf("read the announcement: %v", err)
-	}
-	if announcementType != "blog.post.published.v1" {
-		t.Errorf("event type = %q", announcementType)
-	}
-
 	var action, credential, before, after string
 	var revisionID *string
-	err = stack.pool.QueryRow(context.Background(), `
+	err := stack.pool.QueryRow(context.Background(), `
 		select action, credential, coalesce(before_state, ''), coalesce(after_state, ''),
 		       revision_id::text
 		  from blog_activity_log where post_id = $1 and action = 'post.published'
@@ -668,6 +658,34 @@ func TestARevisionIsNotRewrittenWhenTheDraftedChangesChanges(t *testing.T) {
 	}
 }
 
+func TestAFirstPublicationPostsToTheBlogsDiscordChannelOnce(t *testing.T) {
+	t.Parallel()
+	stack := newBlogStack(t)
+	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
+	connected := apitest.Send(t, stack.router, apitest.AuthorizedJSONRequest(t, http.MethodPut,
+		"/v1/blog/discord-channel",
+		`{"address":"https://discord.com/api/webhooks/1234567890123456789/a-long-webhook-token"}`, session))
+	if connected.Code != http.StatusOK {
+		t.Fatalf("connect the blog's channel = %d: %s", connected.Code, connected.Body.String())
+	}
+	draft := stack.illarinDraft(t, session, "Worth a post")
+	stack.saved(t, session, draft.ID, finished(draft, nil))
+	live := stack.published(t, session, draft.ID)
+	stack.saved(t, session, draft.ID, finished(live, map[string]any{"title": "Worth a second look"}))
+	stack.published(t, session, draft.ID)
+
+	var posts int
+	var body string
+	err := stack.pool.QueryRow(context.Background(),
+		`select count(*), min(body::text) from discord_posts`).Scan(&posts, &body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if posts != 1 || !strings.Contains(body, "Worth a post") {
+		t.Errorf("queued %d posts, first %s; want one for the first publication", posts, body)
+	}
+}
+
 func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 	t.Parallel()
 	stack := newBlogStack(t)
@@ -681,7 +699,7 @@ func TestARefusedPublicationLeavesNoRevisionEventOrByline(t *testing.T) {
 	var revisions, events, bylines int
 	err := stack.pool.QueryRow(context.Background(), `
 		select (select count(*) from post_revisions where post_id = $1),
-		       (select count(*) from blog_announcements where post_id = $1),
+		       (select count(*) from discord_posts),
 		       (select count(*) from post_bylines where post_id = $1)
 	`, draft.ID).Scan(&revisions, &events, &bylines)
 	if err != nil {

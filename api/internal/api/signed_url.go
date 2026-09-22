@@ -1,4 +1,4 @@
-package dispatch
+package api
 
 import (
 	"crypto/hmac"
@@ -11,32 +11,32 @@ import (
 	"time"
 )
 
-const Life = 15 * time.Minute
+const SignedURLLife = 15 * time.Minute
 
 const (
 	ExpiresParam   = "expires"
 	SignatureParam = "signature"
 )
 
-type Key struct {
+type URLSigner struct {
 	secret []byte
 }
 
-func NewKey() Key {
+func NewURLSigner() URLSigner {
 	secret := make([]byte, 32)
 	rand.Read(secret)
-	return Key{secret: secret}
+	return URLSigner{secret: secret}
 }
 
-func (k Key) Sign(path string, now time.Time) string {
-	expires := now.Add(Life).Unix()
+func (k URLSigner) Sign(path string, now time.Time) string {
+	expires := now.Add(SignedURLLife).Unix()
 	query := url.Values{}
 	query.Set(ExpiresParam, strconv.FormatInt(expires, 10))
 	query.Set(SignatureParam, k.stamp(path, expires))
 	return path + "?" + query.Encode()
 }
 
-func (k Key) Valid(path, expires, signature string, now time.Time) bool {
+func (k URLSigner) Valid(path, expires, signature string, now time.Time) bool {
 	if len(k.secret) == 0 {
 		return false
 	}
@@ -47,7 +47,7 @@ func (k Key) Valid(path, expires, signature string, now time.Time) bool {
 	return hmac.Equal([]byte(signature), []byte(k.stamp(path, deadline)))
 }
 
-func (k Key) stamp(path string, expires int64) string {
+func (k URLSigner) stamp(path string, expires int64) string {
 	mac := hmac.New(sha256.New, k.secret)
 	fmt.Fprintf(mac, "%s\n%d", path, expires)
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))

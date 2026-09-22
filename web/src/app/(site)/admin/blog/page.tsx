@@ -4,14 +4,14 @@ import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
   "Blog administration",
-  "Manage blog writers, categories and announcements.",
+  "Manage blog writers, categories and the Discord channel.",
 );
 
 export default function BlogAdminPage() {
   return (
     <AdminPage
       heading="Blog administration"
-      hint="Manage blog writers, categories and announcements."
+      hint="Manage blog writers, categories and the Discord channel."
     >
       <BlogAdmin />
     </AdminPage>

@@ -1,6 +1,4 @@
 import type {
-  BlogAnnouncementAttempt,
-  BlogIntegrationChoiceList,
   Post,
   PostAction,
   PostMedia,
@@ -65,11 +63,8 @@ export function correctPostByline(id: string, handle: string) {
   });
 }
 
-export type Announcement = {
-  integrationIds?: string[] | null;
-  roleIntegrationIds?: string[];
-  note?: string;
-};
+/** Announcement says whether a post's first publication goes to the blog's Discord channel. */
+export type Announcement = { discord?: boolean };
 
 export function publishPost(
   id: string,
@@ -82,20 +77,6 @@ export function publishPost(
       ...announcement,
     },
   });
-}
-
-export function readPostIntegrations(id: string) {
-  return ask<BlogIntegrationChoiceList>(
-    "GET",
-    `/blog/posts/${id}/integrations`,
-  );
-}
-
-export function readPostDeliveries(id: string) {
-  return ask<{ attempts: BlogAnnouncementAttempt[] }>(
-    "GET",
-    `/blog/posts/${id}/announcement-attempts`,
-  );
 }
 
 export function readPostRevisions(id: string) {
@@ -166,29 +147,21 @@ export function unpublishPost(
   version: number,
   reason: string,
   explanation: string,
-  announcement: Announcement,
 ) {
   return ask<Post>("POST", `/blog/posts/${id}/unpublish`, {
     body: {
       version,
       reason,
       explanation,
-      ...announcement,
     },
   });
 }
 
-export function republishPost(
-  id: string,
-  version: number,
-  revisionId: string,
-  announcement: Announcement,
-) {
+export function republishPost(id: string, version: number, revisionId: string) {
   return ask<Post>("POST", `/blog/posts/${id}/republish`, {
     body: {
       version,
       revisionId,
-      ...announcement,
     },
   });
 }

@@ -5,21 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { RegisterRail } from "@/components/register/RegisterRail";
 import { Trouble } from "@/components/ui/field";
 import { Waiting } from "@/components/ui/waiting";
-import { RailBack, WorkspaceRail } from "@/components/workspace/WorkspaceRail";
-import {
-  readCategories,
-  readDeliveries,
-  readIntegrations,
-  readWriters,
-} from "@/lib/api/blog";
-import type {
-  BlogAnnouncementAttempt,
-  BlogAnnouncementAttemptState,
-  BlogCategory,
-  BlogIntegration,
-  WriterResponse,
-} from "@/lib/api/query";
-import { attemptState } from "@/lib/attempt-standing";
+import { DiscordChannel } from "@/components/updates/DiscordChannel";
+import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
+import { readCategories, readWriters } from "@/lib/api/blog";
+import type { BlogCategory, WriterResponse } from "@/lib/api/query";
 import {
   REGISTERS,
   type Register,
@@ -27,55 +16,33 @@ import {
   registerStandings,
 } from "@/lib/blog-admin";
 import { cn } from "@/lib/cn";
-import { AttemptRows } from "./AttemptRows";
 import { CategoryRows, CategoryStep } from "./CategoryRows";
-import { IntegrationRows, IntegrationStep } from "./IntegrationRows";
-import { SecretStep } from "./SecretStep";
 import { WriterRows, WriterStep } from "./WriterRows";
 
 type Step =
   | { what: "writer"; writer: WriterResponse | null }
-  | { what: "category"; category: BlogCategory }
-  | { what: "integration"; integration: BlogIntegration | null }
-  | { what: "secret"; integration: BlogIntegration };
+  | { what: "category"; category: BlogCategory };
 
 export function BlogAdmin() {
   const [writers, setWriters] = useState<WriterResponse[] | null>(null);
   const [categories, setCategories] = useState<BlogCategory[]>([]);
-  const [integrations, setIntegrations] = useState<BlogIntegration[]>([]);
-  const [attempts, setAttempts] = useState<BlogAnnouncementAttempt[]>([]);
-  const [stopped, setStopped] = useState(0);
   const [register, setRegister] = useState<Register>("writers");
-  const [view, setView] = useState("all");
   const [step, setStep] = useState<Step | null>(null);
   const [failure, setFailure] = useState("");
   const [refusal, setRefusal] = useState("");
 
   const load = useCallback(async () => {
-    const [categoriesIn, writersIn, integrationsIn, sent, short] =
-      await Promise.all([
-        readCategories(),
-        readWriters(),
-        readIntegrations(),
-        readDeliveries(),
-        readDeliveries("failed"),
-      ]);
-    const trouble =
-      categoriesIn.error ??
-      writersIn.error ??
-      integrationsIn.error ??
-      sent.error ??
-      "";
+    const [categoriesIn, writersIn] = await Promise.all([
+      readCategories(),
+      readWriters(),
+    ]);
+    const trouble = categoriesIn.error ?? writersIn.error ?? "";
     if (trouble) {
       setFailure(trouble);
       return;
     }
     setFailure("");
     setCategories(categoriesIn.value?.categories ?? []);
-    setIntegrations(integrationsIn.value?.integrations ?? []);
-    setAttempts(sent.value?.attempts ?? []);
-    setStopped(countStopped(short.value?.attempts ?? []));
-    setView("all");
     setWriters(writersIn.value?.writers ?? []);
   }, []);
 
@@ -83,29 +50,9 @@ export function BlogAdmin() {
     void load();
   }, [load]);
 
-  const narrow = useCallback(
-    async (next: string, state?: BlogAnnouncementAttemptState) => {
-      setView(next);
-      const answer = await readDeliveries(state);
-      if (answer.error) {
-        setFailure(answer.error);
-        return;
-      }
-      setFailure("");
-      setAttempts(answer.value?.attempts ?? []);
-    },
-    [],
-  );
-
   const standings = useMemo(
-    () =>
-      registerStandings({
-        categories,
-        integrations,
-        stopped,
-        writers: writers ?? [],
-      }),
-    [categories, integrations, writers, stopped],
+    () => registerStandings({ categories, writers: writers ?? [] }),
+    [categories, writers],
   );
 
   function open(next: Step | null) {
@@ -116,19 +63,6 @@ export function BlogAdmin() {
   function close() {
     setRefusal("");
     setStep(null);
-  }
-
-  function replaceIntegration(saved: BlogIntegration) {
-    setIntegrations((held) =>
-      held.some((one) => one.id === saved.id)
-        ? held.map((one) => (one.id === saved.id ? saved : one))
-        : [...held, saved],
-    );
-    setStep((open) =>
-      open?.what === "integration" && open.integration?.id === saved.id
-        ? { integration: saved, what: "integration" }
-        : open,
-    );
   }
 
   if (!writers) {
@@ -186,28 +120,14 @@ export function BlogAdmin() {
           />
         ) : null}
 
-        {register === "integrations" ? (
-          <IntegrationRows
-            integrations={integrations}
-            onFailure={setFailure}
-            onOpen={(integration) => open({ integration, what: "integration" })}
-            onSaved={replaceIntegration}
-          />
-        ) : null}
-
-        {register === "attempts" ? (
-          <AttemptRows
-            attempts={attempts}
-            onChanged={(changed) => {
-              setAttempts((held) =>
-                held.map((one) => (one.id === changed.id ? changed : one)),
-              );
-              setStopped((held) => Math.max(0, held - 1));
-            }}
-            onFailure={setFailure}
-            onView={(next, state) => void narrow(next, state)}
-            view={view}
-          />
+        {register === "discord" ? (
+          <>
+            <p className="mb-5 max-w-[36rem] font-prose text-ui text-mute">
+              A post's first publication goes to this channel when its writer
+              leaves Post to Discord on.
+            </p>
+            <DiscordChannel scope="blog" />
+          </>
         ) : null}
       </section>
 
@@ -218,26 +138,11 @@ export function BlogAdmin() {
             key={stepKey(step)}
             onClose={close}
             title={stepTitle(step)}
-            tone={step.what === "secret" ? "stop" : "accent"}
+            tone="accent"
           >
             {refusal ? (
               <div className="mb-5">
                 <Trouble>{refusal}</Trouble>
-              </div>
-            ) : null}
-
-            {step.what === "secret" ? (
-              <div className="mb-5">
-                <RailBack
-                  onClick={() =>
-                    open({
-                      integration: step.integration,
-                      what: "integration",
-                    })
-                  }
-                >
-                  {step.integration.name}
-                </RailBack>
               </div>
             ) : null}
 
@@ -265,39 +170,6 @@ export function BlogAdmin() {
                 }
               />
             ) : null}
-
-            {step.what === "integration" ? (
-              <IntegrationStep
-                existing={step.integration}
-                onClose={close}
-                onFailure={setRefusal}
-                onRemoved={() => {
-                  const gone = step.integration?.id;
-                  setIntegrations((held) =>
-                    held.filter((one) => one.id !== gone),
-                  );
-                  void load();
-                }}
-                onRotate={() =>
-                  step.integration
-                    ? open({
-                        integration: step.integration,
-                        what: "secret",
-                      })
-                    : undefined
-                }
-                onSaved={replaceIntegration}
-              />
-            ) : null}
-
-            {step.what === "secret" ? (
-              <SecretStep
-                integration={step.integration}
-                onClose={close}
-                onFailure={setRefusal}
-                onRotated={replaceIntegration}
-              />
-            ) : null}
           </WorkspaceRail>
         ) : null}
       </AnimatePresence>
@@ -305,17 +177,9 @@ export function BlogAdmin() {
   );
 }
 
-function countStopped(attempts: BlogAnnouncementAttempt[]): number {
-  return attempts.filter(
-    (one) => attemptState(one) === "gaveUp" && !one.removed,
-  ).length;
-}
-
 function stepKey(step: Step): string {
   if (step.what === "writer") return `writer-${step.writer?.accountId ?? ""}`;
-  if (step.what === "category") return `category-${step.category.id}`;
-  if (step.what === "secret") return `secret-${step.integration.id}`;
-  return `integration-${step.integration?.id ?? ""}`;
+  return `category-${step.category.id}`;
 }
 
 function stepTitle(step: Step): string {
@@ -324,21 +188,14 @@ function stepTitle(step: Step): string {
       ? `@${step.writer.handle} writes for the blog`
       : "Switch on a writer";
   }
-  if (step.what === "category") return `Rename ${step.category.label}`;
-  if (step.what === "secret") {
-    return `A new signing secret for ${step.integration.name}`;
-  }
-  return step.integration ? step.integration.name : "Add an integration";
+  return `Rename ${step.category.label}`;
 }
 
-function stepHint(step: Step): string | undefined {
+function stepHint(step: Step): string {
   if (step.what === "writer") {
     return step.writer
       ? "They reach Your posts and the editor, and publish under their own name."
       : "The switch opens the blog editor for one account. It grants no other authority.";
   }
-  if (step.what === "category") {
-    return "Readers see the name. Nothing that already references this category moves.";
-  }
-  return undefined;
+  return "Readers see the name. Nothing that already references this category moves.";
 }

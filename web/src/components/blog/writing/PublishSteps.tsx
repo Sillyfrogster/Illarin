@@ -20,7 +20,7 @@ import {
   localParts,
   toInstant,
 } from "@/lib/schedule-time";
-import { AnnouncementChoice } from "./AnnouncementChoice";
+import { DiscordChoice } from "./DiscordChoice";
 import { ScheduleFields } from "./ScheduleFields";
 import { Commit, Editions, Heading, Subject } from "./StepParts";
 
@@ -42,9 +42,7 @@ export function PublishStep({
 }: StepProps & { door: "now" | "later" }) {
   const [busy, setBusy] = useState(false);
   const [when, setWhen] = useState<LocalParts>(() => atLeastAnHourAhead());
-  const [sending, setSending] = useState<string[] | null>(null);
-  const [pinging, setPinging] = useState<string[]>([]);
-  const [note, setNote] = useState("");
+  const [discord, setDiscord] = useState(true);
   const live = post.status === "published";
   const at = toInstant(when.date, when.time);
   const ready = door === "now" || at !== "";
@@ -52,11 +50,7 @@ export function PublishStep({
   async function commit() {
     setBusy(true);
     const version = await onSaveFirst();
-    const announcement = {
-      integrationIds: sending ?? undefined,
-      roleIntegrationIds: pinging.length > 0 ? pinging : undefined,
-      note: note.trim() || undefined,
-    };
+    const announcement = { discord };
     const answer =
       door === "later"
         ? await schedulePost(post.id, version, at, announcement)
@@ -85,17 +79,9 @@ export function PublishStep({
       {door === "later" ? (
         <ScheduleFields id="publish-schedule" onChange={setWhen} parts={when} />
       ) : null}
-      <AnnouncementChoice
-        announced={Boolean(post.publishedAt)}
-        chosen={sending}
-        note={note}
-        onChosen={setSending}
-        onNote={setNote}
-        onPinging={setPinging}
-        pinging={pinging}
-        postId={post.id}
-        transition={live ? "changes" : "publish"}
-      />
+      {post.publishedAt ? null : (
+        <DiscordChoice checked={discord} onChange={setDiscord} />
+      )}
       <Commit
         busy={busy}
         onCommit={() => void commit()}
@@ -112,8 +98,6 @@ export function UnpublishStep({ onFailure, onSettled, post }: StepProps) {
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
   const [explanation, setExplanation] = useState("");
-  const [sending, setSending] = useState<string[] | null>(null);
-  const [note, setNote] = useState("");
 
   async function commit() {
     setBusy(true);
@@ -122,7 +106,6 @@ export function UnpublishStep({ onFailure, onSettled, post }: StepProps) {
       post.version,
       reason.trim(),
       explanation.trim(),
-      { integrationIds: sending, note },
     );
     setBusy(false);
     if (answer.error || !answer.value) {
@@ -165,17 +148,6 @@ export function UnpublishStep({ onFailure, onSettled, post }: StepProps) {
           value={explanation}
         />
       </Field>
-      <AnnouncementChoice
-        announced
-        chosen={sending}
-        note={note}
-        onChosen={setSending}
-        onNote={setNote}
-        onPinging={() => undefined}
-        pinging={[]}
-        postId={post.id}
-        transition="unpublish"
-      />
       <Commit
         busy={busy}
         onCommit={() => void commit()}
@@ -191,16 +163,11 @@ export function RepublishStep({ onFailure, onSettled, post }: StepProps) {
   const kept = useRevisions(post.id, onFailure);
   const [busy, setBusy] = useState(false);
   const [chosen, setChosen] = useState(post.publicRevisionId ?? "");
-  const [sending, setSending] = useState<string[] | null>(null);
-  const [note, setNote] = useState("");
 
   async function commit() {
     if (!chosen) return;
     setBusy(true);
-    const answer = await republishPost(post.id, post.version, chosen, {
-      integrationIds: sending,
-      note,
-    });
+    const answer = await republishPost(post.id, post.version, chosen);
     setBusy(false);
     if (answer.error || !answer.value) {
       onFailure(answer.error ?? "The post is still out of public view.");
@@ -221,17 +188,6 @@ export function RepublishStep({ onFailure, onSettled, post }: StepProps) {
         onChoose={setChosen}
         revisions={kept}
         standingOf={(one) => (one.public ? "Previously published" : "")}
-      />
-      <AnnouncementChoice
-        announced
-        chosen={sending}
-        note={note}
-        onChosen={setSending}
-        onNote={setNote}
-        onPinging={() => undefined}
-        pinging={[]}
-        postId={post.id}
-        transition="republish"
       />
       <Commit
         busy={busy}

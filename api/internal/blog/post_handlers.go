@@ -186,7 +186,7 @@ func (h *Handlers) PublishPost(c *gin.Context) {
 	}
 	published, err := h.blog.PublishPost(
 		c.Request.Context(), editor, id, request.Version,
-		announcementOf(request.IntegrationIds, request.RoleIntegrationIds, request.Note),
+		announcementOf(request.Discord),
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -335,12 +335,6 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	case errors.Is(err, ErrRevisionNotFound):
 		refuseBlog(c, http.StatusNotFound, BlogErrorCodeNotFound,
 			"This post has no such revision.")
-	case errors.Is(err, ErrIntegrationRefused):
-		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
-			"This post may not send to that integration.")
-	case errors.Is(err, ErrRoleRefused):
-		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
-			"This post may not mention that integration's role.")
 	case errors.Is(err, ErrNotPostEditor):
 		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
 			"Only this post's contributor or an Illarin admin can do that.")
@@ -726,10 +720,8 @@ type PublicPostResponse struct {
 }
 
 type PublishPostRequest struct {
-	IntegrationIds     *[]uuid.UUID `json:"integrationIds,omitempty"`
-	Note               *string      `json:"note,omitempty"`
-	RoleIntegrationIds *[]uuid.UUID `json:"roleIntegrationIds,omitempty"`
-	Version            int          `json:"version"`
+	Discord *bool `json:"discord,omitempty"`
+	Version int   `json:"version"`
 }
 
 type SavePostRequest struct {

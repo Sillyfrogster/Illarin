@@ -158,27 +158,6 @@ packages:
     output_path: "../web/src/lib/api/shapes/integration.ts"
     enum_style: "union"
     preserve_comments: "none"
-    frontmatter: |
-      import type { BlogIntegrationChoice as AnnouncementBlogIntegrationChoice } from "./announcements";
-      import type { BlogIntegrationType as AnnouncementBlogIntegrationType } from "./announcements";
-      import type { BlogIntegrationState as AnnouncementBlogIntegrationState } from "./announcements";
-      import type { BlogAnnouncementType as AnnouncementBlogAnnouncementType } from "./announcements";
-    type_mappings:
-      time.Time: "string"
-      uuid.UUID: "string"
-      announcements.BlogIntegrationChoice: "AnnouncementBlogIntegrationChoice"
-      announcements.BlogIntegrationType: "AnnouncementBlogIntegrationType"
-      announcements.BlogIntegrationState: "AnnouncementBlogIntegrationState"
-      announcements.BlogAnnouncementType: "AnnouncementBlogAnnouncementType"
-    include_files:
-      - "work_integration_shapes.go"
-      - "blog_integration_shapes.go"
-  - path: "github.com/Sillyfrogster/Illarin/api/internal/integration/blog"
-    output_path: "../web/src/lib/api/shapes/announcements.ts"
-    enum_style: "union"
-    preserve_comments: "none"
-    type_mappings:
-      uuid.UUID: "string"
     include_files:
       - "shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/blog"
@@ -192,13 +171,11 @@ packages:
       export type { PostSummaryResponse as PostSummary };
       export type { PublicPostResponse as PublicPost };
       import type { ProfilePicture } from "./profile";
-      import type { BlogIntegrationChoice } from "./integration";
     type_mappings:
       time.Time: "string"
       uuid.UUID: "string"
       json.RawMessage: "unknown"
       profile.ProfilePicture: "ProfilePicture"
-      announcements.BlogIntegrationChoice: "BlogIntegrationChoice"
     include_files:
       - "post_deletion_handlers.go"
       - "post_history_handlers.go"

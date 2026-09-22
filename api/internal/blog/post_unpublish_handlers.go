@@ -30,7 +30,6 @@ func (h *Handlers) UnpublishPost(c *gin.Context) {
 	}
 	unpublished, err := h.blog.UnpublishPost(
 		c.Request.Context(), editor, id, request.Version, request.Reason, explanation,
-		announcementOf(request.IntegrationIds, nil, request.Note),
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -55,7 +54,6 @@ func (h *Handlers) RepublishPost(c *gin.Context) {
 	}
 	back, err := h.blog.RepublishPost(
 		c.Request.Context(), editor, id, request.RevisionId, request.Version,
-		announcementOf(request.IntegrationIds, nil, request.Note),
 	)
 	if err != nil {
 		h.postError(c, err)
@@ -97,18 +95,14 @@ type PostUnpublishing struct {
 }
 
 type RepublishPostRequest struct {
-	IntegrationIds *[]uuid.UUID `json:"integrationIds,omitempty"`
-	Note           *string      `json:"note,omitempty"`
-	RevisionId     uuid.UUID    `json:"revisionId"`
-	Version        int          `json:"version"`
+	RevisionId uuid.UUID `json:"revisionId"`
+	Version    int       `json:"version"`
 }
 
 type UnpublishPostRequest struct {
-	IntegrationIds *[]uuid.UUID `json:"integrationIds,omitempty"`
-	Explanation    *string      `json:"explanation,omitempty"`
-	Note           *string      `json:"note,omitempty"`
-	Reason         string       `json:"reason"`
-	Version        int          `json:"version"`
+	Explanation *string `json:"explanation,omitempty"`
+	Reason      string  `json:"reason"`
+	Version     int     `json:"version"`
 }
 
 type UnpublishedPost struct {

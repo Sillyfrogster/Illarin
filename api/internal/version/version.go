@@ -2,24 +2,16 @@ package version
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
-// ErrUnlistedConsentRequired says the creator has not agreed to send an unlisted work's direct link
-var ErrUnlistedConsentRequired = errors.New(
-	"announcing an unlisted work sends its direct link, which needs explicit consent",
-)
-
-var ErrIntegrationIneligible = errors.New("choose only your own verified, active integrations")
-
+// Announcement says who hears about a version: followers, and the creator's Discord channel
 type Announcement struct {
-	IntegrationIDs   *[]uuid.UUID
-	AnnounceUnlisted bool
-	Notify           bool
+	Notify  bool
+	Discord bool
 }
 
 type Version struct {

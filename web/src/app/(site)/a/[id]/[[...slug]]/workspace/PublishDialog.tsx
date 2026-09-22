@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,11 +10,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  type AnnouncementChoice,
-  NO_CHOICE,
-  WorkAnnouncementChoice,
-} from "@/components/updates/WorkAnnouncementChoice";
+import { readDiscordChannel } from "@/lib/api/integrations";
 import {
   compareDraftedChanges,
   fetchWaitingReplacement,
@@ -29,7 +25,7 @@ import {
   useDraftedChanges,
 } from "@/lib/drafted-changes";
 import type { ReadinessTarget } from "@/lib/readiness";
-import { Field, Note, TextAreaField, TextField } from "./fields";
+import { Field, Note, Switch, TextAreaField, TextField } from "./fields";
 import { ReadinessList } from "./ReadinessList";
 import { useWorkspace } from "./state";
 
@@ -60,13 +56,20 @@ export function PublishDialog({
   const [missing, setMissing] = useState<ReadinessItem[]>(
     readiness.filter((item) => !item.met),
   );
-  const [announcement, setAnnouncement] =
-    useState<AnnouncementChoice>(NO_CHOICE);
-  const [needsConsent, setNeedsConsent] = useState(false);
-  const chooseAnnouncement = useCallback((choice: AnnouncementChoice) => {
-    setAnnouncement(choice);
-    setNeedsConsent(false);
-  }, []);
+  const [notify, setNotify] = useState(true);
+  const [discord, setDiscord] = useState(true);
+  const [hasChannel, setHasChannel] = useState(false);
+
+  useEffect(() => {
+    if (workspace.isDraft || unlisted) return;
+    const controller = new AbortController();
+    void readDiscordChannel("account", controller.signal).then((answer) => {
+      if (!controller.signal.aborted) {
+        setHasChannel(Boolean(answer.value?.connected));
+      }
+    });
+    return () => controller.abort();
+  }, [workspace.isDraft, unlisted]);
 
   useEffect(() => {
     let active = true;
@@ -111,9 +114,8 @@ export function PublishDialog({
       const answer = workspace.isDraft
         ? await publishWork(candidate, workspace.workId)
         : await publishWorkVersion(candidate, workspace.workId, {
-            announceUnlisted: announcement.announceUnlisted,
-            integrationIds: announcement.integrationIds ?? undefined,
-            notify: announcement.notify,
+            discord: hasChannel && discord,
+            notify,
             notes: notes.trim(),
             summary: summary.trim(),
             versionLabel: label.trim(),
@@ -127,7 +129,6 @@ export function PublishDialog({
       }
       setMessage(answer.error);
       setStale("code" in answer && answer.code === "drafted_changes_conflict");
-      setNeedsConsent("field" in answer && answer.field === "announceUnlisted");
       setMissing(answer.readiness?.filter((item) => !item.met) ?? []);
     } catch (error) {
       setMessage(
@@ -221,14 +222,24 @@ export function PublishDialog({
                   />
                 </Field>
 
-                <WorkAnnouncementChoice
-                  workId={workspace.workId}
-                  choice={announcement}
-                  disabled={busy}
-                  needsConsent={needsConsent}
-                  onChange={chooseAnnouncement}
-                  unlisted={unlisted}
-                />
+                <div className="flex flex-col gap-2">
+                  <Switch
+                    checked={notify}
+                    hint="Anyone following it, or with it installed in a linked app, gets a notification."
+                    label="Tell people following this"
+                    onChange={setNotify}
+                    pending={busy}
+                  />
+                  {hasChannel ? (
+                    <Switch
+                      checked={discord}
+                      hint="The summary and a link go to the Discord channel in your settings."
+                      label="Post to Discord"
+                      onChange={setDiscord}
+                      pending={busy}
+                    />
+                  ) : null}
+                </div>
               </>
             ) : null}
             {message ? (
