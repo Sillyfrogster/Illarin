@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { PostDesk } from "@/components/blog/writing/PostDesk";
+import { Waiting } from "@/components/ui/waiting";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata(
@@ -7,5 +9,9 @@ export const metadata = pageMetadata(
 );
 
 export default function YourPostsPage() {
-  return <PostDesk />;
+  return (
+    <Suspense fallback={<Waiting>Loading your posts…</Waiting>}>
+      <PostDesk />
+    </Suspense>
+  );
 }
