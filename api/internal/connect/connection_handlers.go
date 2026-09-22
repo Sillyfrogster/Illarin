@@ -57,7 +57,7 @@ func (h *Handlers) StartConnectionAuthorization(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, ConnectionAuthorization{
-		AuthorizationUrl: started.URL, ExpiresAt: started.ExpiresAt,
+		AuthorizationUrl: started.URL, UserCode: started.UserCode, ExpiresAt: started.ExpiresAt,
 	})
 }
 
@@ -97,6 +97,10 @@ func (h *Handlers) GetConnectionRequest(c *gin.Context) {
 		h.connectionError(c, err)
 		return
 	}
+	h.showPendingCode(c, pending)
+}
+
+func (h *Handlers) showPendingCode(c *gin.Context, pending Pending) {
 	shown := toAPIPendingConnection(pending)
 	c.JSON(http.StatusOK, PendingCodeConnection{
 		AppName: shown.AppName, Name: shown.Name, AppVersion: shown.AppVersion,
@@ -157,12 +161,14 @@ func (h *Handlers) GetConnectionAuthorization(c *gin.Context) {
 	if !ok {
 		return
 	}
-	pending, err := h.apps.PendingAuthorization(c.Request.Context(), creator.ID, c.Param("requestCode"))
+	pending, err := h.apps.PendingAuthorization(
+		c.Request.Context(), creator.ID, c.Param("requestCode"), c.Query("userCode"),
+	)
 	if err != nil {
 		h.connectionError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toAPIPendingConnection(pending))
+	h.showPendingCode(c, pending)
 }
 
 func (h *Handlers) ApproveConnectionAuthorization(c *gin.Context) {
@@ -174,7 +180,13 @@ func (h *Handlers) ApproveConnectionAuthorization(c *gin.Context) {
 	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
-	redirect, err := h.apps.ApproveAuthorization(c.Request.Context(), creator.ID, c.Param("requestCode"))
+	var decision ConnectionDecision
+	if !readConnectJSON(c, &decision) {
+		return
+	}
+	redirect, err := h.apps.ApproveAuthorization(
+		c.Request.Context(), creator.ID, c.Param("requestCode"), decision.ApprovalToken,
+	)
 	if err != nil {
 		h.connectionError(c, err)
 		return
@@ -191,7 +203,13 @@ func (h *Handlers) DenyConnectionAuthorization(c *gin.Context) {
 	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
-	redirect, err := h.apps.DenyAuthorization(c.Request.Context(), creator.ID, c.Param("requestCode"))
+	var decision ConnectionDecision
+	if !readConnectJSON(c, &decision) {
+		return
+	}
+	redirect, err := h.apps.DenyAuthorization(
+		c.Request.Context(), creator.ID, c.Param("requestCode"), decision.ApprovalToken,
+	)
 	if err != nil {
 		h.connectionError(c, err)
 		return

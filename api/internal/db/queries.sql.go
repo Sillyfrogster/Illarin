@@ -1158,21 +1158,22 @@ func (q *Queries) InsertConnectedApp(ctx context.Context, arg InsertConnectedApp
 
 const insertConnectionAuthorization = `-- name: InsertConnectionAuthorization :exec
 insert into connection_authorizations (
-    request_hash, redirect_uri, state, code_challenge,
+    request_hash, user_code_hash, redirect_uri, state, code_challenge,
     app_name, name, app_version, protocol_version,
     capabilities, accepted_formats, permissions, expires_at
 )
 values (
-    $1, $2, $3,
-    $4, $5,
-    $6, $7,
-    $8, $9,
-    $10, $11, $12
+    $1, $2, $3, $4,
+    $5, $6,
+    $7, $8,
+    $9, $10,
+    $11, $12, $13
 )
 `
 
 type InsertConnectionAuthorizationParams struct {
 	RequestHash     []byte
+	UserCodeHash    []byte
 	RedirectUri     string
 	State           string
 	CodeChallenge   string
@@ -1189,6 +1190,7 @@ type InsertConnectionAuthorizationParams struct {
 func (q *Queries) InsertConnectionAuthorization(ctx context.Context, arg InsertConnectionAuthorizationParams) error {
 	_, err := q.db.Exec(ctx, insertConnectionAuthorization,
 		arg.RequestHash,
+		arg.UserCodeHash,
 		arg.RedirectUri,
 		arg.State,
 		arg.CodeChallenge,
@@ -2501,16 +2503,18 @@ select redirect_uri, state, app_name, name,
        accepted_formats, permissions, expires_at
   from connection_authorizations
  where request_hash = $1
+   and user_code_hash = $2
    and expires_at > now()
-   and (reviewed_by is null or reviewed_by = $2)
+   and (reviewed_by is null or reviewed_by = $3)
    and approved_at is null
    and denied_at is null
    and redeemed_at is null
 `
 
 type ReviewConnectionAuthorizationParams struct {
-	RequestHash []byte
-	ReviewedBy  pgtype.UUID
+	RequestHash  []byte
+	UserCodeHash []byte
+	ReviewedBy   pgtype.UUID
 }
 
 type ReviewConnectionAuthorizationRow struct {
@@ -2527,7 +2531,7 @@ type ReviewConnectionAuthorizationRow struct {
 }
 
 func (q *Queries) ReviewConnectionAuthorization(ctx context.Context, arg ReviewConnectionAuthorizationParams) (ReviewConnectionAuthorizationRow, error) {
-	row := q.db.QueryRow(ctx, reviewConnectionAuthorization, arg.RequestHash, arg.ReviewedBy)
+	row := q.db.QueryRow(ctx, reviewConnectionAuthorization, arg.RequestHash, arg.UserCodeHash, arg.ReviewedBy)
 	var i ReviewConnectionAuthorizationRow
 	err := row.Scan(
 		&i.RedirectUri,

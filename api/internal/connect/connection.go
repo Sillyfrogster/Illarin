@@ -72,6 +72,7 @@ type Request struct {
 
 type Authorization struct {
 	URL       string
+	UserCode  string
 	ExpiresAt time.Time
 }
 

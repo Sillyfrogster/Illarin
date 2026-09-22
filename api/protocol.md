@@ -216,9 +216,21 @@ Content-Type: application/json
 }
 ```
 
-The response contains `authorizationUrl` and `expiresAt`. The request expires in
-five minutes. Open `authorizationUrl` in the system browser. Do not fetch it in
-an embedded web view and do not log it; the URL contains a one-use request secret.
+The response contains `authorizationUrl`, a short `userCode` such as
+`BCDF-2345`, and `expiresAt`. The request expires in five minutes. Show the
+`userCode` in the app, then open `authorizationUrl` in the system browser. Do
+not fetch it in an embedded web view and do not log it; the URL contains a
+one-use request secret.
+
+The owner must type the `userCode` on that page before Illarin shows the
+request's permissions or lets them approve it. The URL never carries the code,
+and there is no way to prefill it. Keep the code on screen until the callback
+arrives.
+
+**Change on 22 September 2026:** browser authorization now needs the app to show
+`userCode`. An app that opens `authorizationUrl` without showing it cannot
+complete a new connection, including through the old `/api/v1/link/` paths.
+Existing connections and their credentials are unaffected.
 
 ### 3. Validate the loopback callback
 
@@ -601,7 +613,7 @@ installation names, not by token prefix alone.
 Before calling an integration complete, verify all of these:
 
 - Browser authorization uses the system browser, S256 PKCE, random state, and an
-  exact literal loopback callback.
+  exact literal loopback callback, and shows the `userCode` the owner types.
 - The callback rejects a wrong state, wrong path, missing code, denial, timeout,
   and duplicate callback.
 - Device fallback is manual, shows no prefilled link, obeys the persistent

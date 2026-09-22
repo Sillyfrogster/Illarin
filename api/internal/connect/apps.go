@@ -144,9 +144,14 @@ func (s *Apps) StartAuthorization(
 		if err != nil {
 			return Authorization{}, err
 		}
+		userCode, err := newCode(codeLength)
+		if err != nil {
+			return Authorization{}, err
+		}
 		err = queries.InsertConnectionAuthorization(ctx, db.InsertConnectionAuthorizationParams{
-			RequestHash: requestHash, RedirectUri: in.RedirectURI,
-			State: in.State, CodeChallenge: in.CodeChallenge,
+			RequestHash: requestHash, UserCodeHash: s.digest("user-code", userCode),
+			RedirectUri: in.RedirectURI,
+			State:       in.State, CodeChallenge: in.CodeChallenge,
 			AppName: in.AppName, Name: in.Name,
 			AppVersion:      optionalText(in.AppVersion),
 			ProtocolVersion: int32(in.ProtocolVersion),
@@ -156,6 +161,7 @@ func (s *Apps) StartAuthorization(
 		if err == nil {
 			return Authorization{
 				URL:       s.siteURL + "/connect?request=" + url.QueryEscape(requestCode),
+				UserCode:  FormatUserCode(userCode),
 				ExpiresAt: expiresAt,
 			}, nil
 		}
@@ -184,7 +190,7 @@ func (s *Apps) Pending(ctx context.Context, userID uuid.UUID, rawCode string) (P
 	if err != nil {
 		return Pending{}, fmt.Errorf("review device request: %w", err)
 	}
-	return pendingFromDeviceReview(row, s.deviceApprovalProof(userID, code)), nil
+	return pendingFromDeviceReview(row, s.approvalProof("device-approval", userID, code)), nil
 }
 
 func (s *Apps) Approve(
@@ -194,7 +200,7 @@ func (s *Apps) Approve(
 	approvalToken string,
 ) (Pending, error) {
 	code, ok := normalizeUserCode(rawCode)
-	tokenHash, tokenOK := s.deviceApprovalProofHash(userID, code, approvalToken)
+	tokenHash, tokenOK := s.approvalProofHash("device-approval", userID, code, approvalToken)
 	if !ok || !tokenOK {
 		return Pending{}, ErrRequestNotFound
 	}
@@ -218,7 +224,7 @@ func (s *Apps) Deny(
 	approvalToken string,
 ) error {
 	code, ok := normalizeUserCode(rawCode)
-	tokenHash, tokenOK := s.deviceApprovalProofHash(userID, code, approvalToken)
+	tokenHash, tokenOK := s.approvalProofHash("device-approval", userID, code, approvalToken)
 	if !ok || !tokenOK {
 		return ErrRequestNotFound
 	}
@@ -235,17 +241,24 @@ func (s *Apps) Deny(
 	return nil
 }
 
+// PendingAuthorization shows a browser authorization once the creator enters the code its app shows, sharing the device flow's guess limit
 func (s *Apps) PendingAuthorization(
 	ctx context.Context,
 	userID uuid.UUID,
 	requestCode string,
+	rawCode string,
 ) (Pending, error) {
+	if err := s.takeRate(ctx, "user-code", userID.String(), codeAttemptLimit, time.Hour); err != nil {
+		return Pending{}, ErrTooManyCodes
+	}
 	hash, ok := opaqueCodeHash(requestCode)
-	if !ok {
+	code, codeOK := normalizeUserCode(rawCode)
+	if !ok || !codeOK {
 		return Pending{}, ErrRequestNotFound
 	}
 	row, err := db.New(s.pool).ReviewConnectionAuthorization(ctx, db.ReviewConnectionAuthorizationParams{
 		ReviewedBy: uuidValue(userID), RequestHash: hash,
+		UserCodeHash: s.digest("user-code", code),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Pending{}, ErrRequestNotFound
@@ -258,7 +271,8 @@ func (s *Apps) PendingAuthorization(
 			row.AppName, row.Name, row.AppVersion, row.ProtocolVersion,
 			row.Capabilities, row.AcceptedFormats, row.Permissions,
 		),
-		ExpiresAt: row.ExpiresAt.Time,
+		ExpiresAt:     row.ExpiresAt.Time,
+		ApprovalToken: s.approvalProof("authorization-approval", userID, requestCode),
 	}, nil
 }
 
@@ -266,9 +280,11 @@ func (s *Apps) ApproveAuthorization(
 	ctx context.Context,
 	userID uuid.UUID,
 	requestCode string,
+	approvalToken string,
 ) (Redirect, error) {
 	requestHash, ok := opaqueCodeHash(requestCode)
-	if !ok {
+	_, tokenOK := s.approvalProofHash("authorization-approval", userID, requestCode, approvalToken)
+	if !ok || !tokenOK {
 		return Redirect{}, ErrRequestNotFound
 	}
 	code, codeHash, err := newOpaqueCode()
@@ -296,9 +312,11 @@ func (s *Apps) DenyAuthorization(
 	ctx context.Context,
 	userID uuid.UUID,
 	requestCode string,
+	approvalToken string,
 ) (Redirect, error) {
 	hash, ok := opaqueCodeHash(requestCode)
-	if !ok {
+	_, tokenOK := s.approvalProofHash("authorization-approval", userID, requestCode, approvalToken)
+	if !ok || !tokenOK {
 		return Redirect{}, ErrRequestNotFound
 	}
 	row, err := db.New(s.pool).DenyConnectionAuthorization(ctx, db.DenyConnectionAuthorizationParams{
@@ -608,18 +626,20 @@ func (s *Apps) digest(purpose, value string) []byte {
 	return mac.Sum(nil)
 }
 
-func (s *Apps) deviceApprovalProof(userID uuid.UUID, code string) string {
-	digest := s.digest("device-approval", userID.String()+"\x00"+code)
+// approvalProof is what a creator receives for entering a request's code, bound to their account and that one request
+func (s *Apps) approvalProof(purpose string, userID uuid.UUID, request string) string {
+	digest := s.digest(purpose, userID.String()+"\x00"+request)
 	return base64.RawURLEncoding.EncodeToString(digest)
 }
 
-func (s *Apps) deviceApprovalProofHash(
+func (s *Apps) approvalProofHash(
+	purpose string,
 	userID uuid.UUID,
-	code string,
+	request string,
 	proof string,
 ) ([]byte, bool) {
 	hash, ok := opaqueCodeHash(proof)
-	if !ok || !hmac.Equal([]byte(proof), []byte(s.deviceApprovalProof(userID, code))) {
+	if !ok || !hmac.Equal([]byte(proof), []byte(s.approvalProof(purpose, userID, request))) {
 		return nil, false
 	}
 	return hash, true

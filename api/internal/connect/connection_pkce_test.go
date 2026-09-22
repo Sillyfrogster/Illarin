@@ -19,6 +19,7 @@ import (
 
 type startedAuthorization struct {
 	AuthorizationURL string    `json:"authorizationUrl"`
+	UserCode         string    `json:"userCode"`
 	ExpiresAt        time.Time `json:"expiresAt"`
 }
 
@@ -31,6 +32,35 @@ type pendingAuthorization struct {
 	AcceptedFormats []string  `json:"acceptedFormats"`
 	Permissions     []string  `json:"permissions"`
 	ExpiresAt       time.Time `json:"expiresAt"`
+	ApprovalToken   string    `json:"approvalToken"`
+}
+
+// startAuthorization starts a browser authorization and returns its request code from the link and the code the app shows
+func startAuthorization(t *testing.T, r http.Handler, name string) (string, string) {
+	t.Helper()
+	digest := sha256.Sum256([]byte(strings.Repeat("A", 43)))
+	body := apitest.ConnectionStartBody("Example browser client", name, []string{"work:receive"})
+	body["state"] = strings.Repeat("s", 43)
+	body["redirectUri"] = "http://127.0.0.1:49152/illarin/callback"
+	body["codeChallenge"] = base64.RawURLEncoding.EncodeToString(digest[:])
+	body["codeChallengeMethod"] = "S256"
+	rec := apitest.SendJSON(t, r, http.MethodPost, "/v1/connect/authorizations", apitest.JSONText(t, body))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("start authorization status = %d, want 201. body: %s", rec.Code, rec.Body.String())
+	}
+	started := apitest.DecodeResponse[startedAuthorization](t, rec)
+	link, err := url.Parse(started.AuthorizationURL)
+	if err != nil || link.Query().Get("request") == "" || started.UserCode == "" {
+		t.Fatalf("started authorization = %+v", started)
+	}
+	return link.Query().Get("request"), started.UserCode
+}
+
+func reviewAuthorization(t *testing.T, r http.Handler, session *http.Cookie, requestCode, userCode string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet,
+		"/v1/connect/authorizations/"+requestCode+"?userCode="+url.QueryEscape(userCode), nil)
+	return apitest.Send(t, r, apitest.Authorized(req, session))
 }
 
 func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
@@ -65,10 +95,11 @@ func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
 		t.Fatalf("authorization URL = %q", started.AuthorizationURL)
 	}
 
-	reviewReq := httptest.NewRequest(
-		http.MethodGet, "/v1/connect/authorizations/"+requestCode, nil,
-	)
-	reviewRec := apitest.Send(t, r, apitest.Authorized(reviewReq, session))
+	if started.UserCode == "" || strings.Contains(started.AuthorizationURL, started.UserCode) {
+		t.Fatalf("authorization code %q is missing or in the link %q", started.UserCode, started.AuthorizationURL)
+	}
+
+	reviewRec := reviewAuthorization(t, r, session, requestCode, started.UserCode)
 	apitest.AssertNoStore(t, reviewRec)
 	if reviewRec.Code != http.StatusOK {
 		t.Fatalf("review authorization status = %d, want 200. body: %s", reviewRec.Code, reviewRec.Body.String())
@@ -106,7 +137,8 @@ func TestLoopbackPKCEReviewApprovalAndOneUseExchange(t *testing.T) {
 		}
 	}
 
-	approved := apitest.Send(t, r, apitest.BrowserRequest(t, http.MethodPost, approveTarget, nil, session))
+	approved := apitest.Send(t, r, apitest.BrowserRequest(t, http.MethodPost, approveTarget,
+		map[string]string{"approvalToken": pending.ApprovalToken}, session))
 	apitest.AssertNoStore(t, approved)
 	if approved.Code != http.StatusOK {
 		t.Fatalf("approve authorization status = %d, want 200. body: %s", approved.Code, approved.Body.String())
@@ -178,39 +210,15 @@ func TestBrowserAuthorizationReviewsAreReadOnlyAndTheFirstDecisionBindsTheUser(t
 	secondSession := apitest.AddVerifiedUser(
 		t, r, pool, "second.browser@example.com", "second.browser",
 	)
-	verifier := strings.Repeat("A", 43)
-	digest := sha256.Sum256([]byte(verifier))
-	body := apitest.ConnectionStartBody("Example browser client", "review test", []string{"work:receive"})
-	body["state"] = strings.Repeat("s", 43)
-	body["redirectUri"] = "http://127.0.0.1:49152/illarin/callback"
-	body["codeChallenge"] = base64.RawURLEncoding.EncodeToString(digest[:])
-	body["codeChallengeMethod"] = "S256"
-	startedRec := apitest.SendJSON(t, r, http.MethodPost, "/v1/connect/authorizations", apitest.JSONText(t, body))
-	if startedRec.Code != http.StatusCreated {
-		t.Fatalf("start authorization status = %d, want 201. body: %s", startedRec.Code, startedRec.Body.String())
-	}
-	started := apitest.DecodeResponse[startedAuthorization](t, startedRec)
-	authorizationURL, err := url.Parse(started.AuthorizationURL)
-	if err != nil {
-		t.Fatalf("parse authorization URL: %v", err)
-	}
-	requestCode := authorizationURL.Query().Get("request")
-	if requestCode == "" {
-		t.Fatal("authorization URL has no request code")
-	}
+	requestCode, userCode := startAuthorization(t, r, "review test")
 
-	review := func(session *http.Cookie) *httptest.ResponseRecorder {
-		t.Helper()
-		req := httptest.NewRequest(
-			http.MethodGet, "/v1/connect/authorizations/"+requestCode, nil,
-		)
-		return apitest.Send(t, r, apitest.Authorized(req, session))
-	}
+	tokens := map[*http.Cookie]string{}
 	for index, session := range []*http.Cookie{firstSession, firstSession, secondSession} {
-		rec := review(session)
+		rec := reviewAuthorization(t, r, session, requestCode, userCode)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("review %d status = %d, want 200. body: %s", index+1, rec.Code, rec.Body.String())
 		}
+		tokens[session] = apitest.DecodeResponse[pendingAuthorization](t, rec).ApprovalToken
 	}
 
 	var reviewerMissing bool
@@ -227,7 +235,7 @@ func TestBrowserAuthorizationReviewsAreReadOnlyAndTheFirstDecisionBindsTheUser(t
 
 	denyTarget := "/v1/connect/authorizations/" + requestCode + "/deny"
 	denied := apitest.Send(t, r, apitest.BrowserRequest(
-		t, http.MethodPost, denyTarget, nil, firstSession,
+		t, http.MethodPost, denyTarget, map[string]string{"approvalToken": tokens[firstSession]}, firstSession,
 	))
 	if denied.Code != http.StatusOK {
 		t.Fatalf("first decision status = %d, want 200. body: %s", denied.Code, denied.Body.String())
@@ -244,11 +252,66 @@ func TestBrowserAuthorizationReviewsAreReadOnlyAndTheFirstDecisionBindsTheUser(t
 	}
 
 	approved := apitest.Send(t, r, apitest.BrowserRequest(
-		t, http.MethodPost,
-		"/v1/connect/authorizations/"+requestCode+"/approve", nil, secondSession,
+		t, http.MethodPost, "/v1/connect/authorizations/"+requestCode+"/approve",
+		map[string]string{"approvalToken": tokens[secondSession]}, secondSession,
 	))
 	if approved.Code != http.StatusNotFound {
 		t.Fatalf("second user's decision status = %d, want 404. body: %s", approved.Code, approved.Body.String())
+	}
+}
+
+func TestBrowserApprovalNeedsTheAppsCodeEnteredForThatRequest(t *testing.T) {
+	t.Parallel()
+	r, session, pool := harness.NewConnectRouter(t)
+	other := apitest.AddVerifiedUser(t, r, pool, "other.browser@example.com", "other.browser")
+	requestCode, userCode := startAuthorization(t, r, "first request")
+	otherRequest, otherCode := startAuthorization(t, r, "second request")
+
+	for _, test := range []struct{ name, code string }{
+		{"no code", ""},
+		{"another request's code", otherCode},
+	} {
+		if rec := reviewAuthorization(t, r, session, requestCode, test.code); rec.Code != http.StatusNotFound {
+			t.Errorf("review with %s = %d, want 404. body: %s", test.name, rec.Code, rec.Body.String())
+		}
+	}
+	reviewed := reviewAuthorization(t, r, session, otherRequest, otherCode)
+	if reviewed.Code != http.StatusOK {
+		t.Fatalf("review the second request = %d. body: %s", reviewed.Code, reviewed.Body.String())
+	}
+	otherToken := apitest.DecodeResponse[pendingAuthorization](t, reviewed).ApprovalToken
+	reviewed = reviewAuthorization(t, r, other, requestCode, userCode)
+	if reviewed.Code != http.StatusOK {
+		t.Fatalf("review by another account = %d. body: %s", reviewed.Code, reviewed.Body.String())
+	}
+	otherAccountToken := apitest.DecodeResponse[pendingAuthorization](t, reviewed).ApprovalToken
+
+	for _, test := range []struct{ name, path, token string }{
+		{"no proof", "/v1/connect/authorizations/" + requestCode + "/approve", ""},
+		{"another request's proof", "/v1/connect/authorizations/" + requestCode + "/approve", otherToken},
+		{"another account's proof", "/v1/connect/authorizations/" + requestCode + "/approve", otherAccountToken},
+		{"no proof on the old path", "/v1/link/authorizations/" + requestCode + "/approve", ""},
+		{"no proof to deny", "/v1/connect/authorizations/" + requestCode + "/deny", ""},
+		{"no proof to deny on the old path", "/v1/link/authorizations/" + requestCode + "/deny", ""},
+	} {
+		rec := apitest.Send(t, r, apitest.BrowserRequest(
+			t, http.MethodPost, test.path, map[string]string{"approvalToken": test.token}, session,
+		))
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("decision with %s = %d, want 404. body: %s", test.name, rec.Code, rec.Body.String())
+		}
+	}
+
+	var undecided bool
+	if err := pool.QueryRow(context.Background(), `
+		select approved_at is null and denied_at is null and reviewed_by is null
+		  from connection_authorizations
+		 where name = 'first request'
+	`).Scan(&undecided); err != nil {
+		t.Fatalf("read the first request: %v", err)
+	}
+	if !undecided {
+		t.Fatal("a decision without code-entry proof changed the request")
 	}
 }
 

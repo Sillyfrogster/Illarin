@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CircleX, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Check, CircleX, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -27,19 +27,16 @@ import {
 import { ConnectionDecision, type Decision } from "./ConnectionDecision";
 
 type ReviewRequest =
-  | { kind: "authorization"; requestCode: string }
+  | { kind: "authorization"; requestCode: string; userCode: string }
   | { kind: "device"; userCode: string };
 
-type ReviewSource =
-  | { kind: "authorization"; requestCode: string }
-  | { kind: "device"; userCode: string; approvalToken: string };
+type ReviewSource = ReviewRequest & { approvalToken: string };
 
 type Review = { source: ReviewSource; connection: PendingConnection };
 
 type Stage =
   | { kind: "entry" }
   | { kind: "loading" }
-  | { kind: "request-error" }
   | { kind: "confirm"; review: Review }
   | { kind: "deciding"; review: Review; decision: Decision }
   | { kind: "redirecting"; review: Review; decision: Decision }
@@ -56,17 +53,12 @@ export function ConnectionApproval() {
   const returnTo = requestCode
     ? `/connect?request=${encodeURIComponent(requestCode)}`
     : "/connect";
-  const [manualForRequest, setManualForRequest] = useState("");
-  const [stage, setStage] = useState<Stage>(() =>
-    requestCode ? { kind: "loading" } : { kind: "entry" },
-  );
+  const [stage, setStage] = useState<Stage>({ kind: "entry" });
   const [typed, setTyped] = useState("");
   const [trouble, setTrouble] = useState("");
-  const looked = useRef("");
   const activePanel = useRef<HTMLElement | null>(null);
   const previousView = useRef("");
-  const reviewingRequest =
-    requestCode !== "" && manualForRequest !== requestCode;
+  const reviewingRequest = requestCode !== "";
   const stageView =
     stage.kind === "deciding" || stage.kind === "redirecting"
       ? "confirm"
@@ -94,10 +86,10 @@ export function ConnectionApproval() {
     setTrouble("");
     setStage({ kind: "loading" });
 
-    const isAuthorization = request.kind === "authorization";
-    const endpoint = isAuthorization
-      ? `/v1/connect/authorizations/${encodeURIComponent(request.requestCode)}`
-      : `/v1/connect/requests/${encodeURIComponent(request.userCode)}`;
+    const endpoint =
+      request.kind === "authorization"
+        ? `/v1/connect/authorizations/${encodeURIComponent(request.requestCode)}?userCode=${encodeURIComponent(request.userCode)}`
+        : `/v1/connect/requests/${encodeURIComponent(request.userCode)}`;
 
     try {
       const { data, error, response } = await api<unknown>("GET", endpoint, {
@@ -108,30 +100,10 @@ export function ConnectionApproval() {
         setTrouble(
           refusalMessage(
             answer,
-            isAuthorization
-              ? "That browser connection request is no longer available."
-              : "That code does not match a pending connection request.",
+            "That code does not match a pending connection request.",
           ),
         );
-        setStage({ kind: isAuthorization ? "request-error" : "entry" });
-        return;
-      }
-
-      if (isAuthorization) {
-        if (!isPendingConnection(answer)) {
-          setTrouble(
-            "Illarin returned an incomplete connection request. Try again.",
-          );
-          setStage({ kind: "request-error" });
-          return;
-        }
-        setStage({
-          kind: "confirm",
-          review: {
-            connection: answer,
-            source: { kind: "authorization", requestCode: request.requestCode },
-          },
-        });
+        setStage({ kind: "entry" });
         return;
       }
 
@@ -146,25 +118,14 @@ export function ConnectionApproval() {
         kind: "confirm",
         review: {
           connection: answer,
-          source: {
-            approvalToken: answer.approvalToken,
-            kind: "device",
-            userCode: request.userCode,
-          },
+          source: { ...request, approvalToken: answer.approvalToken },
         },
       });
     } catch {
       setTrouble(UNREACHABLE);
-      setStage({ kind: isAuthorization ? "request-error" : "entry" });
+      setStage({ kind: "entry" });
     }
   }, []);
-
-  useEffect(() => {
-    if (!reviewingRequest || !account?.emailVerified) return;
-    if (looked.current === requestCode) return;
-    looked.current = requestCode;
-    void loadReview({ kind: "authorization", requestCode });
-  }, [requestCode, reviewingRequest, account, loadReview]);
 
   function startOver() {
     setTrouble("");
@@ -286,29 +247,18 @@ export function ConnectionApproval() {
     stage.kind === "redirecting"
   ) {
     const review = stage.review;
-    const isDevice = review.source.kind === "device";
     return (
-      <Frame
-        lede={
-          isDevice
-            ? "Approve a private connection between your Illarin account and the app that showed you this code."
-            : "Approve a private connection between your Illarin account and the app that opened this page."
-        }
-      >
+      <Frame lede="Approve a private connection between your Illarin account and the app that showed you this code.">
         <Panel capture={capturePanel}>
           <ConnectionDecision
             connection={review.connection}
             deciding={stage.kind === "confirm" ? null : stage.decision}
-            onCancel={isDevice ? startOver : undefined}
+            onCancel={startOver}
             onDecide={(decision) => {
               void decide(review, decision, setStage, setTrouble);
             }}
             trouble={trouble}
-            userCode={
-              review.source.kind === "device"
-                ? review.source.userCode
-                : undefined
-            }
+            userCode={review.source.userCode}
           />
         </Panel>
       </Frame>
@@ -327,58 +277,8 @@ export function ConnectionApproval() {
     );
   }
 
-  if (stage.kind === "request-error" && reviewingRequest) {
-    return (
-      <Frame lede="The app could not reopen its request. You can enter a device code instead.">
-        <Panel capture={capturePanel}>
-          <Mark tone="stop">
-            <ShieldAlert
-              aria-hidden="true"
-              className="size-6"
-              strokeWidth={1.6}
-            />
-          </Mark>
-          <h2 className="mt-5 font-display text-title font-medium tracking-tight text-ink">
-            This request could not be opened
-          </h2>
-          <p className="mt-3 max-w-[52ch] font-prose text-prose text-mute">
-            It may have expired or already been used. Start connecting again
-            from the app, or enter a device code instead.
-          </p>
-          {trouble ? (
-            <div className="mt-5 max-w-[34rem]">
-              <Trouble>{trouble}</Trouble>
-            </div>
-          ) : null}
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Button
-              onClick={() => {
-                setManualForRequest(requestCode);
-                setTrouble("");
-                setStage({ kind: "entry" });
-              }}
-              size="large"
-              variant="primary"
-            >
-              Enter a device code
-            </Button>
-            <Button
-              onClick={() => {
-                looked.current = requestCode;
-                void loadReview({ kind: "authorization", requestCode });
-              }}
-              variant="outline"
-            >
-              Try again
-            </Button>
-          </div>
-        </Panel>
-      </Frame>
-    );
-  }
-
   return (
-    <Frame lede="Start connecting in your app. If it gives you a code, enter it here.">
+    <Frame lede="Start connecting in your app, then enter the code it shows.">
       <form
         noValidate
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
@@ -388,7 +288,11 @@ export function ConnectionApproval() {
             setTrouble("Enter the code your app is showing.");
             return;
           }
-          void loadReview({ kind: "device", userCode });
+          void loadReview(
+            requestCode
+              ? { kind: "authorization", requestCode, userCode }
+              : { kind: "device", userCode },
+          );
         }}
         ref={capturePanel}
         className="outline-none focus-visible:outline-none"
@@ -566,13 +470,9 @@ async function decide(
   const endpoint = isAuthorization
     ? `/v1/connect/authorizations/${encodeURIComponent(source.requestCode)}/${action}`
     : `/v1/connect/requests/${encodeURIComponent(source.userCode)}/${action}`;
-  const body = isAuthorization
-    ? undefined
-    : { approvalToken: source.approvalToken };
-
   try {
     const { data, error, response } = await api<unknown>("POST", endpoint, {
-      body,
+      body: { approvalToken: source.approvalToken },
     });
     const answer = response.ok ? data : error;
     if (!response.ok) {

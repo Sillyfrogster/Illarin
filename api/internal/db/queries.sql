@@ -787,12 +787,12 @@ update connection_requests
 
 -- name: InsertConnectionAuthorization :exec
 insert into connection_authorizations (
-    request_hash, redirect_uri, state, code_challenge,
+    request_hash, user_code_hash, redirect_uri, state, code_challenge,
     app_name, name, app_version, protocol_version,
     capabilities, accepted_formats, permissions, expires_at
 )
 values (
-    sqlc.arg('request_hash'), sqlc.arg('redirect_uri'), sqlc.arg('state'),
+    sqlc.arg('request_hash'), sqlc.arg('user_code_hash'), sqlc.arg('redirect_uri'), sqlc.arg('state'),
     sqlc.arg('code_challenge'), sqlc.arg('app_name'),
     sqlc.arg('name'), sqlc.narg('app_version'),
     sqlc.arg('protocol_version'), sqlc.arg('capabilities'),
@@ -805,6 +805,7 @@ select redirect_uri, state, app_name, name,
        accepted_formats, permissions, expires_at
   from connection_authorizations
  where request_hash = sqlc.arg('request_hash')
+   and user_code_hash = sqlc.arg('user_code_hash')
    and expires_at > now()
    and (reviewed_by is null or reviewed_by = sqlc.arg('reviewed_by'))
    and approved_at is null

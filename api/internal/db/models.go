@@ -131,6 +131,7 @@ type ConnectionAuthorization struct {
 	RedeemedAt            pgtype.Timestamptz
 	CreatedAt             pgtype.Timestamptz
 	ExpiresAt             pgtype.Timestamptz
+	UserCodeHash          []byte
 }
 
 type ConnectionRateLimit struct {

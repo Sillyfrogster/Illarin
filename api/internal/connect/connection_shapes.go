@@ -47,6 +47,7 @@ type StartConnectionAuthorization struct {
 
 type ConnectionAuthorization struct {
 	AuthorizationUrl string    `json:"authorizationUrl"`
+	UserCode         string    `json:"userCode"`
 	ExpiresAt        time.Time `json:"expiresAt"`
 }
 
