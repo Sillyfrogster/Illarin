@@ -106,7 +106,7 @@ part of the wire contract:
 
 Protocol version 1 changes only by adding optional request fields and new
 response fields. An installation written before a field was added can leave it
-out, and every installation must ignore response fields it does not recognise.
+out, and every installation must ignore response fields it does not recognize.
 
 Use a stable reverse-domain namespace for capabilities you own. A capability is
 only a claim about interoperability. It does not grant a permission, make an
@@ -468,7 +468,7 @@ Rules for a conforming client:
   unacknowledged takes Illarin stops offering it, so acknowledge what you install.
 - Open one wait at a time. A second request supersedes the first, which then
   answers `204`; two workers waiting for the same installation simply take turns.
-- After a failure, back off exponentially with jitter and honour `Retry-After`.
+- After a failure, back off exponentially with jitter and honor `Retry-After`.
   `429` is a rate limit and `503` means Illarin is holding as many waits as it will.
 - Store `versionNumber` against `workId`. A larger one later means a newer
   version was published; fetch it again even if the bytes turn out the same.
@@ -611,7 +611,7 @@ Before calling an integration complete, verify all of these:
 - Two installations of the same app can connect, refresh, update, and
   disconnect without sharing state.
 - Unknown capabilities and formats produce no privileged behavior.
-- Response fields the installation does not recognise are ignored.
+- Response fields the installation does not recognize are ignored.
 - One send wait is open at a time, `204` is handled, files are fetched
   as ordinary retryable `GET`s, and sends are acknowledged only after they
   are durably installed.
