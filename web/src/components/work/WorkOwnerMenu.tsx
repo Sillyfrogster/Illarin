@@ -2,7 +2,6 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { VisibilityControl } from "@/app/(site)/a/[id]/[[...slug]]/VisibilityControl";
 import { OwnerMenu } from "@/components/ui/owner-menu";
 import {
   type BrowseWork,
@@ -13,6 +12,7 @@ import {
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
+import { VisibilityItems } from "./VisibilityItems";
 
 export function WorkOwnerMenu({
   work,
@@ -48,19 +48,14 @@ export function WorkOwnerMenu({
         router.push("/work?deleted=true");
         router.refresh();
       }}
-      visibility={
-        draft ? (
-          <p className="text-ui text-mute">
-            Only you can open this draft. Publish it to share it.
-          </p>
-        ) : (
-          <VisibilityControl
-            workId={work.id}
-            initialVisibility={visibility}
-            frozen={Boolean(work.takedown)}
-            typeName={noun}
-          />
-        )
+      visibilityItems={
+        <VisibilityItems
+          workId={work.id}
+          isDraft={draft}
+          initialVisibility={visibility}
+          frozen={Boolean(work.takedown)}
+          typeName={noun}
+        />
       }
     />
   );

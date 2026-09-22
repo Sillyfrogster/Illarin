@@ -13,6 +13,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./dropdown-menu";
 
@@ -24,6 +25,7 @@ export function OwnerMenu({
   onEdit,
   onDelete,
   visibility,
+  visibilityItems,
 }: {
   name: string;
   noun: string;
@@ -31,7 +33,8 @@ export function OwnerMenu({
   frozen?: boolean;
   onEdit: () => void;
   onDelete: () => Promise<void>;
-  visibility: ReactNode;
+  visibility?: ReactNode;
+  visibilityItems?: ReactNode;
 }) {
   const [dialog, setDialog] = useState<"delete" | "visibility" | "copy" | null>(
     null,
@@ -69,16 +72,18 @@ export function OwnerMenu({
             <PencilLine aria-hidden="true" />
             Edit
           </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={frozen}
-            onSelect={() => {
-              setMessage("");
-              setDialog("visibility");
-            }}
-          >
-            <Eye aria-hidden="true" />
-            Visibility
-          </DropdownMenuItem>
+          {visibility ? (
+            <DropdownMenuItem
+              disabled={frozen}
+              onSelect={() => {
+                setMessage("");
+                setDialog("visibility");
+              }}
+            >
+              <Eye aria-hidden="true" />
+              Visibility
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             disabled={!href}
             onSelect={async () => {
@@ -97,6 +102,13 @@ export function OwnerMenu({
             <Link2 aria-hidden="true" />
             Copy link
           </DropdownMenuItem>
+          {visibilityItems ? (
+            <>
+              <DropdownMenuSeparator />
+              {visibilityItems}
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           <DropdownMenuItem
             disabled={frozen}
             className="text-stop"

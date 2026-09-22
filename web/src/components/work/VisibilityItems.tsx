@@ -1,20 +1,45 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { EyeOff, Globe, Link2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 import type { WorkDetail } from "@/lib/api/query";
 import { saveWorkVisibility, workKeys } from "@/lib/api/query";
 
-export function VisibilityControl({
+type Choice = WorkDetail["visibility"] | "draft";
+
+const CHOICES = [
+  {
+    value: "listed",
+    label: "Public",
+    line: "In Browse and on your profile",
+    icon: Globe,
+  },
+  {
+    value: "unlisted",
+    label: "Unlisted",
+    line: "Anyone with the link",
+    icon: Link2,
+  },
+  { value: "draft", label: "Draft", line: "Only you", icon: EyeOff },
+] as const;
+
+/** VisibilityItems are the owner menu choices of public, unlisted or draft. */
+export function VisibilityItems({
   workId,
+  isDraft,
   initialVisibility,
   frozen,
   typeName,
 }: {
   workId: string;
+  isDraft: boolean;
   initialVisibility: WorkDetail["visibility"];
   frozen: boolean;
   typeName: string;
@@ -24,68 +49,59 @@ export function VisibilityControl({
   const [visibility, setVisibility] = useState(initialVisibility);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
+  const current: Choice = isDraft ? "draft" : visibility;
 
-  const listed = visibility === "listed";
-  const next = listed ? "unlisted" : "listed";
-
-  async function changeVisibility() {
+  async function choose(next: string) {
+    if (next === current || next === "draft") return;
+    const before = visibility;
+    const chosen = next as WorkDetail["visibility"];
     setPending(true);
     setMessage("");
-    setVisibility(next);
+    setVisibility(chosen);
     try {
-      await saveWorkVisibility(workId, next);
+      await saveWorkVisibility(workId, chosen);
       await query.invalidateQueries({ queryKey: workKeys.all });
       router.refresh();
     } catch {
-      setVisibility(visibility);
-      setMessage("The visibility could not be changed. Try again.");
+      setVisibility(before);
+      setMessage("Illarin could not change the visibility. Try again.");
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <section aria-labelledby="visibility-heading" className="flex gap-3">
-      <span aria-hidden="true" className="mt-0.5 shrink-0 text-mute">
-        {frozen ? (
-          <LockKeyhole size={18} />
-        ) : listed ? (
-          <Eye size={18} />
-        ) : (
-          <EyeOff size={18} />
-        )}
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <div>
-          <h3 className="text-ui font-medium text-ink" id="visibility-heading">
-            Visibility
-          </h3>
-          <p className="mt-1 text-meta text-mute">
-            {frozen
-              ? `Locked while this ${typeName} is taken down. Only an admin can lift the takedown.`
-              : listed
-                ? "Listed in Browse and on your public profile."
-                : "Not listed in Browse. Anyone with the link can still view and download it."}
-          </p>
-        </div>
-        {message ? (
-          <p className="text-meta text-stop" role="alert">
-            {message}
-          </p>
-        ) : null}
-        <Button
-          className="self-start"
-          disabled={frozen}
-          loading={pending}
-          onClick={changeVisibility}
-        >
-          {frozen
-            ? "Listing locked"
-            : listed
-              ? "Make unlisted"
-              : "List in Browse"}
-        </Button>
-      </div>
-    </section>
+    <>
+      <DropdownMenuLabel className="pb-1 text-label text-mute">
+        Visibility
+      </DropdownMenuLabel>
+      <DropdownMenuRadioGroup value={current} onValueChange={choose}>
+        {CHOICES.map(({ value, label, line, icon: Icon }) => (
+          <DropdownMenuRadioItem
+            disabled={frozen || pending || (value === "draft") !== isDraft}
+            key={value}
+            onSelect={(event) => event.preventDefault()}
+            value={value}
+          >
+            <Icon aria-hidden="true" />
+            <span className="flex flex-col py-1.5">
+              {label}
+              <span className="text-label text-mute">{line}</span>
+            </span>
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
+      <p
+        className="max-w-64 px-3 pt-1 pb-2 text-label text-mute"
+        role={message ? "alert" : undefined}
+      >
+        {message ||
+          (frozen
+            ? `Locked while this ${typeName} is taken down.`
+            : isDraft
+              ? `Publish this ${typeName} to make it public or unlisted.`
+              : `A published ${typeName} can't go back to draft.`)}
+      </p>
+    </>
   );
 }

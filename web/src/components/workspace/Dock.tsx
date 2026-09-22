@@ -12,7 +12,7 @@ export type DockState =
   | "private"
   | "published";
 
-const TOOL =
+export const TOOL =
   "relative inline-flex size-11 shrink-0 items-center justify-center rounded-control text-field opacity-70 outline-offset-3 hover:bg-field/15 hover:opacity-100 focus-visible:opacity-100 aria-pressed:bg-field/15 aria-pressed:opacity-100";
 
 const QUIET_ACTION =
@@ -46,29 +46,34 @@ export function StatusLight({ state }: { state: DockState }) {
   );
 }
 
+export const WORDED_TOOL = "w-auto gap-2 px-3 text-meta font-medium";
+
 export function DockTool({
   active,
   count,
   icon: Icon,
   label,
   onClick,
+  worded,
 }: {
   active?: boolean;
   count?: number;
   icon: LucideIcon;
   label: string;
   onClick: () => void;
+  worded?: boolean;
 }) {
   return (
     <button
-      aria-label={label}
+      aria-label={worded ? undefined : label}
       aria-pressed={active}
-      className={TOOL}
+      className={cn(TOOL, worded && WORDED_TOOL)}
       onClick={onClick}
-      title={label}
+      title={worded ? undefined : label}
       type="button"
     >
       <Icon aria-hidden="true" size={18} />
+      {worded ? label : null}
       {count ? (
         <span
           aria-hidden="true"
@@ -107,6 +112,7 @@ export function DockAction({
 export function Dock({
   actions,
   detail,
+  layoutId,
   railOpen,
   state,
   tools,
@@ -114,6 +120,7 @@ export function Dock({
 }: {
   actions: ReactNode;
   detail: string;
+  layoutId?: string;
   railOpen: boolean;
   state: DockState;
   tools: ReactNode;
@@ -131,7 +138,14 @@ export function Dock({
       <motion.div
         animate={{ opacity: 1, y: 0 }}
         className="pointer-events-auto flex w-full max-w-[50rem] flex-wrap items-center gap-1 rounded-plate bg-ink p-2 shadow-popover sm:flex-nowrap md:gap-2"
-        initial={reduced ? { opacity: 0 } : { opacity: 0, y: 96 }}
+        initial={
+          layoutId && !reduced
+            ? false
+            : reduced
+              ? { opacity: 0 }
+              : { opacity: 0, y: 96 }
+        }
+        layoutId={reduced ? undefined : layoutId}
         transition={{ duration: reduced ? 0 : 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
         <div

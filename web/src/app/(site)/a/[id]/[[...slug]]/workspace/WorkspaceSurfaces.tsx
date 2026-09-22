@@ -18,24 +18,21 @@ import { ElementFields, elementHint } from "../ElementEditors";
 import { MakePublicConfirmation } from "../MakePublicConfirmation";
 import { PreservedPanel } from "../PreservedPanel";
 import { PreservedPromptsPanel } from "../PreservedPromptsPanel";
+import { fragmentName } from "../PresetElements";
 import {
-  elementHasPrivatePrompts,
   NO_ALLOWED_APP,
   PrivatePromptsControl,
 } from "../PrivatePromptsControl";
 import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
 import { TakedownControl } from "../TakedownControl";
-import { VisibilityControl } from "../VisibilityControl";
 import { AddBlock } from "./AddBlock";
 import { FoundImagesPanel } from "./FoundImagesPanel";
 import { useFoundImages } from "./found-images";
-import { type Destination, destinationsIn, JumpPalette } from "./JumpPalette";
 import { PublishDialog } from "./PublishDialog";
 import { RemoveBlock } from "./RemoveBlock";
 import { ReplacementStep } from "./ReplacementStep";
-import { firstCursor } from "./save";
 import { useWorkspace } from "./state";
-import { WorkspaceDock } from "./WorkspaceDock";
+import { EditToggle, WorkspaceDock } from "./WorkspaceDock";
 
 export type WorkspaceSurfacesProps = {
   creator: string;
@@ -53,55 +50,14 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const workspace = useWorkspace();
   const { account } = useAuth();
   const reduced = useReducedMotion();
-  const [jumping, setJumping] = useState(false);
   const foundImages = useFoundImages(workspace.workId, workspace.isOwner);
   const canTakeDown = Boolean(
     account?.role === "admin" && !workspace.isDraft && !props.takenDown,
   );
-  const _previewing =
-    workspace.isOwner && !workspace.editing && workspace.sweep > 0;
-
-  useEffect(() => {
-    if (!workspace.editing) return;
-    function onKey(event: KeyboardEvent) {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k")
-        return;
-      event.preventDefault();
-      setJumping((open) => !open);
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [workspace.editing]);
-
-  function go(destination: Destination) {
-    setJumping(false);
-    const block = workspace.blocks.find(
-      (item) => item.id === destination.blockId,
-    );
-    document
-      .getElementById(`block-${destination.blockId}`)
-      ?.scrollIntoView({ block: "start" });
-    if (!block || !destination.elementId) return;
-    const element = block.elements.find(
-      (item) => item.id === destination.elementId,
-    );
-    if (!element) return;
-    const cursor = firstCursor(element);
-    if (cursor) {
-      workspace.setCursor(cursor);
-      return;
-    }
-    workspace.openPane({
-      blockId: block.id,
-      elementId: element.id,
-      kind: "element",
-    });
-  }
-
   function goToPage(target: PageTarget) {
     workspace.closePane();
     if (target.where === "block") {
-      go({ blockId: target.blockId, id: target.blockId, label: "", where: "" });
+      goToBlock(target.blockId);
       return;
     }
     document
@@ -130,7 +86,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
       {!workspace.isOwner && canTakeDown && workspace.pane === null ? (
         <button
           className="fixed right-4 bottom-4 z-30 inline-flex min-h-11 items-center gap-2 rounded-control bg-ink px-4 text-meta font-medium text-field shadow-popover outline-offset-3"
-          onClick={() => workspace.openPane({ kind: "access" })}
+          onClick={() => workspace.openPane({ kind: "staff" })}
           type="button"
         >
           <ShieldAlert aria-hidden="true" size={16} />
@@ -143,9 +99,13 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
       {workspace.editing ? (
         <WorkspaceDock
           detail={detail(workspace.isDraft, workspace.saveState)}
-          onJump={() => setJumping(true)}
+          takenDown={props.takenDown}
+          typeName={props.typeName}
+          visibility={props.visibility}
           waiting={foundImages.pictures.length}
         />
+      ) : workspace.isOwner && !props.takenDown ? (
+        <EditToggle typeName={props.typeName} />
       ) : null}
 
       <AnimatePresence>
@@ -182,25 +142,6 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             title={element.label || edited.title}
           >
             <div className="flex flex-col gap-5">
-              {workspace.message === NO_ALLOWED_APP ? (
-                <p
-                  className="rounded-control bg-stop-wash p-3 text-meta text-ink"
-                  role="alert"
-                >
-                  {workspace.message}
-                </p>
-              ) : null}
-              {elementHasPrivatePrompts(element) ? (
-                <PrivatePromptsControl
-                  pending={workspace.busy}
-                  policy={{
-                    allowedApps: workspace.allowedApps,
-                    eligibleApps: workspace.eligibleApps,
-                    onChange: workspace.setAllowedApps,
-                  }}
-                  unanswered={workspace.message === NO_ALLOWED_APP}
-                />
-              ) : null}
               <Fields
                 workId={workspace.workId}
                 blockId={edited.id}
@@ -265,52 +206,60 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 
         {pane?.kind === "replacement" ? (
           <WorkspaceRail
+            description={`Edited this ${props.typeName} in another app? Upload the file here and review what changed before you publish.`}
             key="replacement"
             title="Upload a new version"
             onClose={workspace.closePane}
           >
             <Replacement />
+            {props.hasOriginal ? (
+              <PreservedPanel workId={workspace.workId} />
+            ) : null}
           </WorkspaceRail>
         ) : null}
 
-        {pane?.kind === "access" ? (
+        {pane?.kind === "private-prompts" ? (
           <WorkspaceRail
-            description="Access changes apply the moment you make them. They do not wait for a save or a publication."
-            key="access"
+            description="Readers see a private prompt's name, never its text."
+            key="private-prompts"
             onClose={workspace.closePane}
-            title="Access and published state"
+            title="Private prompts"
           >
             <div className="flex flex-col gap-7">
-              {workspace.isOwner && !workspace.isDraft ? (
-                <VisibilityControl
-                  workId={workspace.workId}
-                  frozen={props.takenDown}
-                  initialVisibility={props.visibility}
-                  typeName={props.typeName}
-                />
-              ) : null}
-              {workspace.isOwner && props.hasOriginal ? (
-                <PreservedPanel workId={workspace.workId} />
-              ) : null}
-              {workspace.isOwner &&
-              !workspace.isDraft &&
-              props.hasPrivatePrompts ? (
+              <PrivatePromptsControl
+                pending={workspace.busy}
+                policy={{
+                  allowedApps: workspace.allowedApps,
+                  eligibleApps: workspace.eligibleApps,
+                  onChange: workspace.setAllowedApps,
+                }}
+                unanswered={workspace.message === NO_ALLOWED_APP}
+              />
+              <PromptPrivacy />
+              {!workspace.isDraft && props.hasPrivatePrompts ? (
                 <RecordedPromptsPanel workId={workspace.workId} />
               ) : null}
-              {workspace.isOwner && props.preservedPrompts ? (
+              {props.preservedPrompts ? (
                 <PreservedPromptsPanel
                   workId={workspace.workId}
                   count={props.preservedPrompts}
                 />
               ) : null}
-              {canTakeDown ? (
-                <TakedownControl
-                  workId={workspace.workId}
-                  creator={props.creator}
-                  typeName={props.typeName}
-                />
-              ) : null}
             </div>
+          </WorkspaceRail>
+        ) : null}
+
+        {pane?.kind === "staff" && canTakeDown ? (
+          <WorkspaceRail
+            key="staff"
+            onClose={workspace.closePane}
+            title="Staff tools"
+          >
+            <TakedownControl
+              workId={workspace.workId}
+              creator={props.creator}
+              typeName={props.typeName}
+            />
           </WorkspaceRail>
         ) : null}
       </AnimatePresence>
@@ -322,14 +271,6 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           onKeepPrivate={workspace.cancelMakePublic}
           pending={workspace.busy}
           prompts={workspace.makingPublic.prompts}
-        />
-      ) : null}
-
-      {jumping ? (
-        <JumpPalette
-          destinations={destinationsIn(workspace.blocks)}
-          onClose={() => setJumping(false)}
-          onGo={go}
         />
       ) : null}
 
@@ -349,6 +290,65 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
       <ActivationSweep />
     </>
   );
+}
+
+function goToBlock(blockId: string) {
+  document
+    .getElementById(`block-${blockId}`)
+    ?.scrollIntoView({ block: "start" });
+}
+
+/** PromptPrivacy switches each prompt the work holds between public and private. */
+function PromptPrivacy() {
+  const workspace = useWorkspace();
+  const lists = workspace.blocks.flatMap((block) =>
+    block.elements.flatMap((element) =>
+      element.type === "prompt_list" && "fragments" in element.content
+        ? [{ block, element, content: element.content }]
+        : [],
+    ),
+  );
+  return lists.map(({ block, element, content }) => (
+    <fieldset
+      className="flex min-w-0 flex-col gap-1 border-0 p-0"
+      key={element.id}
+    >
+      <legend className="mb-2 text-ui font-medium text-ink">
+        {element.label || block.title}
+      </legend>
+      {content.fragments.map((fragment, index) =>
+        fragment.marker ? null : (
+          <label
+            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep has-checked:bg-accent-wash"
+            key={fragment.id ?? index}
+          >
+            <input
+              checked={fragment.private ?? false}
+              className="size-4 shrink-0 accent-[var(--v-action)]"
+              disabled={workspace.busy}
+              onChange={(event) =>
+                workspace.writeElement(block.id, {
+                  ...element,
+                  content: {
+                    ...content,
+                    fragments: content.fragments.map((one, at) =>
+                      at === index
+                        ? { ...one, private: event.target.checked }
+                        : one,
+                    ),
+                  },
+                })
+              }
+              type="checkbox"
+            />
+            <span className="min-w-0 wrap-anywhere">
+              {fragmentName(fragment, index)}
+            </span>
+          </label>
+        ),
+      )}
+    </fieldset>
+  ));
 }
 
 function Fields({
@@ -441,7 +441,6 @@ function Replacement() {
     <ReplacementStep
       onApplied={settled}
       onDiscarded={settled}
-      onBack={workspace.closePane}
       waiting={waiting}
       onWaiting={setWaiting}
     />

@@ -49,7 +49,8 @@ export type SaveState =
   | "published";
 
 export type Pane =
-  | { kind: "access" }
+  | { kind: "private-prompts" }
+  | { kind: "staff" }
   | { kind: "found-images" }
   | { kind: "publication" }
   | { kind: "replacement" }
@@ -146,6 +147,7 @@ export function WorkspaceProvider({
     savedDetailsRef.current = savedDetails;
   }, [savedDetails]);
   const [apps, setApps] = useState<AppName[]>(allowedApps);
+  const [savedApps, setSavedApps] = useState<AppName[]>(allowedApps);
   const [cursor, setCursor] = useState<string | null>(null);
   const [chosenItems, setChosenItems] = useState<Record<string, string>>({});
   const [pane, setPane] = useState<Pane | null>(null);
@@ -207,7 +209,10 @@ export function WorkspaceProvider({
 
   const changed = useMemo(() => changedBlockIds(draft, saved), [draft, saved]);
   const hasDetailsChanges = detailsHasChanged(draftDetails, savedDetails);
-  const dirty = changed.length > 0 || hasDetailsChanges;
+  const appsChanged =
+    draft.some((block) => hasPrivatePrompts(block.elements)) &&
+    !sameApps(apps, savedApps);
+  const dirty = changed.length > 0 || hasDetailsChanges || appsChanged;
 
   const saveState: SaveState = busy
     ? "saving"
@@ -219,21 +224,18 @@ export function WorkspaceProvider({
           ? "private"
           : "published";
 
-  const openPrivatePromptElement = useCallback((pages: WorkBlock[]) => {
-    for (const block of pages) {
-      const asking = block.elements.find((element) =>
-        hasPrivatePrompts([element]),
-      );
-      if (!asking) continue;
-      setPane({ blockId: block.id, elementId: asking.id, kind: "element" });
-      return;
-    }
-  }, []);
-
   const save = useCallback(
     (expose = false) => {
       if (saving.current || !dirty || conflicted) return;
-      const pending = changedBlockIds(draft, saved);
+      const changedBlocks = changedBlockIds(draft, saved);
+      const promptHolder = draft.find((block) =>
+        block.elements.some((element) => element.type === "prompt_list"),
+      );
+      // A change to the allowed apps alone travels on the block that holds the prompts
+      const pending =
+        changedBlocks.length === 0 && appsChanged && promptHolder
+          ? [promptHolder.id]
+          : changedBlocks;
       const before = new Map(saved.map((block) => [block.id, block]));
 
       if (!expose && !exposeConfirmed.current) {
@@ -264,7 +266,7 @@ export function WorkspaceProvider({
       if (keepsPrivatePrompts && apps.length === 0) {
         setFailed(true);
         setMessage(NO_ALLOWED_APP);
-        openPrivatePromptElement(draft);
+        setPane({ kind: "private-prompts" });
         return;
       }
 
@@ -302,6 +304,7 @@ export function WorkspaceProvider({
             await saveWorkDetails(candidate, workId, draftDetails);
             setSavedDetails(draftDetails);
           }
+          setSavedApps(apps);
           exposeConfirmed.current = false;
         } catch (error) {
           setFailed(true);
@@ -319,6 +322,7 @@ export function WorkspaceProvider({
     [
       allowedApps.length,
       apps,
+      appsChanged,
       workId,
       conflicted,
       candidate,
@@ -326,7 +330,6 @@ export function WorkspaceProvider({
       draft,
       draftDetails,
       hasDetailsChanges,
-      openPrivatePromptElement,
       saved,
     ],
   );
@@ -483,7 +486,10 @@ export function WorkspaceProvider({
         ),
       ),
     writeDetails: setDraftDetails,
-    setAllowedApps: setApps,
+    setAllowedApps: (next) => {
+      setApps(next);
+      setFailed(false);
+    },
     openPane: (next) => {
       setPane(next);
       setCursor(null);
@@ -507,6 +513,11 @@ export function WorkspaceProvider({
       {children}
     </WorkspaceContext.Provider>
   );
+}
+
+function sameApps(one: AppName[], other: AppName[]): boolean {
+  const ids = new Set(one.map((app) => app.id));
+  return one.length === other.length && other.every((app) => ids.has(app.id));
 }
 
 function keepWriting(

@@ -1,13 +1,12 @@
 "use client";
 
 import { Check, Minus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -38,34 +37,29 @@ const GRADE_WORDS: Record<string, string> = {
 export function CompareFormats({
   type,
   typeLabel,
+  open,
+  onOpenChange,
 }: {
   type: string;
   typeLabel: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const [reading, setReading] = useState<Reading>({ state: "unread" });
-
-  async function read() {
-    try {
-      setReading({ state: "read", table: await fetchFormatTable() });
-    } catch {
-      setReading({ state: "refused" });
-    }
-  }
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    fetchFormatTable().then(
+      (table) => live && setReading({ state: "read", table }),
+      () => live && setReading({ state: "refused" }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [open]);
 
   return (
-    <Dialog
-      onOpenChange={(open) => {
-        if (open && reading.state !== "read") void read();
-      }}
-    >
-      <DialogTrigger asChild>
-        <button
-          className="inline-flex min-h-11 items-center font-ui text-ui font-medium text-accent underline-offset-4 outline-offset-3 hover:underline"
-          type="button"
-        >
-          Compare formats
-        </button>
-      </DialogTrigger>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-w-[820px] p-6 sm:p-8">
         <DialogTitle className="pr-10 font-display text-title font-medium text-ink">
           Compare formats

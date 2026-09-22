@@ -4,7 +4,6 @@ import { Upload } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
-import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
   acceptWorkReplacement,
   cancelWorkReplacement,
@@ -31,13 +30,11 @@ const POLL_MS = 600;
 
 export function ReplacementStep({
   onApplied,
-  onBack,
   onDiscarded,
   waiting,
   onWaiting,
 }: {
   onApplied: (groups: VersionChangeGroup[]) => void;
-  onBack: () => void;
   onDiscarded: () => void;
   waiting: UploadOperation | null;
   onWaiting: (operation: UploadOperation | null) => void;
@@ -154,15 +151,6 @@ export function ReplacementStep({
 
   return (
     <div className="flex flex-col gap-5">
-      <RailBack onClick={onBack}>Publication</RailBack>
-      <h3 className="font-display text-section font-medium text-ink">
-        Replace the file
-      </h3>
-      <Note>
-        Import a replacement file into your drafted changes. Review its changes
-        before publishing a version.
-      </Note>
-
       {reading ? (
         <p aria-live="polite" className="text-ui text-ink">
           Illarin is reading your file. Readers keep the published version while
@@ -257,7 +245,7 @@ export function ReplacementStep({
           >
             <Upload aria-hidden="true" size={22} strokeWidth={1.35} />
             <span className="text-ui font-medium text-ink wrap-anywhere">
-              {file ? file.name : "Choose the replacement file"}
+              {file ? file.name : "Choose the file"}
             </span>
             <span className="text-meta text-mute">
               {file

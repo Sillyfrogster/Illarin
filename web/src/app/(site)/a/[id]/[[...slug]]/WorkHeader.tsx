@@ -91,19 +91,7 @@ export function WorkHeader({
             Browse
           </Link>
           {work.isOwner ? (
-            <div className="flex items-center gap-2">
-              {!writing ? (
-                <button
-                  className="inline-flex min-h-11 items-center gap-2 rounded-control bg-action px-5 text-ui font-medium text-on-accent hover:opacity-90"
-                  onClick={workspace.startEditing}
-                  type="button"
-                >
-                  <PencilLine aria-hidden="true" size={16} />
-                  Edit your {typeLabel.toLowerCase()}
-                </button>
-              ) : null}
-              <WorkOwnerMenu work={work} onEdit={workspace.startEditing} />
-            </div>
+            <WorkOwnerMenu work={work} onEdit={workspace.startEditing} />
           ) : null}
         </div>
 

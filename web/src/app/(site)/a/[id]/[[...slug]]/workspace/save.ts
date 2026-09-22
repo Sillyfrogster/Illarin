@@ -130,14 +130,3 @@ export function isEmptyContent(element: WorkElement): boolean {
   }
   return element.isEmpty;
 }
-
-export function firstCursor(element: WorkElement): string | null {
-  if (!writesInPlace(element)) return null;
-  const content = element.content;
-  if ("text" in content) return `${element.id}:text`;
-  if ("texts" in content) return `${element.id}:0:text`;
-  if ("turns" in content) return `${element.id}:0:speaker`;
-  if ("fields" in content) return `${element.id}:0:name`;
-  if ("links" in content) return `${element.id}:0:label`;
-  return null;
-}

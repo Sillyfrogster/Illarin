@@ -4,7 +4,6 @@ import {
   acknowledgeBlock,
   blockSaveRequest,
   changedBlockIds,
-  firstCursor,
   isEmptyContent,
   replaceBlock,
   replaceElement,
@@ -136,21 +135,6 @@ describe("isEmptyContent", () => {
     expect(
       isEmptyContent(element("c", "field_list", { fields: [{ value: "1" }] })),
     ).toBe(false);
-  });
-});
-
-describe("firstCursor", () => {
-  test("points at the first field of an element written in place", () => {
-    expect(firstCursor(element("a", "prose", { text: "" }))).toBe("a:text");
-    expect(firstCursor(element("b", "text_set", { texts: [] }))).toBe(
-      "b:0:text",
-    );
-  });
-
-  test("points nowhere for an element edited beside the page", () => {
-    expect(
-      firstCursor(element("c", "entry_table", { entries: [] })),
-    ).toBeNull();
   });
 });
 

@@ -4,6 +4,7 @@ import {
   ChevronDown,
   CircleAlert,
   Clock,
+  Columns3,
   Download,
   FileDown,
   Send,
@@ -17,10 +18,8 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api/client";
 import type {
@@ -29,6 +28,7 @@ import type {
   WorkDetail,
 } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { shortMoment } from "@/lib/dates";
 import { installTrack } from "@/lib/install-track";
 import { installedVersionsLine } from "@/lib/installed-app-versions";
@@ -46,6 +46,9 @@ import { FollowOffer } from "./follow/FollowOffer";
 import { InstallProgress } from "./InstallProgress";
 
 const POLL_INTERVAL_MS = 8000;
+const SPLIT_START = "rounded-r-none motion-safe:hover:translate-y-0";
+const SPLIT_END =
+  "rounded-l-none border-l border-on-accent/30 motion-safe:hover:translate-y-0";
 const POLL_LIMIT = 20;
 
 /** GetWork is the work page's download control. */
@@ -76,6 +79,7 @@ export function GetWork({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
   const [offering, setOffering] = useState(false);
+  const [comparing, setComparing] = useState(false);
   const polls = useRef(0);
   const installs = installsInApp(work.type);
 
@@ -168,90 +172,116 @@ export function GetWork({
     return aside ? <div className="flex">{aside}</div> : null;
   }
 
+  const sendFirst = !forApp && downloads.length === 0 && !original;
+  const primarySend = sendFirst ? (receiving[0] ?? null) : null;
+  const menuSends = receiving.filter((app) => app !== primarySend);
+  const menuFormats = forApp ? others : downloads;
+  const menuOriginal = forApp || downloads.length > 0 ? original : null;
+  const extra =
+    menuSends.length > 0 || downloads.length > 0 ? (
+      <>
+        {menuFormats.length > 0 || menuOriginal ? (
+          <DropdownMenuSeparator />
+        ) : null}
+        {menuSends.map((app) => (
+          <DropdownMenuItem
+            disabled={busy || isWaiting(app.send)}
+            key={app.connectedAppId}
+            onSelect={() => void send(app)}
+          >
+            {isWaiting(app.send) ? (
+              <Clock aria-hidden="true" />
+            ) : (
+              <Send aria-hidden="true" />
+            )}
+            {sendActionLabel(app, installs)}
+          </DropdownMenuItem>
+        ))}
+        {downloads.length > 0 ? (
+          <DropdownMenuItem onSelect={() => setComparing(true)}>
+            <Columns3 aria-hidden="true" />
+            Compare formats
+          </DropdownMenuItem>
+        ) : null}
+      </>
+    ) : null;
+  const hasMenu = menuFormats.length > 0 || menuOriginal || extra;
+  const joined = hasMenu && !(downloads.length > 0 && !forApp);
+
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-        {downloads.length > 0 && forApp ? (
-          <Button asChild variant="primary">
-            <a
-              href={`/download/${work.id}/${forApp.format}`}
-              onClick={() => setOffering(true)}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="inline-flex">
+          {downloads.length > 0 && forApp ? (
+            <Button
+              asChild
+              className={cn(joined && SPLIT_START)}
+              variant="primary"
             >
-              <Download aria-hidden="true" />
-              Download for {forApp.label}
-            </a>
-          </Button>
-        ) : downloads.length > 0 ? (
-          <FormatMenu
-            downloads={downloads}
-            onDownload={() => setOffering(true)}
-            original={original}
-            workId={work.id}
-          >
-            <Button variant="primary">
-              <Download aria-hidden="true" />
-              Download {typeLabel}
-              <ChevronDown aria-hidden="true" />
+              <a
+                href={`/download/${work.id}/${forApp.format}`}
+                onClick={() => setOffering(true)}
+              >
+                <Download aria-hidden="true" />
+                Download for {forApp.label}
+              </a>
             </Button>
-          </FormatMenu>
-        ) : null}
-        {others.length > 0 ? (
-          <FormatMenu
-            downloads={others}
-            onDownload={() => setOffering(true)}
-            original={original}
-            workId={work.id}
-          >
-            <Button>
-              Other formats
-              <ChevronDown aria-hidden="true" />
+          ) : primarySend ? (
+            <SendButton
+              app={primarySend}
+              busy={busy}
+              className={cn(joined && SPLIT_START)}
+              installs={installs}
+              onSend={send}
+            />
+          ) : original && downloads.length === 0 ? (
+            <Button
+              asChild
+              className={cn(joined && SPLIT_START)}
+              variant="primary"
+            >
+              <a href={`/download/${work.id}`}>
+                <FileDown aria-hidden="true" />
+                Original upload
+              </a>
             </Button>
-          </FormatMenu>
-        ) : original && (forApp || downloads.length === 0) ? (
-          <Button asChild>
-            <a href={`/download/${work.id}`}>
-              <FileDown aria-hidden="true" />
-              Original upload
-            </a>
-          </Button>
-        ) : null}
-        {receiving.length === 1 ? (
-          <SendButton
-            app={receiving[0]}
-            busy={busy}
-            installs={installs}
-            onSend={send}
-          />
-        ) : receiving.length > 1 ? (
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button disabled={busy}>
-                <Send aria-hidden="true" />
-                {installs ? "Install on" : "Send to"}
-                <ChevronDown aria-hidden="true" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {receiving.map((app) => (
-                <DropdownMenuItem
-                  disabled={isWaiting(app.send)}
-                  key={app.connectedAppId}
-                  onSelect={() => void send(app)}
-                >
-                  {sendActionLabel(app, installs)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-      </div>
-      {downloads.length > 0 || aside ? (
-        <div className="mt-2 flex items-center gap-4">
-          {downloads.length > 0 ? (
-            <CompareFormats type={work.type} typeLabel={typeLabel} />
           ) : null}
-          {aside}
+          {hasMenu ? (
+            <FormatMenu
+              downloads={menuFormats}
+              extra={extra}
+              onDownload={() => setOffering(true)}
+              original={menuOriginal}
+              workId={work.id}
+            >
+              {joined ? (
+                <Button
+                  aria-label="More ways to get it"
+                  className={SPLIT_END}
+                  size="compact"
+                  variant="primary"
+                >
+                  <ChevronDown aria-hidden="true" />
+                </Button>
+              ) : (
+                <Button variant="primary">
+                  <Download aria-hidden="true" />
+                  Download {typeLabel}
+                  <ChevronDown aria-hidden="true" />
+                </Button>
+              )}
+            </FormatMenu>
+          ) : null}
         </div>
+        {aside}
+      </div>
+      {downloads.length > 0 ? (
+        <CompareFormats
+          onOpenChange={setComparing}
+          open={comparing}
+          type={work.type}
+          typeLabel={typeLabel}
+        />
       ) : null}
       {failure ? (
         <output aria-live="polite" className="mt-3 block text-meta text-stop">
@@ -297,17 +327,25 @@ export function GetWork({
 function SendButton({
   app,
   busy,
+  className,
   installs,
   onSend,
 }: {
   app: WorkConnectedApp;
   busy: boolean;
+  className?: string;
   installs: boolean;
   onSend: (app: WorkConnectedApp) => Promise<void>;
 }) {
   const pending = isWaiting(app.send);
   return (
-    <Button disabled={pending} loading={busy} onClick={() => void onSend(app)}>
+    <Button
+      className={className}
+      disabled={pending}
+      loading={busy}
+      onClick={() => void onSend(app)}
+      variant="primary"
+    >
       {pending ? <Clock aria-hidden="true" /> : <Send aria-hidden="true" />}
       {sendActionLabel(app, installs)}
     </Button>

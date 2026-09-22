@@ -22,10 +22,11 @@ function fileWord(mediaType: string): string {
   return "File";
 }
 
-/** FormatMenu lists the formats a work downloads in, one click each, with the original upload for its owner. */
+/** FormatMenu lists the formats a work downloads in, one click each, with the original upload for its owner and any extra items. */
 export function FormatMenu({
   children,
   downloads,
+  extra,
   original = null,
   version,
   workId,
@@ -33,6 +34,7 @@ export function FormatMenu({
 }: {
   children: ReactNode;
   downloads: DownloadFormat[];
+  extra?: ReactNode;
   original?: OriginalUpload | null;
   version?: number;
   workId: string;
@@ -64,7 +66,7 @@ export function FormatMenu({
         ))}
         {original ? (
           <>
-            <DropdownMenuSeparator />
+            {downloads.length > 0 ? <DropdownMenuSeparator /> : null}
             <DropdownMenuItem asChild>
               <a href={`/download/${workId}`}>
                 <FileDown aria-hidden="true" />
@@ -81,6 +83,7 @@ export function FormatMenu({
             </DropdownMenuItem>
           </>
         ) : null}
+        {extra}
       </DropdownMenuContent>
     </DropdownMenu>
   );
