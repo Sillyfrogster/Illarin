@@ -58,7 +58,7 @@ func TestFollowersAndInstallersHearAboutAnUpdateAndTheOwnerDoesNot(t *testing.T)
 	}
 }
 
-func TestAQuietOrContentFreeUpdateTellsNoOne(t *testing.T) {
+func TestAQuietUpdateOrLiveArrangementTellsNoOne(t *testing.T) {
 	t.Parallel()
 	s := newUpdateInboxStack(t)
 	follower := s.reader(t, "follower@example.com", "moon.follower")
@@ -77,7 +77,6 @@ func TestAQuietOrContentFreeUpdateTellsNoOne(t *testing.T) {
 	}
 
 	s.resizeMessages(t)
-	s.publishUpdate(t, `{"summary":"Tidied the page"}`)
 	s.fanOut(t, time.Now())
 	if page := s.inbox(t, follower, ""); len(page.Items) != 0 {
 		t.Fatalf("resizing a block reached the follower: %+v", page.Items)
@@ -87,9 +86,9 @@ func TestAQuietOrContentFreeUpdateTellsNoOne(t *testing.T) {
 	s.publishUpdate(t, `{"summary":"No integrations, still told","integrationIds":[]}`)
 	s.fanOut(t, time.Now())
 	page := s.inbox(t, follower, "")
-	if len(page.Items) != 1 || page.Items[0].Update == nil || page.Items[0].Update.Number != 4 ||
+	if len(page.Items) != 1 || page.Items[0].Update == nil || page.Items[0].Update.Number != 3 ||
 		page.Items[0].Update.Summary != "No integrations, still told" {
-		t.Fatalf("an update with no integrations gave the follower %+v, want update 4", page.Items)
+		t.Fatalf("an update with no integrations gave the follower %+v, want update 3", page.Items)
 	}
 }
 

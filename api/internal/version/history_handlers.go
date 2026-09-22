@@ -185,6 +185,34 @@ func (h *Handlers) CompareWorkVersions(c *gin.Context) {
 	}
 }
 
+func (h *Handlers) CompareDraftedChanges(c *gin.Context) {
+	id, ok := api.PathID(c, "id")
+	if !ok {
+		return
+	}
+	owner, ok := api.Verified(c, "reading drafted changes")
+	if !ok {
+		return
+	}
+	stamp, ok := api.DraftedChangesVersion(c)
+	if !ok {
+		return
+	}
+	candidate := &work.Candidate{Version: stamp}
+	groups, err := h.versions.CompareDraftedChanges(c.Request.Context(), owner.ID, id, candidate)
+	if page.CandidateResult(c, candidate, err) {
+		return
+	}
+	switch {
+	case errors.Is(err, work.ErrNotFound):
+		api.Refuse(c, http.StatusNotFound, "No such work.")
+	case err != nil:
+		api.Refuse(c, http.StatusInternalServerError, "Could not compare the drafted changes.")
+	default:
+		c.JSON(http.StatusOK, ToChangeGroups(groups))
+	}
+}
+
 func (h *Handlers) ListPrivatePromptMismatches(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {

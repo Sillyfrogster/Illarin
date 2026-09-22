@@ -24,6 +24,44 @@ afterEach(() => {
 });
 
 describe("details client", () => {
+  test("serializes autosaves with the version acknowledged by the previous save", async () => {
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: { dispatchEvent: () => true },
+    });
+    const versions: string[] = [];
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    useFetch(async (_input, init) => {
+      versions.push(
+        new Headers(init?.headers).get("X-Drafted-Changes-Version") ?? "",
+      );
+      if (versions.length === 1) await held;
+      return new Response(null, {
+        status: 204,
+        headers: { "X-Drafted-Changes-Version": String(7 + versions.length) },
+      });
+    });
+    const candidate = { version: 7 };
+    const details = {
+      name: "Fixture work",
+      blurb: "First edit",
+      isNsfw: false,
+    };
+    const first = saveWorkDetails(candidate, ID, details);
+    const second = saveWorkDetails(candidate, ID, {
+      ...details,
+      blurb: "Later edit",
+    });
+    await Promise.resolve();
+    expect(versions).toEqual(["7"]);
+    release();
+    await Promise.all([first, second]);
+    expect(versions).toEqual(["7", "8"]);
+    expect(candidate.version).toBe(9);
+  });
   for (const [action, blurb] of [
     ["add", "A new pitch."],
     ["edit", "A clearer pitch."],

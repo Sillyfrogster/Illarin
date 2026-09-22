@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkBlock, WorkElement } from "@/lib/api/query";
 import {
+  acknowledgeBlock,
   blockSaveRequest,
   changedBlockIds,
   firstCursor,
@@ -9,6 +10,21 @@ import {
   replaceElement,
   writesInPlace,
 } from "./save";
+
+test("a save response keeps typing and sizing done while it was in flight", () => {
+  const sent = block("one", [element("a", "prose", { text: "First edit" })]);
+  const current = {
+    ...sent,
+    width: "half" as const,
+    elements: [element("a", "prose", { text: "Still writing" })],
+  };
+  const server = { ...sent, title: "Server title" };
+  const merged = acknowledgeBlock(current, sent, server);
+  expect(merged.title).toBe("Server title");
+  expect(merged.width).toBe("half");
+  expect(merged.elements[0].content).toEqual({ text: "Still writing" });
+  expect(changedBlockIds([merged], [server])).toEqual(["one"]);
+});
 
 function element(
   id: string,

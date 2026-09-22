@@ -423,7 +423,7 @@ func facetComputedAt(t *testing.T, pool *pgxpool.Pool, workID string) time.Time 
 	return computedAt
 }
 
-func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
+func TestLiveArrangementUpdatesPublishedFiltersAndKeepsExports(t *testing.T) {
 	t.Parallel()
 	r, session, works, pool := harness.NewCharacterUploadRouterWithPool(t)
 	workID := apitest.UploadedCharacterID(t, r, session, works, apitest.PlainCard)
@@ -461,11 +461,11 @@ func TestPrivateArrangementKeepsPublishedFacetsAndExports(t *testing.T) {
 	}
 
 	carried := readBrowse(t, r, "/v1/works?kind=character&facet=expressions%3Dtrue")
-	if !slices.Equal(carried.Names, []string{"Ana"}) {
-		t.Fatalf("private arrangement changed the published facet: %v", carried.Names)
+	if len(carried.Names) != 0 {
+		t.Fatalf("hidden expressions still matched the published filter: %v", carried.Names)
 	}
 	none := readBrowse(t, r, "/v1/works?kind=character&facet=expressions%3Dfalse")
-	if len(none.Names) != 0 {
+	if !slices.Equal(none.Names, []string{"Ana"}) {
 		t.Fatalf("a hidden expression set answered %v, want the none bucket", none.Names)
 	}
 

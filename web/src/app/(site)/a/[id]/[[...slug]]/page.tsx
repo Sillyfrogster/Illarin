@@ -97,7 +97,6 @@ export default async function WorkPage({
           readiness={work.readiness}
           preservedPrompts={work.preservedPrompts}
           hasPrivatePrompts={work.hasPrivatePrompts}
-          unpublishedChanges={Boolean(work.unpublishedChanges)}
           takenDown={Boolean(work.takedown)}
         />
       </WorkspaceProvider>

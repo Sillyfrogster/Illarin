@@ -149,7 +149,7 @@ export function Dock({
           </span>
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center gap-0.5 sm:justify-center">
+        <div className="flex flex-1 basis-auto flex-wrap items-center gap-0.5 sm:justify-center">
           {tools}
         </div>
 

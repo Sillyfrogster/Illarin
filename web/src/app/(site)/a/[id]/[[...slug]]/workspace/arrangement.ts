@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type RefObject, useCallback, useState } from "react";
 import {
   addWorkBlock,
@@ -47,7 +46,6 @@ function returnFocusToGrip(blockId: string) {
 }
 
 export function useArrangement(page: Page): Arrangement {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const run = useCallback(
@@ -57,7 +55,6 @@ export function useArrangement(page: Page): Arrangement {
       void (async () => {
         try {
           await action();
-          router.refresh();
           done?.();
         } catch (error) {
           page.say(error instanceof Error ? error.message : refusal);
@@ -66,7 +63,7 @@ export function useArrangement(page: Page): Arrangement {
         }
       })();
     },
-    [busy, page, router],
+    [busy, page],
   );
 
   const arrange = useCallback(

@@ -226,7 +226,7 @@ func TestAVersionWithoutAChangeOrASummaryIsRefused(t *testing.T) {
 	}
 }
 
-func TestAPresentationChangePublishesAVersionThatMovesTheNumber(t *testing.T) {
+func TestArrangementCannotPublishAVersion(t *testing.T) {
 	t.Parallel()
 	svc, pool := apitest.Works(t)
 	ctx := context.Background()
@@ -242,17 +242,14 @@ func TestAPresentationChangePublishesAVersionThatMovesTheNumber(t *testing.T) {
 		t.Fatalf("rearrange the page: %v", err)
 	}
 
-	recorded, _, err := version.NewService(svc.Pool(), svc).PublishVersion(ctx, version.PublishRequest{
+	_, _, err := version.NewService(svc.Pool(), svc).PublishVersion(ctx, version.PublishRequest{
 		OwnerID: owner, WorkID: id, Summary: "Hid the character block",
 	}, apitest.CurrentCandidate(t, svc, id))
-	if err != nil {
-		t.Fatalf("publish the update: %v", err)
+	if !errors.Is(err, version.ErrNothingToPublish) {
+		t.Fatalf("publish arrangement: %v, want nothing to publish", err)
 	}
-	if recorded.Number != 2 || recorded.ContentChanged {
-		t.Fatalf("recorded version = %+v, want a second version that left the file alone", recorded)
-	}
-	if got := apitest.VersionNumber(t, pool, id.String()); got != number+1 {
-		t.Fatalf("version number = %d, want %d: a version moves it even when the file did not change", got, number+1)
+	if got := apitest.VersionNumber(t, pool, id.String()); got != number {
+		t.Fatalf("arrangement moved version number from %d to %d", number, got)
 	}
 }
 

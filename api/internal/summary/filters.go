@@ -33,6 +33,26 @@ func WriteFilters(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
 	`, workID, stored, block.FacetStamp()); err != nil {
 		return fmt.Errorf("store the facet summary: %w", err)
 	}
+	if _, err := tx.Exec(ctx, `set local search_path = work_public, public`); err != nil {
+		return err
+	}
+	counts, err = filterCounts(ctx, tx, workID)
+	if err != nil {
+		return err
+	}
+	stored, err = json.Marshal(counts)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `set local search_path = public`); err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, `update work_version_summaries set summary = summary ||
+		jsonb_build_object('facets', $2::jsonb, 'facet_stamp', $3::text, 'facet_computed_at', now())
+		where version_id = (select published_version_id from works where id = $1)`, workID, stored, block.FacetStamp())
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

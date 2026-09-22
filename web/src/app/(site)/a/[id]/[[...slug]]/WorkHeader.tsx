@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { ChipSet } from "@/components/ui/Chip";
@@ -54,6 +55,7 @@ export function WorkHeader({
   shellClassName: string;
 }) {
   const workspace = useWorkspace();
+  const reduced = useReducedMotion();
   const isDraft = work.lifecycle === "draft";
   const writing = workspace.editing;
   const ratings = isDraft
@@ -160,6 +162,25 @@ export function WorkHeader({
                   Private draft
                 </span>
               ) : null}
+              <AnimatePresence initial={false}>
+                {work.isOwner && !isDraft && workspace.unpublishedChanges ? (
+                  <motion.span
+                    key="drafted"
+                    initial={{ opacity: 0, clipPath: "inset(0 100% 0 0)" }}
+                    animate={{ opacity: 1, clipPath: "inset(0 0% 0 0)" }}
+                    exit={{ opacity: 0, clipPath: "inset(0 0 0 100%)" }}
+                    transition={{
+                      duration: reduced ? 0 : 0.35,
+                      ease: [0.4, 0, 0.2, 1],
+                    }}
+                    className="inline-flex items-center gap-2 rounded-control bg-accent-wash px-3 py-1 text-meta text-accent"
+                    role="status"
+                  >
+                    <PencilLine aria-hidden="true" size={14} />
+                    Drafted changes
+                  </motion.span>
+                ) : null}
+              </AnimatePresence>
             </p>
             {writing ? (
               <fieldset

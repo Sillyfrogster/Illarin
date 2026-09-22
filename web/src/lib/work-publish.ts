@@ -2,35 +2,6 @@ import type { ReplacementDecision, UploadOperation } from "@/lib/api/query";
 
 const UNSETTLED = ["pending", "processing", "preview"];
 
-export function updateStanding(
-  waiting: UploadOperation | null,
-  changed: boolean,
-): string {
-  if (waiting?.status === "preview") {
-    return "An uploaded file is waiting for your review. Accept or discard it before you publish.";
-  }
-  if (waiting) {
-    return "Illarin is reading the file you uploaded. Readers keep the published version while it works.";
-  }
-  if (changed) {
-    return "You have drafted changes. Review them before publishing a version.";
-  }
-  return "All changes are published.";
-}
-
-export function reviewBlockedReason(
-  waiting: UploadOperation | null,
-  changed: boolean,
-): string {
-  if (waiting) {
-    return "An uploaded file is waiting for your review. Accept or discard it before publishing.";
-  }
-  if (!changed) {
-    return "Nothing has changed since the last version. Edit the page or replace the file first.";
-  }
-  return "";
-}
-
 export function replacementAction(
   operation: UploadOperation | null,
   busy: boolean,

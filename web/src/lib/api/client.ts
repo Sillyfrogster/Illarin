@@ -1,3 +1,4 @@
+import { acceptCandidateVersion, type Candidate } from "@/lib/drafted-changes";
 import { markBrowserMutation } from "./browser-mutation";
 
 const baseUrl =
@@ -14,7 +15,10 @@ export type ApiOptions = {
   signal?: AbortSignal;
   cache?: RequestCache;
   keepalive?: boolean;
+  candidate?: Candidate;
 };
+
+const candidateWrites = new WeakMap<Candidate, Promise<unknown>>();
 
 /** The typed body when the call succeeded, or the parsed error body when it did not. */
 export type ApiResult<T> =
@@ -27,6 +31,27 @@ export async function api<T>(
   path: string,
   options: ApiOptions = {},
 ): Promise<ApiResult<T>> {
+  if (options.candidate) {
+    const candidate = options.candidate;
+    const pending = (candidateWrites.get(candidate) ?? Promise.resolve()).then(
+      async () => {
+        const headers = new Headers(options.headers);
+        headers.set("X-Drafted-Changes-Version", String(candidate.version));
+        const result = await api<T>(method, path, {
+          ...options,
+          candidate: undefined,
+          headers,
+        });
+        acceptCandidateVersion(candidate, result.response);
+        return result;
+      },
+    );
+    candidateWrites.set(
+      candidate,
+      pending.catch(() => {}),
+    );
+    return pending;
+  }
   const { body, query, signal, cache, keepalive } = options;
   const headers = new Headers(options.headers);
   const isForm = body instanceof FormData;

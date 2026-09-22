@@ -49,6 +49,25 @@ func missingWork(err error) error {
 	return err
 }
 
+func validatePublishedWidths(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
+	rows, err := tx.Query(ctx, `select layout, width from work_public.work_blocks where work_id = $1`, workID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var layout block.Layout
+		var width block.Width
+		if err := rows.Scan(&layout, &width); err != nil {
+			return err
+		}
+		if width.Columns() < layout.MinimumWidth().Columns() {
+			return fmt.Errorf("%w: publish the new layout before narrowing this block", block.ErrInvalid)
+		}
+	}
+	return rows.Err()
+}
+
 func deleteBlockAndClosePositions(
 	ctx context.Context,
 	tx pgx.Tx,

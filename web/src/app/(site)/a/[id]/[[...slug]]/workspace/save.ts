@@ -50,6 +50,25 @@ export function replaceBlock(
   return blocks.map((block) => (block.id === saved.id ? saved : block));
 }
 
+export function acknowledgeBlock(
+  current: WorkBlock,
+  sent: WorkBlock,
+  saved: WorkBlock,
+): WorkBlock {
+  return {
+    ...saved,
+    title: current.title === sent.title ? saved.title : current.title,
+    titleIsDefault:
+      current.title === sent.title
+        ? saved.titleIsDefault
+        : current.titleIsDefault,
+    layout: current.layout === sent.layout ? saved.layout : current.layout,
+    width: current.width === sent.width ? saved.width : current.width,
+    elements:
+      current.elements === sent.elements ? saved.elements : current.elements,
+  };
+}
+
 export function replaceElement(
   block: WorkBlock,
   element: WorkElement,

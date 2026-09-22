@@ -1,27 +1,25 @@
 "use client";
 
-import { Command, Images, LockKeyhole } from "lucide-react";
+import { Command, FileUp, Images, LockKeyhole } from "lucide-react";
 import { Dock, DockAction, DockTool } from "@/components/workspace/Dock";
 import type { SaveState } from "./state";
 import { useWorkspace } from "./state";
 
 const STATUS: Record<SaveState, string> = {
   failed: "Not saved",
-  private: "Saved privately",
+  private: "Drafted changes",
   published: "Published",
   saving: "Saving",
-  unsaved: "Unsaved",
+  unsaved: "Saving soon",
 };
 
 export function WorkspaceDock({
   detail,
   onJump,
-  publishLabel,
   waiting = 0,
 }: {
   detail: string;
   onJump: () => void;
-  publishLabel: string;
   waiting?: number;
 }) {
   const workspace = useWorkspace();
@@ -31,18 +29,20 @@ export function WorkspaceDock({
       actions={
         <>
           <DockAction onClick={workspace.stopEditing}>Stop editing</DockAction>
+          {workspace.saveState === "failed" ? (
+            <DockAction onClick={workspace.save}>Retry</DockAction>
+          ) : null}
           <DockAction
-            disabled={workspace.busy || !workspace.dirty}
-            onClick={workspace.save}
-          >
-            {workspace.busy ? "Saving…" : "Save"}
-          </DockAction>
-          <DockAction
-            disabled={workspace.busy}
+            disabled={
+              workspace.busy ||
+              workspace.dirty ||
+              workspace.arrangement.busy ||
+              (!workspace.isDraft && !workspace.unpublishedChanges)
+            }
             onClick={() => workspace.openPane({ kind: "publication" })}
             strong
           >
-            {publishLabel}
+            Publish
           </DockAction>
         </>
       }
@@ -52,6 +52,13 @@ export function WorkspaceDock({
       tools={
         <>
           <DockTool icon={Command} label="Go to content" onClick={onJump} />
+          {!workspace.isDraft ? (
+            <DockTool
+              icon={FileUp}
+              label="Upload a new version"
+              onClick={() => workspace.openPane({ kind: "replacement" })}
+            />
+          ) : null}
           {waiting > 0 ? (
             <DockTool
               active={workspace.pane?.kind === "found-images"}

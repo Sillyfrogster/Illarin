@@ -99,6 +99,9 @@ func (s *Service) ArrangeBlocks(
 	if err := missingWork(summary.WriteFilters(ctx, tx, workID)); err != nil {
 		return SavedBlocks{}, err
 	}
+	if err := validatePublishedWidths(ctx, tx, workID); err != nil {
+		return SavedBlocks{}, err
+	}
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
 		return SavedBlocks{}, err
 	}

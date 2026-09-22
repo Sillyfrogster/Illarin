@@ -116,6 +116,9 @@ func (s *Service) writeBlock(
 	if result.RowsAffected() != 1 {
 		return nil, 0, work.ErrNotFound
 	}
+	if err := validatePublishedWidths(ctx, tx, workID); err != nil {
+		return nil, 0, err
+	}
 	if err := dropUnownedPreservedData(ctx, tx, workID, blocks); err != nil {
 		return nil, 0, err
 	}

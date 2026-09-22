@@ -1,7 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { readRefusal } from "@/lib/answer";
 import {
-  acceptCandidateVersion,
   type Candidate,
   reportStaleDraftedChanges,
 } from "@/lib/drafted-changes";
@@ -374,18 +373,31 @@ export async function saveWorkBlock(
   blockId: string,
   block: SaveWorkBlockRequest,
 ): Promise<WorkBlock> {
-  const { data, error, response } = await api<WorkBlock>(
+  const { data, error } = await api<WorkBlock>(
     "PUT",
     `/v1/works/${workId}/blocks/${blockId}`,
     {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      candidate,
       body: block,
     },
   );
-  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     throw writeRefusal(error, "The block could not be saved. Try again.");
   }
+  return data;
+}
+
+export async function compareDraftedChanges(
+  candidate: Candidate,
+  workId: string,
+) {
+  const { data, error } = await api<VersionChangeGroup[]>(
+    "GET",
+    `/v1/works/${workId}/versions/drafted-changes`,
+    { candidate, cache: "no-store" },
+  );
+  if (error || !data)
+    throw writeRefusal(error, "Could not load your changes. Try again.");
   return data;
 }
 
@@ -395,15 +407,14 @@ export async function addWorkBlock(
   definition: string,
   elementType: ElementType,
 ): Promise<WorkBlock> {
-  const { data, error, response } = await api<WorkBlock>(
+  const { data, error } = await api<WorkBlock>(
     "POST",
     `/v1/works/${workId}/blocks`,
     {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      candidate,
       body: { definition, elementType },
     },
   );
-  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     throw writeRefusal(error, "The block could not be added. Try again.");
   }
@@ -423,7 +434,7 @@ export async function addWorkImage(
     "POST",
     `/v1/works/${workId}/media`,
     {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      candidate,
       body,
     },
   );
@@ -434,7 +445,6 @@ export async function addWorkImage(
         : "The image could not be added. Try again.",
     );
   }
-  acceptCandidateVersion(candidate, response);
   if (typeof added?.id !== "string") {
     throw new Error("The image could not be added. Try again.");
   }
@@ -446,15 +456,14 @@ export async function arrangeWorkBlocks(
   workId: string,
   arrangement: ArrangeWorkBlocksRequest,
 ): Promise<WorkBlock[]> {
-  const { data, error, response } = await api<WorkBlock[]>(
+  const { data, error } = await api<WorkBlock[]>(
     "PUT",
     `/v1/works/${workId}/blocks`,
     {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      candidate,
       body: arrangement,
     },
   );
-  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     throw writeRefusal(error, "The block order could not be saved. Try again.");
   }
@@ -479,15 +488,14 @@ export async function placeFoundImage(
   pictureId: string,
   mediaId?: string,
 ): Promise<WorkBlock[]> {
-  const { data, error, response } = await api<WorkBlock[]>(
+  const { data, error } = await api<WorkBlock[]>(
     "POST",
     `/v1/works/${workId}/found-images/${pictureId}/place`,
     {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      candidate,
       body: mediaId ? { mediaId } : undefined,
     },
   );
-  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     throw writeRefusal(error, "The picture could not be placed. Try again.");
   }
@@ -499,12 +507,11 @@ export async function discardFoundImage(
   workId: string,
   pictureId: string,
 ) {
-  const { error, response } = await api<void>(
+  const { error } = await api<void>(
     "DELETE",
     `/v1/works/${workId}/found-images/${pictureId}`,
-    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
+    { candidate },
   );
-  acceptCandidateVersion(candidate, response);
   if (error) {
     throw writeRefusal(error, "The picture could not be discarded. Try again.");
   }
@@ -515,12 +522,11 @@ export async function removeWorkBlock(
   workId: string,
   blockId: string,
 ) {
-  const { error, response } = await api<void>(
+  const { error } = await api<void>(
     "DELETE",
     `/v1/works/${workId}/blocks/${blockId}`,
-    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
+    { candidate },
   );
-  acceptCandidateVersion(candidate, response);
   if (error) {
     throw writeRefusal(error, "The block could not be removed. Try again.");
   }
@@ -532,15 +538,14 @@ export async function moveWorkBlockContent(
   blockId: string,
   destinationBlockId: string,
 ): Promise<WorkBlock[]> {
-  const { data, error, response } = await api<WorkBlock[]>(
+  const { data, error } = await api<WorkBlock[]>(
     "POST",
     `/v1/works/${workId}/blocks/${blockId}/move-and-remove`,
     {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      candidate,
       body: { destinationBlockId },
     },
   );
-  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     throw writeRefusal(error, "The content could not be moved. Try again.");
   }
@@ -552,15 +557,10 @@ export async function saveWorkDetails(
   id: string,
   details: WorkDetailsRequest,
 ) {
-  const { error, response } = await api<void>(
-    "PUT",
-    `/v1/works/${id}/details`,
-    {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
-      body: details,
-    },
-  );
-  acceptCandidateVersion(candidate, response);
+  const { error } = await api<void>("PUT", `/v1/works/${id}/details`, {
+    candidate,
+    body: details,
+  });
   if (error) {
     throw writeRefusal(error, "The details could not be saved. Try again.");
   }
@@ -573,12 +573,11 @@ export async function publishWork(
   | { published: true }
   | { published: false; error: string; readiness?: ReadinessItem[] }
 > {
-  const { data, error, response } = await api<WorkDetail>(
+  const { data, error } = await api<WorkDetail>(
     "POST",
     `/v1/works/${id}/publish`,
-    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
+    { candidate },
   );
-  acceptCandidateVersion(candidate, response);
   if (data) return { published: true };
   const refusal = error as
     | { error?: unknown; readiness?: ReadinessItem[] }
@@ -615,11 +614,10 @@ export async function uploadWorkReplacement(
     "POST",
     `/v1/works/${id}/original-file`,
     {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      candidate,
       body,
     },
   );
-  acceptCandidateVersion(candidate, response);
   if (!data) {
     throw writeRefusal(
       readRefusal(error),
@@ -648,15 +646,14 @@ export async function acceptWorkReplacement(
   unrepresentable: ReplacementDecision,
   makePromptsPublic = false,
 ): Promise<UploadOperation> {
-  const { data, error, response } = await api<UploadOperation>(
+  const { data, error } = await api<UploadOperation>(
     "POST",
     `/v1/works/${id}/original-file/${operationId}/accept`,
     {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      candidate,
       body: { unrepresentable, makePromptsPublic },
     },
   );
-  acceptCandidateVersion(candidate, response);
   if (error || !data) {
     throw writeRefusal(error, "That file could not be applied. Try again.");
   }
@@ -685,15 +682,14 @@ export async function publishWorkVersion(
       readiness?: ReadinessItem[];
     }
 > {
-  const { data, error, response } = await api<WorkVersion>(
+  const { data, error } = await api<WorkVersion>(
     "POST",
     `/v1/works/${id}/versions`,
     {
-      headers: { "X-Drafted-Changes-Version": String(candidate.version) },
+      candidate,
       body: version,
     },
   );
-  acceptCandidateVersion(candidate, response);
   if (data) return { published: true, version: data };
   reportStaleDraftedChanges(error);
   const refusal = error as
@@ -743,12 +739,11 @@ export async function restoreWorkVersion(
   id: string,
   number: number,
 ) {
-  const { error, response } = await api<void>(
+  const { error } = await api<void>(
     "POST",
     `/v1/works/${id}/versions/${number}/restore`,
-    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
+    { candidate },
   );
-  acceptCandidateVersion(candidate, response);
   if (error) throw writeRefusal(error, "That version could not be restored.");
 }
 
@@ -894,12 +889,11 @@ export async function deletePreservedData(
   id: string,
   namespace: string,
 ) {
-  const { error, response } = await api<void>(
+  const { error } = await api<void>(
     "DELETE",
     `/v1/works/${id}/preserved/${encodeURIComponent(namespace)}`,
-    { headers: { "X-Drafted-Changes-Version": String(candidate.version) } },
+    { candidate },
   );
-  acceptCandidateVersion(candidate, response);
   if (error) {
     throw writeRefusal(error, "That data could not be deleted. Try again.");
   }

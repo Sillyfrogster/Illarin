@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -13,6 +12,7 @@ import {
 } from "react";
 import {
   type AddableBlock,
+  fetchWork,
   saveWorkBlock,
   saveWorkDetails,
   type WorkBlock,
@@ -21,6 +21,7 @@ import {
 } from "@/lib/api/query";
 import type { AppName } from "@/lib/api/shapes";
 import {
+  DRAFTED_CHANGES_SAVED,
   DRAFTED_CHANGES_STALE,
   useDraftedChanges,
 } from "@/lib/drafted-changes";
@@ -30,6 +31,7 @@ import { type Arrangement, useArrangement } from "./arrangement";
 import { seatElements } from "./composition";
 import { detailsHasChanged } from "./details";
 import {
+  acknowledgeBlock,
   blockSaveRequest,
   changedBlockIds,
   replaceBlock,
@@ -49,6 +51,7 @@ export type Pane =
   | { kind: "access" }
   | { kind: "found-images" }
   | { kind: "publication" }
+  | { kind: "replacement" }
   | { kind: "conflict" }
   | { kind: "add-block" }
   | { kind: "remove"; blockId: string }
@@ -71,6 +74,7 @@ type Workspace = {
   cursor: string | null;
   chosenItems: Record<string, string>;
   dirty: boolean;
+  unpublishedChanges: boolean;
   pane: Pane | null;
   saveState: SaveState;
   message: string;
@@ -127,19 +131,25 @@ export function WorkspaceProvider({
   children: ReactNode;
 }) {
   const candidate = useDraftedChanges();
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [sweep, setSweep] = useState(0);
   const [draft, setDraft] = useState(blocks);
   const [saved, setSaved] = useState(blocks);
   const [draftDetails, setDraftDetails] = useState(details);
   const [savedDetails, setSavedDetails] = useState(details);
+  const savedDetailsRef = useRef(savedDetails);
+  useEffect(() => {
+    savedDetailsRef.current = savedDetails;
+  }, [savedDetails]);
   const [apps, setApps] = useState<AppName[]>(allowedApps);
   const [cursor, setCursor] = useState<string | null>(null);
   const [chosenItems, setChosenItems] = useState<Record<string, string>>({});
   const [pane, setPane] = useState<Pane | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [unpublished, setUnpublished] = useState(unpublishedChanges);
+  const [conflicted, setConflicted] = useState(false);
+  const saving = useRef(false);
   const [message, setMessage] = useState("");
   const [makingPublic, setMakingPublic] = useState<MakingPublic | null>(null);
   const exposeConfirmed = useRef(false);
@@ -151,13 +161,39 @@ export function WorkspaceProvider({
   }, [saved]);
 
   useEffect(() => {
-    const stale = () =>
+    const stale = () => {
+      setConflicted(true);
       setPane((open) =>
         open?.kind === "publication" ? open : { kind: "conflict" },
       );
+    };
     window.addEventListener(DRAFTED_CHANGES_STALE, stale);
     return () => window.removeEventListener(DRAFTED_CHANGES_STALE, stale);
   }, []);
+
+  useEffect(() => setUnpublished(unpublishedChanges), [unpublishedChanges]);
+
+  useEffect(() => {
+    let active = true;
+    const read = async () => {
+      const stamp = candidate.version;
+      try {
+        const page = await fetchWork(workId, undefined, true);
+        if (active && page && candidate.version === stamp)
+          setUnpublished(Boolean(page.unpublishedChanges));
+      } catch {
+        /* The save status is kept until the next successful read. */
+      }
+    };
+    const saved = () => {
+      void read();
+    };
+    window.addEventListener(DRAFTED_CHANGES_SAVED, saved);
+    return () => {
+      active = false;
+      window.removeEventListener(DRAFTED_CHANGES_SAVED, saved);
+    };
+  }, [candidate, workId]);
 
   useEffect(() => {
     if (!message) return;
@@ -175,7 +211,7 @@ export function WorkspaceProvider({
       ? "failed"
       : dirty
         ? "unsaved"
-        : isDraft || unpublishedChanges
+        : isDraft || unpublished
           ? "private"
           : "published";
 
@@ -192,7 +228,7 @@ export function WorkspaceProvider({
 
   const save = useCallback(
     (expose = false) => {
-      if (busy || !dirty) return;
+      if (saving.current || !dirty || conflicted) return;
       const pending = changedBlockIds(draft, saved);
       const before = new Map(saved.map((block) => [block.id, block]));
 
@@ -228,14 +264,14 @@ export function WorkspaceProvider({
         return;
       }
 
+      saving.current = true;
       setBusy(true);
       setFailed(false);
       setMessage("");
       void (async () => {
-        let written = draft;
         try {
           for (const id of pending) {
-            const block = written.find((item) => item.id === id);
+            const block = draft.find((item) => item.id === id);
             if (!block) continue;
             const result = await saveWorkBlock(
               candidate,
@@ -251,21 +287,18 @@ export function WorkspaceProvider({
                     : undefined,
               }),
             );
-            written = replaceBlock(written, result);
+            setSaved((current) => replaceBlock(current, result));
+            setDraft((current) =>
+              current.map((held) =>
+                held.id === id ? acknowledgeBlock(held, block, result) : held,
+              ),
+            );
           }
           if (hasDetailsChanges) {
             await saveWorkDetails(candidate, workId, draftDetails);
             setSavedDetails(draftDetails);
           }
           exposeConfirmed.current = false;
-          setDraft(written);
-          setSaved(written);
-          setMessage(
-            isDraft
-              ? "Saved. Only you can open this page."
-              : "Saved privately. Readers still have the published version.",
-          );
-          router.refresh();
         } catch (error) {
           setFailed(true);
           setMessage(
@@ -274,6 +307,7 @@ export function WorkspaceProvider({
               : "The save failed. Everything you wrote is still on the page.",
           );
         } finally {
+          saving.current = false;
           setBusy(false);
         }
       })();
@@ -282,18 +316,31 @@ export function WorkspaceProvider({
       allowedApps.length,
       apps,
       workId,
-      busy,
+      conflicted,
       candidate,
       dirty,
       draft,
       draftDetails,
       hasDetailsChanges,
-      isDraft,
       openPrivatePromptElement,
-      router,
       saved,
     ],
   );
+
+  useEffect(() => {
+    if (!dirty || busy || failed || makingPublic || conflicted) return;
+    const timer = window.setTimeout(() => save(), 600);
+    return () => window.clearTimeout(timer);
+  }, [dirty, busy, failed, makingPublic, conflicted, save]);
+
+  useEffect(() => {
+    if (!dirty && !busy) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, busy]);
 
   const applyServerBlocks = useCallback((incoming: WorkBlock[]) => {
     setDraft((current) => {
@@ -309,16 +356,22 @@ export function WorkspaceProvider({
   }, []);
 
   useEffect(() => {
+    if (saving.current) return;
     applyServerBlocks(blocks);
   }, [applyServerBlocks, blocks]);
 
   useEffect(() => {
+    if (saving.current) return;
     const incomingDetails = {
       blurb: details.blurb,
       isNsfw: details.isNsfw,
       name: details.name,
     };
-    setDraftDetails(incomingDetails);
+    setDraftDetails((current) =>
+      detailsHasChanged(current, savedDetailsRef.current)
+        ? current
+        : incomingDetails,
+    );
     setSavedDetails(incomingDetails);
   }, [details.blurb, details.isNsfw, details.name]);
 
@@ -391,6 +444,7 @@ export function WorkspaceProvider({
     cursor,
     chosenItems,
     dirty,
+    unpublishedChanges: unpublished,
     pane,
     saveState,
     message,
@@ -438,7 +492,10 @@ export function WorkspaceProvider({
       setMakingPublic(null);
       save(true);
     },
-    cancelMakePublic: () => setMakingPublic(null),
+    cancelMakePublic: () => {
+      setMakingPublic(null);
+      setFailed(true);
+    },
   };
 
   return (

@@ -2,8 +2,8 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AnnouncementStatus } from "@/components/updates/AnnouncementStatus";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import type {
   ReadinessItem,
@@ -11,6 +11,7 @@ import type {
   WorkElement,
   WorkImage,
 } from "@/lib/api/query";
+import { fetchWaitingReplacement, type UploadOperation } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import type { PageTarget } from "@/lib/readiness";
 import { DeleteControl } from "../DeleteControl";
@@ -30,8 +31,9 @@ import { AddBlock } from "./AddBlock";
 import { FoundImagesPanel } from "./FoundImagesPanel";
 import { useFoundImages } from "./found-images";
 import { type Destination, destinationsIn, JumpPalette } from "./JumpPalette";
-import { PublishRail } from "./PublishRail";
+import { PublishDialog } from "./PublishDialog";
 import { RemoveBlock } from "./RemoveBlock";
+import { ReplacementStep } from "./ReplacementStep";
 import { firstCursor } from "./save";
 import { useWorkspace } from "./state";
 import { WorkspaceDock } from "./WorkspaceDock";
@@ -45,7 +47,6 @@ export type WorkspaceSurfacesProps = {
   readiness?: ReadinessItem[];
   preservedPrompts?: number;
   hasPrivatePrompts: boolean;
-  unpublishedChanges: boolean;
   takenDown: boolean;
 };
 
@@ -142,9 +143,8 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 
       {workspace.editing ? (
         <WorkspaceDock
-          detail={detail(props, workspace.isDraft, workspace.saveState)}
+          detail={detail(workspace.isDraft, workspace.saveState)}
           onJump={() => setJumping(true)}
-          publishLabel={workspace.isDraft ? "Publish" : "Review version"}
           waiting={foundImages.pictures.length}
         />
       ) : null}
@@ -251,22 +251,26 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
         ) : null}
 
         {pane?.kind === "publication" ? (
-          <WorkspaceRail
-            description="Nothing here reaches readers until you publish. Content and notes stay private in the meantime."
+          <PublishDialog
             key="publication"
+            typeName={props.typeName}
+            onGo={(target) =>
+              target.where === "replacement"
+                ? workspace.openPane({ kind: "replacement" })
+                : goToPage(target)
+            }
+            readiness={props.readiness ?? []}
+            unlisted={props.visibility === "unlisted"}
+          />
+        ) : null}
+
+        {pane?.kind === "replacement" ? (
+          <WorkspaceRail
+            key="replacement"
+            title="Upload a new version"
             onClose={workspace.closePane}
-            title="Publication"
           >
-            <PublishRail
-              typeName={props.typeName}
-              onGo={goToPage}
-              readiness={props.readiness}
-              unlisted={props.visibility === "unlisted"}
-              unpublishedChanges={props.unpublishedChanges}
-            />
-            {workspace.isOwner && !workspace.isDraft ? (
-              <AnnouncementStatus workId={workspace.workId} />
-            ) : null}
+            <Replacement />
           </WorkspaceRail>
         ) : null}
 
@@ -378,7 +382,7 @@ function Fields({
       onChange={(next) => workspace.writeElement(blockId, next)}
       onChoose={(key) => workspace.chooseItem(element.id, key)}
       onImageAdded={() => workspace.say("Picture added.")}
-      pending={workspace.busy}
+      pending={false}
     />
   );
 }
@@ -400,16 +404,58 @@ function ActivationSweep() {
   );
 }
 
-function detail(
-  props: WorkspaceSurfacesProps,
-  isDraft: boolean,
-  state: string,
-): string {
+function detail(isDraft: boolean, state: string): string {
   if (state === "failed")
     return "Your edits are still on this page. Try saving again.";
   if (isDraft) return "Only you can open this page.";
-  if (props.unpublishedChanges || state === "unsaved") {
+  if (state === "private" || state === "unsaved" || state === "saving") {
     return "Readers do not have your changes yet.";
   }
   return "All changes are published.";
+}
+
+function Replacement() {
+  const workspace = useWorkspace();
+  const router = useRouter();
+  const [waiting, setWaiting] = useState<UploadOperation | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    void fetchWaitingReplacement(workspace.workId)
+      .then((upload) => {
+        if (active) {
+          setWaiting(upload);
+          setLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (active)
+          setError(
+            "Could not load your upload. Close this panel and try again.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [workspace.workId]);
+  function settled() {
+    workspace.closePane();
+    router.refresh();
+  }
+  return error ? (
+    <p role="alert" className="text-ui text-stop">
+      {error}
+    </p>
+  ) : loaded ? (
+    <ReplacementStep
+      onApplied={settled}
+      onDiscarded={settled}
+      onBack={workspace.closePane}
+      waiting={waiting}
+      onWaiting={setWaiting}
+    />
+  ) : (
+    <output>Loading…</output>
+  );
 }
