@@ -124,7 +124,7 @@ func publishedWork(t *testing.T, svc *work.Service, pool *pgxpool.Pool, handle s
 	}, apitest.CurrentCandidate(t, svc, id)); err != nil {
 		t.Fatalf("save the header: %v", err)
 	}
-	if _, err := apitest.Pages(svc).Publish(context.Background(), owner, id, apitest.CurrentCandidate(t, svc, id)); err != nil {
+	if _, err := apitest.Pages(svc).Publish(context.Background(), owner, id, apitest.CurrentCandidate(t, svc, id), false); err != nil {
 		t.Fatalf("publish the work: %v", err)
 	}
 	return owner, id

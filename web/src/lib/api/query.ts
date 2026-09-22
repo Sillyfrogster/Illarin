@@ -50,6 +50,7 @@ import type {
   PromptCorrespondenceRequest,
   PromptListContent,
   PublicPost,
+  PublishWorkRequest,
   QueuedSend,
   ReaderPreferences,
   ReadinessItem,
@@ -547,6 +548,7 @@ export async function saveWorkDetails(
 export async function publishWork(
   candidate: Candidate,
   id: string,
+  discord: boolean,
 ): Promise<
   | { published: true }
   | { published: false; error: string; readiness?: ReadinessItem[] }
@@ -554,7 +556,7 @@ export async function publishWork(
   const { data, error } = await api<WorkDetail>(
     "POST",
     `/v1/works/${id}/publish`,
-    { candidate },
+    { candidate, body: { discord } satisfies PublishWorkRequest },
   );
   if (data) return { published: true };
   const refusal = error as

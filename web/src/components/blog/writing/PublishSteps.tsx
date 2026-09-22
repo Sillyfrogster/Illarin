@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CheckRow } from "@/components/ui/check-row";
 import { Field, TextArea } from "@/components/ui/field";
+import { readWorkspace } from "@/lib/api/blog";
 import {
   cancelPostSchedule,
   publishPost,
@@ -14,15 +16,15 @@ import {
 } from "@/lib/api/posts";
 import type { Post, PostRevision } from "@/lib/api/query";
 import { readableMoment } from "@/lib/dates";
+import { useBlogAddress } from "@/lib/origins";
 import {
   atLeastAnHourAhead,
   type LocalParts,
   localParts,
   toInstant,
 } from "@/lib/schedule-time";
-import { DiscordChoice } from "./DiscordChoice";
 import { ScheduleFields } from "./ScheduleFields";
-import { Commit, Editions, Heading, Subject } from "./StepParts";
+import { Commit, Editions, Heading } from "./StepParts";
 
 const SAID_LIMIT = 500;
 
@@ -40,6 +42,8 @@ export function PublishStep({
   onSettled,
   post,
 }: StepProps & { door: "now" | "later" }) {
+  const blogAddress = useBlogAddress();
+  const [hasChannel, setHasChannel] = useState(false);
   const [busy, setBusy] = useState(false);
   const [when, setWhen] = useState<LocalParts>(() => atLeastAnHourAhead());
   const [discord, setDiscord] = useState(true);
@@ -47,10 +51,20 @@ export function PublishStep({
   const at = toInstant(when.date, when.time);
   const ready = door === "now" || at !== "";
 
+  useEffect(() => {
+    let active = true;
+    void readWorkspace().then((answer) => {
+      if (active) setHasChannel(Boolean(answer.value?.discord));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   async function commit() {
     setBusy(true);
     const version = await onSaveFirst();
-    const announcement = { discord };
+    const announcement = { discord: hasChannel && discord };
     const answer =
       door === "later"
         ? await schedulePost(post.id, version, at, announcement)
@@ -66,7 +80,7 @@ export function PublishStep({
   return (
     <>
       <Heading
-        line={publishHint(door, post)}
+        line={publishHint(door, post, `${blogAddress}/${post.slug}`)}
         title={
           door === "later"
             ? "Schedule this post"
@@ -75,13 +89,14 @@ export function PublishStep({
               : "Publish this post"
         }
       />
-      <Subject post={post} />
       {door === "later" ? (
         <ScheduleFields id="publish-schedule" onChange={setWhen} parts={when} />
       ) : null}
-      {post.publishedAt ? null : (
-        <DiscordChoice checked={discord} onChange={setDiscord} />
-      )}
+      {hasChannel && !post.publishedAt ? (
+        <CheckRow checked={discord} onChange={setDiscord}>
+          Post to the blog's Discord
+        </CheckRow>
+      ) : null}
       <Commit
         busy={busy}
         onCommit={() => void commit()}
@@ -118,10 +133,9 @@ export function UnpublishStep({ onFailure, onSettled, post }: StepProps) {
   return (
     <>
       <Heading
-        line="Hide the post from readers. Its content and history remain available for republication."
+        line="Readers lose access. The post and its history stay, so you can republish it later."
         title="Unpublish this post?"
       />
-      <Subject post={post} />
       <Field
         hint="Illarin keeps this with the post. Readers never see it."
         htmlFor="unpublishing-reason"
@@ -179,7 +193,7 @@ export function RepublishStep({ onFailure, onSettled, post }: StepProps) {
   return (
     <>
       <Heading
-        line="Republish at the same address with the original publication date."
+        line="It returns at the same address with its original publication date."
         title="Choose a revision to republish"
       />
       <Editions
@@ -217,7 +231,7 @@ export function RecoverStep({ onFailure, onSettled, post }: StepProps) {
   return (
     <>
       <Heading
-        line="Restore the post to its state before deletion."
+        line="It comes back as it was before you deleted it."
         title="Restore this post?"
       />
       {deletion ? (
@@ -357,7 +371,11 @@ function useRevisions(
   return kept;
 }
 
-function publishHint(door: "now" | "later", post: Post): string {
+function publishHint(
+  door: "now" | "later",
+  post: Post,
+  address: string,
+): string {
   const schedule = post.schedule;
   const waiting =
     schedule?.state === "pending" || schedule?.state === "publishing";
@@ -367,5 +385,5 @@ function publishHint(door: "now" | "later", post: Post): string {
   if (post.status === "published") {
     return "Publishing or scheduling saves a revision of your current writing. Later edits do not change that revision.";
   }
-  return "This fixes the address and puts your name on the post. Only an admin can change either afterwards.";
+  return `It goes live at ${address}. After that, only an admin can change the address or the name on it.`;
 }

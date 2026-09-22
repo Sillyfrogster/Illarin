@@ -139,9 +139,11 @@ func NewServicesWithSends(
 	integrations := NewIntegrations(pool, nil)
 	versions := version.NewService(pool, works)
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
+	pages := page.NewService(pool, works)
+	pages.OnFirstPublication(integrations.AnnounceFirst)
 	return Services{
 		Works:          works,
-		Pages:          page.NewService(pool, works),
+		Pages:          pages,
 		Blocks:         edit.NewService(pool, works),
 		Versions:       versions,
 		Uploads:        upload.NewService(pool, works),
@@ -168,9 +170,11 @@ func NewServicesOver(
 	integrations := NewIntegrations(pool, nil)
 	versions := version.NewService(pool, works)
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
+	pages := page.NewService(pool, works)
+	pages.OnFirstPublication(integrations.AnnounceFirst)
 	return Services{
 		Works:          works,
-		Pages:          page.NewService(pool, works),
+		Pages:          pages,
 		Blocks:         edit.NewService(pool, works),
 		Versions:       versions,
 		Uploads:        upload.NewService(pool, works),

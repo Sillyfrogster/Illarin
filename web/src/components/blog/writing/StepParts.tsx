@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import type { Post, PostRevision } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
-import { useBlogAddress } from "@/lib/origins";
 import { revisionWords } from "@/lib/post-history";
 
 export function Heading({ line, title }: { line: string; title: string }) {
@@ -15,20 +14,6 @@ export function Heading({ line, title }: { line: string; title: string }) {
       </h3>
       <p className="mt-2 font-prose text-meta text-mute">{line}</p>
     </div>
-  );
-}
-
-export function Subject({ post }: { post: Post }) {
-  const blogAddress = useBlogAddress();
-  return (
-    <p className="rounded-plate bg-deep p-4">
-      <span className="block font-display text-ui text-ink wrap-anywhere">
-        {post.title || "Untitled post"}
-      </span>
-      <span className="mt-1 block font-prose text-meta text-mute wrap-anywhere">
-        {blogAddress}/{post.slug}
-      </span>
-    </p>
   );
 }
 

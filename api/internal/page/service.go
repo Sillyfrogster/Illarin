@@ -1,23 +1,31 @@
 package page
 
 import (
+	"context"
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Service struct {
-	pool  *pgxpool.Pool
-	reg   *format.Registry
-	works *work.Service
+	pool     *pgxpool.Pool
+	reg      *format.Registry
+	works    *work.Service
+	announce func(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error
 }
 
 func NewService(pool *pgxpool.Pool, works *work.Service) *Service {
 	return &Service{pool: pool, reg: works.Registry(), works: works}
+}
+
+// OnFirstPublication runs inside the publish transaction when a creator asks for their work to be announced
+func (s *Service) OnFirstPublication(announce func(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error) {
+	s.announce = announce
 }
 
 func uuidToPgtype(u uuid.UUID) pgtype.UUID {

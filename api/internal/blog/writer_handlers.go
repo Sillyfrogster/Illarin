@@ -139,10 +139,16 @@ func (h *Handlers) GetBlogWorkspace(c *gin.Context) {
 		h.blogError(c, err)
 		return
 	}
+	discord, err := h.blog.HasDiscordChannel(c.Request.Context())
+	if err != nil {
+		h.blogError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, BlogWorkspace{
 		Handle:     current.Handle,
 		Admin:      current.Role == api.RoleAdmin,
 		Writer:     writer,
+		Discord:    discord,
 		Categories: toAPICategories(open),
 	})
 }
@@ -248,6 +254,7 @@ type BlogCategoryList struct {
 type BlogWorkspace struct {
 	Admin      bool           `json:"admin"`
 	Categories []BlogCategory `json:"categories"`
+	Discord    bool           `json:"discord"`
 	Handle     string         `json:"handle"`
 	Writer     bool           `json:"writer"`
 }

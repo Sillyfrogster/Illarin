@@ -108,30 +108,54 @@ func (s *Service) Announce(ctx context.Context, tx pgx.Tx, published version.Ver
 	if !choice.Discord {
 		return nil
 	}
-	var owner uuid.UUID
-	var name, visibility string
-	err := tx.QueryRow(ctx, `
-		select owner_id, name, visibility from works where id = $1
-	`, published.WorkID).Scan(&owner, &name, &visibility)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("read the work being announced: %w", err)
-	}
-	if work.Visibility(visibility) != work.VisibilityListed {
-		return nil
+	shown, ok, err := readPublic(ctx, tx, published.WorkID)
+	if err != nil || !ok {
+		return err
 	}
 	update := "#" + strconv.Itoa(published.Number)
 	if published.VersionLabel != "" {
 		update = published.VersionLabel
 	}
-	return s.Queue(ctx, tx, &owner, discord.Announcement{
-		Title:   name,
-		Summary: published.Summary,
-		URL:     s.site + "/a/" + published.WorkID.String() + "/history#version-" + strconv.Itoa(published.Number),
-		Update:  update,
-		At:      s.now(),
-		Footer:  discord.Site,
-	})
+	shown.Summary = published.Summary
+	shown.URL = s.site + "/a/" + published.WorkID.String() + "/history#version-" + strconv.Itoa(published.Number)
+	shown.Update = update
+	return s.queueWork(ctx, tx, shown)
+}
+
+// AnnounceFirst posts a work's first publication to its creator's channel, if the work is public
+func (s *Service) AnnounceFirst(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
+	shown, ok, err := readPublic(ctx, tx, workID)
+	if err != nil || !ok {
+		return err
+	}
+	shown.URL = s.site + "/a/" + workID.String()
+	shown.Update = "New " + shown.kind
+	return s.queueWork(ctx, tx, shown)
+}
+
+type publicWork struct {
+	discord.Announcement
+	owner uuid.UUID
+	kind  string
+}
+
+func (s *Service) queueWork(ctx context.Context, tx pgx.Tx, shown publicWork) error {
+	shown.At = s.now()
+	shown.Footer = discord.Site
+	return s.Queue(ctx, tx, &shown.owner, shown.Announcement)
+}
+
+func readPublic(ctx context.Context, tx pgx.Tx, workID uuid.UUID) (publicWork, bool, error) {
+	var shown publicWork
+	var visibility string
+	err := tx.QueryRow(ctx, `
+		select owner_id, name, blurb, type, visibility from works where id = $1
+	`, workID).Scan(&shown.owner, &shown.Title, &shown.Summary, &shown.kind, &visibility)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return publicWork{}, false, nil
+	}
+	if err != nil {
+		return publicWork{}, false, fmt.Errorf("read the work being announced: %w", err)
+	}
+	return shown, work.Visibility(visibility) == work.VisibilityListed, nil
 }

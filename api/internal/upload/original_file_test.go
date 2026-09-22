@@ -58,7 +58,7 @@ func publishImported(t *testing.T, svc *Service, ownerID uuid.UUID, created work
 	}, currentCandidate(t, svc, created.ID)); err != nil {
 		t.Fatalf("SetDetails imported work: %v", err)
 	}
-	if _, err := works(svc).Publish(context.Background(), ownerID, created.ID, currentCandidate(t, svc, created.ID)); err != nil {
+	if _, err := works(svc).Publish(context.Background(), ownerID, created.ID, currentCandidate(t, svc, created.ID), false); err != nil {
 		t.Fatalf("Publish imported work: %v", err)
 	}
 }

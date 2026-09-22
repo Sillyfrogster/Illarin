@@ -446,7 +446,6 @@ export function PostWriter({ id }: { id: string }) {
 
         {rail === "publish" && state !== "conflict" ? (
           <WorkspaceRail
-            description="Manage publishing, scheduling, unpublishing and recovery."
             key="publish"
             onClose={() => setRail(null)}
             title="Publishing"

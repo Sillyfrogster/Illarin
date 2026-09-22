@@ -60,12 +60,13 @@ func (s *Service) SetVisibility(
 	return work.ErrNotFound
 }
 
-// Publish makes a draft public once it clears the publish floor, and records its first version
+// Publish makes a draft public once it clears the publish floor, records its first version and announces it when asked
 func (s *Service) Publish(
 	ctx context.Context,
 	ownerID uuid.UUID,
 	workID uuid.UUID,
 	candidate *work.Candidate,
+	announce bool,
 ) ([]work.ReadinessItem, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -121,6 +122,11 @@ func (s *Service) Publish(
 			Type: notify.WorkPublished, Work: &workID,
 			Words: notify.Words{WorkName: name, Creator: creator, CreatorName: creatorName},
 		}); err != nil {
+			return nil, err
+		}
+	}
+	if announce && s.announce != nil {
+		if err := s.announce(ctx, tx, workID); err != nil {
 			return nil, err
 		}
 	}

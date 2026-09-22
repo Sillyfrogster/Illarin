@@ -127,6 +127,42 @@ func TestAVersionOfAPublicWorkIsQueuedAndAnUnlistedOneIsNot(t *testing.T) {
 	}
 }
 
+func TestAWorksFirstPublicationPostsUnlessTheCreatorTurnsItOff(t *testing.T) {
+	t.Parallel()
+	outbox := &apitest.VerificationOutbox{}
+	router, pool := harness.NewRouterWithSenderAndPool(t, 1<<20, api.DefaultDeadlines(), outbox)
+	creator := apitest.VerifiedSignUp(t, router, outbox, "creator@example.com", apitest.CreatorHandle)
+	connected := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
+		t, http.MethodPut, "/v1/account/discord-channel", `{"address":"`+hook+`"}`, creator))
+	if connected.Code != http.StatusOK {
+		t.Fatalf("connect = %d: %s", connected.Code, connected.Body.String())
+	}
+	posted := apitest.PublishedCharacter(t, router, creator)
+	quiet := apitest.StartCharacter(t, router, creator)
+	apitest.WriteCharacterFloor(t, router, creator, quiet)
+	if got := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
+		t, http.MethodPost, "/v1/works/"+quiet.ID+"/publish", `{"discord":false}`, creator)); got.Code != http.StatusOK {
+		t.Fatalf("publish without Discord = %d: %s", got.Code, got.Body.String())
+	}
+
+	var bodies []string
+	rows, err := pool.Query(context.Background(), `select body::text from discord_posts`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var body string
+		if err := rows.Scan(&body); err != nil {
+			t.Fatal(err)
+		}
+		bodies = append(bodies, body)
+	}
+	if len(bodies) != 1 || !strings.Contains(bodies[0], "/a/"+posted) {
+		t.Fatalf("queued posts = %v, want one for the work published with Discord on", bodies)
+	}
+}
+
 type fakeDiscord struct {
 	mu       sync.Mutex
 	statuses []int

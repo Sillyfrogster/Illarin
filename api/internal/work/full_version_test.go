@@ -82,7 +82,7 @@ func TestFirstPublicationRecordsTheDraftInTheSameTransaction(t *testing.T) {
 	}, apitest.CurrentCandidate(t, svc, draft)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := apitest.Pages(svc).Publish(context.Background(), owner, draft, apitest.CurrentCandidate(t, svc, draft)); err != nil {
+	if _, err := apitest.Pages(svc).Publish(context.Background(), owner, draft, apitest.CurrentCandidate(t, svc, draft), false); err != nil {
 		t.Fatal(err)
 	}
 	var captured bool
@@ -110,7 +110,7 @@ func TestAVersionRejectsForeignMediaAndPublicationRollsBack(t *testing.T) {
 	versionExec(t, pool, `insert into works (id, type, name, lifecycle) values ($1, 'character', 'Private', 'draft')`, other)
 	versionExec(t, pool, `insert into work_media (id, work_id, role, width, height) values ($1, $2, 'avatar', 1, 1)`, media, other)
 	versionExec(t, pool, `update works set cover_media_id = $2 where id = $1`, draft, media)
-	if _, err := apitest.Pages(svc).Publish(context.Background(), owner, draft, apitest.CurrentCandidate(t, svc, draft)); err == nil {
+	if _, err := apitest.Pages(svc).Publish(context.Background(), owner, draft, apitest.CurrentCandidate(t, svc, draft), false); err == nil {
 		t.Fatal("publication accepted another work's private media")
 	}
 	var private bool

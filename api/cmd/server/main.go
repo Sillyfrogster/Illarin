@@ -156,6 +156,8 @@ func run() error {
 	posts := blog.NewService(pool, images, integrations, cfg.SiteURL)
 	versions := version.NewService(pool, svc)
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
+	pages := page.NewService(pool, svc)
+	pages.OnFirstPublication(integrations.AnnounceFirst)
 	apps := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
 	sends := connect.NewSends(pool, svc, apps, connect.DefaultSettings())
 	notifications := notify.NewService(pool)
@@ -207,7 +209,7 @@ func run() error {
 	r.Use(api.Recovery(log.Default()))
 	running := services{
 		Works:          svc,
-		Pages:          page.NewService(pool, svc),
+		Pages:          pages,
 		Blocks:         edit.NewService(pool, svc),
 		Versions:       versions,
 		Uploads:        uploads,

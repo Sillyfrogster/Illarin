@@ -36,28 +36,28 @@ const OFFERS: Record<
   publish: {
     icon: Send,
     label: "Publish now",
-    line: "Readers see this version as soon as you press the button.",
+    line: "This version goes live right away.",
   },
   schedule: {
     icon: CalendarClock,
     label: "Schedule post",
-    line: "Illarin publishes this exact version at a time you set.",
+    line: "This version goes live at a time you pick.",
   },
   unpublish: {
     icon: EyeOff,
     label: "Unpublish post",
-    line: "Hide the post from readers. Its content and history remain available for republication.",
+    line: "Readers lose access. You can republish it later.",
     tone: "stop",
   },
   republish: {
     icon: Eye,
     label: "Republish post",
-    line: "Republish at the same address with the original publication date.",
+    line: "Same address, same publication date.",
   },
   recover: {
     icon: Undo2,
     label: "Restore post",
-    line: "Restore the post to its state before deletion.",
+    line: "It comes back as it was before you deleted it.",
   },
 };
 
@@ -136,7 +136,7 @@ function Home({
     <div className="flex flex-col gap-7">
       {refusal ? <Trouble>{refusal}</Trouble> : null}
 
-      <section className="flex flex-col gap-2 rounded-plate bg-deep p-4">
+      <section className="flex flex-col gap-1">
         <p className="font-ui text-ui font-medium text-ink">
           {readersHave(post)}
         </p>

@@ -125,6 +125,11 @@ func sameSet(present, given []uuid.UUID) bool {
 	return len(remaining) == 0
 }
 
+// HasDiscordChannel reports whether an admin connected the blog's Discord channel
+func (s *Service) HasDiscordChannel(ctx context.Context) (bool, error) {
+	return s.discord.Connected(ctx, nil)
+}
+
 // Announcement says whether a post's first publication goes to the blog's Discord channel
 type Announcement struct {
 	Discord bool

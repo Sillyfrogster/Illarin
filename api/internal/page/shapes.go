@@ -382,6 +382,11 @@ type WorkDetailsRequest struct {
 	Name   string `json:"name"`
 }
 
+// PublishWorkRequest says whether a draft's first publication goes to the creator's Discord channel; it does unless turned off
+type PublishWorkRequest struct {
+	Discord *bool `json:"discord,omitempty"`
+}
+
 type PublishRefusal struct {
 	Code      *PublishRefusalCode `json:"code,omitempty"`
 	Error     string              `json:"error"`

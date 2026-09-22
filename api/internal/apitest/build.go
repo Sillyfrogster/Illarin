@@ -184,7 +184,7 @@ func PublishedWork(t *testing.T, works *work.Service, handle string) (uuid.UUID,
 	}, CurrentCandidate(t, works, id)); err != nil {
 		t.Fatalf("save the header: %v", err)
 	}
-	if _, err := pages.Publish(context.Background(), owner, id, CurrentCandidate(t, works, id)); err != nil {
+	if _, err := pages.Publish(context.Background(), owner, id, CurrentCandidate(t, works, id), false); err != nil {
 		t.Fatalf("publish the asset: %v", err)
 	}
 	return owner, id
@@ -228,7 +228,7 @@ func PublishImported(t *testing.T, svc *work.Service, ownerID uuid.UUID, created
 		t.Fatalf("SetDetails imported asset: %v", err)
 	}
 	if _, err := pages.Publish(
-		context.Background(), ownerID, created.ID, CurrentCandidate(t, svc, created.ID),
+		context.Background(), ownerID, created.ID, CurrentCandidate(t, svc, created.ID), false,
 	); err != nil {
 		t.Fatalf("Publish imported asset: %v", err)
 	}

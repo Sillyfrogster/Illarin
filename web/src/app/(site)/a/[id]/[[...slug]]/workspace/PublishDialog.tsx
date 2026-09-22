@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
+import { CheckRow } from "@/components/ui/check-row";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { LineLink } from "@/components/ui/line-link";
 import { readDiscordChannel } from "@/lib/api/integrations";
 import {
   compareDraftedChanges,
@@ -25,7 +27,7 @@ import {
   useDraftedChanges,
 } from "@/lib/drafted-changes";
 import type { ReadinessTarget } from "@/lib/readiness";
-import { Field, Note, Switch, TextAreaField, TextField } from "./fields";
+import { Field, Note, TextAreaField, TextField } from "./fields";
 import { ReadinessList } from "./ReadinessList";
 import { useWorkspace } from "./state";
 
@@ -61,7 +63,7 @@ export function PublishDialog({
   const [hasChannel, setHasChannel] = useState(false);
 
   useEffect(() => {
-    if (workspace.isDraft || unlisted) return;
+    if (unlisted) return;
     const controller = new AbortController();
     void readDiscordChannel("account", controller.signal).then((answer) => {
       if (!controller.signal.aborted) {
@@ -69,7 +71,7 @@ export function PublishDialog({
       }
     });
     return () => controller.abort();
-  }, [workspace.isDraft, unlisted]);
+  }, [unlisted]);
 
   useEffect(() => {
     let active = true;
@@ -112,7 +114,7 @@ export function PublishDialog({
     setMessage("");
     try {
       const answer = workspace.isDraft
-        ? await publishWork(candidate, workspace.workId)
+        ? await publishWork(candidate, workspace.workId, hasChannel && discord)
         : await publishWorkVersion(candidate, workspace.workId, {
             discord: hasChannel && discord,
             notify,
@@ -221,26 +223,36 @@ export function PublishDialog({
                     value={label}
                   />
                 </Field>
-
-                <div className="flex flex-col gap-2">
-                  <Switch
-                    checked={notify}
-                    hint="Anyone following it, or with it installed in a linked app, gets a notification."
-                    label="Tell people following this"
-                    onChange={setNotify}
-                    pending={busy}
-                  />
-                  {hasChannel ? (
-                    <Switch
-                      checked={discord}
-                      hint="The summary and a link go to the Discord channel in your settings."
-                      label="Post to Discord"
-                      onChange={setDiscord}
-                      pending={busy}
-                    />
-                  ) : null}
-                </div>
               </>
+            ) : null}
+            {!workspace.isDraft || !unlisted ? (
+              <div className="flex flex-col">
+                {!workspace.isDraft ? (
+                  <CheckRow
+                    checked={notify}
+                    disabled={busy}
+                    onChange={setNotify}
+                  >
+                    Notify followers
+                  </CheckRow>
+                ) : null}
+                {unlisted ? null : hasChannel ? (
+                  <CheckRow
+                    checked={discord}
+                    disabled={busy}
+                    onChange={setDiscord}
+                  >
+                    Post to your Discord
+                  </CheckRow>
+                ) : (
+                  <LineLink
+                    className="self-start text-accent hover:text-accent"
+                    href="/settings#discord-channel"
+                  >
+                    Connect a Discord channel to post updates
+                  </LineLink>
+                )}
+              </div>
             ) : null}
             {message ? (
               <div

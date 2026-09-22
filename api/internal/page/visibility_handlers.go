@@ -53,8 +53,16 @@ func (h *Handlers) PublishWork(c *gin.Context) {
 	if !ok {
 		return
 	}
+	var request PublishWorkRequest
+	if c.Request.ContentLength != 0 {
+		if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+			api.Refuse(c, http.StatusBadRequest, "The publish request could not be read.")
+			return
+		}
+	}
 	candidate := &work.Candidate{Version: version}
-	items, err := h.works.Publish(c.Request.Context(), owner.ID, id, candidate)
+	announce := request.Discord == nil || *request.Discord
+	items, err := h.works.Publish(c.Request.Context(), owner.ID, id, candidate, announce)
 	if CandidateResult(c, candidate, err) {
 		return
 	}
