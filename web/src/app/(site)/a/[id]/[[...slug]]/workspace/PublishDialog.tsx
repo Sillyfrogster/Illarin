@@ -270,12 +270,14 @@ export function PublishDialog({
                     </h3>
                     {!workspace.isDraft ? (
                       <Hearer
+                        control="publish-notify"
                         icon={<Bell aria-hidden="true" />}
                         line="Followers and linked apps with it installed get a notification."
                         title="Notify followers"
                       >
                         <HearerCheck
                           checked={notify}
+                          id="publish-notify"
                           disabled={busy}
                           onChange={setNotify}
                         />
@@ -283,6 +285,7 @@ export function PublishDialog({
                     ) : null}
                     {unlisted ? null : (
                       <Hearer
+                        control={hasChannel ? "publish-discord" : undefined}
                         icon={<SiDiscord aria-hidden="true" />}
                         line={
                           hasChannel
@@ -296,6 +299,7 @@ export function PublishDialog({
                         {hasChannel ? (
                           <HearerCheck
                             checked={discord}
+                            id="publish-discord"
                             disabled={busy}
                             onChange={setDiscord}
                           />

@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
 import type { WorkDetail } from "@/lib/api/query";
+import { cn } from "@/lib/cn";
 import { TYPE_LABELS } from "@/lib/work-types";
 
 /** PublishSubject shows the work being published and the state it moves to. */
@@ -58,28 +59,37 @@ export function PublishSubject({
 /** Hearer is one place a publication is announced, with its switch or the way to set it up. */
 export function Hearer({
   children,
+  control,
   icon,
   line,
   title,
 }: {
   children: ReactNode;
+  control?: string;
   icon: ReactNode;
   line: string;
   title: string;
 }) {
+  const Title = control ? "label" : "span";
   return (
-    <label className="flex min-h-14 cursor-pointer items-center gap-3 has-[a]:cursor-default">
+    <div className="flex min-h-14 items-center gap-3">
       <span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-deep text-ink [&_svg]:size-4.5">
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-ui text-ui font-medium text-ink">
+        <Title
+          className={cn(
+            "block font-ui text-ui font-medium text-ink",
+            control && "cursor-pointer",
+          )}
+          htmlFor={control}
+        >
           {title}
-        </span>
+        </Title>
         <span className="block font-ui text-meta text-mute">{line}</span>
       </span>
       {children}
-    </label>
+    </div>
   );
 }
 
@@ -87,15 +97,18 @@ export function Hearer({
 export function HearerCheck({
   checked,
   disabled,
+  id,
   onChange,
 }: {
   checked: boolean;
   disabled: boolean;
+  id: string;
   onChange: (checked: boolean) => void;
 }) {
   return (
     <input
       checked={checked}
+      id={id}
       className="size-5 shrink-0 cursor-pointer accent-[var(--v-action)] disabled:cursor-default"
       disabled={disabled}
       onChange={(event) => onChange(event.target.checked)}
