@@ -1,10 +1,11 @@
 "use client";
 
+import { SiDiscord } from "@icons-pack/react-simple-icons";
+import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
-import { CheckRow } from "@/components/ui/check-row";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ import {
   publishWorkVersion,
   type ReadinessItem,
   type VersionChangeGroup,
+  type WorkDetail,
 } from "@/lib/api/query";
 import {
   DRAFTED_CHANGES_SAVED,
@@ -28,6 +30,7 @@ import {
 } from "@/lib/drafted-changes";
 import type { ReadinessTarget } from "@/lib/readiness";
 import { Field, Note, TextAreaField, TextField } from "./fields";
+import { Hearer, HearerCheck, PublishSubject } from "./PublishParts";
 import { ReadinessList } from "./ReadinessList";
 import { useWorkspace } from "./state";
 
@@ -61,6 +64,7 @@ export function PublishDialog({
   const [notify, setNotify] = useState(true);
   const [discord, setDiscord] = useState(true);
   const [hasChannel, setHasChannel] = useState(false);
+  const [work, setWork] = useState<WorkDetail | null>(null);
 
   useEffect(() => {
     if (unlisted) return;
@@ -90,6 +94,7 @@ export function PublishDialog({
           throw new Error(
             "Could not load your changes. Close this dialog and try again.",
           );
+        setWork(work);
         setMissing(work.readiness?.filter((item) => !item.met) ?? []);
         setGroups(changes);
         setWaiting(Boolean(upload));
@@ -143,6 +148,9 @@ export function PublishDialog({
     }
   }
 
+  const next = (work?.latestVersion?.number ?? 0) + 1;
+  const hearers = !workspace.isDraft || !unlisted;
+
   return (
     <Dialog
       open
@@ -150,153 +158,214 @@ export function PublishDialog({
         if (!open && !busy) workspace.closePane();
       }}
     >
-      <DialogContent className="max-w-3xl">
-        <div className="shrink-0 px-6 pt-6 pr-16 sm:px-8 sm:pt-8">
-          <DialogTitle className="font-display text-section font-medium">
-            Publish {workspace.isDraft ? `this ${typeName}` : "changes"}?
-          </DialogTitle>
-          <DialogDescription className="mt-2 text-ui text-mute">
-            {workspace.isDraft
-              ? "Anyone with the link can open your published page. Publishing cannot be undone."
-              : "These changes become public. Earlier versions stay in history."}
-          </DialogDescription>
-        </div>
-        <div className="min-h-0 overflow-y-auto px-6 py-6 sm:px-8">
-          <div className="flex min-w-0 flex-col gap-6">
-            {!loaded && !message ? (
-              <output className="text-ui text-mute">
-                Loading your changes…
-              </output>
-            ) : null}
-            {groups ? (
-              groups.length ? (
-                <ChangeList groups={groups} />
-              ) : (
-                <Note>Nothing has changed since the last version.</Note>
-              )
-            ) : null}
-            {waiting ? (
-              <div className="flex flex-col gap-2">
-                <Note>
-                  Accept or discard your uploaded file before publishing.
-                </Note>
-                <Button
-                  onClick={() => workspace.openPane({ kind: "replacement" })}
-                >
-                  Open uploaded file
-                </Button>
-              </div>
-            ) : null}
-            {missing.length > 0 ? (
-              <ReadinessList items={missing} onGo={onGo} />
-            ) : null}
-            {!workspace.isDraft ? (
-              <>
-                <Field
-                  hint="readers see this in the history"
-                  label="Summary of what changed"
-                >
-                  <TextField
-                    autoComplete="off"
-                    maxLength={200}
-                    onChange={(event) => setSummary(event.target.value)}
-                    placeholder="Rewrote her opening and added two greetings"
-                    value={summary}
-                  />
-                </Field>
+      <DialogContent className="max-w-4xl">
+        <div className="grid min-h-0 flex-1 md:grid-cols-[16rem_minmax(0,1fr)]">
+          <aside className="shrink-0 bg-inset px-6 py-5 pr-16 md:p-7">
+            <PublishSubject
+              from={workspace.isDraft ? "Draft" : `Version ${next - 1}`}
+              to={
+                workspace.isDraft
+                  ? unlisted
+                    ? "Unlisted"
+                    : "Public"
+                  : `Version ${next}`
+              }
+              work={work}
+            />
+          </aside>
 
-                <Field hint="optional" label="Notes">
-                  <TextAreaField
-                    maxLength={4000}
-                    onChange={(event) => setNotes(event.target.value)}
-                    rows={4}
-                    value={notes}
-                  />
-                </Field>
+          <div className="flex min-h-0 min-w-0 flex-col">
+            <div className="shrink-0 px-6 pt-6 sm:px-8 sm:pt-8 md:pr-16">
+              <DialogTitle className="font-display text-section font-medium">
+                {workspace.isDraft
+                  ? `Publish this ${typeName}?`
+                  : "Publish your changes?"}
+              </DialogTitle>
+              <DialogDescription className="mt-2 max-w-[52ch] text-ui text-mute">
+                {workspace.isDraft
+                  ? unlisted
+                    ? "Anyone with the link can open it. Publishing can't be undone."
+                    : "It shows in Browse and on your profile. Publishing can't be undone."
+                  : "Readers get the new version. Earlier versions stay in history."}
+              </DialogDescription>
+            </div>
 
-                <Field hint="optional" label="Version">
-                  <TextField
-                    autoComplete="off"
-                    maxLength={60}
-                    onChange={(event) => setLabel(event.target.value)}
-                    placeholder="v2.1"
-                    value={label}
-                  />
-                </Field>
-              </>
-            ) : null}
-            {!workspace.isDraft || !unlisted ? (
-              <div className="flex flex-col">
-                {!workspace.isDraft ? (
-                  <CheckRow
-                    checked={notify}
-                    disabled={busy}
-                    onChange={setNotify}
-                  >
-                    Notify followers
-                  </CheckRow>
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 sm:px-8">
+              <div className="flex min-w-0 flex-col gap-6">
+                {!loaded && !message ? (
+                  <output className="text-ui text-mute">
+                    Loading your changes…
+                  </output>
                 ) : null}
-                {unlisted ? null : hasChannel ? (
-                  <CheckRow
-                    checked={discord}
-                    disabled={busy}
-                    onChange={setDiscord}
-                  >
-                    Post to your Discord
-                  </CheckRow>
-                ) : (
-                  <LineLink
-                    className="self-start text-accent hover:text-accent"
-                    href="/settings#discord-channel"
-                  >
-                    Connect a Discord channel to post updates
-                  </LineLink>
-                )}
-              </div>
-            ) : null}
-            {message ? (
-              <div
-                className="flex flex-col gap-4 rounded-plate bg-stop-wash p-4"
-                role="alert"
-              >
-                <p className="text-ui text-ink">{message}</p>
-                {stale ? (
-                  <>
-                    <p className="text-meta text-mute">
-                      What you wrote here is still here. Copy anything you want
-                      to keep before reloading the page.
-                    </p>
+                {groups ? (
+                  groups.length ? (
+                    <ChangeList groups={groups} />
+                  ) : (
+                    <Note>Nothing has changed since the last version.</Note>
+                  )
+                ) : null}
+                {waiting ? (
+                  <div className="flex flex-col gap-2">
+                    <Note>
+                      Accept or discard your uploaded file before publishing.
+                    </Note>
                     <Button
-                      className="self-start"
-                      onClick={() => window.location.reload()}
+                      onClick={() =>
+                        workspace.openPane({ kind: "replacement" })
+                      }
                     >
-                      Reload the page
+                      Open uploaded file
                     </Button>
+                  </div>
+                ) : null}
+                {missing.length > 0 ? (
+                  <ReadinessList items={missing} onGo={onGo} />
+                ) : null}
+                {!workspace.isDraft ? (
+                  <>
+                    <Field
+                      hint="readers see this in the history"
+                      label="Summary of what changed"
+                    >
+                      <TextField
+                        autoComplete="off"
+                        maxLength={200}
+                        onChange={(event) => setSummary(event.target.value)}
+                        placeholder="Rewrote her opening and added two greetings"
+                        value={summary}
+                      />
+                    </Field>
+
+                    <div className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_10rem]">
+                      <Field hint="optional" label="Notes">
+                        <TextAreaField
+                          maxLength={4000}
+                          onChange={(event) => setNotes(event.target.value)}
+                          rows={3}
+                          value={notes}
+                        />
+                      </Field>
+                      <Field hint="optional" label="Version">
+                        <TextField
+                          autoComplete="off"
+                          maxLength={60}
+                          onChange={(event) => setLabel(event.target.value)}
+                          placeholder="v2.1"
+                          value={label}
+                        />
+                      </Field>
+                    </div>
                   </>
                 ) : null}
+                {hearers ? (
+                  <section
+                    aria-labelledby="publish-hearers"
+                    className="flex flex-col gap-1"
+                  >
+                    <h3
+                      className="font-ui text-meta font-medium text-mute"
+                      id="publish-hearers"
+                    >
+                      Who hears about it
+                    </h3>
+                    {!workspace.isDraft ? (
+                      <Hearer
+                        icon={<Bell aria-hidden="true" />}
+                        line="Followers and linked apps with it installed get a notification."
+                        title="Notify followers"
+                      >
+                        <HearerCheck
+                          checked={notify}
+                          disabled={busy}
+                          onChange={setNotify}
+                        />
+                      </Hearer>
+                    ) : null}
+                    {unlisted ? null : (
+                      <Hearer
+                        icon={<SiDiscord aria-hidden="true" />}
+                        line={
+                          hasChannel
+                            ? workspace.isDraft
+                              ? "Your channel gets its name, blurb and a link."
+                              : "Your channel gets the summary and a link."
+                            : "No channel connected yet."
+                        }
+                        title="Post to Discord"
+                      >
+                        {hasChannel ? (
+                          <HearerCheck
+                            checked={discord}
+                            disabled={busy}
+                            onChange={setDiscord}
+                          />
+                        ) : (
+                          <LineLink
+                            className="text-accent hover:text-accent"
+                            href="/settings#discord-channel"
+                          >
+                            Connect
+                          </LineLink>
+                        )}
+                      </Hearer>
+                    )}
+                  </section>
+                ) : null}
+                {message ? (
+                  <div
+                    className="flex flex-col gap-4 rounded-plate bg-stop-wash p-4"
+                    role="alert"
+                  >
+                    <p className="text-ui text-ink">{message}</p>
+                    {stale ? (
+                      <>
+                        <p className="text-meta text-mute">
+                          What you wrote here is still here. Copy anything you
+                          want to keep before reloading the page.
+                        </p>
+                        <Button
+                          className="self-start"
+                          onClick={() => window.location.reload()}
+                        >
+                          Reload the page
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
-            ) : null}
+            </div>
+
+            <div className="flex shrink-0 flex-wrap justify-end gap-2 px-6 pt-2 pb-6 sm:px-8 sm:pb-8">
+              <Button
+                disabled={busy}
+                onClick={workspace.closePane}
+                variant="ghost"
+              >
+                Keep editing
+              </Button>
+              <Button
+                disabled={
+                  !loaded ||
+                  waiting ||
+                  stale ||
+                  workspace.dirty ||
+                  workspace.busy ||
+                  (!workspace.isDraft &&
+                    (!groups?.length || summary.trim() === ""))
+                }
+                loading={busy}
+                onClick={publish}
+                variant="primary"
+              >
+                {busy
+                  ? "Publishing…"
+                  : workspace.isDraft
+                    ? `Publish ${typeName}`
+                    : `Publish version ${next}`}
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex shrink-0 justify-end gap-2 bg-deep px-6 py-4 sm:px-8">
-          <Button disabled={busy} onClick={workspace.closePane} variant="ghost">
-            Keep editing
-          </Button>
-          <Button
-            disabled={
-              !loaded ||
-              waiting ||
-              stale ||
-              workspace.dirty ||
-              workspace.busy ||
-              (!workspace.isDraft && (!groups?.length || summary.trim() === ""))
-            }
-            loading={busy}
-            onClick={publish}
-            variant="primary"
-          >
-            {busy ? "Publishing…" : "Publish"}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
