@@ -1,11 +1,12 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { WorkDetail } from "@/lib/api/query";
-import { saveWorkVisibility } from "@/lib/api/query";
+import { saveWorkVisibility, workKeys } from "@/lib/api/query";
 
 export function VisibilityControl({
   workId,
@@ -19,6 +20,7 @@ export function VisibilityControl({
   typeName: string;
 }) {
   const router = useRouter();
+  const query = useQueryClient();
   const [visibility, setVisibility] = useState(initialVisibility);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
@@ -32,6 +34,7 @@ export function VisibilityControl({
     setVisibility(next);
     try {
       await saveWorkVisibility(workId, next);
+      await query.invalidateQueries({ queryKey: workKeys.all });
       router.refresh();
     } catch {
       setVisibility(visibility);

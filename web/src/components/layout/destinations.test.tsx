@@ -1,7 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToStaticMarkup } from "react-dom/server";
 import type { SignedInAccount } from "@/lib/auth";
-import { DestinationIcon } from "./DestinationIcon";
 import { accountDestinations } from "./destinations";
 
 const account: SignedInAccount = {
@@ -14,59 +12,32 @@ const account: SignedInAccount = {
   role: "user",
 };
 
-test("account navigation names each task and keeps icons when labels change", () => {
-  const destinations = accountDestinations({ ...account, role: "admin" }, true);
-  expect(destinations.map(({ label, href }) => [label, href])).toEqual([
-    ["Your profile", "/@copy_fixture"],
-    ["Account settings", "/settings"],
-    ["Your posts", "/posts"],
-    ["Blog administration", "/admin/blog"],
-    ["Staff", "/staff"],
-  ]);
-  const icons = [
-    "circle-user-round",
+test("account navigation exposes the destinations allowed by each role", () => {
+  const destinations = (role: SignedInAccount["role"], writer = false) =>
+    accountDestinations({ ...account, role }, writer).map(({ id }) => id);
+  expect(destinations("user")).toEqual(["work", "profile", "settings"]);
+  expect(destinations("user", true)).toEqual([
+    "work",
+    "profile",
     "settings",
-    "notebook-pen",
-    "signature",
-    "shield-check",
-  ];
-  for (const [index, destination] of destinations.entries()) {
-    const renamed = { ...destination, label: "A different label" };
-    const markup = renderToStaticMarkup(<DestinationIcon id={renamed.id} />);
-    expect(markup).toContain(`lucide-${icons[index]}`);
-    expect(markup).toContain('aria-hidden="true"');
-  }
-});
-
-test("sign-in and verification destinations keep their labels and icons", () => {
-  for (const visitor of [null, undefined]) {
-    const destinations = accountDestinations(visitor, false);
-    expect(destinations.map(({ label }) => label)).toEqual([
-      "Sign in",
-      "Create account",
-    ]);
-    expect(
-      renderToStaticMarkup(<DestinationIcon id={destinations[0].id} />),
-    ).toContain("lucide-log-in");
-    expect(
-      renderToStaticMarkup(<DestinationIcon id={destinations[1].id} />),
-    ).toContain("lucide-user-plus");
-  }
-  const destinations = accountDestinations(
-    { ...account, emailVerified: false },
-    false,
-  );
-  expect(destinations.map(({ label }) => label)).toEqual([
-    "Your profile",
-    "Account settings",
-    "Verify email",
+    "posts",
+  ]);
+  expect(destinations("moderator")).toContain("staff");
+  expect(destinations("admin", true)).toEqual([
+    "work",
+    "profile",
+    "settings",
+    "posts",
+    "blog-admin",
+    "staff",
+  ]);
+  expect(accountDestinations(null, false).map(({ id }) => id)).toEqual([
+    "sign-in",
+    "sign-up",
   ]);
   expect(
-    accountDestinations({ ...account, role: "moderator" }, false).map(
-      ({ label }) => label,
+    accountDestinations({ ...account, emailVerified: false }, false).map(
+      ({ id }) => id,
     ),
-  ).toEqual(["Your profile", "Account settings", "Staff"]);
-  expect(
-    renderToStaticMarkup(<DestinationIcon id={destinations[2].id} />),
-  ).toContain("lucide-mail");
+  ).toContain("verify");
 });

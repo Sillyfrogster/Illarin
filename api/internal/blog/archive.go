@@ -51,7 +51,7 @@ const selectSummaries = `
 	  from posts post
 	  join post_revisions revision on revision.id = post.public_revision_id
 	  join blog_categories category on category.id = revision.category_id
-	 where post.status = 'published'
+	 where post.status = 'published' and post.deleted_at is null
 	`
 
 const narrowArchive = `
@@ -64,7 +64,7 @@ func (s *Service) ReadableCategories(ctx context.Context) ([]Category, error) {
 		       select 1
 		         from posts post
 		         join post_revisions revision on revision.id = post.public_revision_id
-		        where post.status = 'published' and revision.category_id = category.id
+		        where post.status = 'published' and post.deleted_at is null and revision.category_id = category.id
 		 )
 		 order by category.position, category.created_at
 	`)
@@ -89,7 +89,7 @@ func (s *Service) Archive(ctx context.Context, asked ArchiveQuery) (Archive, err
 		select count(*)
 		  from posts post
 		  join post_revisions revision on revision.id = post.public_revision_id
-		 where post.status = 'published'
+		 where post.status = 'published' and post.deleted_at is null
 	`+narrowArchive, categoryID).Scan(&found.Total); err != nil {
 		return Archive{}, fmt.Errorf("count the published archive: %w", err)
 	}

@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { CalendarClock, Eye, EyeOff, Send, Trash2, Undo2 } from "lucide-react";
+import { CalendarClock, Eye, EyeOff, Send, Undo2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trouble } from "@/components/ui/field";
@@ -21,7 +21,6 @@ import {
 } from "@/lib/post-writing";
 import { howSoon } from "@/lib/schedule-time";
 import {
-  DeleteStep,
   PublishStep,
   RecoverStep,
   RepublishStep,
@@ -58,12 +57,6 @@ const OFFERS: Record<
     label: "Republish post",
     line: "Republish at the same address with the original publication date.",
   },
-  delete: {
-    icon: Trash2,
-    label: "Delete post",
-    line: "You can restore this post for 30 days. After that, its content, revisions and images are permanently deleted.",
-    tone: "stop",
-  },
   recover: {
     icon: Undo2,
     label: "Restore post",
@@ -72,14 +65,12 @@ const OFFERS: Record<
 };
 
 export function PublishRail({
-  admin,
   onFailure,
   onSaveFirst,
   onSettled,
   post,
   stamp,
 }: {
-  admin: boolean;
   onFailure: (message: string) => void;
   onSaveFirst: () => Promise<number>;
   onSettled: (post: Post) => void;
@@ -112,13 +103,7 @@ export function PublishRail({
 
   if (step === "home") {
     return (
-      <Home
-        admin={admin}
-        onStep={setStep}
-        post={post}
-        refusal={refusal}
-        stamp={stamp}
-      />
+      <Home onStep={setStep} post={post} refusal={refusal} stamp={stamp} />
     );
   }
 
@@ -130,7 +115,6 @@ export function PublishRail({
       {step === "schedule" ? <PublishStep {...shared} door="later" /> : null}
       {step === "unpublish" ? <UnpublishStep {...shared} /> : null}
       {step === "republish" ? <RepublishStep {...shared} /> : null}
-      {step === "delete" ? <DeleteStep {...shared} /> : null}
       {step === "recover" ? <RecoverStep {...shared} /> : null}
       {step === "reschedule" ? <RescheduleStep {...shared} /> : null}
       {step === "unschedule" ? <UnscheduleStep {...shared} /> : null}
@@ -139,13 +123,11 @@ export function PublishRail({
 }
 
 function Home({
-  admin,
   onStep,
   post,
   refusal,
   stamp,
 }: {
-  admin: boolean;
   onStep: (step: Step) => void;
   post: Post;
   refusal: string;
@@ -219,7 +201,7 @@ function Home({
       ) : null}
 
       <section className="flex flex-col gap-2">
-        {publishActions(post, admin).map((action) => (
+        {publishActions(post).map((action) => (
           <Offer action={action} key={action} onChoose={() => onStep(action)} />
         ))}
       </section>

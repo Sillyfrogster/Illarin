@@ -26,7 +26,6 @@ export type PublishAction =
   | "schedule"
   | "unpublish"
   | "republish"
-  | "delete"
   | "recover";
 
 export type PostNotice = {
@@ -79,21 +78,12 @@ export function publishLabel(post: Post): string {
   return standing === "published" ? "Publish changes" : "Publish";
 }
 
-export function publishActions(post: Post, admin: boolean): PublishAction[] {
+export function publishActions(post: Post): PublishAction[] {
   const standing = writerStanding(post);
   if (standing === "deleted") return ["recover"];
-  if (standing === "unpublished") {
-    return mayDelete(post, admin) ? ["republish", "delete"] : ["republish"];
-  }
+  if (standing === "unpublished") return ["republish"];
   if (standing === "published") return ["publish", "schedule", "unpublish"];
-  return mayDelete(post, admin)
-    ? ["publish", "schedule", "delete"]
-    : ["publish", "schedule"];
-}
-
-function mayDelete(post: Post, admin: boolean): boolean {
-  if (post.status === "published") return false;
-  return admin || post.publishedAt === undefined;
+  return ["publish", "schedule"];
 }
 
 export function postNotices(post: Post): PostNotice[] {

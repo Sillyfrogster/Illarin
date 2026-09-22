@@ -17,7 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
+func TestCreatorCanDeleteAndRestoreAWorkDuringItsRecoveryWindow(t *testing.T) {
 	t.Parallel()
 	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(
@@ -64,7 +64,7 @@ func TestCreatorCanDeleteAndRestoreAnWorkDuringItsRecoveryWindow(t *testing.T) {
 		recovery.Items[0].Name != "Recoverable garden" || recovery.Items[0].Type != "character" {
 		t.Fatalf("deleted listing = %+v, want the deleted work", recovery.Items)
 	}
-	if !recovery.Items[0].RecoverableUntil.After(recovery.Items[0].DeletedAt) {
+	if recovery.Items[0].RecoverableUntil.Sub(recovery.Items[0].DeletedAt) != 30*24*time.Hour {
 		t.Fatalf("recovery deadline = %v, deleted at %v", recovery.Items[0].RecoverableUntil, recovery.Items[0].DeletedAt)
 	}
 
@@ -133,6 +133,12 @@ func TestPrivatePromptsSurviveRecoveryAndLeaveAfterItExpires(t *testing.T) {
 	}
 	if _, err := cleanup(works).Cleanup(t.Context()); err != nil {
 		t.Fatalf("cleanup expired work: %v", err)
+	}
+	response := apitest.Send(t, router, apitest.Authorized(
+		httptest.NewRequest(http.MethodPost, "/v1/works/"+started.ID+"/restore", nil), session,
+	))
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("restore after cleanup = %d, want 404", response.Code)
 	}
 	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
 		t.Fatalf("after recovery expired: %d payloads and %d policy rows, want none", payloads, policies)

@@ -13,7 +13,6 @@ import type {
   BrowseFilters,
   BrowsePage,
   BrowseWork,
-  DeletedWork,
   Profile,
 } from "@/lib/api/query";
 import type { Answer } from "@/lib/api/request";
@@ -21,7 +20,6 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { toggleFeatured } from "@/lib/profile-portfolio";
 import { Banner } from "./Banner";
-import { DeletedWorks } from "./DeletedWorks";
 import { FirstSteps } from "./FirstSteps";
 import { type Editing, IdentityCard, type ProfileDraft } from "./IdentityCard";
 import { RecentVersions } from "./RecentVersions";
@@ -40,13 +38,11 @@ function draftOf(profile: Profile): ProfileDraft {
 /** A creator's profile with its banner, card, shelf and recent versions */
 export function ProfilePage({
   address,
-  deletedWorks,
   filters,
   initial,
   initialPage,
 }: {
   address: string;
-  deletedWorks: DeletedWork[] | null;
   filters: BrowseFilters;
   initial: Profile;
   initialPage: BrowsePage | null;
@@ -171,7 +167,7 @@ export function ProfilePage({
     <div
       className={cn(
         "bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--v-field)_91%,var(--tint)),var(--v-field)_40rem)] bg-no-repeat",
-        !deletedWorks?.length && "pb-chapter",
+        "pb-chapter",
       )}
       style={{ "--tint": profile.tint || "var(--v-accent)" } as CSSProperties}
     >
@@ -238,12 +234,6 @@ export function ProfilePage({
           />
         </div>
       </Shell>
-
-      {deletedWorks !== null && deletedWorks.length > 0 ? (
-        <div className="mt-chapter">
-          <DeletedWorks initialItems={deletedWorks} />
-        </div>
-      ) : null}
     </div>
   );
 }

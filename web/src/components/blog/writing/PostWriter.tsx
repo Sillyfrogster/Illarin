@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { shellClasses } from "@/components/layout/Shell";
 import { Gate } from "@/components/ui/gate";
@@ -50,6 +51,7 @@ import { DetailsRail } from "./DetailsRail";
 import { GrowingText } from "./GrowingText";
 import { HistoryRail } from "./HistoryRail";
 import { PostNotices } from "./PostNotices";
+import { PostOwnerMenu } from "./PostOwnerMenu";
 import { PublishRail } from "./PublishRail";
 import { WritingSurface } from "./WritingSurface";
 
@@ -59,6 +61,7 @@ type Rail = "details" | "history" | "publish" | null;
 
 export function PostWriter({ id }: { id: string }) {
   const { account } = useAuth();
+  const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [media, setMedia] = useState<PostMedia[]>([]);
@@ -219,6 +222,19 @@ export function PostWriter({ id }: { id: string }) {
             <ArrowLeft aria-hidden="true" className="size-4" />
             Your posts
           </Link>
+          <PostOwnerMenu
+            post={post}
+            onEdit={() => setReading(false)}
+            onSaveFirst={async () =>
+              state === "dirty" || state === "refused"
+                ? await save()
+                : version.current
+            }
+            onChanged={(next) => {
+              if (next.deletion) router.push("/posts?deleted=true");
+              else settle(next, false);
+            }}
+          />
           {said ? (
             <output
               aria-live="polite"
@@ -438,7 +454,6 @@ export function PostWriter({ id }: { id: string }) {
             title="Publishing"
           >
             <PublishRail
-              admin={admin}
               onFailure={setRefusal}
               onSaveFirst={async () =>
                 state === "dirty" || state === "refused"

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
-import { fetchDeletedWorks, fetchProfile, fetchWorks } from "@/lib/api/query";
+import { fetchProfile, fetchWorks } from "@/lib/api/query";
 import { buildBrowseHref, readBrowseFilters } from "@/lib/browse-url";
 import { profilePath, readProfileAddress } from "@/lib/profile-address";
 import {
@@ -72,18 +72,14 @@ export default async function CreatorProfileListing({
     redirect(buildBrowseHref(filters, `/${canonical}`));
   }
 
-  const [initialPage, deletedWorks] = await Promise.all([
-    fetchWorks(
-      { ...filters, creator: profile.handle, limit: 24 },
-      cookie,
-    ).catch(() => null),
-    fetchDeletedWorks(profile.handle, cookie),
-  ]);
+  const initialPage = await fetchWorks(
+    { ...filters, creator: profile.handle, limit: 24 },
+    cookie,
+  ).catch(() => null);
 
   return (
     <ProfilePage
       address={`${siteUrl}/${canonical}`}
-      deletedWorks={deletedWorks}
       filters={filters}
       initial={profile}
       initialPage={initialPage}

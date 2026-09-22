@@ -14,7 +14,6 @@ import type {
 import { fetchWaitingReplacement, type UploadOperation } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import type { PageTarget } from "@/lib/readiness";
-import { DeleteControl } from "../DeleteControl";
 import { ElementFields, elementHint } from "../ElementEditors";
 import { MakePublicConfirmation } from "../MakePublicConfirmation";
 import { PreservedPanel } from "../PreservedPanel";
@@ -302,15 +301,6 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
                 <PreservedPromptsPanel
                   workId={workspace.workId}
                   count={props.preservedPrompts}
-                />
-              ) : null}
-              {workspace.isOwner ? (
-                <DeleteControl
-                  workId={workspace.workId}
-                  creator={props.creator}
-                  frozen={props.takenDown}
-                  isDraft={workspace.isDraft}
-                  typeName={props.typeName}
                 />
               ) : null}
               {canTakeDown ? (

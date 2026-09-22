@@ -215,38 +215,51 @@ func TestADeletedPostIsListedToItsOwnerAndToAnAdminAndNobodyElse(t *testing.T) {
 	}
 }
 
-func TestOnlyAnAdminDeletesAPostThatHasPublishedAndOnlyOnceItIsDown(t *testing.T) {
+func TestAnOwnerDeletesAPublishedPostAndRestoresItUnchanged(t *testing.T) {
 	t.Parallel()
 	stack := newBlogStack(t)
 	writer := stack.contributor(t, "writer@example.com", "writer.dev")
-	announcement := stack.categoryBySlug(t, "announcement")
+	stranger := stack.contributor(t, "stranger@example.com", "stranger.dev")
+	category := stack.categoryBySlug(t, "announcement")
 	draft := stack.started(t, writer.session, fmt.Sprintf(
-		`{"categoryId":%q,"title":"A post that went out"}`, announcement.ID,
+		`{"categoryId":%q,"title":"A post that went out"}`, category.ID,
 	))
-	stack.saved(t, writer.session, draft.ID, finished(draft, nil))
+	picture := stack.uploaded(t, writer.session, draft.ID, "body", apitest.PNG(t, 800, 400))
+	stack.saved(t, writer.session, draft.ID, finished(draft, map[string]any{
+		"body": bodyWithPicture(picture.ID, "A test picture"),
+	}))
 	live := stack.published(t, writer.session, draft.ID)
-
-	if code := stack.remove(t, writer.session, live.ID, live.Version).Code; code != http.StatusForbidden {
-		t.Errorf("a contributor deleted a published post: %d", code)
+	if code := stack.remove(t, stranger.session, live.ID, live.Version).Code; code != http.StatusForbidden {
+		t.Fatalf("another writer deleted the post: %d", code)
 	}
-
-	session := stack.siteAdmin(t, "editor@example.com", "illarin.editor")
-	refused := stack.remove(t, session, live.ID, live.Version)
-	if refused.Code != http.StatusBadRequest {
-		t.Fatalf("an admin deleted a post readers can see: %d", refused.Code)
+	plain := strings.SplitN(picture.URL, "?", 2)[0]
+	if stack.fetch(t, plain).Code != http.StatusOK {
+		t.Fatal("the published picture cannot be read")
 	}
-
-	down := stack.unpublished(t, session, live.ID, live.Version, "It named the wrong build.", "")
-	gone := stack.removed(t, session, down.ID, down.Version)
-	if gone.Deletion == nil || gone.Status != "unpublished" {
-		t.Fatalf("deleting a unpublished post left it %q with %+v", gone.Status, gone.Deletion)
+	gone := stack.removed(t, writer.session, live.ID, live.Version)
+	if stack.read(t, live.Slug).Code != http.StatusNotFound {
+		t.Fatal("a deleted post still reaches readers")
 	}
-	if code := stack.recover(t, writer.session, gone.ID, gone.Version).Code; code != http.StatusForbidden {
-		t.Errorf("a contributor recovered a published post: %d", code)
+	if stack.fetch(t, plain).Code != http.StatusNotFound {
+		t.Fatal("a deleted post's picture still reaches readers")
 	}
-	back := stack.recovered(t, session, gone.ID, gone.Version)
-	if back.Deletion != nil || back.Status != "unpublished" {
-		t.Errorf("recovery left the post %q with %+v", back.Status, back.Deletion)
+	archive := stack.fetch(t, "/v1/posts")
+	if archive.Code != http.StatusOK || strings.Contains(archive.Body.String(), live.Title) {
+		t.Fatalf("deleted post archive = %d: %s", archive.Code, archive.Body.String())
+	}
+	back := stack.recovered(t, writer.session, gone.ID, gone.Version)
+	if back.Deletion != nil || back.Status != live.Status || back.Title != live.Title || back.Summary != live.Summary {
+		t.Fatalf("restore changed the post: %+v", back)
+	}
+	if stack.read(t, live.Slug).Code != http.StatusOK {
+		t.Fatal("the restored post does not reach readers")
+	}
+	gone = stack.removed(t, writer.session, back.ID, back.Version)
+	if stack.clearOut(t, gone.Deletion.Until) != 1 {
+		t.Fatal("cleanup left the expired post behind")
+	}
+	if code := stack.recover(t, writer.session, gone.ID, gone.Version).Code; code != http.StatusNotFound {
+		t.Fatalf("restore after cleanup returned %d", code)
 	}
 }
 

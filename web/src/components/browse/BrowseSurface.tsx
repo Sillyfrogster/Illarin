@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { ANY_APP } from "@/components/preferences/PreferenceChoices";
 import { Button } from "@/components/ui/button";
+import { WorkOwnerMenu } from "@/components/work/WorkOwnerMenu";
 import {
   type BrowseCursor,
   type BrowseFilters,
@@ -271,6 +272,11 @@ export function BrowseSurface({
           <ul className={GRID}>
             {works.map((work, index) => (
               <BrowsePoster
+                action={
+                  basePath === "/work" && account?.handle === creator ? (
+                    <WorkOwnerMenu work={work} />
+                  ) : undefined
+                }
                 apps={
                   narrowedTo
                     ? undefined

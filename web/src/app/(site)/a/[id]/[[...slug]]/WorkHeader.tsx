@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChipSet } from "@/components/ui/Chip";
 import { Field, TextArea } from "@/components/ui/field";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
+import { WorkOwnerMenu } from "@/components/work/WorkOwnerMenu";
 import type { WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { formattingWasRemoved } from "@/lib/rich-text";
@@ -89,15 +90,20 @@ export function WorkHeader({
             <ArrowLeft aria-hidden="true" className="size-4" />
             Browse
           </Link>
-          {work.isOwner && !writing ? (
-            <button
-              className="inline-flex min-h-11 items-center gap-2 rounded-control bg-action px-5 text-ui font-medium text-on-accent outline-offset-3 hover:opacity-90"
-              onClick={workspace.startEditing}
-              type="button"
-            >
-              <PencilLine aria-hidden="true" size={16} />
-              Edit your {typeLabel.toLowerCase()}
-            </button>
+          {work.isOwner ? (
+            <div className="flex items-center gap-2">
+              {!writing ? (
+                <button
+                  className="inline-flex min-h-11 items-center gap-2 rounded-control bg-action px-5 text-ui font-medium text-on-accent hover:opacity-90"
+                  onClick={workspace.startEditing}
+                  type="button"
+                >
+                  <PencilLine aria-hidden="true" size={16} />
+                  Edit your {typeLabel.toLowerCase()}
+                </button>
+              ) : null}
+              <WorkOwnerMenu work={work} onEdit={workspace.startEditing} />
+            </div>
           ) : null}
         </div>
 

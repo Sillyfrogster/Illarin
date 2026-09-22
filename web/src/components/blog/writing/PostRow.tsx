@@ -13,6 +13,7 @@ import {
   lifecycleName,
   lifecycleOf,
 } from "@/lib/post-standing";
+import { PostOwnerMenu } from "./PostOwnerMenu";
 
 const MARKS = {
   draft: PenLine,
@@ -26,13 +27,22 @@ const CLOSING_SOON = 7 * 24 * 60 * 60 * 1000;
 const TAG =
   "inline-flex min-h-7 items-center gap-1.5 rounded-control px-2.5 font-ui text-label font-medium whitespace-nowrap";
 
-export function PostRow({ post }: { post: Post }) {
+export function PostRow({
+  post,
+  onChanged,
+}: {
+  post: Post;
+  onChanged: (post: Post) => void;
+}) {
   const state = lifecycleOf(post);
   const Mark = MARKS[state];
   const going = goingLiveAt(post);
 
   return (
     <li className="group relative min-w-0 rounded-plate px-4 py-5 transition-colors duration-200 not-first:border-t not-first:border-rule/45 hover:border-transparent hover:bg-deep motion-reduce:transition-none sm:px-5">
+      <div className="float-right relative z-2 ml-3">
+        <PostOwnerMenu post={post} onChanged={onChanged} />
+      </div>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
         <h3 className="min-w-0 font-display text-section leading-snug font-medium text-ink wrap-anywhere">
           <Link

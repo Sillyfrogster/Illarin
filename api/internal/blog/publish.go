@@ -167,7 +167,7 @@ func (s *Service) PublishedPost(ctx context.Context, slug string) (PublicPost, e
 		  from posts post
 		  join post_revisions revision on revision.id = post.public_revision_id
 		  join blog_categories category on category.id = revision.category_id
-		 where post.status = $2
+		 where post.status = $2 and post.deleted_at is null
 		   and (post.slug = $1
 		        or post.id = (select post_id from post_slugs where slug = $1))
 	`, slug, StatusPublished).Scan(
@@ -341,11 +341,9 @@ const RecoveryDays = 30
 const RecoveryPoll = time.Hour
 
 var (
-	ErrPostDeleted      = errors.New("the post has been deleted")
-	ErrPostNotDeleted   = errors.New("the post has not been deleted")
-	ErrPostInPublicView = errors.New("the post is still in public view")
-	ErrDeletePublished  = errors.New("only an admin may delete a post that has published")
-	ErrRecoveryExpired  = errors.New("the recovery window has closed")
+	ErrPostDeleted     = errors.New("the post has been deleted")
+	ErrPostNotDeleted  = errors.New("the post has not been deleted")
+	ErrRecoveryExpired = errors.New("the recovery window has closed")
 )
 
 type Deletion struct {
@@ -367,9 +365,6 @@ func (s *Service) DeletePost(
 	if err := s.mayManage(ctx, editor, current); err != nil {
 		return Post{}, err
 	}
-	if err := mayRemove(editor, current); err != nil {
-		return Post{}, err
-	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Post{}, fmt.Errorf("begin deletion: %w", err)
@@ -381,9 +376,6 @@ func (s *Service) DeletePost(
 	}
 	if locked.Version != version {
 		return Post{}, Stale{Version: locked.Version, UpdatedAt: locked.UpdatedAt}
-	}
-	if locked.Status == StatusPublished {
-		return Post{}, ErrPostInPublicView
 	}
 	if err := overtakeSchedule(ctx, tx, editor, locked, StatusDeleted); err != nil {
 		return Post{}, err
@@ -421,9 +413,6 @@ func (s *Service) RecoverPost(
 		return Post{}, err
 	}
 	if err := s.mayManage(ctx, editor, current); err != nil {
-		return Post{}, err
-	}
-	if err := mayRemove(editor, current); err != nil {
 		return Post{}, err
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -464,16 +453,6 @@ func (s *Service) RecoverPost(
 		return Post{}, fmt.Errorf("commit recovery: %w", err)
 	}
 	return s.post(ctx, id)
-}
-
-func mayRemove(editor Editor, found Post) error {
-	if editor.Admin {
-		return nil
-	}
-	if found.PublishedAt != nil {
-		return ErrDeletePublished
-	}
-	return nil
 }
 
 func (s *Service) RunRecovery(ctx context.Context, onError func(error)) {
@@ -789,7 +768,7 @@ func (s *Service) UnpublishedPost(ctx context.Context, slug string) (Tombstone, 
 		select post.slug, unpublishing.explanation
 		  from posts post
 		  join post_unpublishings unpublishing on unpublishing.post_id = post.id
-		 where post.status = $2
+		 where post.status = $2 and post.deleted_at is null
 		   and (post.slug = $1
 		        or post.id = (select post_id from post_slugs where slug = $1))
 		 order by unpublishing.unpublished_at desc

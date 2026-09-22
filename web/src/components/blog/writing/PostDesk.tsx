@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { Trouble } from "@/components/ui/field";
@@ -24,7 +25,10 @@ export function PostDesk() {
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [deleted, setDeleted] = useState<Post[]>([]);
   const [failure, setFailure] = useState("");
-  const [standing, setStanding] = useState<Standing>("everything");
+  const params = useSearchParams();
+  const [standing, setStanding] = useState<Standing>(
+    params.get("deleted") === "true" ? "deleted" : "everything",
+  );
 
   const load = useCallback(async () => {
     const [open, written, waiting] = await Promise.all([
@@ -32,8 +36,13 @@ export function PostDesk() {
       readPosts(),
       readDeletedPosts(),
     ]);
-    if (open.error || !open.value) {
-      setFailure(open.error ?? "Your blog workspace could not be read.");
+    if (open.error || !open.value || written.error || waiting.error) {
+      setFailure(
+        open.error ??
+          written.error ??
+          waiting.error ??
+          "Your posts could not be read.",
+      );
       return;
     }
     setFailure("");
@@ -68,6 +77,10 @@ export function PostDesk() {
           account={account}
           counts={counts}
           failure={failure}
+          onChanged={(post) => {
+            setStanding(post.deletion ? "deleted" : "everything");
+            void load();
+          }}
           onChoose={setStanding}
           onFailure={setFailure}
           shown={shown}
@@ -81,6 +94,7 @@ export function PostDesk() {
 }
 
 function Inside({
+  onChanged,
   account,
   counts,
   failure,
@@ -92,6 +106,7 @@ function Inside({
   workspace,
 }: {
   account: ReturnType<typeof useAuth>["account"];
+  onChanged: (post: Post) => void;
   counts: Record<Standing, number>;
   failure: string;
   onChoose: (standing: Standing) => void;
@@ -162,6 +177,11 @@ function Inside({
           <StandingRail chosen={standing} counts={counts} onChoose={onChoose} />
         </div>
 
+        {standing === "deleted" ? (
+          <p className="mt-5 text-ui text-mute">
+            You can restore posts for 30 days. After that they are gone.
+          </p>
+        ) : null}
         {shown.length === 0 ? (
           <p className="mt-8 max-w-[54ch] font-prose text-prose text-mute">
             {nothingThere(standing)}
@@ -169,7 +189,7 @@ function Inside({
         ) : (
           <ul className="mt-4 -mx-4 flex list-none flex-col sm:-mx-5">
             {shown.map((post) => (
-              <PostRow key={post.id} post={post} />
+              <PostRow key={post.id} post={post} onChanged={onChanged} />
             ))}
           </ul>
         )}

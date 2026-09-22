@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -131,7 +132,10 @@ export function WorkspaceProvider({
   children: ReactNode;
 }) {
   const candidate = useDraftedChanges();
-  const [editing, setEditing] = useState(false);
+  const searchParams = useSearchParams();
+  const [editing, setEditing] = useState(
+    isOwner && searchParams.get("edit") === "true",
+  );
   const [sweep, setSweep] = useState(0);
   const [draft, setDraft] = useState(blocks);
   const [saved, setSaved] = useState(blocks);

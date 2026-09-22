@@ -811,7 +811,8 @@ func (s *Service) PostImageSize(
 		       exists (select 1
 		                 from post_media_uses use
 		                 join post_revisions revision on revision.id = use.revision_id
-		                where use.media_id = media.id and revision.captured_for = $2)
+		                where use.media_id = media.id and revision.captured_for = $2
+		                  and exists (select 1 from posts where id = media.post_id and deleted_at is null))
 		  from post_media media
 		  join blobs blob on blob.id = media.blob_id
 		 where media.id = $1

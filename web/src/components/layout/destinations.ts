@@ -14,6 +14,7 @@ export function primaryDestinations(): Destination[] {
 export type AccountDestination = Destination & {
   id:
     | "profile"
+    | "work"
     | "settings"
     | "posts"
     | "blog-admin"
@@ -51,6 +52,7 @@ export function accountDestinations(
     ];
 
   return [
+    { id: "work", label: "Your work", href: "/work" },
     { id: "profile", label: "Your profile", href: `/@${account.handle}` },
     { id: "settings", label: "Account settings", href: "/settings" },
     ...(writer

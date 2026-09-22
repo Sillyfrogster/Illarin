@@ -13,6 +13,7 @@ import type { AccountDestination } from "./destinations";
 
 const icons: Record<AccountDestination["id"], LucideIcon> = {
   profile: CircleUserRound,
+  work: NotebookPen,
   settings: Settings,
   posts: NotebookPen,
   "blog-admin": Signature,

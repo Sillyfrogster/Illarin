@@ -368,15 +368,9 @@ func (h *Handlers) postError(c *gin.Context, err error) {
 	case errors.Is(err, ErrPostNotDeleted):
 		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"This post has not been deleted.")
-	case errors.Is(err, ErrPostInPublicView):
-		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
-			"Unpublish the post before deleting it.")
 	case errors.Is(err, ErrRecoveryExpired):
 		refuseBlog(c, http.StatusBadRequest, BlogErrorCodeInvalid,
 			"The recovery deadline has passed. This post cannot be restored.")
-	case errors.Is(err, ErrDeletePublished):
-		refuseBlog(c, http.StatusForbidden, BlogErrorCodeForbidden,
-			"Only an Illarin admin can delete or restore a previously published post.")
 	case errors.Is(err, ErrSchedulePublishing):
 		c.AbortWithStatusJSON(http.StatusConflict, PostConflict{
 			Error: "This revision is being published and can no longer be changed.",

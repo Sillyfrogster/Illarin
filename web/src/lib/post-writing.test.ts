@@ -94,32 +94,17 @@ describe("writerStanding", () => {
   });
 });
 
-describe("publishActions", () => {
-  test("a draft can be published, scheduled and discarded", () => {
-    expect(publishActions(post({}), false)).toEqual([
-      "publish",
-      "schedule",
-      "delete",
-    ]);
-  });
-
-  test("a published post publishes changes and comes down, and cannot be deleted", () => {
-    expect(publishActions(post({ status: "published" }), true)).toEqual([
-      "publish",
-      "schedule",
-      "unpublish",
-    ]);
-  });
-
-  test("a unpublished post goes back up, and only an admin may delete it", () => {
-    const down = post({ status: "unpublished", publishedAt: "2026-09-02" });
-    expect(publishActions(down, false)).toEqual(["republish"]);
-    expect(publishActions(down, true)).toEqual(["republish", "delete"]);
-  });
-
-  test("a deleted post offers recovery and nothing else", () => {
-    expect(publishActions(post({ deletion }), true)).toEqual(["recover"]);
-  });
+test("publishing offers depend on the post's current state", () => {
+  expect(publishActions(post({}))).toEqual(["publish", "schedule"]);
+  expect(publishActions(post({ status: "published" }))).toEqual([
+    "publish",
+    "schedule",
+    "unpublish",
+  ]);
+  expect(publishActions(post({ status: "unpublished" }))).toEqual([
+    "republish",
+  ]);
+  expect(publishActions(post({ deletion }))).toEqual(["recover"]);
 });
 
 describe("publishLabel", () => {

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Field, TextArea } from "@/components/ui/field";
 import {
   cancelPostSchedule,
-  deletePost,
   publishPost,
   readPostRevisions,
   recoverPost,
@@ -239,41 +238,6 @@ export function RepublishStep({ onFailure, onSettled, post }: StepProps) {
         onCommit={() => void commit()}
         ready={chosen !== ""}
         word="Republish post"
-      />
-    </>
-  );
-}
-
-export function DeleteStep({ onFailure, onSettled, post }: StepProps) {
-  const [busy, setBusy] = useState(false);
-
-  async function commit() {
-    setBusy(true);
-    const answer = await deletePost(post.id, post.version);
-    setBusy(false);
-    if (answer.error || !answer.value) {
-      onFailure(answer.error ?? "The post is still here.");
-      return;
-    }
-    onSettled(answer.value);
-  }
-
-  return (
-    <>
-      <Heading
-        line="You can restore this post for 30 days. After that, its content, revisions and images are permanently deleted."
-        title="Delete this post?"
-      />
-      <Subject post={post} />
-      <p className="font-prose text-meta text-mute">
-        {post.publishedAt ? "Published, then taken down." : "Never published."}
-      </p>
-      <Commit
-        busy={busy}
-        onCommit={() => void commit()}
-        ready
-        tone="stop"
-        word="Delete post"
       />
     </>
   );

@@ -11,19 +11,23 @@ import { BLOG_FEEDS, BLOG_HOME } from "@/lib/blog-paths";
 import { asPostBody } from "@/lib/post-body";
 import { postContents } from "@/lib/post-contents";
 import { FurtherReading } from "./FurtherReading";
+import { PostPageActions } from "./PostPageActions";
 
 export function Article({ post }: { post: PublicPost }) {
   const body = asPostBody(post.body);
   const contents = postContents(body);
   return (
     <article className={`${shellClasses} pb-16`} id="article-top">
-      <Link
-        className="mt-6 inline-flex min-h-11 items-center gap-2 text-meta text-mute hover:text-ink"
-        href={BLOG_HOME}
-      >
-        <ArrowLeft aria-hidden="true" className="size-4" />
-        All posts
-      </Link>
+      <div className="mt-6 flex items-center justify-between gap-4">
+        <Link
+          className="mt-6 inline-flex min-h-11 items-center gap-2 text-meta text-mute hover:text-ink"
+          href={BLOG_HOME}
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          All posts
+        </Link>
+        <PostPageActions id={post.id} />
+      </div>
       <div className="mx-auto max-w-[64rem] pt-6">
         <ArticleIdentity
           byline={post.byline}

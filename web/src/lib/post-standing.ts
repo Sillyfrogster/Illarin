@@ -19,7 +19,7 @@ const STANDING_NAMES: Record<Standing, string> = {
   scheduled: "Scheduled",
   published: "Published",
   unpublished: "Unpublished",
-  deleted: "Deleted",
+  deleted: "Recently deleted",
 };
 
 const LIFECYCLE_NAMES: Record<Lifecycle, string> = {

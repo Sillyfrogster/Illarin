@@ -1,18 +1,19 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TypeMark } from "@/components/browse/TypeMark";
 import { Shell } from "@/components/layout/Shell";
 import { Button } from "@/components/ui/button";
-import { type DeletedWork, restoreWork } from "@/lib/api/query";
+import { type DeletedWork, restoreWork, workKeys } from "@/lib/api/query";
 import { remainingDeletionWindow } from "@/lib/deletion-window";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_LABELS } from "@/lib/work-types";
 
 function restoreDeadline(value: string) {
-  return new Date(value).toLocaleDateString("en-GB", {
+  return new Date(value).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -25,6 +26,7 @@ export function DeletedWorks({
   initialItems: DeletedWork[];
 }) {
   const router = useRouter();
+  const query = useQueryClient();
   const [items, setItems] = useState(initialItems);
   const [pending, setPending] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -38,6 +40,7 @@ export function DeletedWorks({
     );
     try {
       await restoreWork(item.id);
+      await query.invalidateQueries({ queryKey: workKeys.all });
       router.refresh();
     } catch {
       setItems((current) => [item, ...current]);
@@ -61,7 +64,7 @@ export function DeletedWorks({
           className="font-display text-title font-medium tracking-[-0.02em]"
           id="deleted-heading"
         >
-          Deleted work
+          Recently deleted
         </h2>
         <p className="mt-2 max-w-[56ch] font-prose text-ui text-mute">
           Restore deleted work within 30 days. After that, it is permanently
