@@ -62,6 +62,9 @@ Store refresh tokens in the operating system credential store where one exists.
 On a headless system, use a file readable only by the service account or an
 equivalent secret store. Do not put tokens in logs, URLs, crash reports, update
 checks, analytics, or exported app settings.
+Keep this record across app upgrades. Migrate its storage in place if the app's
+settings format changes; do not reconnect or replace the installation ID merely
+because the app version changed.
 
 Every installation connects independently. Do not ship a shared credential and do
 not copy one when cloning an app profile, container, or virtual machine.
@@ -369,6 +372,8 @@ replace the old refresh token before releasing the new access token to other
 workers. The old refresh token is spent when the server commits, even if the
 response is lost. If the outcome is unknown, do not blindly retry the old token;
 stop the installation and ask the owner to connect again.
+Coordinate refresh across every worker sharing the saved record, including old
+and new app versions during an upgrade.
 
 Replay of a replaced refresh token retained in Illarin's 90-day detection window
 revokes the whole connected app and all its access tokens. An older replacement

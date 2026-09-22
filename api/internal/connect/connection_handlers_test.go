@@ -311,11 +311,25 @@ func TestConnectedAppsOfOneAppStayIndependentThroughUpdateAndRevocation(t *testi
 		t.Fatalf("capabilities update status = %d, want 200. body: %s", update.Code, update.Body.String())
 	}
 	updated := apitest.DecodeResponse[apitest.ConnectedApp](t, update)
+	if updated.ID != first.ConnectedApp.ID || updated.Name != first.ConnectedApp.Name {
+		t.Errorf("capabilities update changed the installation: %+v", updated)
+	}
 	if !slices.Equal(updated.Capabilities, updatedCapabilities) || !slices.Equal(updated.AcceptedFormats, updatedFormats) {
 		t.Errorf("updated capabilities lost order: capabilities %v, formats %v", updated.Capabilities, updated.AcceptedFormats)
 	}
 	if !slices.Equal(updated.Permissions, []string{"work:receive"}) {
 		t.Errorf("capabilities update changed granted permissions to %v", updated.Permissions)
+	}
+	refresh := apitest.SendJSON(t, r, http.MethodPost, "/v1/connect/refresh",
+		apitest.JSONText(t, map[string]string{"refreshToken": first.RefreshToken}))
+	if refresh.Code != http.StatusOK {
+		t.Fatalf("saved refresh token after update = %d, want 200. body: %s", refresh.Code, refresh.Body.String())
+	}
+	rotated := apitest.DecodeResponse[apitest.AppCredentials](t, refresh)
+	if rotated.ConnectedApp.ID != first.ConnectedApp.ID ||
+		!slices.Equal(rotated.ConnectedApp.Permissions, []string{"work:receive"}) ||
+		!slices.Equal(rotated.ConnectedApp.Capabilities, updatedCapabilities) {
+		t.Errorf("refresh after update changed the installation, grant or capabilities: %+v", rotated.ConnectedApp)
 	}
 
 	otherRec := apitest.Send(t, r, apitest.AsApp(t, http.MethodGet, "/v1/connected-apps/me", second.AccessToken, nil))
