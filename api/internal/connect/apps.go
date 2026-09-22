@@ -198,7 +198,12 @@ func (s *Apps) Approve(
 	userID uuid.UUID,
 	rawCode string,
 	approvalToken string,
+	permissions []Permission,
 ) (Pending, error) {
+	granted, err := canonicalPermissions(permissions)
+	if err != nil {
+		return Pending{}, err
+	}
 	code, ok := normalizeUserCode(rawCode)
 	tokenHash, tokenOK := s.approvalProofHash("device-approval", userID, code, approvalToken)
 	if !ok || !tokenOK {
@@ -206,7 +211,8 @@ func (s *Apps) Approve(
 	}
 	row, err := db.New(s.pool).ApproveConnectionRequest(ctx, db.ApproveConnectionRequestParams{
 		ReviewedBy: uuidValue(userID), ReviewTokenHash: tokenHash,
-		UserCodeHash: s.digest("user-code", code),
+		UserCodeHash:       s.digest("user-code", code),
+		GrantedPermissions: permissionStrings(granted),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Pending{}, ErrRequestNotFound
@@ -281,7 +287,12 @@ func (s *Apps) ApproveAuthorization(
 	userID uuid.UUID,
 	requestCode string,
 	approvalToken string,
+	permissions []Permission,
 ) (Redirect, error) {
+	granted, err := canonicalPermissions(permissions)
+	if err != nil {
+		return Redirect{}, err
+	}
 	requestHash, ok := opaqueCodeHash(requestCode)
 	_, tokenOK := s.approvalProofHash("authorization-approval", userID, requestCode, approvalToken)
 	if !ok || !tokenOK {
@@ -293,7 +304,7 @@ func (s *Apps) ApproveAuthorization(
 	}
 	row, err := db.New(s.pool).ApproveConnectionAuthorization(ctx, db.ApproveConnectionAuthorizationParams{
 		AuthorizationCodeHash: codeHash, ReviewedBy: uuidValue(userID),
-		RequestHash: requestHash,
+		RequestHash: requestHash, GrantedPermissions: permissionStrings(granted),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Redirect{}, ErrRequestNotFound
@@ -392,7 +403,7 @@ func (s *Apps) Poll(
 	}
 	issued, err := issueCredentials(ctx, queries, request.ApprovedBy, startFrom(
 		request.AppName, request.Name, request.AppVersion, request.ProtocolVersion,
-		request.Capabilities, request.AcceptedFormats, request.Permissions,
+		request.Capabilities, request.AcceptedFormats, request.GrantedPermissions,
 	))
 	if err != nil {
 		return Credentials{}, false, err
@@ -445,7 +456,7 @@ func (s *Apps) Exchange(
 	}
 	issued, err := issueCredentials(ctx, queries, request.ApprovedBy, startFrom(
 		request.AppName, request.Name, request.AppVersion, request.ProtocolVersion,
-		request.Capabilities, request.AcceptedFormats, request.Permissions,
+		request.Capabilities, request.AcceptedFormats, request.GrantedPermissions,
 	))
 	if err != nil {
 		return Credentials{}, err
@@ -497,6 +508,28 @@ func (s *Apps) Revoke(ctx context.Context, userID, appID uuid.UUID) error {
 	return nil
 }
 
+// SetPermissions replaces what one of the owner's connected apps may do; dropping library:sync forgets its library
+func (s *Apps) SetPermissions(
+	ctx context.Context,
+	userID, appID uuid.UUID,
+	permissions []Permission,
+) ([]Permission, error) {
+	granted, err := canonicalPermissions(permissions)
+	if err != nil {
+		return nil, err
+	}
+	stored, err := db.New(s.pool).UpdateConnectedAppPermissions(ctx, db.UpdateConnectedAppPermissionsParams{
+		Permissions: permissionStrings(granted), ConnectedAppID: uuidValue(appID), UserID: uuidValue(userID),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrAppNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("change the permissions of a connected app: %w", err)
+	}
+	return permissionsFrom(stored), nil
+}
+
 func (s *Apps) UpdateCapabilities(
 	ctx context.Context,
 	app ConnectedApp,
@@ -546,7 +579,7 @@ func pendingFromDeviceApproval(row db.ApproveConnectionRequestRow) Pending {
 	return Pending{
 		StartInput: startFrom(
 			row.AppName, row.Name, row.AppVersion, row.ProtocolVersion,
-			row.Capabilities, row.AcceptedFormats, row.Permissions,
+			row.Capabilities, row.AcceptedFormats, row.GrantedPermissions,
 		),
 		ExpiresAt: row.ExpiresAt.Time,
 	}

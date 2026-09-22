@@ -119,12 +119,12 @@ func (h *Handlers) ApproveConnectionRequest(c *gin.Context) {
 	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
-	var decision ConnectionDecision
+	var decision ConnectionApproval
 	if !readConnectJSON(c, &decision) {
 		return
 	}
 	approved, err := h.apps.Approve(
-		c.Request.Context(), creator.ID, c.Param("userCode"), decision.ApprovalToken,
+		c.Request.Context(), creator.ID, c.Param("userCode"), decision.ApprovalToken, decision.Permissions,
 	)
 	if err != nil {
 		h.connectionError(c, err)
@@ -180,12 +180,12 @@ func (h *Handlers) ApproveConnectionAuthorization(c *gin.Context) {
 	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
 		return
 	}
-	var decision ConnectionDecision
+	var decision ConnectionApproval
 	if !readConnectJSON(c, &decision) {
 		return
 	}
 	redirect, err := h.apps.ApproveAuthorization(
-		c.Request.Context(), creator.ID, c.Param("requestCode"), decision.ApprovalToken,
+		c.Request.Context(), creator.ID, c.Param("requestCode"), decision.ApprovalToken, decision.Permissions,
 	)
 	if err != nil {
 		h.connectionError(c, err)
@@ -291,6 +291,31 @@ func (h *Handlers) RevokeConnectedApp(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (h *Handlers) SetConnectedAppPermissions(c *gin.Context) {
+	id, ok := api.PathID(c, "id")
+	if !ok {
+		return
+	}
+	if !api.FromIllarin(c) {
+		return
+	}
+	noStore(c)
+	creator, ok := api.SignedIn(c, "managing connected apps")
+	if !ok || !api.RequireBrowser(c, h.apps.BrowserOrigin()) {
+		return
+	}
+	var request ConnectedAppPermissions
+	if !readConnectJSON(c, &request) {
+		return
+	}
+	granted, err := h.apps.SetPermissions(c.Request.Context(), creator.ID, id, request.Permissions)
+	if err != nil {
+		h.connectionError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, ConnectedAppPermissions{Permissions: granted})
+}
+
 func (h *Handlers) GetConnectedApp(c *gin.Context) {
 	noStore(c)
 	app, ok := h.connectedApp(c, "")
@@ -363,7 +388,7 @@ func (h *Handlers) connectionError(c *gin.Context, err error) {
 	case errors.Is(err, ErrInvalidCapabilities):
 		api.Refuse(c, http.StatusBadRequest, "The capabilities are not valid.")
 	case errors.Is(err, ErrInvalidPermissions):
-		api.Refuse(c, http.StatusBadRequest, "Ask for work:receive, library:sync, or both, once each.")
+		api.Refuse(c, http.StatusBadRequest, "Use only work:receive and library:sync, each at most once.")
 	case errors.Is(err, ErrInvalidRedirect):
 		api.Refuse(c, http.StatusBadRequest, "Use an exact 127.0.0.1 or [::1] callback with an explicit port.")
 	case errors.Is(err, ErrInvalidPKCE):

@@ -559,11 +559,8 @@ func TestAConnectedAppThatLostTheReceivePermissionReleasesNothing(t *testing.T) 
 		t.Fatalf("%d sends were claimable before the permission went, want 1", before)
 	}
 
-	if _, err := pool.Exec(context.Background(),
-		`update connected_apps set permissions = array['library:sync'] where id = $1`,
-		credentials.ConnectedApp.ID,
-	); err != nil {
-		t.Fatalf("narrow the connected app permissions: %v", err)
+	if changed := setPermissions(t, router, session, credentials.ConnectedApp.ID, []string{"library:sync"}); changed.Code != http.StatusOK {
+		t.Fatalf("narrow the connected app permissions: %d %s", changed.Code, changed.Body.String())
 	}
 
 	if after := claimable(t, pool, credentials.ConnectedApp.ID); after != 0 {

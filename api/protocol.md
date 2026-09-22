@@ -53,7 +53,7 @@ Keep one record per Illarin account and installation:
 
 - Illarin base URL. Never assume one global host.
 - Connected app ID.
-- Granted permissions.
+- Granted permissions as last read. The owner can change them at any time.
 - Current access token and its expiry.
 - Current refresh token.
 - The capabilities last sent to Illarin.
@@ -160,6 +160,18 @@ The only permissions are:
 
 - `work:receive`: collect works the owner sends to this installation.
 - `library:sync`: report this installation's library.
+
+`permissions` in the request is what the installation asks for. It may be empty
+and it grants nothing. The owner sees both permissions unchecked, chooses any,
+all or none, and can change the choice later in account settings without
+connecting again. Read what was granted from `connectedApp.permissions` in the
+credentials, `GET /api/v1/connected-apps/me` or a refresh; never assume the
+requested set. A call that needs a permission the owner has not granted, or has
+since removed, answers `403`, including with an access token issued before the
+change. Handle that by telling the owner what is off, not by retrying.
+
+**Change on 22 September 2026:** approving no longer grants the requested set.
+An installation connected after this date holds only what its owner checked.
 
 Ask only for permissions the installation will use. A capabilities update
 cannot add or change permissions.
@@ -388,8 +400,9 @@ Content-Type: application/json
 ```
 
 Send the complete replacement, not a patch. Names and granted permissions cannot
-be changed here. If an upgrade changes either, keep the existing authorization
-or ask the owner to revoke and connect again; never silently widen access.
+be changed here. If an upgrade needs a permission the owner has not granted, ask
+the owner to turn it on in their Illarin account settings; the connection and its
+credentials stay as they are.
 
 ## Add support for a new app or format
 
@@ -619,7 +632,9 @@ Before calling an integration complete, verify all of these:
 - Device fallback is manual, shows no prefilled link, obeys the persistent
   `slow_down` interval, and stops on every terminal response.
 - Required arrays are sent even when empty; capabilities stay below every bound.
-- The app requests only the permissions it uses.
+- The app requests only the permissions it uses and reads what was granted
+  from the credentials, which may be fewer or none.
+- A `403` for a missing permission is shown to the owner and not retried.
 - Credentials are isolated per installation, stored securely, redacted from
   logs, and never placed in a URL.
 - Refresh is serialized and the replacement is committed atomically.
@@ -649,7 +664,9 @@ Declaring:
   that passes every item here.
 - Its accepted formats include the matching format id, `extension_spindle` or
   `extension_sillytavern`.
-- Each copy is connected with both `work:receive` and `library:sync`.
+- Installing needs `work:receive`. Library sharing stays optional: with
+  `library:sync` declined, the app still installs what it receives and does not
+  ask again on every send.
 
 Installing:
 

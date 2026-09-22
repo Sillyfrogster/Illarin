@@ -28,8 +28,11 @@ func TestCanonicalPermissionsAcceptsEachKnownPermissionOnce(t *testing.T) {
 		t.Errorf("one permission = %v, %v", one, err)
 	}
 
+	if none, err := canonicalPermissions(nil); err != nil || len(none) != 0 {
+		t.Errorf("no permissions = %v, %v, want an empty set", none, err)
+	}
+
 	for _, requested := range [][]Permission{
-		{},
 		{"asset:write"},
 		{PermissionReceiveWorks, PermissionReceiveWorks},
 		{PermissionReceiveWorks, "asset:write"},
@@ -210,7 +213,7 @@ func TestAConnectedAppIsRefusedAPermissionItWasNotGranted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("review: %v", err)
 	}
-	if _, err := service.Approve(ctx, creator, started.UserCode, pending.ApprovalToken); err != nil {
+	if _, err := service.Approve(ctx, creator, started.UserCode, pending.ApprovalToken, []Permission{PermissionReceiveWorks}); err != nil {
 		t.Fatalf("approve: %v", err)
 	}
 	credentials, connected, err := service.Poll(ctx, "127.0.0.1", started.DeviceCode)

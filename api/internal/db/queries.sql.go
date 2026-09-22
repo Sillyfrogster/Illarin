@@ -104,8 +104,9 @@ update connection_authorizations
    set reviewed_by = $1,
        authorization_code_hash = $2,
        approved_by = $1,
-       approved_at = now()
- where request_hash = $3
+       approved_at = now(),
+       granted_permissions = $3
+ where request_hash = $4
    and (reviewed_by is null or reviewed_by = $1)
    and expires_at > now()
    and approved_at is null
@@ -117,6 +118,7 @@ returning redirect_uri, state, expires_at
 type ApproveConnectionAuthorizationParams struct {
 	ReviewedBy            pgtype.UUID
 	AuthorizationCodeHash []byte
+	GrantedPermissions    []string
 	RequestHash           []byte
 }
 
@@ -127,7 +129,12 @@ type ApproveConnectionAuthorizationRow struct {
 }
 
 func (q *Queries) ApproveConnectionAuthorization(ctx context.Context, arg ApproveConnectionAuthorizationParams) (ApproveConnectionAuthorizationRow, error) {
-	row := q.db.QueryRow(ctx, approveConnectionAuthorization, arg.ReviewedBy, arg.AuthorizationCodeHash, arg.RequestHash)
+	row := q.db.QueryRow(ctx, approveConnectionAuthorization,
+		arg.ReviewedBy,
+		arg.AuthorizationCodeHash,
+		arg.GrantedPermissions,
+		arg.RequestHash,
+	)
 	var i ApproveConnectionAuthorizationRow
 	err := row.Scan(&i.RedirectUri, &i.State, &i.ExpiresAt)
 	return i, err
@@ -138,36 +145,43 @@ update connection_requests
    set review_token_hash = $1,
        reviewed_by = $2,
        approved_by = $2,
-       approved_at = now()
- where user_code_hash = $3
+       approved_at = now(),
+       granted_permissions = $3
+ where user_code_hash = $4
    and (reviewed_by is null or reviewed_by = $2)
    and expires_at > now()
    and approved_at is null
    and denied_at is null
    and redeemed_at is null
 returning app_name, name, app_version, protocol_version,
-          capabilities, accepted_formats, permissions, expires_at
+          capabilities, accepted_formats, granted_permissions, expires_at
 `
 
 type ApproveConnectionRequestParams struct {
-	ReviewTokenHash []byte
-	ReviewedBy      pgtype.UUID
-	UserCodeHash    []byte
+	ReviewTokenHash    []byte
+	ReviewedBy         pgtype.UUID
+	GrantedPermissions []string
+	UserCodeHash       []byte
 }
 
 type ApproveConnectionRequestRow struct {
-	AppName         string
-	Name            string
-	AppVersion      pgtype.Text
-	ProtocolVersion int32
-	Capabilities    []string
-	AcceptedFormats []string
-	Permissions     []string
-	ExpiresAt       pgtype.Timestamptz
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
+	ProtocolVersion    int32
+	Capabilities       []string
+	AcceptedFormats    []string
+	GrantedPermissions []string
+	ExpiresAt          pgtype.Timestamptz
 }
 
 func (q *Queries) ApproveConnectionRequest(ctx context.Context, arg ApproveConnectionRequestParams) (ApproveConnectionRequestRow, error) {
-	row := q.db.QueryRow(ctx, approveConnectionRequest, arg.ReviewTokenHash, arg.ReviewedBy, arg.UserCodeHash)
+	row := q.db.QueryRow(ctx, approveConnectionRequest,
+		arg.ReviewTokenHash,
+		arg.ReviewedBy,
+		arg.GrantedPermissions,
+		arg.UserCodeHash,
+	)
 	var i ApproveConnectionRequestRow
 	err := row.Scan(
 		&i.AppName,
@@ -176,7 +190,7 @@ func (q *Queries) ApproveConnectionRequest(ctx context.Context, arg ApproveConne
 		&i.ProtocolVersion,
 		&i.Capabilities,
 		&i.AcceptedFormats,
-		&i.Permissions,
+		&i.GrantedPermissions,
 		&i.ExpiresAt,
 	)
 	return i, err
@@ -2016,27 +2030,27 @@ func (q *Queries) LockConnectedAppByRefreshToken(ctx context.Context, refreshTok
 const lockConnectionAuthorization = `-- name: LockConnectionAuthorization :one
 select approved_by, denied_at, redeemed_at, redirect_uri, state, code_challenge,
        app_name, name, app_version, protocol_version,
-       capabilities, accepted_formats, permissions, expires_at
+       capabilities, accepted_formats, granted_permissions, expires_at
  from connection_authorizations
  where authorization_code_hash = $1
  for update
 `
 
 type LockConnectionAuthorizationRow struct {
-	ApprovedBy      pgtype.UUID
-	DeniedAt        pgtype.Timestamptz
-	RedeemedAt      pgtype.Timestamptz
-	RedirectUri     string
-	State           string
-	CodeChallenge   string
-	AppName         string
-	Name            string
-	AppVersion      pgtype.Text
-	ProtocolVersion int32
-	Capabilities    []string
-	AcceptedFormats []string
-	Permissions     []string
-	ExpiresAt       pgtype.Timestamptz
+	ApprovedBy         pgtype.UUID
+	DeniedAt           pgtype.Timestamptz
+	RedeemedAt         pgtype.Timestamptz
+	RedirectUri        string
+	State              string
+	CodeChallenge      string
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
+	ProtocolVersion    int32
+	Capabilities       []string
+	AcceptedFormats    []string
+	GrantedPermissions []string
+	ExpiresAt          pgtype.Timestamptz
 }
 
 func (q *Queries) LockConnectionAuthorization(ctx context.Context, authorizationCodeHash []byte) (LockConnectionAuthorizationRow, error) {
@@ -2055,7 +2069,7 @@ func (q *Queries) LockConnectionAuthorization(ctx context.Context, authorization
 		&i.ProtocolVersion,
 		&i.Capabilities,
 		&i.AcceptedFormats,
-		&i.Permissions,
+		&i.GrantedPermissions,
 		&i.ExpiresAt,
 	)
 	return i, err
@@ -2064,7 +2078,7 @@ func (q *Queries) LockConnectionAuthorization(ctx context.Context, authorization
 const lockConnectionRequest = `-- name: LockConnectionRequest :one
 select approved_by, denied_at, redeemed_at, last_polled_at, poll_interval_seconds,
        app_name, name, app_version, protocol_version,
-       capabilities, accepted_formats, permissions, expires_at
+       capabilities, accepted_formats, granted_permissions, expires_at
   from connection_requests
  where device_code_hash = $1
  for update
@@ -2082,7 +2096,7 @@ type LockConnectionRequestRow struct {
 	ProtocolVersion     int32
 	Capabilities        []string
 	AcceptedFormats     []string
-	Permissions         []string
+	GrantedPermissions  []string
 	ExpiresAt           pgtype.Timestamptz
 }
 
@@ -2101,7 +2115,7 @@ func (q *Queries) LockConnectionRequest(ctx context.Context, deviceCodeHash []by
 		&i.ProtocolVersion,
 		&i.Capabilities,
 		&i.AcceptedFormats,
-		&i.Permissions,
+		&i.GrantedPermissions,
 		&i.ExpiresAt,
 	)
 	return i, err
@@ -3175,6 +3189,36 @@ func (q *Queries) UpdateConnectedAppCapabilities(ctx context.Context, arg Update
 		&i.LastSeenAt,
 	)
 	return i, err
+}
+
+const updateConnectedAppPermissions = `-- name: UpdateConnectedAppPermissions :one
+with changed as (
+    update connected_apps
+       set permissions = $1
+     where id = $2
+       and user_id = $3
+       and revoked_at is null
+    returning id, permissions
+), forgotten_library as (
+    delete from app_library_entries as entry
+     using changed
+     where entry.connected_app_id = changed.id
+       and not changed.permissions @> array['library:sync']
+)
+select permissions from changed
+`
+
+type UpdateConnectedAppPermissionsParams struct {
+	Permissions    []string
+	ConnectedAppID pgtype.UUID
+	UserID         pgtype.UUID
+}
+
+func (q *Queries) UpdateConnectedAppPermissions(ctx context.Context, arg UpdateConnectedAppPermissionsParams) ([]string, error) {
+	row := q.db.QueryRow(ctx, updateConnectedAppPermissions, arg.Permissions, arg.ConnectedAppID, arg.UserID)
+	var permissions []string
+	err := row.Scan(&permissions)
+	return permissions, err
 }
 
 const updateDiscordEmail = `-- name: UpdateDiscordEmail :one

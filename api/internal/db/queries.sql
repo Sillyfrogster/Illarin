@@ -732,7 +732,8 @@ update connection_requests
    set review_token_hash = sqlc.arg('review_token_hash'),
        reviewed_by = sqlc.arg('reviewed_by'),
        approved_by = sqlc.arg('reviewed_by'),
-       approved_at = now()
+       approved_at = now(),
+       granted_permissions = sqlc.arg('granted_permissions')
  where user_code_hash = sqlc.arg('user_code_hash')
    and (reviewed_by is null or reviewed_by = sqlc.arg('reviewed_by'))
    and expires_at > now()
@@ -740,7 +741,7 @@ update connection_requests
    and denied_at is null
    and redeemed_at is null
 returning app_name, name, app_version, protocol_version,
-          capabilities, accepted_formats, permissions, expires_at;
+          capabilities, accepted_formats, granted_permissions, expires_at;
 
 -- name: DenyConnectionRequest :execrows
 update connection_requests
@@ -758,7 +759,7 @@ update connection_requests
 -- name: LockConnectionRequest :one
 select approved_by, denied_at, redeemed_at, last_polled_at, poll_interval_seconds,
        app_name, name, app_version, protocol_version,
-       capabilities, accepted_formats, permissions, expires_at
+       capabilities, accepted_formats, granted_permissions, expires_at
   from connection_requests
  where device_code_hash = sqlc.arg('device_code_hash')
  for update;
@@ -817,7 +818,8 @@ update connection_authorizations
    set reviewed_by = sqlc.arg('reviewed_by'),
        authorization_code_hash = sqlc.arg('authorization_code_hash'),
        approved_by = sqlc.arg('reviewed_by'),
-       approved_at = now()
+       approved_at = now(),
+       granted_permissions = sqlc.arg('granted_permissions')
  where request_hash = sqlc.arg('request_hash')
    and (reviewed_by is null or reviewed_by = sqlc.arg('reviewed_by'))
    and expires_at > now()
@@ -842,7 +844,7 @@ returning redirect_uri, state;
 -- name: LockConnectionAuthorization :one
 select approved_by, denied_at, redeemed_at, redirect_uri, state, code_challenge,
        app_name, name, app_version, protocol_version,
-       capabilities, accepted_formats, permissions, expires_at
+       capabilities, accepted_formats, granted_permissions, expires_at
  from connection_authorizations
  where authorization_code_hash = sqlc.arg('authorization_code_hash')
  for update;
@@ -949,6 +951,22 @@ update connected_apps
 returning id, app_name, name, app_version,
           protocol_version, capabilities, accepted_formats,
           refresh_token_prefix, permissions, connected_at, last_seen_at;
+
+-- name: UpdateConnectedAppPermissions :one
+with changed as (
+    update connected_apps
+       set permissions = sqlc.arg('permissions')
+     where id = sqlc.arg('connected_app_id')
+       and user_id = sqlc.arg('user_id')
+       and revoked_at is null
+    returning id, permissions
+), forgotten_library as (
+    delete from app_library_entries as entry
+     using changed
+     where entry.connected_app_id = changed.id
+       and not changed.permissions @> array['library:sync']
+)
+select permissions from changed;
 
 -- name: RevokeConnectedApp :one
 with revoked as (

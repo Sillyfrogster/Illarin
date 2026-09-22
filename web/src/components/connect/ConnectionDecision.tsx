@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, ShieldAlert } from "lucide-react";
-import type { ReactNode } from "react";
+import { ShieldAlert } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trouble } from "@/components/ui/field";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
@@ -9,8 +9,9 @@ import {
   type PendingConnection,
   readableExpiry,
 } from "@/lib/connection-request";
-import { describePermission } from "@/lib/permissions";
+import type { Permission } from "@/lib/permissions";
 import { DeclaredValues } from "./DeclaredValues";
+import { PermissionChoices } from "./PermissionChoices";
 
 export type Decision = "approve" | "deny";
 
@@ -25,11 +26,12 @@ export function ConnectionDecision({
   connection: PendingConnection;
   deciding: Decision | null;
   onCancel?: () => void;
-  onDecide: (decision: Decision) => void;
+  onDecide: (decision: Decision, granted: Permission[]) => void;
   trouble: string;
   userCode?: string;
 }) {
   const busy = deciding !== null;
+  const [granted, setGranted] = useState<Permission[]>([]);
 
   return (
     <div aria-busy={busy} className="grid gap-8">
@@ -83,32 +85,20 @@ export function ConnectionDecision({
           className="font-ui text-ui font-medium text-ink"
           id="connect-permissions"
         >
-          Requested permissions
+          Permissions
         </h3>
-        <ul className="m-0 mt-4 grid list-none gap-4 p-0">
-          {connection.permissions.map((permission) => {
-            const copy = describePermission(permission);
-            return (
-              <li className="flex items-start gap-3.5" key={permission}>
-                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-accent-wash text-accent">
-                  <Check
-                    aria-hidden="true"
-                    className="size-3.5"
-                    strokeWidth={2.4}
-                  />
-                </span>
-                <div className="min-w-0">
-                  <strong className="block font-ui text-ui font-medium text-ink">
-                    {copy.title}
-                  </strong>
-                  <span className="font-prose text-ui text-mute">
-                    {copy.detail}
-                  </span>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <p className="mt-1 font-ui text-meta text-mute">
+          Nothing is on until you check it. Change these later in your account
+          settings.
+        </p>
+        <div className="mt-4">
+          <PermissionChoices
+            disabled={busy}
+            granted={granted}
+            onChange={setGranted}
+            requested={connection.permissions}
+          />
+        </div>
       </section>
 
       <p
@@ -128,7 +118,7 @@ export function ConnectionDecision({
         <Button
           disabled={busy}
           loading={deciding === "approve"}
-          onClick={() => onDecide("approve")}
+          onClick={() => onDecide("approve", granted)}
           size="large"
           variant="primary"
         >
@@ -137,7 +127,7 @@ export function ConnectionDecision({
         <Button
           disabled={busy}
           loading={deciding === "deny"}
-          onClick={() => onDecide("deny")}
+          onClick={() => onDecide("deny", [])}
           size="large"
           variant="outline"
         >

@@ -13,6 +13,7 @@ import {
   type ManagedConnectedApp,
   revoked,
 } from "@/lib/connected-app-standing";
+import type { Permission } from "@/lib/permissions";
 import { ConnectedAppRow } from "./ConnectedAppRow";
 
 type Notice = { kind: "said" | "trouble"; message: string };
@@ -28,6 +29,7 @@ export function ConnectedApps() {
   const [loadTrouble, setLoadTrouble] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [revoking, setRevoking] = useState("");
+  const [saving, setSaving] = useState("");
 
   const load = useCallback(async () => {
     setLoadTrouble("");
@@ -71,8 +73,54 @@ export function ConnectedApps() {
 
   if (!account) return null;
 
+  async function changePermissions(
+    app: ManagedConnectedApp,
+    granted: Permission[],
+  ) {
+    if (saving || revoking) return;
+    setNotice(null);
+    setSaving(app.id);
+    const named = `${app.appName} — ${app.name}`;
+    try {
+      const { data, error, response } = await api<{
+        permissions: Permission[];
+      }>("PUT", `/v1/connected-apps/${app.id}/permissions`, {
+        body: { permissions: granted },
+      });
+      if (!response.ok || !data) {
+        setNotice({
+          kind: "trouble",
+          message: refusalMessage(
+            error,
+            `Illarin could not change what ${named} may do. Try again.`,
+          ),
+        });
+        return;
+      }
+      const shares = data.permissions.includes("library:sync");
+      setApps(
+        (current) =>
+          current?.map((one) =>
+            one.id === app.id
+              ? {
+                  ...one,
+                  permissions: data.permissions,
+                  installed: shares ? one.installed : 0,
+                  updatesAvailable: shares ? one.updatesAvailable : 0,
+                }
+              : one,
+          ) ?? current,
+      );
+      setNotice({ kind: "said", message: `Saved what ${named} may do.` });
+    } catch {
+      setNotice({ kind: "trouble", message: UNREACHABLE });
+    } finally {
+      setSaving("");
+    }
+  }
+
   async function revoke(app: ManagedConnectedApp) {
-    if (revoking) return;
+    if (revoking || saving) return;
     setNotice(null);
     setRevoking(app.id);
     const named = `${app.appName} — ${app.name}`;
@@ -173,8 +221,11 @@ export function ConnectedApps() {
             {apps.map((app) => (
               <ConnectedAppRow
                 app={app}
-                busy={Boolean(revoking)}
+                busy={Boolean(revoking || saving)}
                 key={app.id}
+                onPermissions={(granted) =>
+                  void changePermissions(app, granted)
+                }
                 onRevoke={() => void revoke(app)}
                 revoking={revoking === app.id}
               />

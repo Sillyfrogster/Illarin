@@ -94,6 +94,12 @@ type ConnectionDecision struct {
 	ApprovalToken string `json:"approvalToken"`
 }
 
+// ConnectionApproval carries the permissions the owner chose, which may be none; the app's request grants nothing
+type ConnectionApproval struct {
+	ApprovalToken string       `json:"approvalToken"`
+	Permissions   []Permission `json:"permissions"`
+}
+
 type ConnectionRedirect struct {
 	RedirectUrl string `json:"redirectUrl"`
 }
@@ -145,6 +151,10 @@ type ManagedConnectedApp struct {
 	RevokedAt        *time.Time   `json:"revokedAt" tstype:"string | null,required"`
 	Installed        int          `json:"installed"`
 	UpdatesAvailable int          `json:"updatesAvailable"`
+}
+
+type ConnectedAppPermissions struct {
+	Permissions []Permission `json:"permissions"`
 }
 
 type ConnectedAppList struct {

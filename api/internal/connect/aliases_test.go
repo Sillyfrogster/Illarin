@@ -117,7 +117,7 @@ func TestAnAppStillConnectsUnderTheOldPathsFieldsAndPermission(t *testing.T) {
 		t.Fatalf("review = %s, want the old names beside the new ones", reviewed.Body.String())
 	}
 	apitest.Send(t, r, apitest.BrowserRequest(t, http.MethodPost, "/v1/link/requests/"+request.UserCode+"/approve",
-		map[string]string{"approvalToken": pending.ApprovalToken}, session))
+		map[string]any{"approvalToken": pending.ApprovalToken, "permissions": []string{"work:receive"}}, session))
 
 	polled := apitest.SendJSON(t, r, http.MethodPost, "/v1/link/poll",
 		apitest.JSONText(t, map[string]string{"deviceCode": request.DeviceCode}))

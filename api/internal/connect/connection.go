@@ -24,7 +24,7 @@ var permissionOrder = []Permission{PermissionReceiveWorks, PermissionSyncLibrary
 var (
 	ErrInvalidName         = errors.New("the app and the connected app need names")
 	ErrInvalidCapabilities = errors.New("the capabilities are not valid")
-	ErrInvalidPermissions  = errors.New("at least one known permission is required")
+	ErrInvalidPermissions  = errors.New("only known permissions, each at most once, are allowed")
 	ErrInvalidRedirect     = errors.New("the redirect is not an exact loopback callback")
 	ErrInvalidPKCE         = errors.New("S256 PKCE data is not valid")
 	ErrRequestNotFound     = errors.New("no pending connection request has that code")
@@ -225,9 +225,6 @@ func canonicalIdentifiers(values []string, pattern *regexp.Regexp) ([]string, er
 }
 
 func canonicalPermissions(requested []Permission) ([]Permission, error) {
-	if len(requested) == 0 {
-		return nil, ErrInvalidPermissions
-	}
 	granted := make([]Permission, 0, len(permissionOrder))
 	for _, known := range permissionOrder {
 		count := 0

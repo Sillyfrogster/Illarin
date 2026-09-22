@@ -40,6 +40,7 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodGet, "/v1/connected-apps/me", d.JSON, h.GetConnectedApp)
 	routes.Handle(http.MethodPut, "/v1/connected-apps/me", d.JSON, h.UpdateCapabilities)
 	routes.Handle(http.MethodDelete, "/v1/connected-apps/:id", d.JSON, h.RevokeConnectedApp)
+	routes.Handle(http.MethodPut, "/v1/connected-apps/:id/permissions", d.JSON, h.SetConnectedAppPermissions)
 	routes.Handle(http.MethodPost, "/v1/sends/collect", d.Collect, h.CollectSends)
 	routes.Handle(http.MethodDelete, "/v1/sends/:id", d.JSON, h.DiscardSend)
 	routes.Handle(http.MethodPost, "/v1/library/sync", d.JSON, h.SyncLibrary)

@@ -132,6 +132,7 @@ type ConnectionAuthorization struct {
 	CreatedAt             pgtype.Timestamptz
 	ExpiresAt             pgtype.Timestamptz
 	UserCodeHash          []byte
+	GrantedPermissions    []string
 }
 
 type ConnectionRateLimit struct {
@@ -162,6 +163,7 @@ type ConnectionRequest struct {
 	CreatedAt           pgtype.Timestamptz
 	ExpiresAt           pgtype.Timestamptz
 	PollIntervalSeconds int32
+	GrantedPermissions  []string
 }
 
 type CreatorFollow struct {

@@ -11,17 +11,20 @@ import {
   seenAt,
 } from "@/lib/connected-app-standing";
 import { readableDate } from "@/lib/dates";
-import { describePermission } from "@/lib/permissions";
+import type { Permission } from "@/lib/permissions";
 import { DeclaredValues } from "./DeclaredValues";
+import { PermissionChoices } from "./PermissionChoices";
 
 export function ConnectedAppRow({
   app,
   busy,
+  onPermissions,
   onRevoke,
   revoking,
 }: {
   app: ManagedConnectedApp;
   busy: boolean;
+  onPermissions: (granted: Permission[]) => void;
   onRevoke: () => void;
   revoking: boolean;
 }) {
@@ -61,23 +64,16 @@ export function ConnectedAppRow({
           {library && !cut ? (
             <p className="font-ui text-meta text-mute">{library}</p>
           ) : null}
-          <ul
-            aria-label="Granted permissions"
-            className="m-0 mt-3 flex list-none flex-wrap gap-1.5 p-0"
-          >
-            {app.permissions.map((permission) => {
-              const copy = describePermission(permission);
-              return (
-                <li
-                  className="rounded-control bg-deep px-2.5 py-1 font-ui text-meta text-mute"
-                  key={permission}
-                  title={copy.detail}
-                >
-                  {copy.title}
-                </li>
-              );
-            })}
-          </ul>
+          {cut ? null : (
+            <fieldset className="mt-4 max-w-[60ch]">
+              <legend className="sr-only">Permissions</legend>
+              <PermissionChoices
+                disabled={busy}
+                granted={app.permissions}
+                onChange={onPermissions}
+              />
+            </fieldset>
+          )}
         </div>
 
         {cut ? (

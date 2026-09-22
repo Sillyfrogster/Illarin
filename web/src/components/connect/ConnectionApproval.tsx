@@ -24,6 +24,7 @@ import {
   isSafeLoopbackRedirect,
   type PendingConnection,
 } from "@/lib/connection-request";
+import type { Permission } from "@/lib/permissions";
 import { ConnectionDecision, type Decision } from "./ConnectionDecision";
 
 type ReviewRequest =
@@ -254,8 +255,8 @@ export function ConnectionApproval() {
             connection={review.connection}
             deciding={stage.kind === "confirm" ? null : stage.decision}
             onCancel={startOver}
-            onDecide={(decision) => {
-              void decide(review, decision, setStage, setTrouble);
+            onDecide={(decision, granted) => {
+              void decide(review, decision, granted, setStage, setTrouble);
             }}
             trouble={trouble}
             userCode={review.source.userCode}
@@ -459,6 +460,7 @@ function Gate({
 async function decide(
   review: Review,
   decision: Decision,
+  granted: Permission[],
   setStage: (stage: Stage) => void,
   setTrouble: (trouble: string) => void,
 ) {
@@ -472,7 +474,10 @@ async function decide(
     : `/v1/connect/requests/${encodeURIComponent(source.userCode)}/${action}`;
   try {
     const { data, error, response } = await api<unknown>("POST", endpoint, {
-      body: { approvalToken: source.approvalToken },
+      body:
+        decision === "approve"
+          ? { approvalToken: source.approvalToken, permissions: granted }
+          : { approvalToken: source.approvalToken },
     });
     const answer = response.ok ? data : error;
     if (!response.ok) {

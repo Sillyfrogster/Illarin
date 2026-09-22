@@ -132,7 +132,7 @@ func ConnectApp(
 	}
 	approve := Send(t, r, BrowserRequest(
 		t, http.MethodPost, "/v1/connect/requests/"+started.UserCode+"/approve",
-		map[string]string{"approvalToken": pending.ApprovalToken}, session,
+		map[string]any{"approvalToken": pending.ApprovalToken, "permissions": permissions}, session,
 	))
 	AssertNoStore(t, approve)
 	if approve.Code != http.StatusOK {
