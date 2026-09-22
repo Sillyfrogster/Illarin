@@ -137,7 +137,7 @@ change. Handle that by telling the owner what is off, not by retrying.
 **Change on 22 September 2026:** approving no longer grants the requested set.
 An installation connected after this date holds only what its owner checked.
 
-Ask only for permissions the installation will use. A capabilities update
+Ask only for permissions the installation uses. A capabilities update
 cannot add or change permissions.
 
 ## Same-device browser authorization
@@ -469,7 +469,7 @@ Rules for a conforming client:
 - Open one wait at a time. A second request supersedes the first, which then
   answers `204`; two workers waiting for the same installation simply take turns.
 - After a failure, back off exponentially with jitter and honor `Retry-After`.
-  `429` is a rate limit and `503` means Illarin is holding as many waits as it will.
+  `429` is a rate limit and `503` means Illarin has reached its wait limit.
 - Store `versionNumber` against `workId`. A larger one later means a newer
   version was published; fetch it again even if the bytes turn out the same.
 

@@ -56,7 +56,9 @@ function inline(nodes: readonly PhrasingContent[]): ReactNode {
       case "break":
         return <br key={key} />;
       default:
-        return null;
+        throw new Error(
+          `Unsupported documentation inline syntax: ${node.type}`,
+        );
     }
   });
 }
@@ -68,6 +70,7 @@ function blocks(nodes: readonly RootContent[]): ReactNode {
       case "heading": {
         const title = words(node.children);
         const id = headingId(title);
+        const Heading = `h${node.depth}` as const;
         const className =
           node.depth === 1
             ? "text-[clamp(2rem,4vw,3.25rem)] leading-tight tracking-[-0.045em]"
@@ -88,34 +91,14 @@ function blocks(nodes: readonly RootContent[]): ReactNode {
             </span>
           </a>
         );
-        if (node.depth === 1)
-          return (
-            <h1
-              className={`font-display font-medium text-ink ${className}`}
-              id={id}
-              key={key}
-            >
-              {content}
-            </h1>
-          );
-        if (node.depth === 2)
-          return (
-            <h2
-              className={`scroll-mt-28 font-display font-medium text-ink ${className}`}
-              id={id}
-              key={key}
-            >
-              {content}
-            </h2>
-          );
         return (
-          <h3
-            className={`scroll-mt-28 font-ui font-semibold text-ink ${className}`}
+          <Heading
+            className={`scroll-mt-28 font-display font-medium text-ink ${className}`}
             id={id}
             key={key}
           >
             {content}
-          </h3>
+          </Heading>
         );
       }
       case "paragraph":
@@ -203,7 +186,7 @@ function blocks(nodes: readonly RootContent[]): ReactNode {
       case "thematicBreak":
         return <hr className="my-10 border-rule" key={key} />;
       default:
-        return null;
+        throw new Error(`Unsupported documentation block syntax: ${node.type}`);
     }
   });
 }
