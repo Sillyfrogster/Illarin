@@ -27,6 +27,20 @@ update notifications
  where words ? 'assetName';
 
 drop index notifications_folding;
+-- +goose StatementBegin
+do $$
+begin
+    if exists (
+        select 1 from information_schema.columns
+        where table_schema = 'public' and table_name = 'notifications' and column_name = 'asset_id'
+    ) and not exists (
+        select 1 from information_schema.columns
+        where table_schema = 'public' and table_name = 'notifications' and column_name = 'work_id'
+    ) then
+        alter table notifications rename column asset_id to work_id;
+    end if;
+end $$;
+-- +goose StatementEnd
 create unique index notifications_folding on notifications (account_id, work_id)
     where type = 'work_updated' and read_at is null;
 
