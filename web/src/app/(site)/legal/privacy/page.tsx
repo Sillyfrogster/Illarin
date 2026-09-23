@@ -83,10 +83,10 @@ const CLAUSES: LegalClause[] = [
         <p>
           Illarin&rsquo;s servers send their logs to Datadog, a monitoring
           service, so that errors and outages show up. Those logs hold the
-          request lines described in 1.5 and the errors Illarin&rsquo;s own
-          programs write. Datadog also receives how busy the servers are and
-          which programs are running on them. Nothing from Datadog runs in your
-          browser.
+          request lines described in 1.5, with the IP address replaced before
+          they leave the server, and the errors Illarin&rsquo;s own programs
+          write. Datadog also receives how busy the servers are. Nothing from
+          Datadog runs in your browser.
         </p>
 
         <h3>1.9 Money</h3>

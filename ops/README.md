@@ -20,7 +20,9 @@ Internet -> DNS and TLS proxy -> Illarin gateway -> web and API -> PostgreSQL
 
 The Compose stack runs PostgreSQL, the Go API, the Next.js site, an internal
 nginx gateway, Umami for page view counts, and a Datadog agent that ships
-logs and host metrics to Datadog. Uploaded blobs remain on the host. nginx
+logs and host metrics to Datadog. The agent reads Docker through a proxy that
+allows only read requests, and it replaces the client address at the start of
+each gateway log line with `[client]`. Uploaded blobs remain on the host. nginx
 may serve a blob only after the API authorizes it with `X-Accel-Redirect`.
 
 Illarin answers at `SITE_URL`. The blog lives under `/blog` with the rest of the
