@@ -10,7 +10,7 @@ check-web: test-web lint ## Check the site and run its tests
 .PHONY: test test-postgres test-postgres-stop
 test: test-postgres ## Run the Go tests; narrow them with TEST=./internal/work/...
 	cd api && TEST_DATABASE_URL="$(TEST_POSTGRES_URL)" $(GOTESTSUM) --format-hide-empty-pkg \
-		$(if $(TEST_JSON),--jsonfile "$(TEST_JSON)") -- -short -timeout $(TEST_TIMEOUT) $(TEST)
+		$(if $(TEST_JSON),--jsonfile "$(TEST_JSON)") -- -short -timeout $(TEST_TIMEOUT) -p 2 -parallel 4 $(TEST)
 
 test-postgres: ## Start the in-memory Postgres the Go tests run against
 	@docker container inspect -f '{{.State.Running}}' $(TEST_POSTGRES) 2>/dev/null | grep -qx true || { \
@@ -36,7 +36,7 @@ test-web: ## Run the site tests
 .PHONY: cover
 cover: test-postgres ## Report Go test coverage per package
 	cd api && TEST_DATABASE_URL="$(TEST_POSTGRES_URL)" $(GOTESTSUM) --format-hide-empty-pkg \
-		-- -short -cover ./...
+		-- -short -cover -p 2 -parallel 4 ./...
 
 .PHONY: vet
 vet: ## Report suspicious Go code
