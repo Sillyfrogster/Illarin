@@ -24,22 +24,21 @@ const FLIGHT = {
 const WING =
   "h-full w-1/2 bg-[url(/landing/flight/butterfly.webp)] bg-size-[200%_100%] bg-no-repeat";
 
-/** TypeIndex names every type browse holds as the page's heading, with the butterfly resting on the chosen one. */
+/** TypeIndex lists every type browse holds with its count, with the butterfly resting on the chosen one. */
 export function TypeIndex({
   basePath,
-  compact = false,
   filters,
   navigate,
   overview,
 }: {
   basePath: string;
-  compact?: boolean;
   filters: BrowseFilters;
   navigate: (next: BrowseFilters) => void;
   overview: BrowsePage | undefined;
 }) {
   const [chosen, setChosen] = useState(filters.type ?? "all");
   const index = useRef<HTMLElement>(null);
+  const still = useReducedMotion();
   useEffect(() => setChosen(filters.type ?? "all"), [filters.type]);
   useEffect(() => {
     index.current
@@ -65,13 +64,8 @@ export function TypeIndex({
   return (
     <nav aria-label="Type" className="-ml-4 min-w-0" ref={index}>
       <LayoutGroup id="browse-type">
-        <Scroller buttonClassName="bottom-0.5">
-          <ul
-            className={cn(
-              "m-0 flex w-max list-none gap-x-7 p-0 pt-6 pr-6 pl-4 sm:gap-x-8",
-              compact ? "text-section" : "text-[clamp(1.625rem,2.3vw,2.25rem)]",
-            )}
-          >
+        <Scroller>
+          <ul className="m-0 flex w-max list-none gap-x-6 p-0 pt-3 pr-6 pl-4 sm:gap-x-8">
             {entries.map((entry) => {
               const here = chosen === entry.key;
               const empty = entry.count === 0 && !here;
@@ -81,7 +75,7 @@ export function TypeIndex({
                     aria-current={here ? "page" : undefined}
                     data-type={entry.key}
                     className={cn(
-                      "relative flex items-start rounded-control font-display leading-[1.15] font-medium tracking-[-0.03em] whitespace-nowrap outline-offset-4 transition-colors duration-300 motion-reduce:transition-none",
+                      "relative flex min-h-11 items-center gap-1.5 rounded-control font-ui text-[1.0625rem] font-medium whitespace-nowrap outline-offset-4 transition-colors duration-300 motion-reduce:transition-none",
                       here ? "text-ink" : "text-mute hover:text-ink",
                       empty && "opacity-45",
                     )}
@@ -103,18 +97,28 @@ export function TypeIndex({
                     {entry.count === undefined ? null : (
                       <span
                         className={cn(
-                          "ml-1 font-ui text-meta font-medium tracking-normal tabular-nums",
+                          "text-meta tabular-nums",
                           here ? "text-accent" : "text-mute",
                         )}
                       >
                         <span className="sr-only">, </span>
-                        {entry.count}
+                        {entry.count.toLocaleString("en-US")}
                         <span className="sr-only">
                           {entry.count === 1 ? " work" : " works"}
                         </span>
                       </span>
                     )}
-                    {here ? <Butterfly landing={entry.key} /> : null}
+                    {here ? (
+                      <>
+                        <Butterfly landing={entry.key} />
+                        <motion.span
+                          aria-hidden="true"
+                          className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent"
+                          layoutId="type-line"
+                          transition={still ? { duration: 0 } : FLIGHT}
+                        />
+                      </>
+                    ) : null}
                   </Link>
                 </li>
               );
@@ -143,7 +147,7 @@ function Butterfly({ landing }: { landing: string }) {
   return (
     <motion.span
       aria-hidden="true"
-      className="pointer-events-none absolute -top-5.5 -left-4 flex h-6 w-9 -rotate-[18deg] drop-shadow-[0_3px_10px_rgb(167_120_255/0.5)]"
+      className="pointer-events-none absolute -top-2.5 -left-4 flex h-4.5 w-7 -rotate-[18deg] drop-shadow-[0_3px_10px_rgb(167_120_255/0.5)]"
       layoutId="butterfly"
       transition={still ? { duration: 0 } : FLIGHT}
     >

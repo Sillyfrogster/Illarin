@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 export const GRID =
   "m-0 grid list-none grid-cols-2 items-start gap-x-4 gap-y-9 p-0 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-5";
 
+export const CONTROL =
+  "inline-flex h-11 min-w-0 items-center gap-1 rounded-control bg-deep px-3 font-ui text-ui font-medium text-ink outline-offset-2 transition-colors duration-200 hover:bg-accent-wash disabled:opacity-55 data-[state=open]:bg-accent-wash motion-reduce:transition-none";
+
 /** Ten placeholder cards while a listing loads. */
 export function BrowseLoading() {
   return (

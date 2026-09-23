@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { BrowsePage, NsfwPreference } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
+import { CONTROL } from "./BrowseStates";
 
 const ADULT_STATES: Record<NsfwPreference, string> = {
   hidden: "Adult works hidden",
@@ -22,10 +23,7 @@ const ADULT_STATES: Record<NsfwPreference, string> = {
   shown: "Adult covers shown",
 };
 
-const word =
-  "-mx-1.5 inline-flex min-h-11 items-center gap-1 rounded-control px-1.5 font-medium text-ink outline-offset-2 transition-colors duration-200 hover:bg-deep data-[state=open]:bg-deep disabled:opacity-55 motion-reduce:transition-none";
-
-/** ReaderLine states the reader's app and adult content setting as words that open their choices. */
+/** ReaderLine holds the reader's app and adult content setting as controls that open their choices, then the result count. */
 export function ReaderLine({
   adultOpen,
   asking,
@@ -51,7 +49,7 @@ export function ReaderLine({
   const named = overview?.apps.find((one) => one.value === app)?.label;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-ui text-ui text-mute">
+    <div className="contents font-ui text-ui text-mute">
       {setApp && overview ? (
         asking ? (
           <span className="flex basis-full flex-wrap items-center gap-2 sm:basis-auto">
@@ -90,8 +88,6 @@ export function ReaderLine({
         )
       ) : null}
 
-      {setApp && overview ? <Dot /> : null}
-
       <Choice
         label={ADULT_STATES[preference]}
         locked={locked}
@@ -108,23 +104,17 @@ export function ReaderLine({
       />
 
       {overview ? (
-        <>
-          <Dot />
-          <output aria-live="polite" className="tabular-nums">
-            {overview.total === 1 ? "1 work" : `${overview.total} works`},
-            newest first
-          </output>
-        </>
+        <output
+          aria-live="polite"
+          className="px-1.5 font-ui text-ui text-mute tabular-nums"
+        >
+          {overview.total === 1
+            ? "1 work"
+            : `${overview.total.toLocaleString("en-US")} works`}
+          , newest first
+        </output>
       ) : null}
     </div>
-  );
-}
-
-function Dot() {
-  return (
-    <span aria-hidden="true" className="text-rule max-sm:hidden">
-      ·
-    </span>
   );
 }
 
@@ -149,7 +139,7 @@ function Choice({
 }) {
   return (
     <DropdownMenu modal={false} onOpenChange={onOpenChange} open={open}>
-      <DropdownMenuTrigger className={word} disabled={locked}>
+      <DropdownMenuTrigger className={CONTROL} disabled={locked}>
         {label}
         <ChevronDown aria-hidden="true" className="size-4 text-mute" />
       </DropdownMenuTrigger>

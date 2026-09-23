@@ -28,3 +28,16 @@ export function buildBrowseHref(filters: BrowseFilters, basePath = "/browse") {
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
 }
+
+/** Sets one filter to a value, or clears it with null, keeping the rest. */
+export function chooseFilter(
+  filters: BrowseFilters,
+  key: string,
+  value: string | null,
+): BrowseFilters {
+  const kept = (filters.facet ?? []).filter(
+    (one) => !one.startsWith(`${key}=`),
+  );
+  const facet = value === null ? kept : [...kept, `${key}=${value}`];
+  return { ...filters, facet: facet.length ? facet : undefined };
+}

@@ -26,7 +26,7 @@ import {
 import { BrowsePoster } from "./BrowsePoster";
 import { BrowseSearch } from "./BrowseSearch";
 import { BrowseLoading, GRID, Message } from "./BrowseStates";
-import { FeatureRow } from "./FeatureRow";
+import { ActiveFilters, FilterMenu } from "./FilterMenu";
 import { ReaderLine } from "./ReaderLine";
 import { TypeIndex } from "./TypeIndex";
 import { useBrowseNavigation } from "./use-browse-navigation";
@@ -40,6 +40,7 @@ export function BrowseSurface({
   heading,
   initialPage,
   search,
+  showHeading = false,
 }: {
   basePath?: string;
   creator?: string;
@@ -47,6 +48,7 @@ export function BrowseSurface({
   heading: string;
   initialPage: BrowsePage | null;
   search: { hint?: string; label: string; placeholder: string };
+  showHeading?: boolean;
 }) {
   const queryClient = useQueryClient();
   const { account } = useAuth();
@@ -147,23 +149,44 @@ export function BrowseSurface({
     <Shell
       aria-labelledby={`${panel}-heading`}
       as="section"
-      className={cn("pb-chapter", creator ? "pt-4" : "pt-6 lg:pt-10")}
+      className={cn("pb-chapter", creator ? "pt-4" : "pt-6 lg:pt-8")}
     >
-      <h2 className="sr-only" id={`${panel}-heading`}>
-        {heading}
-      </h2>
-
-      <div className="grid gap-y-4 md:grid-cols-[minmax(0,1fr)_minmax(15rem,21rem)] md:gap-x-10">
-        <div className="min-w-0 md:col-span-2">
-          <TypeIndex
-            basePath={basePath}
-            compact={Boolean(creator)}
-            filters={filters}
-            navigate={navigate}
-            overview={overview}
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-3">
+          {showHeading ? (
+            <h1
+              className="font-display text-title font-medium tracking-[-0.02em] md:pt-1"
+              id={`${panel}-heading`}
+            >
+              {heading}
+            </h1>
+          ) : (
+            <h2 className="sr-only" id={`${panel}-heading`}>
+              {heading}
+            </h2>
+          )}
+          <div
+            className={cn("w-full md:max-w-md", showHeading && "md:ml-auto")}
+          >
+            <BrowseSearch
+              hint={search.hint}
+              id={`${panel}-search`}
+              label={search.label}
+              onSearch={(q) => navigate({ ...filters, q })}
+              placeholder={search.placeholder}
+              value={filters.q ?? ""}
+            />
+          </div>
         </div>
-        <div className="min-w-0 md:col-start-1 md:row-start-2 md:self-center">
+
+        <TypeIndex
+          basePath={basePath}
+          filters={filters}
+          navigate={navigate}
+          overview={overview}
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
           <ReaderLine
             adultOpen={adultOpen}
             asking={asking}
@@ -175,37 +198,33 @@ export function BrowseSurface({
             setPreference={(next) => void setPreference(next)}
             signedIn={Boolean(account)}
           />
-          {trouble ? (
-            <p className="mt-1 font-ui text-meta text-stop" role="alert">
-              {trouble}
-            </p>
-          ) : null}
-        </div>
-        <div className="min-w-0 md:col-start-2 md:row-start-2 md:self-center">
-          <BrowseSearch
-            hint={search.hint}
-            id={`${panel}-search`}
-            label={search.label}
-            onSearch={(q) => navigate({ ...filters, q })}
-            placeholder={search.placeholder}
-            value={filters.q ?? ""}
-          />
-        </div>
-        {overview?.facets.length ? (
-          <div className="min-w-0 md:col-span-2">
-            <FeatureRow
+          {overview ? (
+            <FilterMenu
+              className="ml-auto"
               facets={overview.facets}
               filters={filters}
               navigate={navigate}
             />
-          </div>
+          ) : null}
+        </div>
+        {trouble ? (
+          <p className="font-ui text-meta text-stop" role="alert">
+            {trouble}
+          </p>
+        ) : null}
+        {overview ? (
+          <ActiveFilters
+            facets={overview.facets}
+            filters={filters}
+            navigate={navigate}
+          />
         ) : null}
       </div>
 
       <div
         aria-busy={pending || query.isFetching || undefined}
         className={cn(
-          "mt-10 transition-opacity duration-200 motion-reduce:transition-none",
+          "mt-8 transition-opacity duration-200 motion-reduce:transition-none",
           (pending || (query.isFetching && !query.isFetchingNextPage)) &&
             "opacity-60",
         )}
@@ -237,7 +256,7 @@ export function BrowseSurface({
 
         {query.isPending ? <BrowseLoading /> : null}
 
-        {query.isError ? (
+        {query.isError && !works.length ? (
           <Message
             action={
               <Button onClick={() => void query.refetch()} variant="primary">
@@ -292,7 +311,12 @@ export function BrowseSurface({
         ) : null}
 
         {query.hasNextPage ? (
-          <div className="mt-14 flex justify-center">
+          <div className="mt-14 flex flex-col items-center gap-3">
+            {query.isFetchNextPageError ? (
+              <p className="font-ui text-meta text-stop" role="alert">
+                More works could not load. Try again.
+              </p>
+            ) : null}
             <Button
               loading={query.isFetchingNextPage}
               onClick={() => void query.fetchNextPage()}

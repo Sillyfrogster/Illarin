@@ -44,7 +44,7 @@ export function BrowseSearch({
   }
 
   return (
-    <search className="group/search relative">
+    <search className="group/search">
       <form onSubmit={submit}>
         <label className="sr-only" htmlFor={id}>
           {label}
@@ -88,10 +88,7 @@ export function BrowseSearch({
         </div>
       </form>
       {hint ? (
-        <p
-          className="pointer-events-none absolute top-full right-0 left-0 z-10 mt-2 font-ui text-meta text-mute opacity-0 transition-opacity duration-200 group-focus-within/search:opacity-100 motion-reduce:transition-none"
-          id={`${id}-hint`}
-        >
+        <p className="mt-1.5 font-ui text-meta text-mute" id={`${id}-hint`}>
           {hint}
         </p>
       ) : null}

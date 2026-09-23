@@ -37,11 +37,11 @@ export default async function BrowsePage({
     <div className="relative isolate">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-1 h-[26rem] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_20%,transparent)]"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-1 h-[22rem] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_20%,transparent)]"
       >
         <Image
           alt=""
-          className="hidden object-cover object-[50%_62%] opacity-35 dark:block"
+          className="hidden object-cover object-[50%_62%] opacity-30 dark:block"
           fill
           priority
           sizes="100vw"
@@ -49,23 +49,23 @@ export default async function BrowsePage({
         />
         <Image
           alt=""
-          className="object-cover object-[50%_40%] opacity-40 dark:hidden"
+          className="object-cover object-[50%_40%] opacity-25 dark:hidden"
           fill
           priority
           sizes="100vw"
           src="/landing/flight/kingdom-distance.webp"
         />
       </div>
-      <h1 className="sr-only">Browse</h1>
       <BrowseSurface
         filters={filters}
-        heading="Works"
+        heading="Browse"
         initialPage={initialPage}
         search={{
           hint: "Try tag:fantasy or author:handle",
           label: "Search works",
           placeholder: "Search works",
         }}
+        showHeading
       />
     </div>
   );
