@@ -83,6 +83,7 @@ jobs:
         run: make lint
 
   images:
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
     name: Build ${{ matrix.name }} image
     runs-on: ubuntu-latest
     timeout-minutes: 25
