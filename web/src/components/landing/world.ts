@@ -187,7 +187,7 @@ export function createWorld(
   function resize() {
     w = canvas.clientWidth;
     h = canvas.clientHeight;
-    dpr = Math.min(devicePixelRatio, 1.6);
+    dpr = Math.min(devicePixelRatio, 1);
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
   }

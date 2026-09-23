@@ -42,6 +42,8 @@ export function startJourney(
     active = 0;
   let tickStart: number | undefined;
   let ambient = 0;
+  let lastDraw = -Infinity;
+  let redrawUntil = 0;
   const state = { progress: 0 };
   try {
     wanted =
@@ -51,6 +53,7 @@ export function startJourney(
 
   function update() {
     if (!live) return;
+    redrawUntil = gsap.ticker.time + 1.5;
     const p = state.progress;
     active = p < 0.2 ? 0 : p < 0.485 ? 1 : p < 0.64 ? 2 : p < 0.855 ? 3 : 4;
     if (root.dataset.chapter === String(active)) return;
@@ -78,7 +81,14 @@ export function startJourney(
   }
 
   function draw(time: number) {
-    if (!live || document.hidden) return;
+    if (
+      !live ||
+      document.hidden ||
+      time > redrawUntil ||
+      time - lastDraw < 1 / 20
+    )
+      return;
+    lastDraw = time;
     tickStart ??= time;
     ambient = time - tickStart;
     renderer?.render(state.progress, ambient, smooth(0, 2.2, ambient));
@@ -113,6 +123,8 @@ export function startJourney(
     onMode(media.matches ? "reduced" : live ? "live" : "still");
     if (live) {
       tickStart = undefined;
+      lastDraw = -Infinity;
+      redrawUntil = gsap.ticker.time + 3.5;
       root.dataset.chapter = "";
       state.progress = 0;
       timeline = gsap.timeline({ paused: true, onUpdate: update });
@@ -237,13 +249,23 @@ export function startJourney(
   media.addEventListener("change", () => setMode(wanted), {
     signal: events.signal,
   });
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+      if (!document.hidden) redrawUntil = gsap.ticker.time + 1.5;
+    },
+    { signal: events.signal },
+  );
   document
     .querySelector('a[href="#main-content"]')
     ?.addEventListener("click", () => setMode(false), {
       signal: events.signal,
     });
   const observer = new ResizeObserver(() => {
-    if (live) renderer?.resize();
+    if (live) {
+      renderer?.resize();
+      redrawUntil = gsap.ticker.time + 1.5;
+    }
   });
   if (stage) observer.observe(stage);
   setMode(wanted, false);
