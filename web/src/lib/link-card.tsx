@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import type { CSSProperties } from "react";
 import { CARD_SIZE, mediaUrl } from "@/lib/site-metadata";
@@ -17,28 +15,41 @@ type CardSubject = {
 
 type CardImage = { url: string; width: number; height: number };
 
-const resources = Promise.all([
-  Promise.all(
-    (
-      [
-        { name: "Outfit", file: "Outfit-SemiBold.ttf", weight: 600 },
-        { name: "DM Sans", file: "DMSans-Medium.ttf", weight: 500 },
-      ] as const
-    ).map(async (face) => ({
-      name: face.name,
-      data: await readFile(join(process.cwd(), "assets/fonts", face.file)),
-      weight: face.weight,
-      style: "normal" as const,
-    })),
-  ),
-  readFile(
-    join(process.cwd(), "public/brand/illarin-horizontal-white.svg"),
-    "utf8",
-  ).then((svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`),
-  readFile(join(process.cwd(), "public/brand/link-card-fallback.png")).then(
-    (bytes) => `data:image/png;base64,${bytes.toString("base64")}`,
-  ),
-]);
+const assetUrl = `http://127.0.0.1:${process.env.PORT ?? "3000"}`;
+
+let resources: ReturnType<typeof loadResources> | undefined;
+
+function loadResources() {
+  return Promise.all([
+    Promise.all(
+      (
+        [
+          { name: "Outfit", file: "Outfit-SemiBold.ttf", weight: 600 },
+          { name: "DM Sans", file: "DMSans-Medium.ttf", weight: 500 },
+        ] as const
+      ).map(async (face) => ({
+        name: face.name,
+        data: await fetchAsset(`/fonts/${face.file}`).then((r) =>
+          r.arrayBuffer(),
+        ),
+        weight: face.weight,
+        style: "normal" as const,
+      })),
+    ),
+    fetchAsset("/brand/illarin-horizontal-white.svg")
+      .then((r) => r.text())
+      .then((svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`),
+    fetchAsset("/brand/link-card-fallback.png").then((r) =>
+      imageDataUrl(r, "image/png"),
+    ),
+  ]);
+}
+
+async function fetchAsset(path: string): Promise<Response> {
+  const response = await fetch(new URL(path, assetUrl));
+  if (!response.ok) throw new Error(`Could not load card asset ${path}`);
+  return response;
+}
 
 const clipped: CSSProperties = {
   display: "block",
@@ -49,6 +60,12 @@ const clipped: CSSProperties = {
 };
 
 export async function renderLinkCard(subject: CardSubject): Promise<Response> {
+  if (!resources) {
+    resources = loadResources().catch((error) => {
+      resources = undefined;
+      throw error;
+    });
+  }
   const [[fonts, logo, fallback], image, avatar] = await Promise.all([
     resources,
     drawable(subject.image?.url),
@@ -241,9 +258,17 @@ async function drawable(address?: string | null): Promise<string | null> {
     });
     const type = response.headers.get("content-type") ?? "";
     if (!response.ok || !type.startsWith("image/")) return null;
-    const bytes = Buffer.from(await response.arrayBuffer());
-    return `data:${type};base64,${bytes.toString("base64")}`;
+    return imageDataUrl(response, type);
   } catch {
     return null;
   }
+}
+
+async function imageDataUrl(response: Response, type: string): Promise<string> {
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  return `data:${type};base64,${btoa(binary)}`;
 }

@@ -5,6 +5,7 @@ import { readProfileAddress } from "@/lib/profile-address";
 import { countWords } from "@/lib/profile-portfolio";
 
 export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
 export async function GET(
   _request: Request,

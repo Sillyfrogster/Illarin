@@ -4,6 +4,7 @@ import { bylineName } from "@/lib/byline";
 import { renderLinkCard } from "@/lib/link-card";
 
 export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
 export async function GET(
   _request: Request,

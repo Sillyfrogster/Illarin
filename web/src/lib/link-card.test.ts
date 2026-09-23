@@ -38,6 +38,9 @@ function publicData(data: unknown) {
       if (!["http:", "https:"].includes(url.protocol))
         return originalFetch(input, init);
       const path = url.pathname;
+      if (path.startsWith("/fonts/") || path.startsWith("/brand/")) {
+        return new Response(await readFile(`public${path}`));
+      }
       paths.push(path);
       expect(new Headers(init?.headers).has("cookie")).toBe(false);
       return path.startsWith("/media/")

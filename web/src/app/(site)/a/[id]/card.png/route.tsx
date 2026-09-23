@@ -6,6 +6,7 @@ import { TYPE_LABELS } from "@/lib/work-types";
 import { isWorkId } from "@/lib/work-url";
 
 export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
 export async function GET(
   _request: Request,
