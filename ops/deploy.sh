@@ -62,10 +62,17 @@ rollback_after_failure() {
     return 1
   fi
 
+  local failed="$ILLARIN_VERSION"
   echo "The new release failed its checks. Restoring application release $current." >&2
   ILLARIN_VERSION="$current"
   export ILLARIN_VERSION
-  compose up -d --wait --wait-timeout 180 api web gateway datadog
+  if ! compose up -d --wait --wait-timeout 180 api web gateway datadog; then
+    echo "The previous release is unhealthy. Restoring application release $failed." >&2
+    ILLARIN_VERSION="$failed"
+    export ILLARIN_VERSION
+    compose up -d --wait --wait-timeout 180 api web gateway datadog || true
+    return 1
+  fi
 }
 
 echo "Starting the new application containers."
