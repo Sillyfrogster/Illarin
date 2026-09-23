@@ -28,9 +28,8 @@ export default async function UploadPage() {
         <aside className="grid min-w-0 gap-6 rounded-plate bg-inset p-5 sm:grid-cols-[12rem_1fr] sm:items-center lg:sticky lg:top-[calc(var(--header-height)+2.5rem)] lg:grid-cols-1">
           <Image
             alt=""
-            className="mx-auto h-auto w-full max-w-[15rem] rounded-control sm:max-w-none"
+            className="mx-auto hidden h-auto w-full max-w-[15rem] rounded-control sm:block sm:max-w-none"
             height={1402}
-            priority
             sizes="(max-width: 639px) 240px, (max-width: 1023px) 192px, 264px"
             src="/publish/watcher-studio.png"
             width={1122}

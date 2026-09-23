@@ -11,13 +11,13 @@ export function BackToIllarin() {
     >
       <Image
         alt=""
-        className="absolute inset-0 size-full object-cover object-center"
-        sizes="(min-width: 1216px) 1104px, 100vw"
+        className="absolute inset-0 size-full object-contain object-right"
+        sizes="320px"
         src={doorway}
       />
       <span
         aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-r from-deep via-deep/85 to-transparent"
+        className="absolute inset-0 bg-gradient-to-r from-deep via-deep/40 to-transparent"
       />
       <span className="relative flex items-center gap-4 pl-6 font-display text-section font-medium text-ink sm:pl-10">
         Browse

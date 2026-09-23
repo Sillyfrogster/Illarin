@@ -101,7 +101,7 @@ export function BrowsePoster({
           {work.cover ? (
             <Image
               alt=""
-              className="size-full object-cover transition-transform duration-700 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
+              className="size-full object-contain transition-transform duration-700 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
               fill
               loading={eager ? "eager" : "lazy"}
               onError={() => setFailed(true)}
