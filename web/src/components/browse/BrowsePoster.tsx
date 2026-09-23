@@ -69,6 +69,7 @@ export function BrowsePoster({
     <Link
       className="[color:inherit] after:absolute after:inset-0 after:content-['']"
       href={workHref(work.id, work.name)}
+      prefetch={false}
     >
       {name}
     </Link>
@@ -154,6 +155,7 @@ export function BrowsePoster({
               <Link
                 className="relative z-1 -my-3 inline-flex min-h-11 min-w-0 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
                 href={`/@${work.creator}`}
+                prefetch={false}
               >
                 @{work.creator}
               </Link>
