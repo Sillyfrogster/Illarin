@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CONTACT_EMAIL } from "@/lib/contact";
+import { CONTACT_EMAIL, KOFI_PAGE } from "@/lib/contact";
 import { pageMetadata } from "@/lib/site-metadata";
 import { type LegalClause, LegalPage } from "../LegalPage";
 
@@ -14,9 +14,9 @@ const CLAUSES: LegalClause[] = [
       <>
         <p>
           Illarin is a personal project run by one person. There is no company
-          behind it. It charges nothing, sells nothing, and carries no
-          advertising. &ldquo;We,&rdquo; &ldquo;us,&rdquo; and
-          &ldquo;Illarin&rdquo; mean the person who runs it, reachable at{" "}
+          behind it. It charges nothing today. It carries no ads, and it never
+          will. &ldquo;We,&rdquo; &ldquo;us,&rdquo; and &ldquo;Illarin&rdquo;
+          mean the person who runs it, reachable at{" "}
           <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
         </p>
       </>
@@ -68,17 +68,17 @@ const CLAUSES: LegalClause[] = [
       <>
         <h3>4.1 It stays yours</h3>
         <p>
-          You keep ownership of the characters, lorebooks, presets, themes, and
-          packs you upload. You are responsible for them.
+          You keep ownership of the characters, lorebooks, presets, themes,
+          packs, and extensions you upload. You are responsible for them.
         </p>
 
         <h3>4.2 What you let us do with it</h3>
         <p>
           So that Illarin can do its job, you grant us a worldwide,
-          non-exclusive, royalty-free licence to store your work, show it to the
+          non-exclusive, royalty-free license to store your work, show it to the
           people you publish it to, hand it to the apps you or your readers
           connect, resize your images for display, and convert your work into
-          formats for other apps. That licence covers nothing else, and it ends
+          formats for other apps. That license covers nothing else, and it ends
           when you delete the work, apart from copies already in backups or ones
           the law requires us to keep.
         </p>
@@ -92,7 +92,7 @@ const CLAUSES: LegalClause[] = [
         <ul>
           <li>
             You own it, or you have the rights to upload it and grant the
-            licence above.
+            license above.
           </li>
           <li>
             It does not infringe anyone else&rsquo;s copyright, trademark, or
@@ -186,28 +186,112 @@ const CLAUSES: LegalClause[] = [
     body: (
       <>
         <p>
+          Illarin charges nothing today. You can support it on{" "}
+          <a href={KOFI_PAGE}>Ko-fi</a>. That is a gift to the person who runs
+          Illarin: it buys nothing here, and Ko-fi&rsquo;s terms cover the
+          payment.
+        </p>
+        <p>
+          Illarin may later add the features below. Each part applies once its
+          feature exists. Before you pay, the page you pay on shows what you pay
+          and what Illarin keeps.
+        </p>
+
+        <h3>9.1 Payments go through a provider</h3>
+        <p>
+          Every payment on Illarin goes through a payment provider. Illarin
+          never holds your card or bank details, and the provider&rsquo;s terms
+          apply alongside these.
+        </p>
+
+        <h3>9.2 Donations</h3>
+        <p>
+          You can give money to Illarin or to a creator. A donation is a gift.
+          It buys nothing, and it is not refunded unless the law or the provider
+          requires it.
+        </p>
+
+        <h3>9.3 Membership</h3>
+        <p>
+          A membership is a payment to Illarin that repeats until you cancel it.
+          Canceling stops the next payment, and the membership lasts until the
+          end of the period you already paid for.
+        </p>
+
+        <h3>9.4 Commissions</h3>
+        <p>
+          A creator can take paid commissions through Illarin. A commission is
+          an agreement between you and the creator. The creator is responsible
+          for delivering what they agreed to, and Illarin is not a party to that
+          agreement. Illarin keeps a cut of each commission, shown before you
+          pay. If a commission is not delivered, Illarin may refund it through
+          the provider.
+        </p>
+
+        <h3>9.5 Paying creators</h3>
+        <p>
+          Money a creator earns is paid out through the provider, to the account
+          the creator sets up there. The provider may need the creator&rsquo;s
+          identity and tax details before it pays, and the creator is
+          responsible for their own taxes.
+        </p>
+
+        <h3>9.6 Money when an account closes</h3>
+        <ul>
+          <li>
+            Any membership is canceled, so no further payment is taken. The part
+            of a period already paid is not refunded.
+          </li>
+          <li>
+            Commissions not yet delivered are refunded to the person who paid.
+          </li>
+          <li>
+            Money a creator has already earned is still paid out through the
+            provider, as long as the provider can pay it.
+          </li>
+          <li>
+            If we close an account for breaking these Terms or the{" "}
+            <Link href="/legal/acceptable-use">Acceptable Use Policy</Link>,
+            money tied to the breach may be held back or returned to the people
+            who paid it, where the law and the provider allow.
+          </li>
+          <li>
+            Payment records are kept for as long as tax law requires, even after
+            the account is gone.
+          </li>
+        </ul>
+      </>
+    ),
+    heading: "9. Money",
+  },
+  {
+    body: (
+      <>
+        <p>
           The <Link href="/legal/acceptable-use">Acceptable Use Policy</Link> is
           part of these Terms. Breaking it can mean your work is removed, your
           account is suspended, or your account is closed.
         </p>
       </>
     ),
-    heading: "9. Acceptable use",
+    heading: "10. Acceptable use",
   },
   {
     body: (
       <>
         <p>
           Illarin runs on a hosting provider&rsquo;s servers, sends email
-          through an email provider, monitors its own logs through a monitoring
-          provider, and offers Discord as a way to sign in. Those services have
-          their own terms, and we are not responsible for how they behave. The{" "}
+          through an email provider, sends its server logs to Datadog for
+          monitoring, and offers Discord as a way to sign in. Support goes
+          through Ko-fi, and payments, once Illarin takes them, go through a
+          payment provider. Those services have their own terms, and we are not
+          responsible for how they behave. The{" "}
           <Link href="/legal/privacy">Privacy Policy</Link> says what each of
           them receives.
         </p>
       </>
     ),
-    heading: "10. Services we depend on",
+    heading: "11. Services we depend on",
   },
   {
     body: (
@@ -215,12 +299,12 @@ const CLAUSES: LegalClause[] = [
         <p>
           The Illarin name, artwork, and design belong to us or to the people
           who licensed them to us. The source code is available under the
-          licence in its repository. Nothing in these Terms takes away rights
-          that licence grants you.
+          license in its repository. Nothing in these Terms takes away rights
+          that license grants you.
         </p>
       </>
     ),
-    heading: "11. Illarin itself",
+    heading: "12. Illarin itself",
   },
   {
     body: (
@@ -232,7 +316,7 @@ const CLAUSES: LegalClause[] = [
         </p>
       </>
     ),
-    heading: "12. Copyright",
+    heading: "13. Copyright",
   },
   {
     body: (
@@ -242,12 +326,12 @@ const CLAUSES: LegalClause[] = [
           We may suspend or end your access, with or without notice, if we
           believe you have broken these Terms, or if Illarin shuts down. The
           parts of these Terms that should outlast the account — ownership, the
-          licence covering copies that already exist, the disclaimers, the
+          license covering copies that already exist, the disclaimers, the
           liability limit, and the dispute terms — carry on afterwards.
         </p>
       </>
     ),
-    heading: "13. Ending things",
+    heading: "14. Ending things",
   },
   {
     body: (
@@ -266,7 +350,7 @@ const CLAUSES: LegalClause[] = [
         </p>
       </>
     ),
-    heading: "14. No warranty",
+    heading: "15. No warranty",
   },
   {
     body: (
@@ -280,7 +364,7 @@ const CLAUSES: LegalClause[] = [
         </p>
       </>
     ),
-    heading: "15. Limit of liability",
+    heading: "16. Limit of liability",
   },
   {
     body: (
@@ -292,7 +376,7 @@ const CLAUSES: LegalClause[] = [
         </p>
       </>
     ),
-    heading: "16. Covering our costs if you cause them",
+    heading: "17. Covering our costs if you cause them",
   },
   {
     body: (
@@ -307,7 +391,7 @@ const CLAUSES: LegalClause[] = [
         </p>
       </>
     ),
-    heading: "17. Governing law",
+    heading: "18. Governing law",
   },
   {
     body: (
@@ -320,7 +404,7 @@ const CLAUSES: LegalClause[] = [
         </p>
       </>
     ),
-    heading: "18. Changes",
+    heading: "19. Changes",
   },
   {
     body: (
@@ -331,7 +415,7 @@ const CLAUSES: LegalClause[] = [
         </p>
       </>
     ),
-    heading: "19. Contact",
+    heading: "20. Contact",
   },
 ];
 export default function Terms() {

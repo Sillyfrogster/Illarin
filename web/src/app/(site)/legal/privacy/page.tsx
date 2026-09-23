@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CONTACT_EMAIL } from "@/lib/contact";
+import { CONTACT_EMAIL, KOFI_PAGE } from "@/lib/contact";
 import { pageMetadata } from "@/lib/site-metadata";
 import { type LegalClause, LegalPage } from "../LegalPage";
 
@@ -65,7 +65,47 @@ const CLAUSES: LegalClause[] = [
           your IP address points to. It sets no cookie, stores nothing in your
           browser, and keeps neither your IP address nor anything tied to your
           account, so no identity is kept. Every page view record is deleted
-          after 30 days.
+          after 30 days. What stays is the number of visits on each day, and
+          that number is kept.
+        </p>
+
+        <h3>1.7 Counts of what happens</h3>
+        <p>
+          When an account is created, a work is downloaded or sent to an app, or
+          a work is published, Illarin records which of those happened, the work
+          where there is one, and the day. The record holds no account, no IP
+          address, no time of day, and nothing about the browser. Each night
+          Illarin adds these records up into totals for each day and deletes the
+          records older than 30 days. The daily totals are kept.
+        </p>
+
+        <h3>1.8 Monitoring</h3>
+        <p>
+          Illarin&rsquo;s servers send their logs to Datadog, a monitoring
+          service, so that errors and outages show up. Those logs hold the
+          request lines described in 1.5 and the errors Illarin&rsquo;s own
+          programs write. Datadog also receives how busy the servers are and
+          which programs are running on them. Nothing from Datadog runs in your
+          browser.
+        </p>
+
+        <h3>1.9 Money</h3>
+        <p>
+          Illarin takes no payments today. If you support Illarin on{" "}
+          <a href={KOFI_PAGE}>Ko-fi</a>, Ko-fi handles the payment under its own
+          terms, and Illarin sees only what Ko-fi shows the owner of a page,
+          such as the name and message you leave. Illarin does not tie it to
+          your account.
+        </p>
+        <p>
+          Illarin may later let you donate, take out a membership, or pay a
+          creator for commissioned work. When it does, a payment provider
+          handles the payment, and your card or bank details go to that
+          provider, never to Illarin. Illarin keeps what it needs to run those
+          features and meet tax law: who paid whom, how much, when, what for,
+          and the provider&rsquo;s reference for the payment. A creator who is
+          paid gives their payout details to the provider, not to Illarin. This
+          section applies once those features exist.
         </p>
       </>
     ),
@@ -78,15 +118,17 @@ const CLAUSES: LegalClause[] = [
           <li>
             <strong>We do not record who downloads what.</strong> Illarin counts
             downloads for a creator&rsquo;s benefit. The record holds the work,
-            the format, the time, and whether the download came from a signed-in
-            reader, the creator, a connected app, or nobody signed in at all. It
-            holds no account, no IP address, and nothing else that could point
-            back to a person.
+            the format, the time, and whether the download came from the
+            creator, a connected app, or anyone else. It holds no account, no IP
+            address, and nothing else that could point back to a person.
           </li>
           <li>
-            <strong>There is no advertising on the site</strong>, no advertising
-            or cross-site tracking cookies, and no third-party script tracking
-            what you read.
+            <strong>
+              There are no ads on Illarin, and there never will be.
+            </strong>{" "}
+            There are no advertising or cross-site tracking cookies, and no
+            third-party script tracking what you read. Illarin does not sell
+            your data or share it with advertisers.
           </li>
           <li>
             <strong>
@@ -110,9 +152,10 @@ const CLAUSES: LegalClause[] = [
           sign you in. Counting page views sets no cookie.
         </p>
         <p>
-          Your browser also keeps two things locally, which never reach us: your
-          light or dark appearance choice, and, for the length of the tab,
-          whether you asked to see adult content.
+          Your browser also keeps a few display choices locally, which never
+          reach us: light or dark appearance, whether the front page moves, how
+          wide the side panel is, which follow suggestions you dismissed, and,
+          for the length of the tab, how adult content is shown.
         </p>
       </>
     ),
@@ -142,7 +185,12 @@ const CLAUSES: LegalClause[] = [
             To keep Illarin working and to see what broke when it does not.
           </li>
           <li>
-            To see which pages people read and which sites send them here.
+            To see which pages people read, which sites send them here, and how
+            many works are downloaded, sent, and published each day.
+          </li>
+          <li>
+            To take and pass on payments, once Illarin offers them, and to keep
+            the records tax law requires.
           </li>
         </ul>
       </>
@@ -182,11 +230,20 @@ const CLAUSES: LegalClause[] = [
             email.
           </li>
           <li>
-            <strong>Our monitoring provider</strong>, which receives the server
-            logs described above so that we can see errors and outages.
+            <strong>Datadog</strong>, our monitoring service, which receives the
+            server logs described above.
           </li>
           <li>
-            <strong>Discord</strong>, if you choose to sign in or link with it.
+            <strong>Discord</strong>, if you sign in or link with it, or connect
+            a channel for announcements. A connected channel receives the public
+            page details of what you publish.
+          </li>
+          <li>
+            <strong>Ko-fi</strong>, if you support Illarin there.
+          </li>
+          <li>
+            <strong>A payment provider</strong>, once Illarin takes payments,
+            which receives what it needs to charge you or pay you.
           </li>
           <li>
             <strong>Apps you connect</strong>, which receive the work they are
@@ -214,8 +271,10 @@ const CLAUSES: LegalClause[] = [
           recovery window while you can still restore it, and is destroyed after
           that. Sign-in sessions, email verification links, password reset
           links, and app connection codes all expire on their own. Page view
-          records are deleted after 30 days. Server logs are kept for a short
-          rolling window.
+          records and the counts described in 1.7 are deleted after 30 days, and
+          the daily totals made from them are kept. Server logs are kept for a
+          short rolling window. Once Illarin takes payments, payment records are
+          kept for as long as tax law requires, even after the account is gone.
         </p>
       </>
     ),
@@ -259,11 +318,12 @@ const CLAUSES: LegalClause[] = [
     body: (
       <>
         <p>
-          Illarin&rsquo;s servers, and the email, monitoring, and sign-in
-          services it depends on, operate across several countries including the
-          United States. Using Illarin means your data travels to those places.
-          Where the law requires safeguards for that transfer, we rely on the
-          ones our providers put in place, such as Standard Contractual Clauses.
+          Illarin&rsquo;s servers, and the email, monitoring, sign-in, and
+          payment services it depends on, operate across several countries
+          including the United States. Using Illarin means your data travels to
+          those places. Where the law requires safeguards for that transfer, we
+          rely on the ones our providers put in place, such as Standard
+          Contractual Clauses.
         </p>
       </>
     ),
@@ -321,9 +381,8 @@ export default function Privacy() {
       lede={
         <>
           This policy says what Illarin collects, why, who else sees it, and
-          what you can do about it. Illarin is a personal project that makes no
-          money, sells nothing, and has no reason to collect anything it does
-          not need.
+          what you can do about it. Illarin is a personal project that shows no
+          ads and has no reason to collect anything it does not need.
         </>
       }
     />

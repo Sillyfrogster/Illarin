@@ -19,7 +19,7 @@ const CLAUSES: LegalClause[] = [
         <ul>
           <li>
             <strong>Sexual content involving minors</strong>, real or fictional.
-            Any sexual or sexualised depiction of someone presented or implied
+            Any sexual or sexualized depiction of someone presented or implied
             to be under 18 is banned, however the character is framed. Calling a
             character ageless, ancient, or an adult-coded archetype does not get
             around this rule.
@@ -97,7 +97,7 @@ const CLAUSES: LegalClause[] = [
             anywhere else.
           </li>
           <li>
-            Nothing that dehumanises people or incites hatred against them based
+            Nothing that dehumanizes people or incites hatred against them based
             on race, ethnicity, national origin, religion, disability, gender,
             gender identity, sexual orientation, or anything else of that kind.
           </li>
@@ -158,6 +158,11 @@ const CLAUSES: LegalClause[] = [
           <li>
             Don&rsquo;t use a connected app, or a token from one, to reach work
             you would not be allowed to reach in a browser.
+          </li>
+          <li>
+            Once Illarin takes payments, don&rsquo;t take money for a commission
+            you don&rsquo;t mean to deliver, and don&rsquo;t use donations,
+            memberships, or commissions to move money for anything else.
           </li>
         </ul>
       </>
@@ -231,10 +236,10 @@ export default function AcceptableUse() {
       title="Acceptable Use Policy"
       lede={
         <>
-          Illarin holds characters, lorebooks, presets, themes, and packs made
-          by the people who use it. These rules apply to all of it, and to how
-          you behave here. Breaking them can mean your work is taken down or
-          removed, or your account is suspended or closed.
+          Illarin holds characters, lorebooks, presets, themes, packs, and
+          extensions made by the people who use it. These rules apply to all of
+          it, and to how you behave here. Breaking them can mean your work is
+          taken down or removed, or your account is suspended or closed.
         </>
       }
     />

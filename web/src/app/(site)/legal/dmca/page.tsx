@@ -16,12 +16,12 @@ const CLAUSES: LegalClause[] = [
           is the only channel, and it is read by the person who runs Illarin.
         </p>
         <p>
-          <strong>Be straight with you about one thing:</strong> Illarin is a
-          personal project and has not registered a designated agent with the
-          United States Copyright Office, so it does not claim the DMCA safe
-          harbour that registration provides. We follow the process below
-          anyway, because it is the right way to handle a copyright complaint
-          and it gives both sides a fair hearing.
+          <strong>One thing to know first:</strong> Illarin is a personal
+          project and has not registered a designated agent with the United
+          States Copyright Office, so it does not claim the DMCA safe harbor
+          that registration provides. We follow the process below anyway,
+          because it is the right way to handle a copyright complaint and it
+          gives both sides a fair hearing.
         </p>
       </>
     ),
@@ -34,7 +34,7 @@ const CLAUSES: LegalClause[] = [
         <ol>
           <li>
             Your signature, physical or electronic, as the copyright owner or
-            someone authorised to act for them.
+            someone authorized to act for them.
           </li>
           <li>
             What work you say has been infringed. If it is many works at once, a
@@ -47,11 +47,11 @@ const CLAUSES: LegalClause[] = [
           <li>Your name, address, telephone number, and email address.</li>
           <li>
             A statement that you believe in good faith that the use complained
-            of is not authorised by the copyright owner, its agent, or the law.
+            of is not authorized by the copyright owner, its agent, or the law.
           </li>
           <li>
             A statement, under penalty of perjury, that what you have said is
-            accurate and that you are the copyright owner or authorised to act
+            accurate and that you are the copyright owner or authorized to act
             for them.
           </li>
         </ol>
