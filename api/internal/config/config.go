@@ -127,20 +127,18 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("LINKING_HMAC_KEY must be 32 bytes encoded as unpadded base64url")
 	}
 	cfg.LinkingHMACKey = linkingKey
-	// PUBLICATION_SECRET_KEY is the name this key had before 18 November 2026
-	integrationKey, err := base64.RawURLEncoding.DecodeString(
-		get("INTEGRATION_SECRET_KEY", get("PUBLICATION_SECRET_KEY", "")))
+	integrationKey, err := base64.RawURLEncoding.DecodeString(get("PUBLICATION_SECRET_KEY", ""))
 	if err != nil || len(integrationKey) != secrets.KeyBytes {
 		return Config{}, fmt.Errorf(
-			"INTEGRATION_SECRET_KEY must be %d bytes encoded as unpadded base64url",
+			"PUBLICATION_SECRET_KEY must be %d bytes encoded as unpadded base64url",
 			secrets.KeyBytes,
 		)
 	}
 	if bytes.Equal(integrationKey, linkingKey) {
-		return Config{}, fmt.Errorf("INTEGRATION_SECRET_KEY must differ from LINKING_HMAC_KEY")
+		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY must differ from LINKING_HMAC_KEY")
 	}
 	if _, err := secrets.NewKey(integrationKey); err != nil {
-		return Config{}, fmt.Errorf("INTEGRATION_SECRET_KEY: %w", err)
+		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY: %w", err)
 	}
 	cfg.IntegrationSecretKey = integrationKey
 	limits := format.DefaultLimits()

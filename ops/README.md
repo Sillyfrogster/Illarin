@@ -78,7 +78,7 @@ fork owned by `example`, use `ghcr.io/example`; the workflows publish
 Set `SITE_URL` to the site's address. Keep its `blog.` DNS name pointed at the
 gateway so old post addresses redirect to `/blog`.
 
-Generate `LINKING_HMAC_KEY` and `INTEGRATION_SECRET_KEY` as 32 random bytes each,
+Generate `LINKING_HMAC_KEY` and `PUBLICATION_SECRET_KEY` as 32 random bytes each,
 encoded as unpadded base64url. They are separate keys and never share a value.
 Use a separate, randomly generated PostgreSQL password and update both
 `POSTGRES_PASSWORD` and `DATABASE_URL` with the same value.

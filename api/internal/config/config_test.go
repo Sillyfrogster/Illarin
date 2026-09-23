@@ -15,27 +15,26 @@ const (
 func setLinkingKey(t *testing.T) {
 	t.Helper()
 	t.Setenv("LINKING_HMAC_KEY", linkingKey)
-	t.Setenv("INTEGRATION_SECRET_KEY", integrationKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", integrationKey)
 }
 
 func TestLoadRequiresAnExactUnpaddedIntegrationSecretKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
 	t.Setenv("LINKING_HMAC_KEY", linkingKey)
-	t.Setenv("PUBLICATION_SECRET_KEY", "")
 
 	for _, key := range []string{
 		"",
 		"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB==",
 		"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
 	} {
-		t.Setenv("INTEGRATION_SECRET_KEY", key)
+		t.Setenv("PUBLICATION_SECRET_KEY", key)
 		if _, err := Load(); err == nil {
 			t.Errorf("Load accepted publication secret key %q", key)
 		}
 	}
 
-	t.Setenv("INTEGRATION_SECRET_KEY", integrationKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", integrationKey)
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load with a 32-byte key: %v", err)
@@ -43,23 +42,13 @@ func TestLoadRequiresAnExactUnpaddedIntegrationSecretKey(t *testing.T) {
 	if len(cfg.IntegrationSecretKey) != 32 {
 		t.Errorf("IntegrationSecretKey is %d bytes, want 32", len(cfg.IntegrationSecretKey))
 	}
-
-	t.Setenv("INTEGRATION_SECRET_KEY", "")
-	t.Setenv("PUBLICATION_SECRET_KEY", integrationKey)
-	older, err := Load()
-	if err != nil {
-		t.Fatalf("Load with the name the key had before 18 November 2026: %v", err)
-	}
-	if len(older.IntegrationSecretKey) != 32 {
-		t.Errorf("the older name gave %d bytes, want 32", len(older.IntegrationSecretKey))
-	}
 }
 
 func TestTheIntegrationSecretKeyCannotBeTheLinkingKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
 	t.Setenv("LINKING_HMAC_KEY", linkingKey)
-	t.Setenv("INTEGRATION_SECRET_KEY", linkingKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", linkingKey)
 
 	if _, err := Load(); err == nil {
 		t.Error("Load accepted one key doing two jobs")
@@ -95,7 +84,7 @@ func TestLoadUsesDefaultPort(t *testing.T) {
 func TestLoadRequiresAnExactUnpaddedLinkingKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	t.Setenv("INTEGRATION_SECRET_KEY", integrationKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", integrationKey)
 
 	for _, key := range []string{
 		"",
