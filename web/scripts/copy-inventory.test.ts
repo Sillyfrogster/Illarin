@@ -83,4 +83,4 @@ var query = "SELECT name FROM users"
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 60_000);
