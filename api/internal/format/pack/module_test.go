@@ -105,6 +105,26 @@ func TestPackReadsItemsWithoutFetchingImagesAndWritesPreservedFieldsBack(t *test
 	}
 }
 
+func TestPackWithOnlyNarrativeAndUtilityItemsRoundTrips(t *testing.T) {
+	t.Parallel()
+	source := []byte(`{"packName":"Loom set","lumiaItems":[],"loomItems":[{"loomName":"Narrator","loomCategory":"Narrative Style","loomContent":"Tell the story."},{"loomName":"Helper","loomCategory":"Loom Utility","loomContent":"Keep notes."}]}`)
+	parsed := parse(t, source)
+	if len(packRecords(t, parsed).Records) != 0 {
+		t.Fatal("Loom entries became Lumia records")
+	}
+	written := write(t, format.ExportWork{Type: Type, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder})
+	var got, want map[string]json.RawMessage
+	if err := json.Unmarshal(written.Body, &got); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(source, &want); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got["loomItems"], want["loomItems"]) {
+		t.Fatalf("Loom entries changed: %s", got["loomItems"])
+	}
+}
+
 func TestPackWritesIllarinCoverAndItemImages(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, []byte(samplePack))

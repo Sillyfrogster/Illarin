@@ -152,7 +152,8 @@ const (
 )
 
 type RecordListContent struct {
-	Records []struct {
+	LoomItems []json.RawMessage `json:"loomItems,omitempty"`
+	Records   []struct {
 		AuthorName       string                                 `json:"authorName"`
 		AvatarUrl        *uuid.UUID                             `json:"avatarUrl,omitempty"`
 		GenderIdentity   RecordListContentRecordsGenderIdentity `json:"genderIdentity"`

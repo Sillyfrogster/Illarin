@@ -772,7 +772,7 @@ func writeOriginalFile(
 ) error {
 	_, err := work.RecordOriginalFile(ctx, tx, work.OriginalFile{
 		WorkID: workID, Number: number, BlobID: job.BlobID, MediaType: prepared.MediaType,
-		Format: prepared.Format, Identifier: prepared.Header.Identifier, Media: prepared.Media,
+		Format: prepared.Format, Identifier: prepared.Header.Identifier, Filename: job.Filename, Media: prepared.Media,
 	})
 	return err
 }

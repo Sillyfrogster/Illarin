@@ -20,8 +20,8 @@ select id, definition, title, position, hidden, layout, width, elements
 
 -- name: InsertOriginalFile :exec
 insert into work_original_files
-  (id, work_id, number, blob_id, media_type, format, identifier)
-values ($1, $2, $3, $4, $5, $6, $7);
+  (id, work_id, number, blob_id, media_type, format, identifier, filename)
+values ($1, $2, $3, $4, $5, $6, $7, $8);
 
 -- name: SetOriginalFile :exec
 update works set original_file_id = $2, updated_at = now() where id = $1;
@@ -273,7 +273,7 @@ select media.id, media.role, media.width, media.height, blob.byte_size,
           media.created_at desc, media.id desc;
 
 -- name: OriginalFileLocation :one
-select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, a.owner_id
+select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, r.filename, r.format, a.owner_id
   from works a
   left join public.work_versions version on version.id = a.published_version_id
   join work_original_files r on r.id = case when version.id is null

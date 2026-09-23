@@ -220,6 +220,29 @@ type Event struct {
 	Day    pgtype.Date
 }
 
+type ExtensionReleaseImport struct {
+	WorkID        pgtype.UUID
+	ReleaseID     int64
+	Tag           string
+	PublishedAt   pgtype.Timestamptz
+	AssetID       pgtype.Int8
+	Status        string
+	Failure       pgtype.Text
+	VersionNumber pgtype.Int4
+	CreatedAt     pgtype.Timestamptz
+}
+
+type ExtensionReleaseSource struct {
+	WorkID             pgtype.UUID
+	Repository         string
+	Proof              string
+	VerifiedAt         pgtype.Timestamptz
+	Attachment         pgtype.Text
+	IncludePrereleases bool
+	NextCheckAt        pgtype.Timestamptz
+	LastError          pgtype.Text
+}
+
 type InboxEntry struct {
 	ID          pgtype.UUID
 	AccountID   pgtype.UUID
@@ -643,6 +666,7 @@ type WorkOriginalFile struct {
 	BlobID     pgtype.UUID
 	Format     string
 	Identifier string
+	Filename   pgtype.Text
 }
 
 type WorkPreservedDatum struct {

@@ -192,3 +192,20 @@ func TestPackUploadBuildsAPageAndExportsEditedItemImages(t *testing.T) {
 		t.Fatalf("downloaded Pack item image status = %d, want 200: %s", served.Code, served.Body.String())
 	}
 }
+
+func TestLoomOnlyPackImportsAndOffersItsOriginalFile(t *testing.T) {
+	t.Parallel()
+	registry := format.NewRegistry()
+	if err := registry.Register(packformat.Module{}); err != nil {
+		t.Fatal(err)
+	}
+	r, session, works, _ := harness.NewVerifiedUploadRouterWithPool(t, registry)
+	metadata := apitest.ExampleMetadata("Loom set")
+	metadata["filename"] = "loom-pack.json"
+	source := []byte(`{"packName":"Loom set","lumiaItems":[],"loomItems":[{"loomName":"Narrator","loomCategory":"Narrative Style","loomContent":"Tell the story."},{"loomName":"Helper","loomCategory":"Loom Utility","loomContent":"Keep notes."}]}`)
+	workID := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, source))
+	download := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/download/"+workID, nil))
+	if download.Code != http.StatusOK || download.Header().Get("Content-Disposition") != `attachment; filename=loom-pack.json` {
+		t.Fatalf("original download = %d, disposition %q", download.Code, download.Header().Get("Content-Disposition"))
+	}
+}

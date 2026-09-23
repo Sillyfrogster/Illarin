@@ -1380,8 +1380,8 @@ func (q *Queries) InsertOAuthState(ctx context.Context, arg InsertOAuthStatePara
 
 const insertOriginalFile = `-- name: InsertOriginalFile :exec
 insert into work_original_files
-  (id, work_id, number, blob_id, media_type, format, identifier)
-values ($1, $2, $3, $4, $5, $6, $7)
+  (id, work_id, number, blob_id, media_type, format, identifier, filename)
+values ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type InsertOriginalFileParams struct {
@@ -1392,6 +1392,7 @@ type InsertOriginalFileParams struct {
 	MediaType  string
 	Format     string
 	Identifier string
+	Filename   pgtype.Text
 }
 
 func (q *Queries) InsertOriginalFile(ctx context.Context, arg InsertOriginalFileParams) error {
@@ -1403,6 +1404,7 @@ func (q *Queries) InsertOriginalFile(ctx context.Context, arg InsertOriginalFile
 		arg.MediaType,
 		arg.Format,
 		arg.Identifier,
+		arg.Filename,
 	)
 	return err
 }
@@ -2194,7 +2196,7 @@ func (q *Queries) NSFWPreferenceBySessionHash(ctx context.Context, tokenHash []b
 }
 
 const originalFileLocation = `-- name: OriginalFileLocation :one
-select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, a.owner_id
+select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, r.filename, r.format, a.owner_id
   from works a
   left join public.work_versions version on version.id = a.published_version_id
   join work_original_files r on r.id = case when version.id is null
@@ -2216,6 +2218,8 @@ type OriginalFileLocationRow struct {
 	OriginalFileID pgtype.UUID
 	BlobID         pgtype.UUID
 	MediaType      string
+	Filename       pgtype.Text
+	Format         string
 	OwnerID        pgtype.UUID
 }
 
@@ -2227,6 +2231,8 @@ func (q *Queries) OriginalFileLocation(ctx context.Context, arg OriginalFileLoca
 		&i.OriginalFileID,
 		&i.BlobID,
 		&i.MediaType,
+		&i.Filename,
+		&i.Format,
 		&i.OwnerID,
 	)
 	return i, err

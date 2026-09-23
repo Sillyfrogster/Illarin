@@ -7,6 +7,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type originalFileRow struct {
@@ -15,6 +16,7 @@ type originalFileRow struct {
 	MediaType  string
 	Format     string
 	Identifier string
+	Filename   string
 }
 
 func insertOriginalFile(ctx context.Context, tx pgx.Tx, id, workID uuid.UUID, row originalFileRow) error {
@@ -27,6 +29,7 @@ func insertOriginalFile(ctx context.Context, tx pgx.Tx, id, workID uuid.UUID, ro
 		MediaType:  row.MediaType,
 		Format:     row.Format,
 		Identifier: row.Identifier,
+		Filename:   pgtype.Text{String: row.Filename, Valid: row.Filename != ""},
 	}
 	if err := queries.InsertOriginalFile(ctx, params); err != nil {
 		return fmt.Errorf("insert the original file: %w", err)
@@ -51,6 +54,8 @@ type OriginalFileLocation struct {
 	OriginalFileID uuid.UUID
 	BlobID         uuid.UUID
 	MediaType      string
+	Filename       string
+	Format         string
 	OwnerID        *uuid.UUID
 }
 
@@ -76,6 +81,7 @@ func LocateOriginalFile(
 	return OriginalFileLocation{
 		WorkID: uuidFromPgtype(row.WorkID), OriginalFileID: uuidFromPgtype(row.OriginalFileID),
 		BlobID: uuidFromPgtype(row.BlobID), MediaType: row.MediaType,
+		Filename: row.Filename.String, Format: row.Format,
 		OwnerID: ownerID,
 	}, nil
 }
@@ -151,6 +157,7 @@ type OriginalFile struct {
 	MediaType  string
 	Format     string
 	Identifier string
+	Filename   string
 	Media      []PreparedMedia
 }
 
@@ -159,7 +166,7 @@ func RecordOriginalFile(ctx context.Context, tx pgx.Tx, original OriginalFile) (
 	originalFileID := uuid.New()
 	if err := insertOriginalFile(ctx, tx, originalFileID, original.WorkID, originalFileRow{
 		Number: original.Number, BlobID: original.BlobID, MediaType: original.MediaType,
-		Format: original.Format, Identifier: original.Identifier,
+		Format: original.Format, Identifier: original.Identifier, Filename: original.Filename,
 	}); err != nil {
 		return uuid.Nil, err
 	}

@@ -110,7 +110,7 @@ func countRecords(content Content) int {
 	if !ok {
 		return 0
 	}
-	return len(list.Records)
+	return len(list.Records) + len(list.LoomItems)
 }
 
 var characterFacets = []Facet{

@@ -16,6 +16,8 @@ import (
 type Source struct {
 	InternalRedirect string
 	MediaType        string
+	Filename         string
+	Format           string
 	Inline           bool
 	Record           Record
 }
@@ -59,6 +61,7 @@ func (s *Service) Source(
 	originalFileID := location.OriginalFileID
 	return Source{
 		InternalRedirect: redirect, MediaType: location.MediaType,
+		Filename: location.Filename, Format: location.Format,
 		Inline: format.IsInlineMediaType(location.MediaType),
 		Record: newRecord(
 			location.WorkID, &originalFileID, format.Raw,

@@ -70,7 +70,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (work.Work, error)
 	a.CreatedAt = made
 	originalFileID, err := work.RecordOriginalFile(ctx, tx, work.OriginalFile{
 		WorkID: a.ID, Number: 1, BlobID: stored.ID, MediaType: "application/octet-stream",
-		Format: a.Format, Media: extractedMedia,
+		Format: a.Format, Filename: in.Filename, Media: extractedMedia,
 	})
 	if err != nil {
 		return work.Work{}, err

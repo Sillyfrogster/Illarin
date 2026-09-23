@@ -14,11 +14,12 @@ const LumiaRecordSchema RecordSchema = "lumia"
 func (schema RecordSchema) Known() bool { return schema == LumiaRecordSchema }
 
 type RecordList struct {
-	Schema  RecordSchema  `json:"schema"`
-	Records []LumiaRecord `json:"records"`
+	Schema    RecordSchema      `json:"schema"`
+	Records   []LumiaRecord     `json:"records"`
+	LoomItems []json.RawMessage `json:"loomItems,omitempty"`
 }
 
-func (list RecordList) Empty() bool { return len(list.Records) == 0 }
+func (list RecordList) Empty() bool { return len(list.Records) == 0 && len(list.LoomItems) == 0 }
 
 type LumiaRecord struct {
 	ID               uuid.UUID  `json:"id"`
@@ -34,8 +35,9 @@ type LumiaRecord struct {
 
 func decodeRecordList(raw json.RawMessage) (Content, error) {
 	var incoming struct {
-		Schema  *RecordSchema `json:"schema"`
-		Records *[]struct {
+		Schema    *RecordSchema     `json:"schema"`
+		LoomItems []json.RawMessage `json:"loomItems"`
+		Records   *[]struct {
 			ID               uuid.UUID  `json:"id,omitempty"`
 			LumiaName        *string    `json:"lumiaName"`
 			LumiaDefinition  *string    `json:"lumiaDefinition"`
@@ -77,7 +79,7 @@ func decodeRecordList(raw json.RawMessage) (Content, error) {
 			Version: *item.Version,
 		}
 	}
-	return RecordList{Schema: *incoming.Schema, Records: records}, nil
+	return RecordList{Schema: *incoming.Schema, Records: records, LoomItems: incoming.LoomItems}, nil
 }
 
 func decodeStoredRecordList(raw json.RawMessage) (Content, error) {

@@ -83,6 +83,9 @@ func TestDownloadHandsTheCurrentSourceToNginx(t *testing.T) {
 	if got := rec.Header().Get("X-Accel-Redirect"); got == "" {
 		t.Fatal("X-Accel-Redirect is missing")
 	}
+	if got := rec.Header().Get("Content-Disposition"); got != `attachment; filename=exact.lumitheme` {
+		t.Fatalf("Content-Disposition = %q, want the uploaded filename", got)
+	}
 	if rec.Body.Len() != 0 {
 		t.Fatalf("Go returned %d bytes instead of handing the file to nginx", rec.Body.Len())
 	}
@@ -482,8 +485,8 @@ func TestUnverifiedSourceTypeDownloadsAsAnOpaqueAttachment(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); got != "application/octet-stream" {
 		t.Errorf("Content-Type = %q, want application/octet-stream", got)
 	}
-	if got := rec.Header().Get("Content-Disposition"); got != "attachment" {
-		t.Errorf("Content-Disposition = %q, want attachment", got)
+	if got := rec.Header().Get("Content-Disposition"); got != `attachment; filename=evil.lumitheme` {
+		t.Errorf("Content-Disposition = %q, want an attachment with the uploaded filename", got)
 	}
 	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
 		t.Errorf("X-Content-Type-Options = %q, want nosniff", got)
@@ -523,8 +526,8 @@ func TestProbeVerifiedRasterSourcesMayRenderInline(t *testing.T) {
 			if got := download.Header().Get("Content-Type"); got != wantType {
 				t.Errorf("Content-Type = %q, want %q", got, wantType)
 			}
-			if got := download.Header().Get("Content-Disposition"); got != "inline" {
-				t.Errorf("Content-Disposition = %q, want inline", got)
+			if got := download.Header().Get("Content-Disposition"); got != `inline; filename=misleading.lumitheme` {
+				t.Errorf("Content-Disposition = %q, want inline with the uploaded filename", got)
 			}
 		})
 	}

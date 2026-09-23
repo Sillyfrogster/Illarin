@@ -149,6 +149,9 @@ func elementItems(content Content) []any {
 		for _, item := range value.Records {
 			items = append(items, item)
 		}
+		for _, item := range value.LoomItems {
+			items = append(items, item)
+		}
 	}
 	return items
 }

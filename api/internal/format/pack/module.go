@@ -106,15 +106,20 @@ func (Module) Parse(
 	}
 	delete(source, "lumiaItems")
 	records, leftovers, unread := readItems(rawItems)
-	if len(records) == 0 {
-		return format.Parsed{}, format.MalformedInput(fmt.Errorf("%s items: at least one Lumia item is required", ID))
+	var loomItems []json.RawMessage
+	if err := json.Unmarshal(source["loomItems"], &loomItems); err != nil {
+		return format.Parsed{}, format.MalformedInput(fmt.Errorf("%s items: loomItems must be a list", ID))
+	}
+	delete(source, "loomItems")
+	if len(records) == 0 && len(loomItems) == 0 {
+		return format.Parsed{}, format.MalformedInput(fmt.Errorf("%s items: at least one item is required", ID))
 	}
 	if len(unread) > 0 {
 		source["lumiaItems"] = keys.Must(unread)
 	}
 	element := block.Element{
 		ID: uuid.New(), Type: block.TypeRecordList, Role: block.RolePackItems,
-		Content: block.RecordList{Schema: block.LumiaRecordSchema, Records: records},
+		Content: block.RecordList{Schema: block.LumiaRecordSchema, Records: records, LoomItems: loomItems},
 	}
 	return format.Parsed{
 		Type: Type, Format: ID, Header: header, Elements: []block.Element{element},
@@ -224,6 +229,9 @@ func (Module) Write(_ context.Context, work format.ExportWork) (format.MainFile,
 	items := make([]json.RawMessage, 0, len(unread))
 	if content, ok := work.Content(block.RolePackItems); ok {
 		if list, isList := content.(block.RecordList); isList && list.Schema == block.LumiaRecordSchema {
+			if len(list.LoomItems) > 0 {
+				body["loomItems"] = keys.Must(list.LoomItems)
+			}
 			for _, record := range list.Records {
 				fields := map[string]json.RawMessage{
 					"lumiaName": keys.Must(record.LumiaName),

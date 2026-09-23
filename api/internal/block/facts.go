@@ -40,7 +40,7 @@ func (e Element) Facts() []string {
 		}
 		return e.itemFacts(count + len(content.Stylesheets))
 	case RecordList:
-		return e.itemFacts(len(content.Records))
+		return e.itemFacts(len(content.Records) + len(content.LoomItems))
 	default:
 		return nil
 	}

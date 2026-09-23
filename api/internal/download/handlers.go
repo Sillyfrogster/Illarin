@@ -2,7 +2,9 @@ package download
 
 import (
 	"errors"
+	"mime"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
@@ -154,7 +156,14 @@ func (h *Handlers) HandOffSource(c *gin.Context, download Source) {
 		disposition = "inline"
 		mediaType = download.MediaType
 	}
-	c.Header("Content-Disposition", disposition)
+	filename := path.Base(strings.ReplaceAll(download.Filename, `\`, "/"))
+	if filename == "." || filename == "" {
+		filename = "original.bin"
+		if download.Format == "pack_lumiverse" {
+			filename = "original.json"
+		}
+	}
+	c.Header("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": filename}))
 	c.Header("Content-Type", mediaType)
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("X-Accel-Redirect", download.InternalRedirect)
