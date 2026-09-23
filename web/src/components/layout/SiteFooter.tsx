@@ -1,6 +1,8 @@
+import { SiDiscord, SiKofi } from "@icons-pack/react-simple-icons";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { shellClasses } from "@/components/layout/Shell";
 import { LineLink } from "@/components/ui/line-link";
+import { DISCORD_INVITE, KOFI_PAGE } from "@/lib/contact";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
 import { primaryDestinations } from "./destinations";
 
@@ -28,6 +30,30 @@ export function SiteFooter() {
             >
               Download the brand kit
             </a>
+            <ul className="mt-2 grid list-none">
+              <li>
+                <a
+                  className="flex min-h-11 w-fit items-center gap-2 text-meta text-ink hover:text-accent"
+                  href={DISCORD_INVITE}
+                  rel="noopener"
+                  target="_blank"
+                >
+                  <SiDiscord aria-hidden="true" className="size-4" title="" />
+                  Join the Discord
+                </a>
+              </li>
+              <li>
+                <a
+                  className="flex min-h-11 w-fit items-center gap-2 text-meta text-ink hover:text-accent"
+                  href={KOFI_PAGE}
+                  rel="noopener"
+                  target="_blank"
+                >
+                  <SiKofi aria-hidden="true" className="size-4" title="" />
+                  Support Illarin on Ko-fi
+                </a>
+              </li>
+            </ul>
             <p className="mt-8 text-meta text-mute">© 2026 Illarin</p>
           </div>
 
