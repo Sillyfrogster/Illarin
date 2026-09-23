@@ -40,7 +40,6 @@ export function startJourney(
     disposed = false,
     wanted = true,
     active = 0;
-  let tickStart: number | undefined;
   let ambient = 0;
   let lastDraw = -Infinity;
   let redrawUntil = 0;
@@ -85,12 +84,11 @@ export function startJourney(
       !live ||
       document.hidden ||
       time > redrawUntil ||
-      time - lastDraw < 1 / 20
+      time - lastDraw < 1 / 60
     )
       return;
+    if (lastDraw !== -Infinity) ambient += Math.min(time - lastDraw, 0.1);
     lastDraw = time;
-    tickStart ??= time;
-    ambient = time - tickStart;
     renderer?.render(state.progress, ambient, smooth(0, 2.2, ambient));
     if (veil) veil.style.opacity = String(1 - smooth(0, 1.6, ambient));
   }
@@ -122,9 +120,9 @@ export function startJourney(
     root.classList.toggle("motion", live);
     onMode(media.matches ? "reduced" : live ? "live" : "still");
     if (live) {
-      tickStart = undefined;
+      ambient = 0;
       lastDraw = -Infinity;
-      redrawUntil = gsap.ticker.time + 3.5;
+      redrawUntil = gsap.ticker.time + 4;
       root.dataset.chapter = "";
       state.progress = 0;
       timeline = gsap.timeline({ paused: true, onUpdate: update });
