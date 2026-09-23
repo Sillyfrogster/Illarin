@@ -163,7 +163,10 @@ export function PromptFragmentBody({
           The app inserts its own content here.
         </p>
       ) : (
-        <Paragraphs text={fragment.text} />
+        <RichText
+          className={cn(ITEM_BODY, "max-w-[70ch]")}
+          text={fragment.text}
+        />
       )}
     </>
   );
@@ -375,16 +378,5 @@ export function ScriptBody({
         <code>{script.replace || "nothing"}</code>
       </p>
     </>
-  );
-}
-
-function Paragraphs({ text }: { text: string }) {
-  const paragraphs = text.split(/\n{2,}/).filter((line) => line.trim() !== "");
-  return (
-    <div className={cn(ITEM_BODY, "max-w-[70ch] [&>p+p]:mt-[0.85em]")}>
-      {paragraphs.map((paragraph, index) => (
-        <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
-      ))}
-    </div>
   );
 }

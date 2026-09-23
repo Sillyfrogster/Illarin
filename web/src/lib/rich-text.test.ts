@@ -383,12 +383,12 @@ describe("which of an element's text is prose", () => {
     ).toEqual(["Keeps **good** notes."]);
   });
 
-  test("a prompt fragment is the prompt, so it is not prose", () => {
+  test("a prompt fragment's text is read as page markdown", () => {
     expect(
       richTextsOf({
         type: "prompt_list",
         content: { fragments: [{ text: "<instructions>Stay in character." }] },
       }),
-    ).toEqual([]);
+    ).toEqual(["<instructions>Stay in character."]);
   });
 });
