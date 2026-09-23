@@ -19,9 +19,9 @@ Internet -> DNS and TLS proxy -> Illarin gateway -> web and API -> PostgreSQL
 ```
 
 The Compose stack runs PostgreSQL, the Go API, the Next.js site, an internal
-nginx gateway, and Umami for page view counts. Uploaded blobs remain on the
-host. nginx may serve a blob only after the API authorizes it with
-`X-Accel-Redirect`.
+nginx gateway, Umami for page view counts, and a Datadog agent that ships
+logs and host metrics to Datadog. Uploaded blobs remain on the host. nginx
+may serve a blob only after the API authorizes it with `X-Accel-Redirect`.
 
 Illarin answers at `SITE_URL`. The blog lives under `/blog` with the rest of the
 site. A hostname beginning with `blog.` is only a permanent redirect to that
@@ -39,6 +39,7 @@ The included deployment has these current integration requirements:
 - a container registry that holds `illarin-api` and `illarin-web` images tagged
   with full Git commit SHAs;
 - an SMTP relay or Microsoft Graph application credentials for account email;
+- a Datadog API key for the monitoring service in `compose.prod.yaml`;
 - an off-host, restic-compatible repository for production backups.
 
 Discord sign-in is optional. NPMPlus is also optional: `compose.npmplus.yaml`
@@ -52,7 +53,7 @@ port instead.
 - three DNS names, the site and its `blog.` and `analytics.` subdomains, and
   a TLS-terminating reverse proxy that forwards all three to the gateway;
 - a GitHub fork or another way to build and publish both application images;
-- SMTP or Microsoft 365 credentials;
+- SMTP or Microsoft 365 credentials, and a Datadog API key;
 - enough persistent storage for PostgreSQL, uploads, image replacement, and the
   configured free-space reserve.
 
