@@ -19,23 +19,22 @@ Internet -> DNS and TLS proxy -> Illarin gateway -> web and API -> PostgreSQL
 ```
 
 The Compose stack runs PostgreSQL, the Go API, the Next.js site, an internal
-nginx gateway, Umami for page view counts, and a Datadog agent. Uploaded blobs remain on the host. nginx may
-serve a blob only after the API authorizes it with `X-Accel-Redirect`.
+nginx gateway, Umami for page view counts, and a Datadog agent that ships
+logs and host metrics to Datadog. The agent reads Docker through a proxy that
+allows only read requests, and it replaces the client address at the start of
+each gateway log line with `[client]`. Uploaded blobs remain on the host. nginx
+may serve a blob only after the API authorizes it with `X-Accel-Redirect`.
 
-Illarin answers on two hostnames that both reach the same gateway: the site at
-`SITE_URL` and the blog at `BLOG_URL`. The gateway tells them apart by name. A
-hostname beginning with `blog.` gets the blog, which serves blog pages and
-media and nothing else: no API, no sign-in, no uploads. Every other hostname
-gets the site, including the catalog, accounts, the blog's editor and the
-Publication API. The site's old `/blog` addresses redirect to the blog.
+Illarin answers at `SITE_URL`. The blog lives under `/blog` with the rest of the
+site. A hostname beginning with `blog.` is only a permanent redirect to that
+path, so old post addresses keep working.
 
-Umami counts page views and referrers without cookies. Both the site and the
-blog load its tracker from `/stats/script.js` on their own hostname and send
-views to `/stats/api/send`. Its dashboard answers only on a hostname beginning
-with `analytics.`, such as `analytics.illarin.example`. Umami keeps its tables
-in an `umami` schema in the same database and logs in with its own role, and a
-small `analytics-retention` service deletes its rows older than 30 days every
-night.
+Umami counts page views and referrers without cookies. The site loads its
+tracker from `/stats/script.js` and sends views to `/stats/api/send`. Its
+dashboard answers only on a hostname beginning with `analytics.`, such as
+`analytics.illarin.example`. Umami keeps its tables in an `umami` schema in the
+same database and logs in with its own role, and a small `analytics-retention`
+service deletes its rows older than 30 days every night.
 
 The included deployment has these current integration requirements:
 
@@ -53,7 +52,7 @@ port instead.
 ## Prerequisites
 
 - a Linux host with Docker Engine, the Docker Compose plugin, `flock`, and SSH;
-- three DNS names, the site's and its `blog.` and `analytics.` subdomains, and
+- three DNS names, the site and its `blog.` and `analytics.` subdomains, and
   a TLS-terminating reverse proxy that forwards all three to the gateway;
 - a GitHub fork or another way to build and publish both application images;
 - SMTP or Microsoft 365 credentials, and a Datadog API key;
@@ -78,9 +77,8 @@ fork owned by `example`, use `ghcr.io/example`; the workflows publish
 `ghcr.io/example/illarin-api:<commit>` and
 `ghcr.io/example/illarin-web:<commit>`.
 
-Set `SITE_URL` to the site's address and `BLOG_URL` to the blog's. The blog
-hostname must begin with `blog.`, because that prefix is how the gateway
-recognises it. The stack refuses to start without `BLOG_URL`.
+Set `SITE_URL` to the site's address. Keep its `blog.` DNS name pointed at the
+gateway so old post addresses redirect to `/blog`.
 
 Generate `LINKING_HMAC_KEY` and `PUBLICATION_SECRET_KEY` as 32 random bytes each,
 encoded as unpadded base64url. They are separate keys and never share a value.
@@ -97,17 +95,6 @@ The API accepts one mail transport. For SMTP, set `SMTP_ADDR` and `SMTP_FROM`,
 and set `SMTP_USERNAME` and `SMTP_PASSWORD` when the relay needs a login. Leave
 the Microsoft 365 values empty. For Microsoft Graph, leave the SMTP values empty
 and install the Microsoft secret as shown above.
-
-The interactive helper covers the reference GitHub, Microsoft Graph, Datadog,
-SSH, and NPMPlus path:
-
-```bash
-make production-setup
-```
-
-It writes local setup material under `ops/`; those files are ignored by Git.
-The helper is optional. Operators may configure the same values and secrets with
-their own provisioning system.
 
 ## Publish and deploy
 
@@ -141,12 +128,9 @@ make prod-deploy VERSION=<full-lowercase-commit-sha>
 make prod-smoke
 ```
 
-The smoke check speaks to both hostnames through the gateway: the site must
-answer, the blog must answer with its own canonical address, the site's `/blog`
-must redirect there, and the blog hostname must refuse every API, sign-in and
-editor address. It also checks that both hostnames serve the analytics tracker,
-that the `analytics.` hostname reaches Umami, and that the retention service is
-running.
+The smoke check proves that `/blog` and its feed answer under the site, old blog
+hostname paths redirect there, the `analytics.` hostname reaches Umami, and the
+retention service is running.
 
 Useful operating commands are listed by `make help`. In particular:
 
@@ -157,12 +141,26 @@ make prod-restart SERVICE=api
 make prod-rollback
 ```
 
+## Make an account admin
+
+Only the command line makes an admin. Sign up on the site first, then run:
+
+```bash
+make prod-make-admin HANDLE=<your handle>
+```
+
+The same command on a development machine is `make make-admin HANDLE=<handle>`.
+An admin is staff: they take down works, restrict profiles, switch writers on
+and off, and configure the blog's integrations. Nothing on the site makes or
+removes an admin, and the command does not remove one; set the account's
+`role` back to `user` in the database to do that.
+
 ## Backups and recovery
 
 The backup job writes a PostgreSQL dump first, then uploads that dump and the
 immutable blob directory to restic while blob deletion is locked. Uploaded post
-media and avatars are blobs, so they travel with it. Derivatives are disposable
-and are not backed up, and the blog's social cards are composed on request
+media and avatars are blobs, so they travel with it. The image cache is
+disposable and is not backed up, and the blog's social cards are composed on request
 rather than stored, so a restore has nothing to rebuild. Retention defaults to
 30 daily snapshots.
 

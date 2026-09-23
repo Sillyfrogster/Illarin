@@ -9,16 +9,15 @@ source "$OPS_DIR/lib.sh"
 require_release
 
 site_host="$(host_of "${SITE_URL:?Set SITE_URL}")"
-blog_host="$(host_of "${BLOG_URL:?Set BLOG_URL}")"
-blog_root="${BLOG_URL%/}/"
+blog_host="blog.$site_host"
+blog_root="${SITE_URL%/}/blog"
 
 compose exec -T gateway wget -q -T 5 -O /dev/null http://127.0.0.1:8080/gateway-healthz
 compose exec -T gateway wget -q -T 10 -O /dev/null http://127.0.0.1:8080/api/readyz
 compose exec -T gateway wget -q -T 15 -O /dev/null http://127.0.0.1:8080/
 
-# The site and the blog are told apart by hostname alone, so every check
-# below names the hostname it speaks to and reads the answer without
-# following redirects.
+# Every check names the hostname it speaks to and reads the answer without
+# following redirects, including redirects from the old blog hostname.
 through_gateway() {
   compose exec -T \
     -e "SMOKE_HOST=$1" -e "SMOKE_METHOD=$2" -e "SMOKE_PATH=$3" \
@@ -52,23 +51,17 @@ request.end();
 
 through_gateway "$site_host" GET / 200
 through_gateway "$site_host" GET /stats/script.js 200 "" "website-id"
-through_gateway "$blog_host" GET /stats/script.js 200 "" "website-id"
 through_gateway "analytics.$site_host" GET /api/heartbeat 200
-through_gateway "$site_host" GET /blog 308 "$blog_root"
+through_gateway "$site_host" GET /blog 200 "" "<link rel=\"canonical\" href=\"$blog_root"
+through_gateway "$site_host" GET /blog/feed.xml 200 "" "<rss"
+through_gateway "$blog_host" GET / 308 "$blog_root"
+through_gateway "$blog_host" GET /a-post 308 "$blog_root/a-post"
 through_gateway "illarin.xyz" GET /a/1 308 "https://illarin.com/a/1"
-through_gateway "blog.illarin.xyz" GET /a-post 308 "https://blog.illarin.com/a-post"
-through_gateway "$blog_host" GET / 200 "" "<link rel=\"canonical\" href=\"${BLOG_URL%/}"
-through_gateway "$blog_host" GET /feed.xml 200 "" "<rss"
-through_gateway "$blog_host" GET /api/v1/auth/session 404
-through_gateway "$blog_host" POST /api/v1/auth/sign-in 404
-through_gateway "$blog_host" POST /api/v1/publication/posts 404
-through_gateway "$blog_host" GET /sign-in 404
-through_gateway "$blog_host" GET /admin/blog 404
-through_gateway "$blog_host" GET /withdrawn 404
+through_gateway "blog.illarin.xyz" GET /a-post 308 "https://illarin.com/blog/a-post"
 
 if ! compose ps --status running --services | grep -qx analytics-retention; then
   echo "The nightly analytics retention job is not running." >&2
   exit 1
 fi
 
-echo "Illarin passed its gateway, API, site, blog and analytics smoke checks."
+echo "Illarin passed its gateway, API, site, blog redirect and analytics smoke checks."

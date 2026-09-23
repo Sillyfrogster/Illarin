@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
-	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
 )
 
@@ -24,7 +24,6 @@ const (
 type Config struct {
 	Port                         string
 	SiteURL                      string
-	BlogURL                      string
 	SMTP                         SMTPSettings
 	Microsoft365                 Microsoft365Settings
 	Discord                      DiscordSettings
@@ -34,11 +33,23 @@ type Config struct {
 	StorageFreeSpaceReserveBytes int64
 	AccountStorageCapBytes       int64
 	LinkingHMACKey               []byte
-	PublicationSecretKey         []byte
-	ProbeLimits                  probe.Limits
-	IngestWorkers                int
-	Server                       apihttp.Timeouts
-	Deadlines                    apihttp.Deadlines
+	IntegrationSecretKey         []byte
+	ProbeLimits                  format.Limits
+	UploadWorkers                int
+	Server                       ServerTimeouts
+	Deadlines                    api.Deadlines
+}
+
+type ServerTimeouts struct {
+	ReadHeader time.Duration
+	Idle       time.Duration
+}
+
+func defaultServerTimeouts() ServerTimeouts {
+	return ServerTimeouts{
+		ReadHeader: 10 * time.Second,
+		Idle:       2 * time.Minute,
+	}
 }
 
 type SMTPSettings struct {
@@ -65,11 +76,10 @@ func Load() (Config, error) {
 	cfg := Config{
 		Port:       get("PORT", "8080"),
 		SiteURL:    get("SITE_URL", "http://localhost:3000"),
-		BlogURL:    get("BLOG_URL", ""),
 		Database:   postgres.DefaultSettings(databaseURL),
 		UploadsDir: get("UPLOADS_DIR", ""),
-		Server:     apihttp.DefaultTimeouts(),
-		Deadlines:  apihttp.DefaultDeadlines(),
+		Server:     defaultServerTimeouts(),
+		Deadlines:  api.DefaultDeadlines(),
 		SMTP: SMTPSettings{
 			Address:  get("SMTP_ADDR", ""),
 			From:     get("SMTP_FROM", ""),
@@ -90,16 +100,11 @@ func Load() (Config, error) {
 	for name, value := range map[string]string{
 		"DATABASE_URL": databaseURL,
 		"UPLOADS_DIR":  cfg.UploadsDir,
-		"BLOG_URL":     cfg.BlogURL,
 	} {
 		if value == "" {
 			return Config{}, fmt.Errorf("%s is required", name)
 		}
 	}
-	if err := checkOrigin("BLOG_URL", cfg.BlogURL); err != nil {
-		return Config{}, err
-	}
-
 	max, err := bytesOrDefault("MAX_UPLOAD_BYTES", defaultMaxUploadBytes)
 	if err != nil {
 		return Config{}, err
@@ -122,21 +127,21 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("LINKING_HMAC_KEY must be 32 bytes encoded as unpadded base64url")
 	}
 	cfg.LinkingHMACKey = linkingKey
-	publicationKey, err := base64.RawURLEncoding.DecodeString(get("PUBLICATION_SECRET_KEY", ""))
-	if err != nil || len(publicationKey) != secrets.KeyBytes {
+	integrationKey, err := base64.RawURLEncoding.DecodeString(get("PUBLICATION_SECRET_KEY", ""))
+	if err != nil || len(integrationKey) != secrets.KeyBytes {
 		return Config{}, fmt.Errorf(
 			"PUBLICATION_SECRET_KEY must be %d bytes encoded as unpadded base64url",
 			secrets.KeyBytes,
 		)
 	}
-	if bytes.Equal(publicationKey, linkingKey) {
+	if bytes.Equal(integrationKey, linkingKey) {
 		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY must differ from LINKING_HMAC_KEY")
 	}
-	if _, err := secrets.NewKey(publicationKey); err != nil {
+	if _, err := secrets.NewKey(integrationKey); err != nil {
 		return Config{}, fmt.Errorf("PUBLICATION_SECRET_KEY: %w", err)
 	}
-	cfg.PublicationSecretKey = publicationKey
-	limits := probe.DefaultLimits()
+	cfg.IntegrationSecretKey = integrationKey
+	limits := format.DefaultLimits()
 	entries, err := intOrDefault("MAX_ARCHIVE_ENTRIES", limits.MaxArchiveEntries)
 	if err != nil {
 		return Config{}, err
@@ -153,17 +158,17 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	cfg.ProbeLimits = probe.Limits{
+	cfg.ProbeLimits = format.Limits{
 		MaxArchiveEntries:   entries,
 		MaxEntryBytes:       uint64(entryBytes),
 		MaxArchiveBytes:     uint64(archiveBytes),
 		MaxCompressionRatio: ratio,
 	}
-	workers, err := intOrDefault("INGEST_WORKERS", 2)
+	workers, err := intOrDefault("UPLOAD_WORKERS", 2)
 	if err != nil {
 		return Config{}, err
 	}
-	cfg.IngestWorkers = workers
+	cfg.UploadWorkers = workers
 	if (cfg.SMTP.Address == "") != (cfg.SMTP.From == "") {
 		return Config{}, fmt.Errorf("SMTP_ADDR and SMTP_FROM must be set together")
 	}
@@ -210,17 +215,6 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
-}
-
-// checkOrigin rejects addresses that cannot safely have blog paths appended.
-func checkOrigin(key, value string) error {
-	parsed, err := url.Parse(value)
-	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" ||
-		parsed.User != nil || (parsed.Path != "" && parsed.Path != "/") ||
-		parsed.RawQuery != "" || parsed.Fragment != "" {
-		return fmt.Errorf("%s must be an http or https origin with no path, got %q", key, value)
-	}
-	return nil
 }
 
 func intOrDefault(key string, fallback int) (int, error) {

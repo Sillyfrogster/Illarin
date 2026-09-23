@@ -1,0 +1,45 @@
+{
+  "note": "Marks come back in one order whatever order they arrive in",
+  "body": {
+    "version": 2,
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Every one",
+            "marks": [
+              {"type": "link", "href": "https://example.com"},
+              {"type": "code"},
+              {"type": "strike"},
+              {"type": "italic"},
+              {"type": "bold"}
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "canonical": {
+    "version": 2,
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Every one",
+            "marks": [
+              {"type": "bold"},
+              {"type": "italic"},
+              {"type": "strike"},
+              {"type": "code"},
+              {"type": "link", "href": "https://example.com"}
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

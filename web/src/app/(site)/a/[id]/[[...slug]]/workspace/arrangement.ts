@@ -1,16 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { type RefObject, useCallback, useState } from "react";
 import {
-  type AssetBlock,
-  addAssetBlock,
-  arrangeAssetBlocks,
+  addWorkBlock,
+  arrangeWorkBlocks,
   type ElementType,
-  moveAssetBlockContent,
-  removeAssetBlock,
+  moveWorkBlockContent,
+  removeWorkBlock,
+  type WorkBlock,
 } from "@/lib/api/query";
-import type { Candidate } from "@/lib/working-copy";
+import type { Candidate } from "@/lib/drafted-changes";
 import { arrangementRequest, moveBlock } from "./composition";
 
 export type Arrangement = {
@@ -23,12 +22,12 @@ export type Arrangement = {
 };
 
 type Page = {
-  assetId: string;
+  workId: string;
   candidate: Candidate;
-  applyServerBlocks: (blocks: AssetBlock[]) => void;
-  blocks: RefObject<AssetBlock[]>;
-  editBlockList: (change: (blocks: AssetBlock[]) => AssetBlock[]) => void;
-  savedBlocks: RefObject<AssetBlock[]>;
+  applyServerBlocks: (blocks: WorkBlock[]) => void;
+  blocks: RefObject<WorkBlock[]>;
+  editBlockList: (change: (blocks: WorkBlock[]) => WorkBlock[]) => void;
+  savedBlocks: RefObject<WorkBlock[]>;
   say: (message: string) => void;
 };
 
@@ -47,7 +46,6 @@ function returnFocusToGrip(blockId: string) {
 }
 
 export function useArrangement(page: Page): Arrangement {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const run = useCallback(
@@ -57,7 +55,6 @@ export function useArrangement(page: Page): Arrangement {
       void (async () => {
         try {
           await action();
-          router.refresh();
           done?.();
         } catch (error) {
           page.say(error instanceof Error ? error.message : refusal);
@@ -66,16 +63,16 @@ export function useArrangement(page: Page): Arrangement {
         }
       })();
     },
-    [busy, page, router],
+    [busy, page],
   );
 
   const arrange = useCallback(
-    (order: AssetBlock[], refusal: string, done?: () => void) =>
+    (order: WorkBlock[], refusal: string, done?: () => void) =>
       run(
         async () => {
-          const saved = await arrangeAssetBlocks(
+          const saved = await arrangeWorkBlocks(
             page.candidate,
-            page.assetId,
+            page.workId,
             arrangementRequest(order, page.savedBlocks.current),
           );
           page.applyServerBlocks(saved);
@@ -89,9 +86,9 @@ export function useArrangement(page: Page): Arrangement {
   return {
     add: (definition, elementType) =>
       run(async () => {
-        const added = await addAssetBlock(
+        const added = await addWorkBlock(
           page.candidate,
-          page.assetId,
+          page.workId,
           definition,
           elementType,
         );
@@ -110,9 +107,9 @@ export function useArrangement(page: Page): Arrangement {
     },
     moveContent: (blockId, destinationBlockId) =>
       run(async () => {
-        const saved = await moveAssetBlockContent(
+        const saved = await moveWorkBlockContent(
           page.candidate,
-          page.assetId,
+          page.workId,
           blockId,
           destinationBlockId,
         );
@@ -120,7 +117,7 @@ export function useArrangement(page: Page): Arrangement {
       }, "The content could not be moved. Try again."),
     remove: (blockId) =>
       run(async () => {
-        await removeAssetBlock(page.candidate, page.assetId, blockId);
+        await removeWorkBlock(page.candidate, page.workId, blockId);
         page.editBlockList((list) =>
           list
             .filter((block) => block.id !== blockId)

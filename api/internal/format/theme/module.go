@@ -8,7 +8,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 const (
@@ -17,7 +16,7 @@ const (
 
 	lumiverseNamespace          = LumiverseID
 	lumiverseComponentNamespace = LumiverseID + "_component"
-	lumiverseAssetNamespace     = LumiverseID + "_asset"
+	lumiverseFileNamespace      = LumiverseID + "_asset"
 	sillyTavernNamespace        = SillyTavernID
 )
 
@@ -36,7 +35,7 @@ func (LumiverseModule) Declaration() format.Declaration {
 		LumiverseID,
 		"Lumiverse theme bundle",
 		[]format.Recognition{{
-			Kind: format.RecognitionDiscriminator, Containers: []probe.Container{probe.ZIP},
+			Type: format.RecognitionMarker, Containers: []format.Container{format.ZIP},
 			Path: []string{"format"}, Values: []string{"3"},
 		}},
 		lumiverseColors,
@@ -51,7 +50,7 @@ func (SillyTavernModule) Declaration() format.Declaration {
 		SillyTavernID,
 		"SillyTavern theme",
 		[]format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []probe.Container{probe.JSON},
+			Type: format.RecognitionShape, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				"main_text_color": format.ValueString,
 				"blur_strength":   format.ValueNumber,
@@ -91,14 +90,14 @@ func themeDeclaration(
 	styles format.RoleSupport,
 	header []format.HeaderField,
 ) format.Declaration {
-	testedOrigins := []string{id, format.OriginIllarin}
-	var preservesOrigins []string
+	testedOrigins := []string{id, format.OriginalFormatIllarin}
+	var preservesOriginalFormats []string
 	if id == LumiverseID {
-		testedOrigins = append(testedOrigins, format.OriginV1)
-		preservesOrigins = append(preservesOrigins, format.OriginV1)
+		testedOrigins = append(testedOrigins, format.OriginalFormatV1)
+		preservesOriginalFormats = append(preservesOriginalFormats, format.OriginalFormatV1)
 	}
 	return format.Declaration{
-		ID: id, Label: label, Kind: Kind,
+		ID: id, Label: label, Type: Type,
 		Direction:   format.Direction{Read: true, Write: true},
 		Recognition: recognition,
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -133,10 +132,10 @@ func themeDeclaration(
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
 			ItemBytes: block.MaxItemBytes, ArchiveFiles: format.MaxArchiveFiles,
 		},
-		ConsumedKeys:  themeConsumedKeys(id, colors, controls),
-		Boilerplate:   themeBoilerplate(id),
-		Preservation:  format.PreservationDeclaration{Body: id},
-		TestedOrigins: testedOrigins, PreservesOrigins: preservesOrigins,
+		ConsumedKeys:          themeConsumedKeys(id, colors, controls),
+		Boilerplate:           themeBoilerplate(id),
+		Preservation:          format.PreservationDeclaration{Body: id},
+		TestedOriginalFormats: testedOrigins, PreservesOriginalFormats: preservesOriginalFormats,
 	}
 }
 
@@ -161,16 +160,16 @@ func declaredColorSlots(names []string) []format.SlotDeclaration {
 func declaredControlSlots(slots []namedSlot) []format.SlotDeclaration {
 	result := make([]format.SlotDeclaration, 0, len(slots))
 	for _, slot := range slots {
-		kind := format.ValueString
+		valueType := format.ValueString
 		switch slot.settingType {
 		case block.SettingNumber:
-			kind = format.ValueNumber
+			valueType = format.ValueNumber
 		case block.SettingBoolean:
-			kind = format.ValueBoolean
+			valueType = format.ValueBoolean
 		case block.SettingStrings:
-			kind = format.ValueArray
+			valueType = format.ValueArray
 		}
-		result = append(result, format.SlotDeclaration{Name: slot.name, Type: kind})
+		result = append(result, format.SlotDeclaration{Name: slot.name, Type: valueType})
 	}
 	return result
 }
@@ -274,7 +273,7 @@ func sillyTavernStylesReduced(content block.Content) bool {
 	if !ok {
 		return false
 	}
-	if len(styles.Assets) > 0 {
+	if len(styles.Files) > 0 {
 		return styles.Global != "" || hasEnabledStylesheet(styles)
 	}
 	return len(styles.Stylesheets) > 0 && (styles.Global != "" || hasEnabledStylesheet(styles))
@@ -291,32 +290,32 @@ func hasEnabledStylesheet(styles block.StylesheetSet) bool {
 	})
 }
 
-func (m LumiverseModule) Claim(file probe.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m LumiverseModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
-func (m SillyTavernModule) Claim(file probe.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m SillyTavernModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
-func payloadFor(file probe.Inspection, claim format.Claim, id string) (probe.Payload, error) {
-	payload, ok := claim.Payload(file)
+func payloadFor(file format.Inspection, match format.Match, id string) (format.Payload, error) {
+	payload, ok := match.Payload(file)
 	if !ok {
-		return probe.Payload{}, fmt.Errorf("%s payload: the claimed payload is missing", id)
+		return format.Payload{}, fmt.Errorf("%s payload: the matched payload is missing", id)
 	}
 	return payload, nil
 }
 
-func (m LumiverseModule) Parse(ctx context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
-	payload, err := payloadFor(file, claim, m.ID())
+func (m LumiverseModule) Parse(ctx context.Context, file format.Inspection, match format.Match) (format.Parsed, error) {
+	payload, err := payloadFor(file, match, m.ID())
 	if err != nil {
 		return format.Parsed{}, err
 	}
 	return readLumiverse(ctx, file, payload)
 }
 
-func (m SillyTavernModule) Parse(_ context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
-	payload, err := payloadFor(file, claim, m.ID())
+func (m SillyTavernModule) Parse(_ context.Context, file format.Inspection, match format.Match) (format.Parsed, error) {
+	payload, err := payloadFor(file, match, m.ID())
 	if err != nil {
 		return format.Parsed{}, err
 	}

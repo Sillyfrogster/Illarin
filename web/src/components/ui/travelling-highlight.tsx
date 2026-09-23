@@ -55,13 +55,13 @@ export function TravellingHighlight({
     const here = row.current;
     if (!here) return;
     const replace = () => moveTo(chosen, false);
-    const watch = new ResizeObserver(replace);
-    watch.observe(here);
+    const observer = new ResizeObserver(replace);
+    observer.observe(here);
     for (const cell of here.querySelectorAll("[data-cell]"))
-      watch.observe(cell);
+      observer.observe(cell);
     window.addEventListener("resize", replace);
     return () => {
-      watch.disconnect();
+      observer.disconnect();
       window.removeEventListener("resize", replace);
     };
   }, [chosen, moveTo]);

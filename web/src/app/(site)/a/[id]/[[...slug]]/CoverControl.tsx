@@ -3,21 +3,21 @@
 import { ImagePlus, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
-import { addAssetImage } from "@/lib/api/query";
+import { addWorkImage } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { useWorkingCopy } from "@/lib/working-copy";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 
-/** CoverControl offers a display picture to every kind of asset. */
+/** CoverControl offers a display picture to every type of work. */
 export function CoverControl({
-  assetId,
+  workId,
   hasCover,
-  kindLabel,
+  typeLabel,
 }: {
-  assetId: string;
+  workId: string;
   hasCover: boolean;
-  kindLabel: string;
+  typeLabel: string;
 }) {
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const router = useRouter();
   const file = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
@@ -29,7 +29,7 @@ export function CoverControl({
     setSending(true);
     setTrouble("");
     try {
-      await addAssetImage(candidate, assetId, chosen, "avatar");
+      await addWorkImage(candidate, workId, chosen, "avatar");
       router.refresh();
     } catch (error) {
       setTrouble(
@@ -78,7 +78,7 @@ export function CoverControl({
         )}
       >
         {trouble ||
-          `Shown for this ${kindLabel} in the catalog and on shared links.`}
+          `Shown for this ${typeLabel} in Browse and on shared links.`}
       </p>
     </div>
   );

@@ -2,39 +2,41 @@ import { expect, test } from "bun:test";
 import {
   archivePage,
   archivePath,
+  BLOG_FEEDS,
   BLOG_HOME,
   feedAddresses,
-  PUBLICATION_FEEDS,
   pageAddress,
   postPath,
 } from "./blog-paths";
 
 test("a post lives directly beneath the blog's front page", () => {
-  expect(postPath("first-post")).toBe("/first-post");
-  expect(postPath("café notes")).toBe("/caf%C3%A9%20notes");
+  expect(postPath("first-post")).toBe("/blog/first-post");
+  expect(postPath("café notes")).toBe("/blog/caf%C3%A9%20notes");
 });
 
 test("a narrowed archive lives under its scope", () => {
-  expect(archivePath("category", "release")).toBe("/category/release");
-  expect(archivePath("app", "lumiverse")).toBe("/app/lumiverse");
+  expect(archivePath("category", "release")).toBe("/blog/category/release");
 });
 
 test("page one is the archive itself and later pages count from it", () => {
-  expect(pageAddress(BLOG_HOME, 1)).toBe("/");
-  expect(pageAddress(BLOG_HOME, 2)).toBe("/page/2");
+  expect(pageAddress(BLOG_HOME, 1)).toBe("/blog");
+  expect(pageAddress(BLOG_HOME, 2)).toBe("/blog/page/2");
   expect(pageAddress("/category/release", 1)).toBe("/category/release");
   expect(pageAddress("/category/release", 3)).toBe("/category/release/page/3");
 });
 
 test("a feed answers beneath the archive it summarizes", () => {
   expect(feedAddresses(BLOG_HOME)).toEqual({
-    rss: "/feed.xml",
-    json: "/feed.json",
+    rss: "/blog/feed.xml",
+    json: "/blog/feed.json",
   });
-  expect(PUBLICATION_FEEDS).toEqual({ rss: "/feed.xml", json: "/feed.json" });
-  expect(feedAddresses("/app/lumiverse")).toEqual({
-    rss: "/app/lumiverse/feed.xml",
-    json: "/app/lumiverse/feed.json",
+  expect(BLOG_FEEDS).toEqual({
+    rss: "/blog/feed.xml",
+    json: "/blog/feed.json",
+  });
+  expect(feedAddresses("/category/release")).toEqual({
+    rss: "/category/release/feed.xml",
+    json: "/category/release/feed.json",
   });
 });
 

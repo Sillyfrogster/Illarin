@@ -20,12 +20,12 @@ import (
 var (
 	ErrImageTooLarge    = errors.New("image dimensions exceed the safety limit")
 	ErrUnsupportedImage = errors.New("image is not a supported raster format")
-	ErrUnknownVariant   = errors.New("unknown media variant")
+	ErrUnknownImageSize = errors.New("unknown media size")
 )
 
 const (
-	DerivativeVersion uint32 = 2
-	DerivativeType           = "image/png"
+	ImageSizeVersion   uint32 = 2
+	ImageSizeMediaType        = "image/png"
 )
 
 type Limits struct {
@@ -37,14 +37,14 @@ func DefaultLimits() Limits {
 	return Limits{MaxDimension: 16_384, MaxPixels: 40_000_000}
 }
 
-type Variant struct {
+type ImageSize struct {
 	Name      string
 	MaxWidth  int
 	MaxHeight int
 	Blurred   bool
 }
 
-var variants = []Variant{
+var imageSizes = []ImageSize{
 	{Name: "grid", MaxWidth: 640, MaxHeight: 640},
 	{Name: "grid_blurred", MaxWidth: 640, MaxHeight: 640, Blurred: true},
 	{Name: "detail", MaxWidth: 1600, MaxHeight: 1600},
@@ -53,48 +53,49 @@ var variants = []Variant{
 	{Name: "thumb_blurred", MaxWidth: 160, MaxHeight: 160, Blurred: true},
 }
 
-var socialPreviews = []Variant{
+var linkCards = []ImageSize{
 	{Name: "og", MaxWidth: 1200, MaxHeight: 630},
 	{Name: "og_blurred", MaxWidth: 1200, MaxHeight: 630, Blurred: true},
 }
 
 var previewField = color.RGBA{R: 0x05, G: 0x05, B: 0x05, A: 0xff}
 
-func SocialPreviewByName(name string) (Variant, bool) {
-	for _, preview := range socialPreviews {
+func LinkCardByName(name string) (ImageSize, bool) {
+	for _, preview := range linkCards {
 		if preview.Name == name {
 			return preview, true
 		}
 	}
-	return Variant{}, false
+	return ImageSize{}, false
 }
 
-func VariantNames() []string {
-	names := make([]string, 0, len(variants))
-	for _, variant := range variants {
-		names = append(names, variant.Name)
+func ImageSizeNames() []string {
+	names := make([]string, 0, len(imageSizes))
+	for _, size := range imageSizes {
+		names = append(names, size.Name)
 	}
 	return names
 }
 
-func VariantByName(name string) (Variant, bool) {
-	for _, variant := range variants {
-		if variant.Name == name {
-			return variant, true
+func ImageSizeByName(name string) (ImageSize, bool) {
+	for _, size := range imageSizes {
+		if size.Name == name {
+			return size, true
 		}
 	}
-	return Variant{}, false
+	return ImageSize{}, false
 }
 
-type Derivative struct {
-	Variant string
-	Bytes   []byte
+type Rendered struct {
+	Size  string
+	Bytes []byte
 }
 
 type Prepared struct {
-	Width       int
-	Height      int
-	Derivatives []Derivative
+	Width  int
+	Height int
+	Tint   string
+	Sizes  []Rendered
 }
 
 type Processor struct {
@@ -113,7 +114,7 @@ type Encoder interface {
 
 type PNGEncoder struct{}
 
-func (PNGEncoder) MediaType() string { return DerivativeType }
+func (PNGEncoder) MediaType() string { return ImageSizeMediaType }
 
 func (PNGEncoder) Encode(w io.Writer, source image.Image) error {
 	return png.Encode(w, source)
@@ -123,7 +124,7 @@ func NewProcessorWithEncoder(limits Limits, encoder Encoder) *Processor {
 	return &Processor{limits: limits, encoder: encoder}
 }
 
-func (p *Processor) DerivativeType() string {
+func (p *Processor) ImageSizeMediaType() string {
 	return p.encoder.MediaType()
 }
 
@@ -133,53 +134,54 @@ func (p *Processor) Prepare(ctx context.Context, source io.Reader) (Prepared, er
 		return Prepared{}, err
 	}
 	prepared := Prepared{
-		Width:       width,
-		Height:      height,
-		Derivatives: make([]Derivative, 0, len(variants)),
+		Width:  width,
+		Height: height,
+		Tint:   Tint(decoded),
+		Sizes:  make([]Rendered, 0, len(imageSizes)),
 	}
-	for _, variant := range variants {
+	for _, size := range imageSizes {
 		if err := ctx.Err(); err != nil {
 			return Prepared{}, err
 		}
-		derivative, err := p.render(decoded, variant)
+		rendered, err := p.render(decoded, size)
 		if err != nil {
-			return Prepared{}, fmt.Errorf("render %s variant: %w", variant.Name, err)
+			return Prepared{}, fmt.Errorf("render %s size: %w", size.Name, err)
 		}
-		prepared.Derivatives = append(prepared.Derivatives, derivative)
+		prepared.Sizes = append(prepared.Sizes, rendered)
 	}
 	return prepared, nil
 }
 
-func (p *Processor) Render(ctx context.Context, source io.Reader, name string) (Derivative, error) {
-	variant, ok := VariantByName(name)
+func (p *Processor) Render(ctx context.Context, source io.Reader, name string) (Rendered, error) {
+	size, ok := ImageSizeByName(name)
 	if !ok {
-		return Derivative{}, ErrUnknownVariant
+		return Rendered{}, ErrUnknownImageSize
 	}
 	decoded, _, _, err := p.decode(ctx, source)
 	if err != nil {
-		return Derivative{}, err
+		return Rendered{}, err
 	}
 	if err := ctx.Err(); err != nil {
-		return Derivative{}, err
+		return Rendered{}, err
 	}
-	return p.render(decoded, variant)
+	return p.render(decoded, size)
 }
 
-func (p *Processor) ComposeSocialPreview(
+func (p *Processor) ComposeLinkCard(
 	ctx context.Context,
 	source io.Reader,
 	name string,
-) (Derivative, error) {
-	preview, ok := SocialPreviewByName(name)
+) (Rendered, error) {
+	preview, ok := LinkCardByName(name)
 	if !ok {
-		return Derivative{}, ErrUnknownVariant
+		return Rendered{}, ErrUnknownImageSize
 	}
 	decoded, _, _, err := p.decode(ctx, source)
 	if err != nil {
-		return Derivative{}, err
+		return Rendered{}, err
 	}
 	if err := ctx.Err(); err != nil {
-		return Derivative{}, err
+		return Rendered{}, err
 	}
 	canvas := image.NewRGBA(image.Rect(0, 0, preview.MaxWidth, preview.MaxHeight))
 	draw.Draw(canvas, canvas.Bounds(), &image.Uniform{C: previewField}, image.Point{}, draw.Src)
@@ -237,24 +239,24 @@ func (p *Processor) checkDimensions(width, height int) error {
 	return nil
 }
 
-func (p *Processor) render(source image.Image, variant Variant) (Derivative, error) {
+func (p *Processor) render(source image.Image, size ImageSize) (Rendered, error) {
 	sourceSize := source.Bounds().Size()
-	width, height := boundedSize(sourceSize.X, sourceSize.Y, variant.MaxWidth, variant.MaxHeight)
+	width, height := boundedSize(sourceSize.X, sourceSize.Y, size.MaxWidth, size.MaxHeight)
 	resized := image.NewRGBA(image.Rect(0, 0, width, height))
 	draw.CatmullRom.Scale(resized, resized.Bounds(), source, source.Bounds(), draw.Over, nil)
 	output := image.Image(resized)
-	if variant.Blurred {
+	if size.Blurred {
 		output = obscure(resized)
 	}
-	return p.encode(output, variant.Name)
+	return p.encode(output, size.Name)
 }
 
-func (p *Processor) encode(source image.Image, variant string) (Derivative, error) {
+func (p *Processor) encode(source image.Image, size string) (Rendered, error) {
 	var encoded bytes.Buffer
 	if err := p.encoder.Encode(&encoded, source); err != nil {
-		return Derivative{}, fmt.Errorf("encode %s: %w", p.encoder.MediaType(), err)
+		return Rendered{}, fmt.Errorf("encode %s: %w", p.encoder.MediaType(), err)
 	}
-	return Derivative{Variant: variant, Bytes: encoded.Bytes()}, nil
+	return Rendered{Size: size, Bytes: encoded.Bytes()}, nil
 }
 
 func boundedSize(width, height, maxWidth, maxHeight int) (int, int) {

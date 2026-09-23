@@ -1,8 +1,0 @@
-{
-  "note": "Styling is not part of a document",
-  "path": "document.content.0.style",
-  "document": {
-    "version": 2,
-    "content": [{"type": "paragraph", "style": "color:red", "content": [{"type": "text", "text": "Loud"}]}]
-  }
-}

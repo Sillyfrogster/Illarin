@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated from the API by make site-types
+/src/lib/api/shapes.ts
+/src/lib/api/shapes/

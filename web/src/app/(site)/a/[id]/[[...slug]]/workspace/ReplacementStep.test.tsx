@@ -8,11 +8,11 @@ test("replacement warnings survive a null conflict list and name missing wording
       preview={{
         conflicts: null as never,
         missingWording: ["New private prompt"],
-        seals: 1,
+        privatePrompts: 1,
       }}
     />,
   );
   expect(markup).toContain("New private prompt");
-  expect(markup).toContain("sealed and empty");
+  expect(markup).toContain("private and empty");
   expect(markup).not.toContain("overwrites edits");
 });

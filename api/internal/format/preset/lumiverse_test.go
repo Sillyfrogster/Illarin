@@ -13,38 +13,38 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
+	"github.com/Sillyfrogster/Illarin/api/internal/private"
 )
 
 func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
-		name     string
-		body     string
-		claimant string
+		name      string
+		body      string
+		matchedBy string
 	}{
-		{name: "schema version 1", body: `{"schemaVersion": 1, "blocks": []}`, claimant: LumiverseID},
-		{name: "schema version 2", body: `{"schemaVersion": 2, "blocks": []}`, claimant: LumiverseID},
-		{name: "a whole preset", body: lumiversePreset, claimant: LumiverseID},
+		{name: "schema version 1", body: `{"schemaVersion": 1, "blocks": []}`, matchedBy: LumiverseID},
+		{name: "schema version 2", body: `{"schemaVersion": 2, "blocks": []}`, matchedBy: LumiverseID},
+		{name: "a whole preset", body: lumiversePreset, matchedBy: LumiverseID},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			file := document(t, test.body)
-			resolution, claimed, err := testRegistry(t).Resolve(file)
+			resolution, matched, err := testRegistry(t).Resolve(file)
 			if err != nil {
 				t.Fatalf("resolve: %v", err)
 			}
-			claimant := ""
-			if claimed {
-				claimant = resolution.Module.ID()
+			matchedBy := ""
+			if matched {
+				matchedBy = resolution.Module.ID()
 			}
-			if claimant != test.claimant {
-				t.Fatalf("claimed by %q, want %q", claimant, test.claimant)
+			if matchedBy != test.matchedBy {
+				t.Fatalf("matched by %q, want %q", matchedBy, test.matchedBy)
 			}
-			if !claimed {
+			if !matched {
 				return
 			}
 			if _, err := resolution.Module.Parse(
-				context.Background(), file, resolution.Claim,
+				context.Background(), file, resolution.Match,
 			); err != nil {
 				t.Fatalf("parse: %v", err)
 			}
@@ -52,9 +52,9 @@ func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
 	}
 
 	t.Run("a marker outside the set", func(t *testing.T) {
-		_, claimed, err := testRegistry(t).Resolve(document(t, `{"schemaVersion": 3, "blocks": []}`))
-		if claimed {
-			t.Fatal("a marker outside the set was claimed")
+		_, matched, err := testRegistry(t).Resolve(document(t, `{"schemaVersion": 3, "blocks": []}`))
+		if matched {
+			t.Fatal("a marker outside the set was matched")
 		}
 		if !errors.Is(err, format.ErrUnsupportedFormat) {
 			t.Fatalf("resolve error = %v, want an unsupported format", err)
@@ -73,10 +73,10 @@ func TestASchemaVersionIsAMarkerAndNeverAnUnsupportedVersion(t *testing.T) {
 func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, lumiversePreset)
-	if parsed.Kind != Kind || parsed.Format != LumiverseID {
-		t.Fatalf("parsed kind %q format %q", parsed.Kind, parsed.Format)
+	if parsed.Type != Type || parsed.Format != LumiverseID {
+		t.Fatalf("parsed type %q format %q", parsed.Type, parsed.Format)
 	}
-	if parsed.Header.Name != "Quiet Room" || parsed.Header.AssetVersion != "1.2" {
+	if parsed.Header.Name != "Quiet Room" || parsed.Header.WorkVersion != "1.2" {
 		t.Errorf("header = %+v, want the preset's own name and version", parsed.Header)
 	}
 	if parsed.Header.Blurb != "A calm narrator with a short leash." {
@@ -165,7 +165,7 @@ func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 		t.Errorf("script runs over %v and changes %v", script.Targets, script.Affects)
 	}
 
-	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, lumiverseNamespace)
+	body := preservedPayload(t, parsed.Remainder, format.OwnerWork, lumiverseNamespace)
 	for _, key := range []string{"id", "coverUrl", "isDefault", "modelProfiles", "customBody"} {
 		if _, held := body[key]; !held {
 			t.Errorf("the preset's %s was not preserved", key)
@@ -178,7 +178,7 @@ func TestReadingALumiversePresetFillsTheRolesAndKeepsTheRest(t *testing.T) {
 	if _, held := samplerLeftovers["top_p"]; !held {
 		t.Error("a settings name this app does not read was dropped rather than preserved")
 	}
-	if _, held := preserved(parsed.Remainder, format.OwnerAsset, "risuai"); !held {
+	if _, held := preserved(parsed.Remainder, format.OwnerWork, "risuai"); !held {
 		t.Error("the extensions namespace was not preserved as its own namespace")
 	}
 }
@@ -223,10 +223,10 @@ func TestReadingLumiverseScriptsBundledOnlyUnderExtensions(t *testing.T) {
 		!reflect.DeepEqual(script.Affects, []block.ScriptEffect{block.EffectDisplay, block.EffectPrompt}) {
 		t.Errorf("script runs over %v and changes %v", script.Targets, script.Affects)
 	}
-	if _, held := preserved(parsed.Remainder, format.OwnerAsset, "another_extension"); !held {
+	if _, held := preserved(parsed.Remainder, format.OwnerWork, "another_extension"); !held {
 		t.Error("a neighbouring extension was dropped")
 	}
-	if _, held := preserved(parsed.Remainder, format.OwnerAsset, lvScripts); held {
+	if _, held := preserved(parsed.Remainder, format.OwnerWork, lvScripts); held {
 		t.Error("the bundled script list was preserved as opaque data instead of being read")
 	}
 
@@ -249,13 +249,13 @@ func TestReadingLumiverseScriptsBundledOnlyUnderExtensions(t *testing.T) {
 	}
 }
 
-func TestWritingARestoredPromptHasNoProtectedContentProtocol(t *testing.T) {
+func TestWritingARestoredPromptLeavesNoPrivatePromptMarker(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, lumiversePreset)
 	list := promptList(t, parsed.Elements)
-	const restored = "Delivered only to the linked application."
+	const restored = "Sent only to an allowed app."
 	list.Fragments[0].Text = restored
-	list.Fragments[0].Protected = true
+	list.Fragments[0].Private = true
 	for index := range parsed.Elements {
 		if parsed.Elements[index].Role == block.RolePromptFragments {
 			parsed.Elements[index].Content = list
@@ -267,17 +267,17 @@ func TestWritingARestoredPromptHasNoProtectedContentProtocol(t *testing.T) {
 	if !strings.Contains(string(written.Body), restored) {
 		t.Fatal("the writer did not receive the restored prompt text")
 	}
-	if strings.Contains(string(written.Body), `"protected"`) {
-		t.Fatal("the artifact contained Illarin's protected-content marker")
+	if strings.Contains(string(written.Body), `"private"`) {
+		t.Fatal("the artifact contained Illarin's private prompt marker")
 	}
 }
 
-func TestReadingAKeyedSealedPromptSeparatesItsText(t *testing.T) {
+func TestReadingAKeyedPrivatePromptSeparatesItsText(t *testing.T) {
 	t.Parallel()
 	const privateText = "Private publisher prompt\nwith exact whitespace. "
 	parsed := parse(t, `{
 		"schemaVersion": 1,
-		"name": "Sealed preset",
+		"name": "Private prompt preset",
 		"blocks": [
 			{
 				"id": "public",
@@ -302,20 +302,20 @@ func TestReadingAKeyedSealedPromptSeparatesItsText(t *testing.T) {
 	if len(list.Fragments) != 2 {
 		t.Fatalf("read %d fragments, want 2", len(list.Fragments))
 	}
-	public, sealed := list.Fragments[0], list.Fragments[1]
-	if public.Protected || public.Text != "Visible text." {
+	public, privateFragment := list.Fragments[0], list.Fragments[1]
+	if public.Private || public.Text != "Visible text." {
 		t.Errorf("public fragment = %+v", public)
 	}
-	if !sealed.Protected || sealed.Text != "" {
-		t.Errorf("sealed stub = %+v, want a protected fragment with no public text", sealed)
+	if !privateFragment.Private || privateFragment.Text != "" {
+		t.Errorf("private stub = %+v, want a private fragment with no public text", privateFragment)
 	}
-	if len(parsed.Protected.Prompts) != 1 {
-		t.Fatalf("protected prompts = %d, want 1", len(parsed.Protected.Prompts))
+	if len(parsed.PrivatePrompts) != 1 {
+		t.Fatalf("private prompts = %d, want 1", len(parsed.PrivatePrompts))
 	}
-	private := parsed.Protected.Prompts[0]
-	if private.FragmentID != sealed.ID || private.SourceKey != "dialogue.frame" ||
+	private := parsed.PrivatePrompts[0]
+	if private.FragmentID != privateFragment.ID || private.SourceKey != "dialogue.frame" ||
 		private.Text != privateText || private.ReuseExisting {
-		t.Errorf("protected prompt = %+v", private)
+		t.Errorf("private prompt = %+v", private)
 	}
 
 	list.Fragments[1].Text = private.Text
@@ -359,20 +359,20 @@ func TestReadingAKeyedPlaceholderMarksItForReuse(t *testing.T) {
 	}`)
 
 	fragment := promptList(t, parsed.Elements).Fragments[0]
-	if !fragment.Protected || fragment.Text != "" {
+	if !fragment.Private || fragment.Text != "" {
 		t.Errorf("placeholder stub = %+v", fragment)
 	}
-	if len(parsed.Protected.Prompts) != 1 {
-		t.Fatalf("protected prompts = %d, want 1", len(parsed.Protected.Prompts))
+	if len(parsed.PrivatePrompts) != 1 {
+		t.Fatalf("private prompts = %d, want 1", len(parsed.PrivatePrompts))
 	}
-	private := parsed.Protected.Prompts[0]
+	private := parsed.PrivatePrompts[0]
 	if private.FragmentID != fragment.ID || private.SourceKey != "dialogue.frame" ||
 		private.Text != "" || !private.ReuseExisting {
-		t.Errorf("protected prompt = %+v", private)
+		t.Errorf("private prompt = %+v", private)
 	}
 }
 
-func TestMalformedKeyedSealingMetadataIsRefused(t *testing.T) {
+func TestMalformedKeyedPrivatePromptMetadataIsRefused(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name   string
@@ -390,7 +390,7 @@ func TestMalformedKeyedSealingMetadataIsRefused(t *testing.T) {
 			blocks: `[{"id":"one","content":"Private","enabled":true,"sealed":true}]`,
 		},
 		{
-			name:   "key without sealing",
+			name:   "key without the private flag",
 			blocks: `[{"id":"one","content":"Private","enabled":true,"sealedKey":"orphan"}]`,
 		},
 		{
@@ -408,34 +408,30 @@ func TestMalformedKeyedSealingMetadataIsRefused(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			file := document(t, `{"schemaVersion":1,"blocks":`+test.blocks+`}`)
-			claim, claimed := (LumiverseModule{}).Claim(file)
-			if !claimed {
-				t.Fatal("the Lumiverse marker was not claimed")
+			match, matched := (LumiverseModule{}).Match(file)
+			if !matched {
+				t.Fatal("the Lumiverse marker was not matched")
 			}
-			_, err := (LumiverseModule{}).Parse(context.Background(), file, claim)
+			_, err := (LumiverseModule{}).Parse(context.Background(), file, match)
 			if reason, classified := format.FailureOf(err); !classified ||
 				reason != format.FailureMalformedInput {
 				t.Fatalf("parse error = %v, want a malformed input refusal", err)
 			}
-			if !strings.Contains(err.Error(), "sealed") {
-				t.Errorf("parse error = %v, want useful sealing detail", err)
+			if !strings.Contains(err.Error(), "private prompt") {
+				t.Errorf("parse error = %v, want useful private prompt detail", err)
 			}
 		})
 	}
 }
 
-func TestASillyTavernOriginDoesNotOfferLumiverseForProtectedDelivery(t *testing.T) {
+func TestASillyTavernOriginOffersNoAppForPrivatePrompts(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, sillyTavernPreset)
-	offered := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: Kind, Origin: SillyTavernID, Elements: parsed.Elements,
+	offered := testRegistry(t).OfferedFormats(format.CapabilitySubject{
+		Type: Type, OriginalFormat: SillyTavernID, Elements: parsed.Elements,
 	})
-	targets := make([]string, len(offered))
-	for i, target := range offered {
-		targets[i] = target.Format
-	}
-	if apps := protected.EligibleApps(Kind, targets); len(apps) != 0 {
-		t.Fatalf("SillyTavern protected-delivery apps = %v, want none", apps)
+	if apps := private.EligibleApps(testRegistry(t), format.OfferedIDs(offered)); len(apps) != 0 {
+		t.Fatalf("apps allowed private prompts from a SillyTavern original format = %v, want none", apps)
 	}
 }
 
@@ -473,11 +469,11 @@ func TestALargePayloadImportsWithinTheDeclaredLimits(t *testing.T) {
 func TestABlockListThatIsNotAListRefusesTheImport(t *testing.T) {
 	t.Parallel()
 	file := document(t, `{"schemaVersion": 1, "blocks": {"0": {}}}`)
-	claim, claimed := (LumiverseModule{}).Claim(file)
-	if !claimed {
+	match, matched := (LumiverseModule{}).Match(file)
+	if !matched {
 		t.Fatal("the marker was not recognised")
 	}
-	_, err := (LumiverseModule{}).Parse(context.Background(), file, claim)
+	_, err := (LumiverseModule{}).Parse(context.Background(), file, match)
 	if reason, classified := format.FailureOf(err); !classified ||
 		reason != format.FailureMalformedInput {
 		t.Fatalf("parse error = %v, want a malformed input refusal", err)
@@ -497,7 +493,7 @@ func TestADescriptionTooLongToBindStaysInTheFile(t *testing.T) {
 	if parsed.Header.Blurb != "" {
 		t.Errorf("blurb = %q, want none rather than a shortened one", parsed.Header.Blurb)
 	}
-	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, lumiverseNamespace)
+	body := preservedPayload(t, parsed.Remainder, format.OwnerWork, lumiverseNamespace)
 	if string(body["description"]) != string(mustEncode(t, long)) {
 		t.Error("the description was not kept whole in the file")
 	}

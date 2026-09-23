@@ -1,49 +1,43 @@
 import type {
   Post,
   PostAction,
-  PostDelivery,
   PostMedia,
   PostMediaPurpose,
   PostRevision,
-  PublicationDestinationChoiceList,
 } from "@/lib/api/query";
-import type { PostDocument } from "@/lib/post-document";
-import { ask, json } from "./request";
+import type { PostBody } from "@/lib/post-body";
+import { ask } from "./request";
 
-export type WorkingCopy = {
+export type DraftedChanges = {
   version: number;
   categoryId: string;
   title: string;
   summary: string;
   slug: string;
-  document: PostDocument;
+  body: PostBody;
   release?: { appId: string; version: string; address?: string } | null;
   header?: { mediaId: string; alt: string; caption?: string } | null;
-  socialMediaId?: string | null;
+  linkCardMediaId?: string | null;
 };
 
 export function readPosts() {
-  return json<{ posts: Post[] }>("/publication/posts", "GET");
+  return ask<{ posts: Post[] }>("GET", "/blog/posts");
 }
 
 export function readDeletedPosts() {
-  return json<{ posts: Post[] }>("/publication/posts?deleted=true", "GET");
+  return ask<{ posts: Post[] }>("GET", "/blog/posts?deleted=true");
 }
 
-export function startPost(draft: {
-  grantId?: string;
-  categoryId: string;
-  title: string;
-}) {
-  return json<Post>("/publication/posts", "POST", draft);
+export function startPost(draft: { categoryId: string; title: string }) {
+  return ask<Post>("POST", "/blog/posts", { body: draft });
 }
 
 export function readPost(id: string) {
-  return json<Post>(`/publication/posts/${id}`, "GET");
+  return ask<Post>("GET", `/blog/posts/${id}`);
 }
 
-export function saveWorkingCopy(id: string, working: WorkingCopy) {
-  return json<Post>(`/publication/posts/${id}`, "PUT", working);
+export function saveDraftedChanges(id: string, drafted: DraftedChanges) {
+  return ask<Post>("PUT", `/blog/posts/${id}`, { body: drafted });
 }
 
 export function uploadPostMedia(
@@ -54,62 +48,49 @@ export function uploadPostMedia(
   const body = new FormData();
   body.append("metadata", JSON.stringify({ purpose }));
   body.append("file", file, file.name);
-  return ask<PostMedia>(
-    `/publication/posts/${id}/media`,
-    { method: "POST", body },
-    (response) => response.json() as Promise<PostMedia>,
-  );
+  return ask<PostMedia>("POST", `/blog/posts/${id}/media`, { body });
 }
 
 export function correctPostAddress(id: string, slug: string) {
-  return json<Post>(`/publication/posts/${id}/address`, "PUT", { slug });
+  return ask<Post>("PUT", `/blog/posts/${id}/address`, {
+    body: { slug },
+  });
 }
 
 export function correctPostByline(id: string, handle: string) {
-  return json<Post>(`/publication/posts/${id}/byline`, "PUT", { handle });
+  return ask<Post>("PUT", `/blog/posts/${id}/byline`, {
+    body: { handle },
+  });
 }
 
-export type Announcement = {
-  destinationIds?: string[] | null;
-  roleDestinationIds?: string[];
-  note?: string;
-};
+/** Announcement says whether a post's first publication goes to the blog's Discord channel. */
+export type Announcement = { discord?: boolean };
 
 export function publishPost(
   id: string,
   version: number,
   announcement: Announcement = {},
 ) {
-  return json<Post>(`/publication/posts/${id}/publish`, "POST", {
-    version,
-    ...announcement,
+  return ask<Post>("POST", `/blog/posts/${id}/publish`, {
+    body: {
+      version,
+      ...announcement,
+    },
   });
 }
 
-export function readPostDestinations(id: string) {
-  return json<PublicationDestinationChoiceList>(
-    `/publication/posts/${id}/destinations`,
-    "GET",
-  );
-}
-
-export function readPostDeliveries(id: string) {
-  return json<{ deliveries: PostDelivery[] }>(
-    `/publication/posts/${id}/deliveries`,
-    "GET",
-  );
-}
-
 export function readPostRevisions(id: string) {
-  return json<{ revisions: PostRevision[] }>(
-    `/publication/posts/${id}/revisions`,
+  return ask<{ revisions: PostRevision[] }>(
     "GET",
+    `/blog/posts/${id}/revisions`,
   );
 }
 
 export function keepPostVersion(id: string, version: number) {
-  return json<PostRevision>(`/publication/posts/${id}/revisions`, "POST", {
-    version,
+  return ask<PostRevision>("POST", `/blog/posts/${id}/revisions`, {
+    body: {
+      version,
+    },
   });
 }
 
@@ -118,18 +99,15 @@ export function restorePostRevision(
   revisionId: string,
   version: number,
 ) {
-  return json<Post>(
-    `/publication/posts/${id}/revisions/${revisionId}/restore`,
+  return ask<Post>(
     "POST",
-    { version },
+    `/blog/posts/${id}/revisions/${revisionId}/restore`,
+    { body: { version } },
   );
 }
 
 export function readPostHistory(id: string) {
-  return json<{ actions: PostAction[] }>(
-    `/publication/posts/${id}/history`,
-    "GET",
-  );
+  return ask<{ actions: PostAction[] }>("GET", `/blog/posts/${id}/history`);
 }
 
 export function schedulePost(
@@ -138,10 +116,12 @@ export function schedulePost(
   at: string,
   announcement: Announcement = {},
 ) {
-  return json<Post>(`/publication/posts/${id}/schedule`, "POST", {
-    version,
-    at,
-    ...announcement,
+  return ask<Post>("POST", `/blog/posts/${id}/schedule`, {
+    body: {
+      version,
+      at,
+      ...announcement,
+    },
   });
 }
 
@@ -150,48 +130,50 @@ export function replacePostSchedule(
   revisionId: string,
   at: string,
 ) {
-  return json<Post>(`/publication/posts/${id}/schedule`, "PUT", {
-    revisionId,
-    at,
+  return ask<Post>("PUT", `/blog/posts/${id}/schedule`, {
+    body: {
+      revisionId,
+      at,
+    },
   });
 }
 
 export function cancelPostSchedule(id: string) {
-  return json<Post>(`/publication/posts/${id}/schedule`, "DELETE");
+  return ask<Post>("DELETE", `/blog/posts/${id}/schedule`);
 }
 
-export function withdrawPost(
+export function unpublishPost(
   id: string,
   version: number,
   reason: string,
   explanation: string,
-  announcement: Announcement,
 ) {
-  return json<Post>(`/publication/posts/${id}/withdraw`, "POST", {
-    version,
-    reason,
-    explanation,
-    ...announcement,
+  return ask<Post>("POST", `/blog/posts/${id}/unpublish`, {
+    body: {
+      version,
+      reason,
+      explanation,
+    },
   });
 }
 
-export function republishPost(
-  id: string,
-  version: number,
-  revisionId: string,
-  announcement: Announcement,
-) {
-  return json<Post>(`/publication/posts/${id}/republish`, "POST", {
-    version,
-    revisionId,
-    ...announcement,
+export function republishPost(id: string, version: number, revisionId: string) {
+  return ask<Post>("POST", `/blog/posts/${id}/republish`, {
+    body: {
+      version,
+      revisionId,
+    },
   });
 }
 
 export function deletePost(id: string, version: number) {
-  return json<Post>(`/publication/posts/${id}/delete`, "POST", { version });
+  return ask<Post>("POST", `/blog/posts/${id}/delete`, {
+    body: { version },
+  });
 }
 
 export function recoverPost(id: string, version: number) {
-  return json<Post>(`/publication/posts/${id}/recover`, "POST", { version });
+  return ask<Post>("POST", `/blog/posts/${id}/recover`, {
+    body: { version },
+  });
 }

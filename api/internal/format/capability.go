@@ -36,6 +36,62 @@ func Apps() []App {
 	}
 }
 
+// AppLabel names the app with the given id, or gives the id back for an app Illarin no longer knows
+func AppLabel(id string) string {
+	for _, app := range Apps() {
+		if app.ID == id {
+			return app.Label
+		}
+	}
+	return id
+}
+
+// KnownApp says whether the registry holds an app with this id
+func KnownApp(id string) bool {
+	return slices.ContainsFunc(Apps(), func(app App) bool { return app.ID == id })
+}
+
+// AppsReading lists the ids of the apps that read at least one of these formats
+func AppsReading(formats []string) []string {
+	ids := []string{}
+	for _, app := range Apps() {
+		if slices.ContainsFunc(formats, func(id string) bool { return slices.Contains(app.Reads, id) }) {
+			ids = append(ids, app.ID)
+		}
+	}
+	return ids
+}
+
+// TypesRead lists the types of the formats an app reads, sorted
+func (r *Registry) TypesRead(app App) []string {
+	types := []string{}
+	for _, id := range app.Reads {
+		if declaration, ok := r.Declaration(id); ok && !slices.Contains(types, declaration.Type) {
+			types = append(types, declaration.Type)
+		}
+	}
+	slices.Sort(types)
+	return types
+}
+
+// OneAppTypes lists the types only one app reads, which browse holds back until a reader picks that app
+func (r *Registry) OneAppTypes() []string {
+	readers := map[string]int{}
+	for _, app := range Apps() {
+		for _, workType := range r.TypesRead(app) {
+			readers[workType]++
+		}
+	}
+	types := []string{}
+	for workType, count := range readers {
+		if count == 1 {
+			types = append(types, workType)
+		}
+	}
+	slices.Sort(types)
+	return types
+}
+
 func reach(formatID string) int {
 	count := 0
 	for _, app := range Apps() {
@@ -74,14 +130,15 @@ func (l RoleLoss) reaches(app string) bool {
 
 func (l RoleLoss) Lossy() bool { return l.Verdict != Carried }
 
-type Target struct {
+// Offered is one format a work can be downloaded or sent in, with what that format leaves out
+type Offered struct {
 	Format      string     `json:"format"`
 	Label       string     `json:"label"`
 	Recommended bool       `json:"recommended"`
 	Roles       []RoleLoss `json:"roles"`
 }
 
-func (t Target) Losses() []RoleLoss {
+func (t Offered) Losses() []RoleLoss {
 	losses := make([]RoleLoss, 0, len(t.Roles))
 	for _, role := range t.Roles {
 		if role.Lossy() {
@@ -91,8 +148,8 @@ func (t Target) Losses() []RoleLoss {
 	return losses
 }
 
-// LossesFor counts what this target leaves out of the named app.
-func (t Target) LossesFor(app string) int {
+// LossesFor counts what this format leaves out of the named app.
+func (t Offered) LossesFor(app string) int {
 	lost := 0
 	for _, role := range t.Roles {
 		if !role.reaches(app) {
@@ -102,8 +159,8 @@ func (t Target) LossesFor(app string) int {
 	return lost
 }
 
-// Notes counts the roles this target carries somewhere only some apps read.
-func (t Target) Notes() int {
+// Notes counts the roles this format carries somewhere only some apps read.
+func (t Offered) Notes() int {
 	notes := 0
 	for _, role := range t.Roles {
 		if !role.Lossy() && role.Destination != "" {
@@ -114,65 +171,60 @@ func (t Target) Notes() int {
 }
 
 type CapabilitySubject struct {
-	Kind                 string
-	Origin               string
-	Elements             []block.Element
-	AllowedCrossPlatform []string
+	Type           string
+	OriginalFormat string
+	Elements       []block.Element
 }
 
-func (s CapabilitySubject) origin() string {
-	if s.Origin == "" {
-		return OriginIllarin
+func (s CapabilitySubject) originalFormat() string {
+	if s.OriginalFormat == "" {
+		return OriginalFormatIllarin
 	}
-	return s.Origin
+	return s.OriginalFormat
 }
 
-func (r *Registry) WritesKind(kind string) bool {
+func (r *Registry) WritesType(workType string) bool {
 	for _, module := range r.modules {
 		declaration := module.Declaration()
-		if declaration.Direction.Write && declaration.Kind == kind {
+		if declaration.Direction.Write && declaration.Type == workType {
 			return true
 		}
 	}
 	return false
 }
 
-// BuildsFromNothing says whether a kind can exist without an upload for its writer to hand back.
-func (r *Registry) BuildsFromNothing(kind string) bool {
+// BuildsFromNothing says whether a type can exist without an upload for its writer to hand back.
+func (r *Registry) BuildsFromNothing(workType string) bool {
 	for _, module := range r.modules {
 		declaration := module.Declaration()
-		if declaration.Direction.Write && declaration.Kind == kind && declaration.KeepsUpload {
+		if declaration.Direction.Write && declaration.Type == workType && declaration.KeepsUpload {
 			return false
 		}
 	}
 	return true
 }
 
-func (r *Registry) OfferedTargets(subject CapabilitySubject) []Target {
+func (r *Registry) OfferedFormats(subject CapabilitySubject) []Offered {
 	ids := make([]string, 0, len(r.modules))
 	for id := range r.modules {
 		ids = append(ids, id)
 	}
 	slices.Sort(ids)
 
-	offered := make([]Target, 0, len(ids))
+	offered := make([]Offered, 0, len(ids))
 	for _, id := range ids {
 		declaration := r.modules[id].Declaration()
-		if !declaration.Direction.Write || declaration.Kind != subject.Kind {
+		if !declaration.Direction.Write || declaration.Type != subject.Type {
 			continue
 		}
-		if !slices.Contains(declaration.TestedOrigins, subject.origin()) {
-			continue
-		}
-		if declaration.CrossPlatform &&
-			!slices.Contains(subject.AllowedCrossPlatform, declaration.ID) {
+		if !slices.Contains(declaration.TestedOriginalFormats, subject.originalFormat()) {
 			continue
 		}
 		roles, survives := lossReport(declaration, subject)
 		if !survives {
 			continue
 		}
-		offered = append(offered, Target{
+		offered = append(offered, Offered{
 			Format: declaration.ID, Label: declaration.Label, Roles: roles,
 		})
 	}
@@ -184,7 +236,7 @@ func lossReport(declaration Declaration, subject CapabilitySubject) ([]RoleLoss,
 	if declaration.KeepsUpload {
 		return []RoleLoss{}, true
 	}
-	required := block.RequiredRoles(subject.Kind)
+	required := block.RequiredRoles(subject.Type)
 	report := make([]RoleLoss, 0, len(block.Roles()))
 	for _, role := range block.Roles() {
 		written := writtenContent(subject.Elements, role)
@@ -237,19 +289,19 @@ func matchesAny(condition *ContentCondition, written []block.Content) bool {
 	return false
 }
 
-func recommend(targets []Target, r *Registry) {
+func recommend(offered []Offered, r *Registry) {
 	best := -1
-	for i := range targets {
-		if best < 0 || outranks(targets[i], targets[best], r) {
+	for i := range offered {
+		if best < 0 || outranks(offered[i], offered[best], r) {
 			best = i
 		}
 	}
 	if best >= 0 {
-		targets[best].Recommended = true
+		offered[best].Recommended = true
 	}
 }
 
-func outranks(candidate, holder Target, r *Registry) bool {
+func outranks(candidate, holder Offered, r *Registry) bool {
 	for _, comparison := range []int{
 		reach(candidate.Format) - reach(holder.Format),
 		len(holder.Losses()) - len(candidate.Losses()),
@@ -294,9 +346,9 @@ func (r *Registry) CapabilityStamp() string {
 		if !declaration.Direction.Write {
 			continue
 		}
-		fmt.Fprintf(digest, "module\x00%s\x00%s\x00%s\x00%v\x00%s\n",
-			declaration.ID, declaration.Kind, declaration.Label,
-			declaration.CrossPlatform, strings.Join(declaration.TestedOrigins, ","))
+		fmt.Fprintf(digest, "module\x00%s\x00%s\x00%s\x00%s\n",
+			declaration.ID, declaration.Type, declaration.Label,
+			strings.Join(declaration.TestedOriginalFormats, ","))
 		for _, role := range block.Roles() {
 			support := declaration.Roles[role].Write
 			condition := ""

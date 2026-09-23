@@ -5,11 +5,14 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import {
-  correctAssetVersionNotes,
+  correctWorkVersionNotes,
   type RecordedVersion,
-  restoreAssetVersion,
-  withdrawAssetVersion,
+  restoreWorkVersion,
+  withdrawWorkVersion,
 } from "@/lib/api/query";
+import { cn } from "@/lib/cn";
+import type { Candidate } from "@/lib/drafted-changes";
+import { workHref } from "@/lib/work-url";
 import {
   earlierVersions,
   isLongNote,
@@ -17,23 +20,20 @@ import {
   versionDate,
   versionSummary,
   versionTitle,
-} from "@/lib/asset-updates";
-import { assetHref } from "@/lib/asset-url";
-import { cn } from "@/lib/cn";
-import type { Candidate } from "@/lib/working-copy";
+} from "@/lib/work-versions";
 import { VersionChanges } from "./VersionChanges";
 
 export type HistoryOwner = {
-  assetName: string;
+  workName: string;
   canManage: boolean;
   isOwner: boolean;
-  workingCopyVersion: number;
+  draftedChangesVersion: number;
 };
 
 /** Shows a version's notes, changes, downloads and owner controls. */
 export function VersionDetail({
-  assetId,
-  kind,
+  workId,
+  typeName,
   version,
   versions,
   current,
@@ -41,8 +41,8 @@ export function VersionDetail({
   onChanged,
   owner,
 }: {
-  assetId: string;
-  kind: string;
+  workId: string;
+  typeName: string;
   version: RecordedVersion;
   versions: RecordedVersion[];
   current: boolean;
@@ -98,7 +98,7 @@ export function VersionDetail({
       ) : (
         <>
           <p className="mt-6 max-w-[60ch] font-prose text-lede text-ink">
-            {versionSummary(version, kind)}
+            {versionSummary(version, typeName)}
           </p>
           {version.notes ? <Note notes={version.notes} /> : null}
 
@@ -124,9 +124,9 @@ export function VersionDetail({
             </div>
             {against ? (
               <VersionChanges
-                assetId={assetId}
+                workId={workId}
                 from={baseline}
-                kind={kind}
+                typeName={typeName}
                 to={version.number}
               />
             ) : (
@@ -141,7 +141,7 @@ export function VersionDetail({
 
       {owner.canManage ? (
         <VersionManagement
-          assetId={assetId}
+          workId={workId}
           current={current}
           onChanged={onChanged}
           owner={owner}
@@ -153,13 +153,13 @@ export function VersionDetail({
 }
 
 function VersionManagement({
-  assetId,
+  workId,
   current,
   onChanged,
   owner,
   version,
 }: {
-  assetId: string;
+  workId: string;
   current: boolean;
   onChanged: () => void;
   owner: HistoryOwner;
@@ -236,25 +236,26 @@ function VersionManagement({
       {mode === "restore" ? (
         <div className="grid gap-4 pt-4 pb-1">
           <p className="text-meta text-mute">
-            This replaces the private working copy with this version, including
-            its pictures and page arrangement. Access, protection and delivery
-            choices stay current. Publishing it later requires fresh update
-            notes and validation.
+            This replaces your drafted changes with this version, including its
+            pictures and page arrangement. Access, private prompts and allowed
+            apps stay current. Publishing it later needs fresh version notes and
+            a fresh check.
           </p>
           <ActionRow
             busy={busy}
-            confirm="Replace working copy"
+            confirm="Replace drafted changes"
             onCancel={() => setMode("")}
             onConfirm={() =>
               runMutation(
                 () =>
-                  restoreAssetVersion(
-                    { version: owner.workingCopyVersion } satisfies Candidate,
-                    assetId,
+                  restoreWorkVersion(
+                    {
+                      version: owner.draftedChangesVersion,
+                    } satisfies Candidate,
+                    workId,
                     version.number,
                   ),
-                () =>
-                  window.location.assign(assetHref(assetId, owner.assetName)),
+                () => window.location.assign(workHref(workId, owner.workName)),
               )
             }
           />
@@ -288,7 +289,7 @@ function VersionManagement({
             onConfirm={() =>
               runMutation(
                 () =>
-                  correctAssetVersionNotes(assetId, version.number, {
+                  correctWorkVersionNotes(workId, version.number, {
                     summary,
                     notes,
                   }),
@@ -323,8 +324,7 @@ function VersionManagement({
             onCancel={() => setMode("")}
             onConfirm={() =>
               runMutation(
-                () =>
-                  withdrawAssetVersion(assetId, version.number, explanation),
+                () => withdrawWorkVersion(workId, version.number, explanation),
                 () => {
                   setMode("");
                   onChanged();

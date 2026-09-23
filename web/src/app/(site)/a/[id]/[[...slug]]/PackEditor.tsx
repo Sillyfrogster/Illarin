@@ -4,12 +4,12 @@ import { ImagePlus, UserRound, X } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
 import {
-  type AssetImage,
-  addAssetImage,
+  addWorkImage,
   type LumiaRecord,
   type RecordListContent,
+  type WorkImage,
 } from "@/lib/api/query";
-import { useWorkingCopy } from "@/lib/working-copy";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 import { CollectionStep } from "./workspace/CollectionStep";
 import { moveItem, replaceAt, without } from "./workspace/collection";
 import {
@@ -31,11 +31,11 @@ const PRONOUNS: Array<{
 ];
 
 function recordName(record: LumiaRecord, position: number): string {
-  return record.lumiaName.trim() || `Lumia ${position + 1}`;
+  return record.lumiaName.trim() || `Character ${position + 1}`;
 }
 
 export function PackEditor({
-  assetId,
+  workId,
   chosen,
   content,
   images,
@@ -44,10 +44,10 @@ export function PackEditor({
   onImageAdded,
   pending,
 }: {
-  assetId: string;
+  workId: string;
   chosen: string | null;
   content: RecordListContent;
-  images: AssetImage[];
+  images: WorkImage[];
   onChange: (content: RecordListContent) => void;
   onChoose: (key: string | null) => void;
   onImageAdded: () => void;
@@ -58,8 +58,8 @@ export function PackEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="This pack has no Lumia yet."
-      noun="Lumia"
+      emptyMessage="This pack has no characters yet."
+      noun="Character"
       onAdd={() =>
         onChange({
           ...content,
@@ -85,7 +85,7 @@ export function PackEditor({
         onChange({ ...content, records: without(records, index) })
       }
       pending={pending}
-      plural="Lumia"
+      plural="Characters"
       rows={records.map((record, index) => ({
         detail: record.authorName.trim() || "No author named",
         id: record.id,
@@ -96,8 +96,8 @@ export function PackEditor({
       }))}
     >
       {(index) => (
-        <LumiaFields
-          assetId={assetId}
+        <CharacterFields
+          workId={workId}
           images={images}
           onChange={(changes) =>
             onChange({
@@ -114,16 +114,16 @@ export function PackEditor({
   );
 }
 
-function LumiaFields({
-  assetId,
+function CharacterFields({
+  workId,
   images,
   onChange,
   onImageAdded,
   pending,
   record,
 }: {
-  assetId: string;
-  images: AssetImage[];
+  workId: string;
+  images: WorkImage[];
   onChange: (changes: Partial<LumiaRecord>) => void;
   onImageAdded: () => void;
   pending: boolean;
@@ -132,7 +132,7 @@ function LumiaFields({
   return (
     <div className="flex flex-col gap-6">
       <AvatarField
-        assetId={assetId}
+        workId={workId}
         images={images}
         onChange={onChange}
         onImageAdded={onImageAdded}
@@ -224,21 +224,21 @@ function LumiaFields({
 }
 
 function AvatarField({
-  assetId,
+  workId,
   images,
   onChange,
   onImageAdded,
   pending,
   record,
 }: {
-  assetId: string;
-  images: AssetImage[];
+  workId: string;
+  images: WorkImage[];
   onChange: (changes: Partial<LumiaRecord>) => void;
   onImageAdded: () => void;
   pending: boolean;
   record: LumiaRecord;
 }) {
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState("");
@@ -258,9 +258,9 @@ function AvatarField({
     setUploading(true);
     setMessage("");
     try {
-      const mediaId = await addAssetImage(
+      const mediaId = await addWorkImage(
         candidate,
-        assetId,
+        workId,
         chosen,
         "pack_item",
       );

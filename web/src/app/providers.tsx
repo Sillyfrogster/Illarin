@@ -12,7 +12,7 @@ export function Providers({
   children: ReactNode;
 }) {
   return (
-    <OriginsProvider blog={origins.blog} site={origins.site}>
+    <OriginsProvider site={origins.site}>
       <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </OriginsProvider>
   );

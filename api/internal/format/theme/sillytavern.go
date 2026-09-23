@@ -11,11 +11,10 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
-func readSillyTavern(payload probe.Payload) (format.Parsed, error) {
+func readSillyTavern(payload format.Payload) (format.Parsed, error) {
 	source := maps.Clone(payload.Root)
 	header := format.Header{}
 	keys.Take(source, "name", &header.Name)
@@ -58,22 +57,22 @@ func readSillyTavern(payload probe.Payload) (format.Parsed, error) {
 		elements = append(elements, block.Element{
 			ID: uuid.New(), Type: block.TypeStylesheetSet, Role: block.RoleStylesheets,
 			Content: block.StylesheetSet{
-				Global: css, Stylesheets: []block.Stylesheet{}, Assets: []block.StylesheetAsset{},
+				Global: css, Stylesheets: []block.Stylesheet{}, Files: []block.StylesheetFile{},
 			},
 		})
 	}
 
 	return format.Parsed{
-		Kind: Kind, Format: SillyTavernID, Header: header, Elements: elements,
+		Type: Type, Format: SillyTavernID, Header: header, Elements: elements,
 		Remainder: themeRemainder(sillyTavernNamespace, source),
 	}, nil
 }
 
-func (SillyTavernModule) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	body := keepTheme(asset.Preserved).body(sillyTavernNamespace)
-	body["name"] = raw(asset.Header.Name)
+func (SillyTavernModule) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
+	body := keepTheme(work.Preserved).body(sillyTavernNamespace)
+	body["name"] = raw(work.Header.Name)
 
-	if content, ok := asset.Content(block.RoleThemeTokens); ok {
+	if content, ok := work.Content(block.RoleThemeTokens); ok {
 		if palette, isPalette := content.(block.ColorSet); isPalette {
 			if len(palette.Modes) > 0 {
 				for _, color := range palette.Modes[0].Colors {
@@ -84,7 +83,7 @@ func (SillyTavernModule) Write(_ context.Context, asset format.ExportAsset) (for
 			}
 		}
 	}
-	if content, ok := asset.Content(block.RoleThemeControls); ok {
+	if content, ok := work.Content(block.RoleThemeControls); ok {
 		for _, setting := range themeSettings(content) {
 			if setting.Value != nil && slices.ContainsFunc(sillyTavernControls, func(slot namedSlot) bool {
 				return slot.name == setting.Name
@@ -93,7 +92,7 @@ func (SillyTavernModule) Write(_ context.Context, asset format.ExportAsset) (for
 			}
 		}
 	}
-	if content, ok := asset.Content(block.RoleStylesheets); ok {
+	if content, ok := work.Content(block.RoleStylesheets); ok {
 		if styles, isStyles := content.(block.StylesheetSet); isStyles {
 			if css := sillyTavernCSS(styles); css != "" {
 				body["custom_css"] = raw(css)
@@ -103,9 +102,9 @@ func (SillyTavernModule) Write(_ context.Context, asset format.ExportAsset) (for
 
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the SillyTavern theme: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the SillyTavern theme: %w", err)
 	}
-	return format.Artifact{Body: document, MediaType: "application/json", Extension: ".json"}, nil
+	return format.MainFile{Body: document, MediaType: "application/json", Extension: ".json"}, nil
 }
 
 func sillyTavernCSS(styles block.StylesheetSet) string {

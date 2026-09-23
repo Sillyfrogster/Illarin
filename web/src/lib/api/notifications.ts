@@ -1,10 +1,12 @@
 import { ask } from "./request";
-import type { components } from "./schema";
 
-export type Notification = components["schemas"]["Notification"];
-export type NotificationList = components["schemas"]["NotificationList"];
-export type NotificationCursor = components["schemas"]["NotificationCursor"];
-export type AssetWatch = components["schemas"]["AssetWatch"];
+import type {
+  Notification,
+  NotificationCursor,
+  NotificationList,
+  WorkFollow,
+} from "./shapes";
+export type { WorkFollow, Notification, NotificationCursor, NotificationList };
 
 export const notificationKeys = {
   all: ["notifications"] as const,
@@ -25,80 +27,67 @@ export async function readNotifications(
     query.set("before", cursor.before);
     query.set("beforeId", cursor.beforeId);
   }
-  const answer = await ask<NotificationList>(
-    `/notifications?${query}`,
-    { signal },
-    (response) => response.json() as Promise<NotificationList>,
-  );
+  const answer = await ask<NotificationList>("GET", `/notifications?${query}`, {
+    signal,
+  });
   if (answer.value) return answer.value;
   throw new Error(answer.error ?? UNREADABLE);
 }
 
 export async function readUnreadCount(signal?: AbortSignal): Promise<number> {
-  const answer = await ask<{ count: number }>(
-    "/notifications/unread",
-    { signal },
-    (response) => response.json() as Promise<{ count: number }>,
-  );
+  const answer = await ask<{ count: number }>("GET", "/notifications/unread", {
+    signal,
+  });
   if (answer.value) return answer.value.count;
   throw new Error(answer.error ?? UNREADABLE);
 }
 
 /** Marks one entry read, and keeps the request alive if the page moves on before it lands. */
 export async function markNotificationRead(id: string): Promise<void> {
-  const answer = await ask<null>(
+  const answer = await ask<void>(
+    "POST",
     `/notifications/${encodeURIComponent(id)}/read`,
-    { method: "POST", keepalive: true },
-    async () => null,
+    { keepalive: true },
   );
   if (answer.error) throw new Error(answer.error);
 }
 
 /** Takes one entry out of the inbox, keeping the request alive if the page moves on before it lands. */
 export async function removeNotification(id: string): Promise<void> {
-  const answer = await ask<null>(
+  const answer = await ask<void>(
+    "DELETE",
     `/notifications/${encodeURIComponent(id)}`,
-    { method: "DELETE", keepalive: true },
-    async () => null,
+    { keepalive: true },
   );
   if (answer.error) throw new Error(answer.error);
 }
 
 export async function clearNotifications(): Promise<void> {
-  const answer = await ask<null>(
-    "/notifications",
-    { method: "DELETE" },
-    async () => null,
-  );
+  const answer = await ask<void>("DELETE", "/notifications");
   if (answer.error) throw new Error(answer.error);
 }
 
-export function watchAsset(assetId: string): Promise<AssetWatch> {
-  return changeWatch(assetId, "PUT");
+export function followWork(workId: string): Promise<WorkFollow> {
+  return changeFollow(workId, "PUT");
 }
 
-export function stopWatchingAsset(assetId: string): Promise<AssetWatch> {
-  return changeWatch(assetId, "DELETE");
+export function stopFollowingWork(workId: string): Promise<WorkFollow> {
+  return changeFollow(workId, "DELETE");
 }
 
-async function changeWatch(
-  assetId: string,
+async function changeFollow(
+  workId: string,
   method: "PUT" | "DELETE",
-): Promise<AssetWatch> {
-  const answer = await ask<AssetWatch>(
-    `/assets/${encodeURIComponent(assetId)}/watch`,
-    { method },
-    (response) => response.json() as Promise<AssetWatch>,
+): Promise<WorkFollow> {
+  const answer = await ask<WorkFollow>(
+    method,
+    `/works/${encodeURIComponent(workId)}/follow`,
   );
   if (answer.value) return answer.value;
-  throw new Error(answer.error ?? "Your watch could not be changed.");
+  throw new Error(answer.error ?? "Following could not be changed.");
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
-  const answer = await ask<null>(
-    "/notifications/read",
-    { method: "POST" },
-    async () => null,
-  );
+  const answer = await ask<void>("POST", "/notifications/read");
   if (answer.error) throw new Error(answer.error);
 }

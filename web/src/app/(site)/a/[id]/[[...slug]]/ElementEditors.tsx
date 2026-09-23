@@ -9,11 +9,11 @@ import {
   SortableItemHandle,
 } from "@/components/ui/sortable";
 import {
-  type AssetElement,
-  type AssetImage,
-  addAssetImage,
+  addWorkImage,
+  type WorkElement,
+  type WorkImage,
 } from "@/lib/api/query";
-import { useWorkingCopy } from "@/lib/working-copy";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 import { EntryTableEditor } from "./EntryTableEditor";
 import { PackEditor } from "./PackEditor";
 import {
@@ -33,7 +33,7 @@ type ImageItem = {
 };
 
 export function ElementFields({
-  assetId,
+  workId,
   chosen,
   element,
   images,
@@ -42,11 +42,11 @@ export function ElementFields({
   onImageAdded,
   pending,
 }: {
-  assetId: string;
+  workId: string;
   chosen: string | null;
-  element: AssetElement;
-  images: AssetImage[];
-  onChange: (element: AssetElement) => void;
+  element: WorkElement;
+  images: WorkImage[];
+  onChange: (element: WorkElement) => void;
   onChoose: (key: string | null) => void;
   onImageAdded: () => void;
   pending: boolean;
@@ -54,7 +54,7 @@ export function ElementFields({
   if (element.type === "image_set" && "images" in element.content) {
     return (
       <ImageEditor
-        assetId={assetId}
+        workId={workId}
         images={images}
         isGallery={element.role === "gallery"}
         items={element.content.images}
@@ -97,7 +97,7 @@ export function ElementFields({
   ) {
     return (
       <PackEditor
-        assetId={assetId}
+        workId={workId}
         chosen={chosen}
         content={element.content}
         images={images}
@@ -228,7 +228,7 @@ export function ElementFields({
 }
 
 function ImageEditor({
-  assetId,
+  workId,
   images,
   isGallery,
   items,
@@ -237,8 +237,8 @@ function ImageEditor({
   onChange,
   pending,
 }: {
-  assetId: string;
-  images: AssetImage[];
+  workId: string;
+  images: WorkImage[];
   isGallery: boolean;
   items: ImageItem[];
   mediaRole: "expression" | "gallery";
@@ -246,7 +246,7 @@ function ImageEditor({
   onChange: (items: ImageItem[]) => void;
   pending: boolean;
 }) {
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [previews, setPreviews] = useState<Record<string, string>>({});
@@ -261,12 +261,7 @@ function ImageEditor({
     setUploading(true);
     setMessage("");
     try {
-      const mediaId = await addAssetImage(
-        candidate,
-        assetId,
-        chosen,
-        mediaRole,
-      );
+      const mediaId = await addWorkImage(candidate, workId, chosen, mediaRole);
       setPreviews((current) => ({
         ...current,
         [mediaId]: URL.createObjectURL(chosen),
@@ -400,7 +395,7 @@ function ImageEditor({
   );
 }
 
-export function elementHint(type: AssetElement["type"]): string {
+export function elementHint(type: WorkElement["type"]): string {
   switch (type) {
     case "prose":
       return "Edit the text shown in this block.";
@@ -429,6 +424,6 @@ export function elementHint(type: AssetElement["type"]): string {
     case "script_list":
       return "Add scripts to find and replace matching text.";
     case "record_list":
-      return "Each Lumia keeps its identity, writing, and avatar together in Pack order.";
+      return "Each character keeps its writing and avatar together, in pack order.";
   }
 }

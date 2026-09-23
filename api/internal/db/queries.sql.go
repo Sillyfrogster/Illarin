@@ -11,106 +11,102 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const abandonExhaustedDeliveries = `-- name: AbandonExhaustedDeliveries :execrows
-update instance_deliveries
+const abandonExhaustedSends = `-- name: AbandonExhaustedSends :execrows
+update sends
    set state = 'failed', settled_at = now(), settled_reason = 'abandoned',
        lease_expires_at = null
- where instance_id = $1
+ where connected_app_id = $1
    and state = 'released'
    and lease_expires_at <= now()
    and attempts >= $2
 `
 
-type AbandonExhaustedDeliveriesParams struct {
-	InstanceID  pgtype.UUID
-	MaxAttempts int32
+type AbandonExhaustedSendsParams struct {
+	ConnectedAppID pgtype.UUID
+	MaxAttempts    int32
 }
 
-func (q *Queries) AbandonExhaustedDeliveries(ctx context.Context, arg AbandonExhaustedDeliveriesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, abandonExhaustedDeliveries, arg.InstanceID, arg.MaxAttempts)
+func (q *Queries) AbandonExhaustedSends(ctx context.Context, arg AbandonExhaustedSendsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, abandonExhaustedSends, arg.ConnectedAppID, arg.MaxAttempts)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const acknowledgeDeliveries = `-- name: AcknowledgeDeliveries :execrows
-update instance_deliveries
+const acknowledgeSends = `-- name: AcknowledgeSends :execrows
+update sends
    set state = 'delivered', settled_at = now(), lease_expires_at = null
- where instance_id = $1
+ where connected_app_id = $1
    and id = any($2::uuid[])
    and state = 'released'
 `
 
-type AcknowledgeDeliveriesParams struct {
-	InstanceID  pgtype.UUID
-	DeliveryIds []pgtype.UUID
+type AcknowledgeSendsParams struct {
+	ConnectedAppID pgtype.UUID
+	SendIds        []pgtype.UUID
 }
 
-func (q *Queries) AcknowledgeDeliveries(ctx context.Context, arg AcknowledgeDeliveriesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, acknowledgeDeliveries, arg.InstanceID, arg.DeliveryIds)
+func (q *Queries) AcknowledgeSends(ctx context.Context, arg AcknowledgeSendsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, acknowledgeSends, arg.ConnectedAppID, arg.SendIds)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const approveDeviceLinkRequest = `-- name: ApproveDeviceLinkRequest :one
-update link_requests
-   set review_token_hash = $1,
-       reviewed_by = $2,
-       approved_by = $2,
-       approved_at = now()
- where user_code_hash = $3
-   and (reviewed_by is null or reviewed_by = $2)
-   and expires_at > now()
-   and approved_at is null
-   and denied_at is null
-   and redeemed_at is null
-returning application_name, instance_name, application_version, protocol_version,
-          capabilities, accepted_targets, scopes, expires_at
+const appLibraryCounts = `-- name: AppLibraryCounts :many
+select entry.connected_app_id,
+       count(*)::bigint as installed,
+       count(*) filter (
+           where version.number > entry.version_number
+       )::bigint as updates_available
+  from app_library_entries as entry
+  join works as work on work.id = entry.work_id
+  join work_versions as version on version.id = work.published_version_id
+  join connected_apps as app on app.id = entry.connected_app_id
+ where app.user_id = $1
+   and app.revoked_at is null
+   and work.deleted_at is null
+   and work.taken_down_at is null
+   and work.lifecycle = 'published'
+ group by entry.connected_app_id
 `
 
-type ApproveDeviceLinkRequestParams struct {
-	ReviewTokenHash []byte
-	ReviewedBy      pgtype.UUID
-	UserCodeHash    []byte
+type AppLibraryCountsRow struct {
+	ConnectedAppID   pgtype.UUID
+	Installed        int64
+	UpdatesAvailable int64
 }
 
-type ApproveDeviceLinkRequestRow struct {
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    int32
-	Capabilities       []string
-	AcceptedTargets    []string
-	Scopes             []string
-	ExpiresAt          pgtype.Timestamptz
+func (q *Queries) AppLibraryCounts(ctx context.Context, userID pgtype.UUID) ([]AppLibraryCountsRow, error) {
+	rows, err := q.db.Query(ctx, appLibraryCounts, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AppLibraryCountsRow
+	for rows.Next() {
+		var i AppLibraryCountsRow
+		if err := rows.Scan(&i.ConnectedAppID, &i.Installed, &i.UpdatesAvailable); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-func (q *Queries) ApproveDeviceLinkRequest(ctx context.Context, arg ApproveDeviceLinkRequestParams) (ApproveDeviceLinkRequestRow, error) {
-	row := q.db.QueryRow(ctx, approveDeviceLinkRequest, arg.ReviewTokenHash, arg.ReviewedBy, arg.UserCodeHash)
-	var i ApproveDeviceLinkRequestRow
-	err := row.Scan(
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
-		&i.ProtocolVersion,
-		&i.Capabilities,
-		&i.AcceptedTargets,
-		&i.Scopes,
-		&i.ExpiresAt,
-	)
-	return i, err
-}
-
-const approveLinkAuthorization = `-- name: ApproveLinkAuthorization :one
-update link_authorizations
+const approveConnectionAuthorization = `-- name: ApproveConnectionAuthorization :one
+update connection_authorizations
    set reviewed_by = $1,
        authorization_code_hash = $2,
        approved_by = $1,
-       approved_at = now()
- where request_hash = $3
+       approved_at = now(),
+       granted_permissions = $3
+ where request_hash = $4
    and (reviewed_by is null or reviewed_by = $1)
    and expires_at > now()
    and approved_at is null
@@ -119,382 +115,84 @@ update link_authorizations
 returning redirect_uri, state, expires_at
 `
 
-type ApproveLinkAuthorizationParams struct {
+type ApproveConnectionAuthorizationParams struct {
 	ReviewedBy            pgtype.UUID
 	AuthorizationCodeHash []byte
+	GrantedPermissions    []string
 	RequestHash           []byte
 }
 
-type ApproveLinkAuthorizationRow struct {
+type ApproveConnectionAuthorizationRow struct {
 	RedirectUri string
 	State       string
 	ExpiresAt   pgtype.Timestamptz
 }
 
-func (q *Queries) ApproveLinkAuthorization(ctx context.Context, arg ApproveLinkAuthorizationParams) (ApproveLinkAuthorizationRow, error) {
-	row := q.db.QueryRow(ctx, approveLinkAuthorization, arg.ReviewedBy, arg.AuthorizationCodeHash, arg.RequestHash)
-	var i ApproveLinkAuthorizationRow
+func (q *Queries) ApproveConnectionAuthorization(ctx context.Context, arg ApproveConnectionAuthorizationParams) (ApproveConnectionAuthorizationRow, error) {
+	row := q.db.QueryRow(ctx, approveConnectionAuthorization,
+		arg.ReviewedBy,
+		arg.AuthorizationCodeHash,
+		arg.GrantedPermissions,
+		arg.RequestHash,
+	)
+	var i ApproveConnectionAuthorizationRow
 	err := row.Scan(&i.RedirectUri, &i.State, &i.ExpiresAt)
 	return i, err
 }
 
-const assetBlocks = `-- name: AssetBlocks :many
-select id, definition, title, position, hidden, layout, width, elements
-  from asset_blocks
- where asset_id = $1
- order by position
+const approveConnectionRequest = `-- name: ApproveConnectionRequest :one
+update connection_requests
+   set review_token_hash = $1,
+       reviewed_by = $2,
+       approved_by = $2,
+       approved_at = now(),
+       granted_permissions = $3
+ where user_code_hash = $4
+   and (reviewed_by is null or reviewed_by = $2)
+   and expires_at > now()
+   and approved_at is null
+   and denied_at is null
+   and redeemed_at is null
+returning app_name, name, app_version, protocol_version,
+          capabilities, accepted_formats, granted_permissions, expires_at
 `
 
-type AssetBlocksRow struct {
-	ID         pgtype.UUID
-	Definition string
-	Title      pgtype.Text
-	Position   int32
-	Hidden     bool
-	Layout     string
-	Width      string
-	Elements   []byte
+type ApproveConnectionRequestParams struct {
+	ReviewTokenHash    []byte
+	ReviewedBy         pgtype.UUID
+	GrantedPermissions []string
+	UserCodeHash       []byte
 }
 
-func (q *Queries) AssetBlocks(ctx context.Context, assetID pgtype.UUID) ([]AssetBlocksRow, error) {
-	rows, err := q.db.Query(ctx, assetBlocks, assetID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AssetBlocksRow
-	for rows.Next() {
-		var i AssetBlocksRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Definition,
-			&i.Title,
-			&i.Position,
-			&i.Hidden,
-			&i.Layout,
-			&i.Width,
-			&i.Elements,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type ApproveConnectionRequestRow struct {
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
+	ProtocolVersion    int32
+	Capabilities       []string
+	AcceptedFormats    []string
+	GrantedPermissions []string
+	ExpiresAt          pgtype.Timestamptz
 }
 
-const assetByID = `-- name: AssetByID :one
-select a.id, a.kind, revision.format, a.origin_format,
-       a.asset_version, a.credited_author, a.nickname, a.lifecycle,
-       a.name, a.blurb, a.tags,
-       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
-       a.current_revision_id, a.created_at
-  from assets a
-  join asset_revisions revision on revision.id = a.current_revision_id
- where a.id = $1
-`
-
-type AssetByIDRow struct {
-	ID                pgtype.UUID
-	Kind              string
-	Format            string
-	OriginFormat      pgtype.Text
-	AssetVersion      string
-	CreditedAuthor    string
-	Nickname          string
-	Lifecycle         string
-	Name              string
-	Blurb             string
-	Tags              []string
-	IsNsfw            bool
-	Discovery         string
-	CurrentRevisionID pgtype.UUID
-	CreatedAt         pgtype.Timestamptz
-}
-
-func (q *Queries) AssetByID(ctx context.Context, id pgtype.UUID) (AssetByIDRow, error) {
-	row := q.db.QueryRow(ctx, assetByID, id)
-	var i AssetByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.Kind,
-		&i.Format,
-		&i.OriginFormat,
-		&i.AssetVersion,
-		&i.CreditedAuthor,
-		&i.Nickname,
-		&i.Lifecycle,
-		&i.Name,
-		&i.Blurb,
-		&i.Tags,
-		&i.IsNsfw,
-		&i.Discovery,
-		&i.CurrentRevisionID,
-		&i.CreatedAt,
+func (q *Queries) ApproveConnectionRequest(ctx context.Context, arg ApproveConnectionRequestParams) (ApproveConnectionRequestRow, error) {
+	row := q.db.QueryRow(ctx, approveConnectionRequest,
+		arg.ReviewTokenHash,
+		arg.ReviewedBy,
+		arg.GrantedPermissions,
+		arg.UserCodeHash,
 	)
-	return i, err
-}
-
-const assetDeletionState = `-- name: AssetDeletionState :one
-select withheld_at, deleted_at
-  from assets
- where id = $1 and owner_id = $2
-`
-
-type AssetDeletionStateParams struct {
-	ID      pgtype.UUID
-	OwnerID pgtype.UUID
-}
-
-type AssetDeletionStateRow struct {
-	WithheldAt pgtype.Timestamptz
-	DeletedAt  pgtype.Timestamptz
-}
-
-func (q *Queries) AssetDeletionState(ctx context.Context, arg AssetDeletionStateParams) (AssetDeletionStateRow, error) {
-	row := q.db.QueryRow(ctx, assetDeletionState, arg.ID, arg.OwnerID)
-	var i AssetDeletionStateRow
-	err := row.Scan(&i.WithheldAt, &i.DeletedAt)
-	return i, err
-}
-
-const assetInstanceStates = `-- name: AssetInstanceStates :many
-select instance.id, instance.application_name, instance.instance_name,
-       instance.last_seen_at, instance.scopes, instance.capabilities,
-       instance.accepted_targets,
-       delivery.id as delivery_id,
-       coalesce(delivery.state, '')::text as delivery_state,
-       delivery.settled_reason, delivery.queued_at, delivery.settled_at,
-       delivery.expires_at,
-       coalesce(delivery.updates_install, false)::boolean as updates_install,
-       entry.content_generation as installed_generation
-  from linked_instances as instance
-  left join lateral (
-      select waiting.id, waiting.state, waiting.settled_reason,
-             waiting.queued_at, waiting.settled_at, waiting.expires_at,
-             waiting.updates_install
-        from instance_deliveries as waiting
-       where waiting.instance_id = instance.id
-         and waiting.asset_id = $1
-       order by (waiting.state in ('queued', 'released')) desc,
-                waiting.queued_at desc
-       limit 1
-  ) as delivery on true
-  left join instance_library_entries as entry
-    on entry.instance_id = instance.id and entry.asset_id = $1
- where instance.user_id = $2 and instance.revoked_at is null
- order by coalesce(instance.last_seen_at, instance.linked_at) desc,
-          instance.linked_at desc
-`
-
-type AssetInstanceStatesParams struct {
-	AssetID pgtype.UUID
-	UserID  pgtype.UUID
-}
-
-type AssetInstanceStatesRow struct {
-	ID                  pgtype.UUID
-	ApplicationName     string
-	InstanceName        string
-	LastSeenAt          pgtype.Timestamptz
-	Scopes              []string
-	Capabilities        []string
-	AcceptedTargets     []string
-	DeliveryID          pgtype.UUID
-	DeliveryState       string
-	SettledReason       pgtype.Text
-	QueuedAt            pgtype.Timestamptz
-	SettledAt           pgtype.Timestamptz
-	ExpiresAt           pgtype.Timestamptz
-	UpdatesInstall      bool
-	InstalledGeneration pgtype.Int4
-}
-
-func (q *Queries) AssetInstanceStates(ctx context.Context, arg AssetInstanceStatesParams) ([]AssetInstanceStatesRow, error) {
-	rows, err := q.db.Query(ctx, assetInstanceStates, arg.AssetID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AssetInstanceStatesRow
-	for rows.Next() {
-		var i AssetInstanceStatesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ApplicationName,
-			&i.InstanceName,
-			&i.LastSeenAt,
-			&i.Scopes,
-			&i.Capabilities,
-			&i.AcceptedTargets,
-			&i.DeliveryID,
-			&i.DeliveryState,
-			&i.SettledReason,
-			&i.QueuedAt,
-			&i.SettledAt,
-			&i.ExpiresAt,
-			&i.UpdatesInstall,
-			&i.InstalledGeneration,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const assetPage = `-- name: AssetPage :one
-select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
-       a.lifecycle, a.created_at,
-       revision.format as original_format, revision.media_type as original_media_type,
-       revision.created_at as original_arrived_at,
-       coalesce(revision.identifier, '')::text as identifier,
-       coalesce(owner.username, 'unknown') as creator,
-       coalesce(a.owner_id = $2::uuid, false)::boolean as is_owner,
-       a.withheld_reason, a.withheld_at
-  from assets a
-  left join users owner on owner.id = a.owner_id
-  left join asset_revisions revision on revision.id = a.current_revision_id
- where a.id = $1
-   and a.deleted_at is null
-   and (a.lifecycle = 'published' or a.owner_id = $2::uuid)
-   and (a.withheld_at is null or a.owner_id = $2::uuid)
-`
-
-type AssetPageParams struct {
-	ID       pgtype.UUID
-	ViewerID pgtype.UUID
-}
-
-type AssetPageRow struct {
-	ID                pgtype.UUID
-	Kind              string
-	Name              string
-	Blurb             string
-	Tags              []string
-	IsNsfw            pgtype.Bool
-	Discovery         string
-	Lifecycle         string
-	CreatedAt         pgtype.Timestamptz
-	OriginalFormat    pgtype.Text
-	OriginalMediaType pgtype.Text
-	OriginalArrivedAt pgtype.Timestamptz
-	Identifier        string
-	Creator           string
-	IsOwner           bool
-	WithheldReason    pgtype.Text
-	WithheldAt        pgtype.Timestamptz
-}
-
-func (q *Queries) AssetPage(ctx context.Context, arg AssetPageParams) (AssetPageRow, error) {
-	row := q.db.QueryRow(ctx, assetPage, arg.ID, arg.ViewerID)
-	var i AssetPageRow
+	var i ApproveConnectionRequestRow
 	err := row.Scan(
-		&i.ID,
-		&i.Kind,
+		&i.AppName,
 		&i.Name,
-		&i.Blurb,
-		&i.Tags,
-		&i.IsNsfw,
-		&i.Discovery,
-		&i.Lifecycle,
-		&i.CreatedAt,
-		&i.OriginalFormat,
-		&i.OriginalMediaType,
-		&i.OriginalArrivedAt,
-		&i.Identifier,
-		&i.Creator,
-		&i.IsOwner,
-		&i.WithheldReason,
-		&i.WithheldAt,
+		&i.AppVersion,
+		&i.ProtocolVersion,
+		&i.Capabilities,
+		&i.AcceptedFormats,
+		&i.GrantedPermissions,
+		&i.ExpiresAt,
 	)
-	return i, err
-}
-
-const assetPageMedia = `-- name: AssetPageMedia :many
-select media.id, media.role, media.width, media.height, blob.byte_size,
-       coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
-  from assets a
-  join asset_media media on media.asset_id = a.id
-  join blobs blob on blob.id = media.blob_id
- where a.id = $1
-   and media.is_current
-   and media.width is not null
-   and media.height is not null
-   and media.blob_id is not null
- order by (media.id = a.cover_media_id) desc,
-		  case media.role
-		    when 'avatar' then 1
-		    when 'avatar_alt' then 2
-		    when 'gallery' then 3
-		    when 'expression' then 4
-		    when 'pack_item' then 5
-		    else 6
-		  end,
-          media.created_at desc, media.id desc
-`
-
-type AssetPageMediaRow struct {
-	ID       pgtype.UUID
-	Role     string
-	Width    pgtype.Int4
-	Height   pgtype.Int4
-	ByteSize int64
-	IsCover  bool
-}
-
-func (q *Queries) AssetPageMedia(ctx context.Context, id pgtype.UUID) ([]AssetPageMediaRow, error) {
-	rows, err := q.db.Query(ctx, assetPageMedia, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AssetPageMediaRow
-	for rows.Next() {
-		var i AssetPageMediaRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Role,
-			&i.Width,
-			&i.Height,
-			&i.ByteSize,
-			&i.IsCover,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const assetStateForOwner = `-- name: AssetStateForOwner :one
-select withheld_at, lifecycle
-  from assets
- where id = $1 and owner_id = $2 and deleted_at is null
-`
-
-type AssetStateForOwnerParams struct {
-	ID      pgtype.UUID
-	OwnerID pgtype.UUID
-}
-
-type AssetStateForOwnerRow struct {
-	WithheldAt pgtype.Timestamptz
-	Lifecycle  string
-}
-
-func (q *Queries) AssetStateForOwner(ctx context.Context, arg AssetStateForOwnerParams) (AssetStateForOwnerRow, error) {
-	row := q.db.QueryRow(ctx, assetStateForOwner, arg.ID, arg.OwnerID)
-	var i AssetStateForOwnerRow
-	err := row.Scan(&i.WithheldAt, &i.Lifecycle)
 	return i, err
 }
 
@@ -514,16 +212,18 @@ func (q *Queries) BlobLocation(ctx context.Context, id pgtype.UUID) (BlobLocatio
 	return i, err
 }
 
-const browseAssets = `-- name: BrowseAssets :many
+const browseWorks = `-- name: BrowseWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.kind, a.is_nsfw, a.created_at, a.lifecycle,
+       a.type, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.discovery, a.withheld_at, a.withheld_reason
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+       a.visibility, a.taken_down_at, a.taken_down_reason,
+       array(select offered.format ->> 'format'
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
-  left join asset_media cover
-    on cover.id = a.cover_media_id and cover.asset_id = a.id
+  left join work_media cover
+    on cover.id = a.cover_media_id and cover.work_id = a.id
    and cover.is_current
    and cover.width is not null and cover.height is not null
    and cover.blob_id is not null
@@ -533,58 +233,60 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
    and a.deleted_at is null
    and (
        ($2::uuid is null
-        and a.discovery = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.taken_down_at is null)
        or
        (a.owner_id = $2::uuid
         and ($1::boolean
-             or (a.discovery = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
-   and ($3::text = '' or a.kind = $3::text)
+   and ($3::text = '' or a.type = $3::text)
+   and a.type <> all(coalesce($4::text[], '{}'))
    and ($1::boolean
-        or $4::text <> 'hidden' or not a.is_nsfw)
-   and ($5::text = '' or exists (
+        or $5::text <> 'hidden' or not a.is_nsfw)
+   and ($6::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
-         where offered.target ->> 'format' = any($6::text[])
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
+         where offered.format ->> 'format' = any($7::text[])
    ))
-   and (cardinality($7::text[]) = 0 or not exists (
+   and (cardinality($8::text[]) = 0 or not exists (
         select 1
-          from unnest($7::text[]) with ordinality as chosen(key, at)
-          join unnest($8::int[]) with ordinality as lows(low, at)
+          from unnest($8::text[]) with ordinality as chosen(key, at)
+          join unnest($9::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($9::int[]) with ordinality as highs(high, at)
+          join unnest($10::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($10::text = ''
-        or position($10::text in lower(a.name)) > 0
-        or position($10::text in lower(a.blurb)) > 0
-        or position($10::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($11::text = '' or lower(coalesce(owner.username, '')) = $11::text)
-   and (cardinality($12::text[]) = 0 or not exists (
-        select 1 from unnest($12::text[]) wanted(tag)
+   and ($11::text = ''
+        or position($11::text in lower(a.name)) > 0
+        or position($11::text in lower(a.blurb)) > 0
+        or position($11::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($12::text = '' or lower(coalesce(owner.username, '')) = $12::text)
+   and (cardinality($13::text[]) = 0 or not exists (
+        select 1 from unnest($13::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
          )
    ))
-   and ($13::timestamptz is null
+   and ($14::timestamptz is null
         or (a.created_at, a.id)
-           < ($13::timestamptz, $14::uuid))
+           < ($14::timestamptz, $15::uuid))
  order by a.created_at desc, a.id desc
- limit $15
+ limit $16
 `
 
-type BrowseAssetsParams struct {
+type BrowseWorksParams struct {
 	OwnProfile     bool
 	CreatorID      pgtype.UUID
-	Kind           string
-	NsfwVisibility string
-	Platform       string
+	Type           string
+	HiddenTypes    []string
+	NsfwPreference string
+	App            string
 	Formats        []string
 	FacetKeys      []string
 	FacetLows      []int32
@@ -597,29 +299,31 @@ type BrowseAssetsParams struct {
 	PageSize       int32
 }
 
-type BrowseAssetsRow struct {
-	ID             pgtype.UUID
-	Name           string
-	Creator        string
-	Kind           string
-	IsNsfw         pgtype.Bool
-	CreatedAt      pgtype.Timestamptz
-	Lifecycle      string
-	CoverID        pgtype.UUID
-	CoverWidth     pgtype.Int4
-	CoverHeight    pgtype.Int4
-	Discovery      string
-	WithheldAt     pgtype.Timestamptz
-	WithheldReason pgtype.Text
+type BrowseWorksRow struct {
+	ID              pgtype.UUID
+	Name            string
+	Creator         string
+	Type            string
+	IsNsfw          pgtype.Bool
+	CreatedAt       pgtype.Timestamptz
+	Lifecycle       string
+	CoverID         pgtype.UUID
+	CoverWidth      pgtype.Int4
+	CoverHeight     pgtype.Int4
+	Visibility      string
+	TakenDownAt     pgtype.Timestamptz
+	TakenDownReason pgtype.Text
+	Formats         []string
 }
 
-func (q *Queries) BrowseAssets(ctx context.Context, arg BrowseAssetsParams) ([]BrowseAssetsRow, error) {
-	rows, err := q.db.Query(ctx, browseAssets,
+func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]BrowseWorksRow, error) {
+	rows, err := q.db.Query(ctx, browseWorks,
 		arg.OwnProfile,
 		arg.CreatorID,
-		arg.Kind,
-		arg.NsfwVisibility,
-		arg.Platform,
+		arg.Type,
+		arg.HiddenTypes,
+		arg.NsfwPreference,
+		arg.App,
 		arg.Formats,
 		arg.FacetKeys,
 		arg.FacetLows,
@@ -635,23 +339,24 @@ func (q *Queries) BrowseAssets(ctx context.Context, arg BrowseAssetsParams) ([]B
 		return nil, err
 	}
 	defer rows.Close()
-	var items []BrowseAssetsRow
+	var items []BrowseWorksRow
 	for rows.Next() {
-		var i BrowseAssetsRow
+		var i BrowseWorksRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Creator,
-			&i.Kind,
+			&i.Type,
 			&i.IsNsfw,
 			&i.CreatedAt,
 			&i.Lifecycle,
 			&i.CoverID,
 			&i.CoverWidth,
 			&i.CoverHeight,
-			&i.Discovery,
-			&i.WithheldAt,
-			&i.WithheldReason,
+			&i.Visibility,
+			&i.TakenDownAt,
+			&i.TakenDownReason,
+			&i.Formats,
 		); err != nil {
 			return nil, err
 		}
@@ -663,15 +368,15 @@ func (q *Queries) BrowseAssets(ctx context.Context, arg BrowseAssetsParams) ([]B
 	return items, nil
 }
 
-const claimDeliveries = `-- name: ClaimDeliveries :many
+const claimSends = `-- name: ClaimSends :many
 with candidates as (
     select waiting.id
-      from instance_deliveries as waiting
-      join linked_instances as instance
-        on instance.id = waiting.instance_id
-       and instance.revoked_at is null
-       and instance.scopes @> array['asset:receive']
-     where waiting.instance_id = $2
+      from sends as waiting
+      join connected_apps as app
+        on app.id = waiting.connected_app_id
+       and app.revoked_at is null
+       and app.permissions @> array['work:receive']
+     where waiting.connected_app_id = $2
        and waiting.expires_at > now()
        and waiting.attempts < $3
        and (waiting.state = 'queued'
@@ -680,34 +385,34 @@ with candidates as (
      limit $4
      for update of waiting skip locked
 )
-update instance_deliveries as delivery
+update sends as send
    set state = 'released',
-       attempts = delivery.attempts + 1,
+       attempts = send.attempts + 1,
        lease_expires_at = $1
   from candidates
- where delivery.id = candidates.id
-returning delivery.id, delivery.asset_id, delivery.queued_at,
-          delivery.lease_expires_at
+ where send.id = candidates.id
+returning send.id, send.work_id, send.queued_at,
+          send.lease_expires_at
 `
 
-type ClaimDeliveriesParams struct {
+type ClaimSendsParams struct {
 	LeaseExpiresAt pgtype.Timestamptz
-	InstanceID     pgtype.UUID
+	ConnectedAppID pgtype.UUID
 	MaxAttempts    int32
 	BatchSize      int32
 }
 
-type ClaimDeliveriesRow struct {
+type ClaimSendsRow struct {
 	ID             pgtype.UUID
-	AssetID        pgtype.UUID
+	WorkID         pgtype.UUID
 	QueuedAt       pgtype.Timestamptz
 	LeaseExpiresAt pgtype.Timestamptz
 }
 
-func (q *Queries) ClaimDeliveries(ctx context.Context, arg ClaimDeliveriesParams) ([]ClaimDeliveriesRow, error) {
-	rows, err := q.db.Query(ctx, claimDeliveries,
+func (q *Queries) ClaimSends(ctx context.Context, arg ClaimSendsParams) ([]ClaimSendsRow, error) {
+	rows, err := q.db.Query(ctx, claimSends,
 		arg.LeaseExpiresAt,
-		arg.InstanceID,
+		arg.ConnectedAppID,
 		arg.MaxAttempts,
 		arg.BatchSize,
 	)
@@ -715,12 +420,12 @@ func (q *Queries) ClaimDeliveries(ctx context.Context, arg ClaimDeliveriesParams
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ClaimDeliveriesRow
+	var items []ClaimSendsRow
 	for rows.Next() {
-		var i ClaimDeliveriesRow
+		var i ClaimSendsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.AssetID,
+			&i.WorkID,
 			&i.QueuedAt,
 			&i.LeaseExpiresAt,
 		); err != nil {
@@ -732,31 +437,6 @@ func (q *Queries) ClaimDeliveries(ctx context.Context, arg ClaimDeliveriesParams
 		return nil, err
 	}
 	return items, nil
-}
-
-const clearAssetWithhold = `-- name: ClearAssetWithhold :one
-with cleared as (
-    update assets as asset
-       set withheld_at = null, withheld_by = null, withheld_reason = null,
-           updated_at = now()
-     where asset.id = $1 and asset.withheld_at is not null and asset.deleted_at is null
-    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
-)
-select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
-  from cleared
-  left join asset_snapshots snapshot on snapshot.id = cleared.published_snapshot_id
-`
-
-type ClearAssetWithholdRow struct {
-	OwnerID    pgtype.UUID
-	PublicName string
-}
-
-func (q *Queries) ClearAssetWithhold(ctx context.Context, id pgtype.UUID) (ClearAssetWithholdRow, error) {
-	row := q.db.QueryRow(ctx, clearAssetWithhold, id)
-	var i ClearAssetWithholdRow
-	err := row.Scan(&i.OwnerID, &i.PublicName)
-	return i, err
 }
 
 const clearPendingEmailCopies = `-- name: ClearPendingEmailCopies :exec
@@ -775,10 +455,30 @@ func (q *Queries) ClearPendingEmailCopies(ctx context.Context, arg ClearPendingE
 	return err
 }
 
-const countBrowseAssets = `-- name: CountBrowseAssets :one
+const connectedAppForUsedRefreshToken = `-- name: ConnectedAppForUsedRefreshToken :one
+select history.connected_app_id, app.user_id
+  from app_refresh_history as history
+  join connected_apps as app on app.id = history.connected_app_id
+ where history.token_hash = $1
+   and history.detectable_until > now()
+`
+
+type ConnectedAppForUsedRefreshTokenRow struct {
+	ConnectedAppID pgtype.UUID
+	UserID         pgtype.UUID
+}
+
+func (q *Queries) ConnectedAppForUsedRefreshToken(ctx context.Context, refreshTokenHash []byte) (ConnectedAppForUsedRefreshTokenRow, error) {
+	row := q.db.QueryRow(ctx, connectedAppForUsedRefreshToken, refreshTokenHash)
+	var i ConnectedAppForUsedRefreshTokenRow
+	err := row.Scan(&i.ConnectedAppID, &i.UserID)
+	return i, err
+}
+
+const countBrowseWorks = `-- name: CountBrowseWorks :one
 select count(*)
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
  where (a.lifecycle = 'published'
         or ($1::boolean
@@ -786,40 +486,41 @@ select count(*)
    and a.deleted_at is null
    and (
        ($2::uuid is null
-        and a.discovery = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.taken_down_at is null)
        or
        (a.owner_id = $2::uuid
         and ($1::boolean
-             or (a.discovery = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
-   and ($3::text = '' or a.kind = $3::text)
+   and ($3::text = '' or a.type = $3::text)
+   and a.type <> all(coalesce($4::text[], '{}'))
    and ($1::boolean
-        or $4::text <> 'hidden' or not a.is_nsfw)
-   and ($5::text = '' or exists (
+        or $5::text <> 'hidden' or not a.is_nsfw)
+   and ($6::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
-         where offered.target ->> 'format' = any($6::text[])
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
+         where offered.format ->> 'format' = any($7::text[])
    ))
-   and (cardinality($7::text[]) = 0 or not exists (
+   and (cardinality($8::text[]) = 0 or not exists (
         select 1
-          from unnest($7::text[]) with ordinality as chosen(key, at)
-          join unnest($8::int[]) with ordinality as lows(low, at)
+          from unnest($8::text[]) with ordinality as chosen(key, at)
+          join unnest($9::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($9::int[]) with ordinality as highs(high, at)
+          join unnest($10::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($10::text = ''
-        or position($10::text in lower(a.name)) > 0
-        or position($10::text in lower(a.blurb)) > 0
-        or position($10::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($11::text = '' or lower(coalesce(owner.username, '')) = $11::text)
-   and (cardinality($12::text[]) = 0 or not exists (
-        select 1 from unnest($12::text[]) wanted(tag)
+   and ($11::text = ''
+        or position($11::text in lower(a.name)) > 0
+        or position($11::text in lower(a.blurb)) > 0
+        or position($11::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($12::text = '' or lower(coalesce(owner.username, '')) = $12::text)
+   and (cardinality($13::text[]) = 0 or not exists (
+        select 1 from unnest($13::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
@@ -827,12 +528,13 @@ select count(*)
    ))
 `
 
-type CountBrowseAssetsParams struct {
+type CountBrowseWorksParams struct {
 	OwnProfile     bool
 	CreatorID      pgtype.UUID
-	Kind           string
-	NsfwVisibility string
-	Platform       string
+	Type           string
+	HiddenTypes    []string
+	NsfwPreference string
+	App            string
 	Formats        []string
 	FacetKeys      []string
 	FacetLows      []int32
@@ -842,13 +544,14 @@ type CountBrowseAssetsParams struct {
 	Tags           []string
 }
 
-func (q *Queries) CountBrowseAssets(ctx context.Context, arg CountBrowseAssetsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countBrowseAssets,
+func (q *Queries) CountBrowseWorks(ctx context.Context, arg CountBrowseWorksParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countBrowseWorks,
 		arg.OwnProfile,
 		arg.CreatorID,
-		arg.Kind,
-		arg.NsfwVisibility,
-		arg.Platform,
+		arg.Type,
+		arg.HiddenTypes,
+		arg.NsfwPreference,
+		arg.App,
 		arg.Formats,
 		arg.FacetKeys,
 		arg.FacetLows,
@@ -862,55 +565,56 @@ func (q *Queries) CountBrowseAssets(ctx context.Context, arg CountBrowseAssetsPa
 	return count, err
 }
 
-const countLiveDeliveries = `-- name: CountLiveDeliveries :one
+const countLiveSends = `-- name: CountLiveSends :one
 select count(*)::bigint
-  from instance_deliveries
- where instance_id = $1 and state in ('queued', 'released')
+  from sends
+ where connected_app_id = $1 and state in ('queued', 'released')
 `
 
-func (q *Queries) CountLiveDeliveries(ctx context.Context, instanceID pgtype.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countLiveDeliveries, instanceID)
+func (q *Queries) CountLiveSends(ctx context.Context, connectedAppID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countLiveSends, connectedAppID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
 }
 
-const countSuppressedBrowseAssets = `-- name: CountSuppressedBrowseAssets :one
+const countSuppressedBrowseWorks = `-- name: CountSuppressedBrowseWorks :one
 select count(*)
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
  where a.lifecycle = 'published'
-   and a.discovery = 'listed'
-   and a.withheld_at is null
+   and a.visibility = 'listed'
+   and a.taken_down_at is null
    and a.deleted_at is null
    and ($1::uuid is null or a.owner_id = $1::uuid)
-   and ($2::text = '' or a.kind = $2::text)
-   and ($3::text = '' or exists (
+   and ($2::text = '' or a.type = $2::text)
+   and a.type <> all(coalesce($3::text[], '{}'))
+   and ($4::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
-         where offered.target ->> 'format' = any($4::text[])
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
+         where offered.format ->> 'format' = any($5::text[])
    ))
-   and (cardinality($5::text[]) = 0 or not exists (
+   and (cardinality($6::text[]) = 0 or not exists (
         select 1
-          from unnest($5::text[]) with ordinality as chosen(key, at)
-          join unnest($6::int[]) with ordinality as lows(low, at)
+          from unnest($6::text[]) with ordinality as chosen(key, at)
+          join unnest($7::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($7::int[]) with ordinality as highs(high, at)
+          join unnest($8::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($8::text = ''
-        or position($8::text in lower(a.name)) > 0
-        or position($8::text in lower(a.blurb)) > 0
-        or position($8::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($9::text = '' or lower(coalesce(owner.username, '')) = $9::text)
-   and (cardinality($10::text[]) = 0 or not exists (
-        select 1 from unnest($10::text[]) wanted(tag)
+   and ($9::text = ''
+        or position($9::text in lower(a.name)) > 0
+        or position($9::text in lower(a.blurb)) > 0
+        or position($9::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($10::text = '' or lower(coalesce(owner.username, '')) = $10::text)
+   and (cardinality($11::text[]) = 0 or not exists (
+        select 1 from unnest($11::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
@@ -919,24 +623,26 @@ select count(*)
    and a.is_nsfw
 `
 
-type CountSuppressedBrowseAssetsParams struct {
-	CreatorID  pgtype.UUID
-	Kind       string
-	Platform   string
-	Formats    []string
-	FacetKeys  []string
-	FacetLows  []int32
-	FacetHighs []int32
-	SearchText string
-	Author     string
-	Tags       []string
+type CountSuppressedBrowseWorksParams struct {
+	CreatorID   pgtype.UUID
+	Type        string
+	HiddenTypes []string
+	App         string
+	Formats     []string
+	FacetKeys   []string
+	FacetLows   []int32
+	FacetHighs  []int32
+	SearchText  string
+	Author      string
+	Tags        []string
 }
 
-func (q *Queries) CountSuppressedBrowseAssets(ctx context.Context, arg CountSuppressedBrowseAssetsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countSuppressedBrowseAssets,
+func (q *Queries) CountSuppressedBrowseWorks(ctx context.Context, arg CountSuppressedBrowseWorksParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSuppressedBrowseWorks,
 		arg.CreatorID,
-		arg.Kind,
-		arg.Platform,
+		arg.Type,
+		arg.HiddenTypes,
+		arg.App,
 		arg.Formats,
 		arg.FacetKeys,
 		arg.FacetLows,
@@ -950,176 +656,137 @@ func (q *Queries) CountSuppressedBrowseAssets(ctx context.Context, arg CountSupp
 	return count, err
 }
 
-const currentRevisionLocation = `-- name: CurrentRevisionLocation :one
-select a.id as asset_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
-  from assets a
-  left join public.asset_snapshots snapshot on snapshot.id = a.published_snapshot_id
-  join asset_revisions r on r.id = case when snapshot.id is null
-      then a.current_revision_id else snapshot.source_revision_id end
- where a.id = $1
-   and r.blob_id is not null
-   and a.lifecycle = 'published'
-   and a.deleted_at is null
-   and (a.withheld_at is null or a.owner_id = $2::uuid)
-`
-
-type CurrentRevisionLocationParams struct {
-	ID       pgtype.UUID
-	ViewerID pgtype.UUID
-}
-
-type CurrentRevisionLocationRow struct {
-	AssetID    pgtype.UUID
-	RevisionID pgtype.UUID
-	BlobID     pgtype.UUID
-	MediaType  string
-	OwnerID    pgtype.UUID
-}
-
-func (q *Queries) CurrentRevisionLocation(ctx context.Context, arg CurrentRevisionLocationParams) (CurrentRevisionLocationRow, error) {
-	row := q.db.QueryRow(ctx, currentRevisionLocation, arg.ID, arg.ViewerID)
-	var i CurrentRevisionLocationRow
-	err := row.Scan(
-		&i.AssetID,
-		&i.RevisionID,
-		&i.BlobID,
-		&i.MediaType,
-		&i.OwnerID,
-	)
-	return i, err
-}
-
-const deleteExpiredDeliveries = `-- name: DeleteExpiredDeliveries :execrows
-with expired as (
-    select id
-      from instance_deliveries
-     where expires_at <= now()
-     order by expires_at
-     limit $1
-     for update skip locked
-)
-delete from instance_deliveries as delivery
- using expired
- where delivery.id = expired.id
-`
-
-func (q *Queries) DeleteExpiredDeliveries(ctx context.Context, batchSize int32) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredDeliveries, batchSize)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const deleteExpiredDeviceLinkRequests = `-- name: DeleteExpiredDeviceLinkRequests :execrows
-with expired as (
-    select device_code_hash
-      from link_requests
-     where expires_at <= now()
-     order by expires_at
-     limit $1
-     for update skip locked
-)
-delete from link_requests as request
- using expired
- where request.device_code_hash = expired.device_code_hash
-`
-
-func (q *Queries) DeleteExpiredDeviceLinkRequests(ctx context.Context, batchSize int32) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredDeviceLinkRequests, batchSize)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const deleteExpiredInstanceAccessTokens = `-- name: DeleteExpiredInstanceAccessTokens :execrows
+const deleteExpiredAppAccessTokens = `-- name: DeleteExpiredAppAccessTokens :execrows
 with expired as (
     select token_hash
-      from instance_access_tokens
+      from app_access_tokens
      where expires_at <= now()
      order by expires_at
      limit $1
      for update skip locked
 )
-delete from instance_access_tokens as token
+delete from app_access_tokens as token
  using expired
  where token.token_hash = expired.token_hash
 `
 
-func (q *Queries) DeleteExpiredInstanceAccessTokens(ctx context.Context, batchSize int32) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredInstanceAccessTokens, batchSize)
+func (q *Queries) DeleteExpiredAppAccessTokens(ctx context.Context, batchSize int32) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredAppAccessTokens, batchSize)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const deleteExpiredInstanceRefreshHistory = `-- name: DeleteExpiredInstanceRefreshHistory :execrows
+const deleteExpiredAppRefreshHistory = `-- name: DeleteExpiredAppRefreshHistory :execrows
 with expired as (
     select token_hash
-      from instance_refresh_history
+      from app_refresh_history
      where detectable_until <= now()
      order by detectable_until
      limit $1
      for update skip locked
 )
-delete from instance_refresh_history as history
+delete from app_refresh_history as history
  using expired
  where history.token_hash = expired.token_hash
 `
 
-func (q *Queries) DeleteExpiredInstanceRefreshHistory(ctx context.Context, batchSize int32) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredInstanceRefreshHistory, batchSize)
+func (q *Queries) DeleteExpiredAppRefreshHistory(ctx context.Context, batchSize int32) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredAppRefreshHistory, batchSize)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const deleteExpiredLinkAuthorizations = `-- name: DeleteExpiredLinkAuthorizations :execrows
+const deleteExpiredConnectionAuthorizations = `-- name: DeleteExpiredConnectionAuthorizations :execrows
 with expired as (
     select request_hash
-      from link_authorizations
+      from connection_authorizations
      where expires_at <= now()
      order by expires_at
      limit $1
      for update skip locked
 )
-delete from link_authorizations as link_auth
+delete from connection_authorizations as request
  using expired
- where link_auth.request_hash = expired.request_hash
+ where request.request_hash = expired.request_hash
 `
 
-func (q *Queries) DeleteExpiredLinkAuthorizations(ctx context.Context, batchSize int32) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredLinkAuthorizations, batchSize)
+func (q *Queries) DeleteExpiredConnectionAuthorizations(ctx context.Context, batchSize int32) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredConnectionAuthorizations, batchSize)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const deleteExpiredLinkRateLimits = `-- name: DeleteExpiredLinkRateLimits :execrows
+const deleteExpiredConnectionRateLimits = `-- name: DeleteExpiredConnectionRateLimits :execrows
 with expired as (
     select key_hash, action
-      from link_rate_limits
-     where link_rate_limits.window_start <= $1
-     order by link_rate_limits.window_start
+      from connection_rate_limits
+     where connection_rate_limits.window_start <= $1
+     order by connection_rate_limits.window_start
      limit $2
      for update skip locked
 )
-delete from link_rate_limits as rate
+delete from connection_rate_limits as rate
  using expired
  where rate.key_hash = expired.key_hash and rate.action = expired.action
 `
 
-type DeleteExpiredLinkRateLimitsParams struct {
+type DeleteExpiredConnectionRateLimitsParams struct {
 	WindowCutoff pgtype.Timestamptz
 	BatchSize    int32
 }
 
-func (q *Queries) DeleteExpiredLinkRateLimits(ctx context.Context, arg DeleteExpiredLinkRateLimitsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredLinkRateLimits, arg.WindowCutoff, arg.BatchSize)
+func (q *Queries) DeleteExpiredConnectionRateLimits(ctx context.Context, arg DeleteExpiredConnectionRateLimitsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredConnectionRateLimits, arg.WindowCutoff, arg.BatchSize)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteExpiredConnectionRequests = `-- name: DeleteExpiredConnectionRequests :execrows
+with expired as (
+    select device_code_hash
+      from connection_requests
+     where expires_at <= now()
+     order by expires_at
+     limit $1
+     for update skip locked
+)
+delete from connection_requests as request
+ using expired
+ where request.device_code_hash = expired.device_code_hash
+`
+
+func (q *Queries) DeleteExpiredConnectionRequests(ctx context.Context, batchSize int32) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredConnectionRequests, batchSize)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteExpiredSends = `-- name: DeleteExpiredSends :execrows
+with expired as (
+    select id
+      from sends
+     where expires_at <= now()
+     order by expires_at
+     limit $1
+     for update skip locked
+)
+delete from sends as send
+ using expired
+ where send.id = expired.id
+`
+
+func (q *Queries) DeleteExpiredSends(ctx context.Context, batchSize int32) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredSends, batchSize)
 	if err != nil {
 		return 0, err
 	}
@@ -1172,62 +839,8 @@ func (q *Queries) DeleteVerificationTokensForUser(ctx context.Context, userID pg
 	return err
 }
 
-const deliveryForArtifact = `-- name: DeliveryForArtifact :one
-select delivery.asset_id, delivery.chosen_target, instance.id as instance_id
-  from instance_deliveries as delivery
-  join linked_instances as instance on instance.id = delivery.instance_id
- where delivery.id = $1
-   and delivery.state = 'released'
-   and delivery.lease_expires_at > now()
-   and delivery.expires_at > now()
-   and delivery.chosen_target is not null
-   and instance.revoked_at is null
-   and instance.scopes @> array['asset:receive']
-`
-
-type DeliveryForArtifactRow struct {
-	AssetID      pgtype.UUID
-	ChosenTarget pgtype.Text
-	InstanceID   pgtype.UUID
-}
-
-func (q *Queries) DeliveryForArtifact(ctx context.Context, deliveryID pgtype.UUID) (DeliveryForArtifactRow, error) {
-	row := q.db.QueryRow(ctx, deliveryForArtifact, deliveryID)
-	var i DeliveryForArtifactRow
-	err := row.Scan(&i.AssetID, &i.ChosenTarget, &i.InstanceID)
-	return i, err
-}
-
-const denyDeviceLinkRequest = `-- name: DenyDeviceLinkRequest :execrows
-update link_requests
-   set review_token_hash = $1,
-       reviewed_by = $2,
-       denied_by = $2,
-       denied_at = now()
- where user_code_hash = $3
-   and (reviewed_by is null or reviewed_by = $2)
-   and expires_at > now()
-   and approved_at is null
-   and denied_at is null
-   and redeemed_at is null
-`
-
-type DenyDeviceLinkRequestParams struct {
-	ReviewTokenHash []byte
-	ReviewedBy      pgtype.UUID
-	UserCodeHash    []byte
-}
-
-func (q *Queries) DenyDeviceLinkRequest(ctx context.Context, arg DenyDeviceLinkRequestParams) (int64, error) {
-	result, err := q.db.Exec(ctx, denyDeviceLinkRequest, arg.ReviewTokenHash, arg.ReviewedBy, arg.UserCodeHash)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const denyLinkAuthorization = `-- name: DenyLinkAuthorization :one
-update link_authorizations
+const denyConnectionAuthorization = `-- name: DenyConnectionAuthorization :one
+update connection_authorizations
    set reviewed_by = $1,
        denied_by = $1,
        denied_at = now()
@@ -1240,38 +853,66 @@ update link_authorizations
 returning redirect_uri, state
 `
 
-type DenyLinkAuthorizationParams struct {
+type DenyConnectionAuthorizationParams struct {
 	ReviewedBy  pgtype.UUID
 	RequestHash []byte
 }
 
-type DenyLinkAuthorizationRow struct {
+type DenyConnectionAuthorizationRow struct {
 	RedirectUri string
 	State       string
 }
 
-func (q *Queries) DenyLinkAuthorization(ctx context.Context, arg DenyLinkAuthorizationParams) (DenyLinkAuthorizationRow, error) {
-	row := q.db.QueryRow(ctx, denyLinkAuthorization, arg.ReviewedBy, arg.RequestHash)
-	var i DenyLinkAuthorizationRow
+func (q *Queries) DenyConnectionAuthorization(ctx context.Context, arg DenyConnectionAuthorizationParams) (DenyConnectionAuthorizationRow, error) {
+	row := q.db.QueryRow(ctx, denyConnectionAuthorization, arg.ReviewedBy, arg.RequestHash)
+	var i DenyConnectionAuthorizationRow
 	err := row.Scan(&i.RedirectUri, &i.State)
 	return i, err
 }
 
-const discardDelivery = `-- name: DiscardDelivery :execrows
-delete from instance_deliveries as delivery
- using linked_instances as instance
- where delivery.id = $1
-   and delivery.instance_id = instance.id
-   and instance.user_id = $2
+const denyConnectionRequest = `-- name: DenyConnectionRequest :execrows
+update connection_requests
+   set review_token_hash = $1,
+       reviewed_by = $2,
+       denied_by = $2,
+       denied_at = now()
+ where user_code_hash = $3
+   and (reviewed_by is null or reviewed_by = $2)
+   and expires_at > now()
+   and approved_at is null
+   and denied_at is null
+   and redeemed_at is null
 `
 
-type DiscardDeliveryParams struct {
-	DeliveryID pgtype.UUID
-	UserID     pgtype.UUID
+type DenyConnectionRequestParams struct {
+	ReviewTokenHash []byte
+	ReviewedBy      pgtype.UUID
+	UserCodeHash    []byte
 }
 
-func (q *Queries) DiscardDelivery(ctx context.Context, arg DiscardDeliveryParams) (int64, error) {
-	result, err := q.db.Exec(ctx, discardDelivery, arg.DeliveryID, arg.UserID)
+func (q *Queries) DenyConnectionRequest(ctx context.Context, arg DenyConnectionRequestParams) (int64, error) {
+	result, err := q.db.Exec(ctx, denyConnectionRequest, arg.ReviewTokenHash, arg.ReviewedBy, arg.UserCodeHash)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const discardSend = `-- name: DiscardSend :execrows
+delete from sends as send
+ using connected_apps as app
+ where send.id = $1
+   and send.connected_app_id = app.id
+   and app.user_id = $2
+`
+
+type DiscardSendParams struct {
+	SendID pgtype.UUID
+	UserID pgtype.UUID
+}
+
+func (q *Queries) DiscardSend(ctx context.Context, arg DiscardSendParams) (int64, error) {
+	result, err := q.db.Exec(ctx, discardSend, arg.SendID, arg.UserID)
 	if err != nil {
 		return 0, err
 	}
@@ -1305,21 +946,102 @@ func (q *Queries) DiscordSubjectsForUser(ctx context.Context, userID pgtype.UUID
 	return items, nil
 }
 
-const failDelivery = `-- name: FailDelivery :exec
-update instance_deliveries
+const failSend = `-- name: FailSend :exec
+update sends
    set state = 'failed', settled_at = now(),
        settled_reason = $1, lease_expires_at = null
  where id = $2
 `
 
-type FailDeliveryParams struct {
+type FailSendParams struct {
 	SettledReason pgtype.Text
 	ID            pgtype.UUID
 }
 
-func (q *Queries) FailDelivery(ctx context.Context, arg FailDeliveryParams) error {
-	_, err := q.db.Exec(ctx, failDelivery, arg.SettledReason, arg.ID)
+func (q *Queries) FailSend(ctx context.Context, arg FailSendParams) error {
+	_, err := q.db.Exec(ctx, failSend, arg.SettledReason, arg.ID)
 	return err
+}
+
+const featuredWorks = `-- name: FeaturedWorks :many
+select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
+       a.type, a.is_nsfw, a.created_at, a.lifecycle,
+       cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
+       a.visibility, a.taken_down_at, a.taken_down_reason,
+       array(select offered.format ->> 'format'
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+  from profile_featured_works featured
+  join works a on a.id = featured.work_id
+  left join work_summaries summary on summary.work_id = a.id
+  left join users owner on owner.id = a.owner_id
+  left join work_media cover
+    on cover.id = a.cover_media_id and cover.work_id = a.id
+   and cover.is_current
+   and cover.width is not null and cover.height is not null
+   and cover.blob_id is not null
+ where featured.user_id = $1::uuid
+   and a.owner_id = featured.user_id
+   and a.lifecycle = 'published' and a.visibility = 'listed'
+   and a.deleted_at is null and a.taken_down_at is null
+   and ($2::text <> 'hidden' or not a.is_nsfw)
+ order by featured.position
+`
+
+type FeaturedWorksParams struct {
+	CreatorID      pgtype.UUID
+	NsfwPreference string
+}
+
+type FeaturedWorksRow struct {
+	ID              pgtype.UUID
+	Name            string
+	Creator         string
+	Type            string
+	IsNsfw          pgtype.Bool
+	CreatedAt       pgtype.Timestamptz
+	Lifecycle       string
+	CoverID         pgtype.UUID
+	CoverWidth      pgtype.Int4
+	CoverHeight     pgtype.Int4
+	Visibility      string
+	TakenDownAt     pgtype.Timestamptz
+	TakenDownReason pgtype.Text
+	Formats         []string
+}
+
+func (q *Queries) FeaturedWorks(ctx context.Context, arg FeaturedWorksParams) ([]FeaturedWorksRow, error) {
+	rows, err := q.db.Query(ctx, featuredWorks, arg.CreatorID, arg.NsfwPreference)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FeaturedWorksRow
+	for rows.Next() {
+		var i FeaturedWorksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Creator,
+			&i.Type,
+			&i.IsNsfw,
+			&i.CreatedAt,
+			&i.Lifecycle,
+			&i.CoverID,
+			&i.CoverWidth,
+			&i.CoverHeight,
+			&i.Visibility,
+			&i.TakenDownAt,
+			&i.TakenDownReason,
+			&i.Formats,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const handleUnavailable = `-- name: HandleUnavailable :one
@@ -1337,93 +1059,172 @@ func (q *Queries) HandleUnavailable(ctx context.Context, username string) (bool,
 	return exists, err
 }
 
-const insertAsset = `-- name: InsertAsset :one
-insert into assets
-  (id, kind, owner_id, name, blurb, tags, is_nsfw, discovery, lifecycle,
-   asset_version, credited_author, nickname, origin_format, created_at)
-values ($1, $2, $3, $4, $5, $6, $12::boolean, $7, $8,
-        $9, $10, $11, $13::text,
-        coalesce($14::timestamptz, now()))
-returning created_at
+const insertAppAccessToken = `-- name: InsertAppAccessToken :one
+with live_app as (
+    select id
+      from connected_apps
+     where id = $2 and revoked_at is null
+     for update
+)
+insert into app_access_tokens (token_hash, connected_app_id, expires_at)
+select $1, $2, $3
+  from live_app
+returning token_hash, connected_app_id, expires_at
 `
 
-type InsertAssetParams struct {
-	ID             pgtype.UUID
-	Kind           string
-	OwnerID        pgtype.UUID
-	Name           string
-	Blurb          string
-	Tags           []string
-	Discovery      string
-	Lifecycle      string
-	AssetVersion   string
-	CreditedAuthor string
-	Nickname       string
-	IsNsfw         pgtype.Bool
-	OriginFormat   pgtype.Text
-	CreatedAt      pgtype.Timestamptz
+type InsertAppAccessTokenParams struct {
+	TokenHash      []byte
+	ConnectedAppID pgtype.UUID
+	ExpiresAt      pgtype.Timestamptz
 }
 
-func (q *Queries) InsertAsset(ctx context.Context, arg InsertAssetParams) (pgtype.Timestamptz, error) {
-	row := q.db.QueryRow(ctx, insertAsset,
+type InsertAppAccessTokenRow struct {
+	TokenHash      []byte
+	ConnectedAppID pgtype.UUID
+	ExpiresAt      pgtype.Timestamptz
+}
+
+func (q *Queries) InsertAppAccessToken(ctx context.Context, arg InsertAppAccessTokenParams) (InsertAppAccessTokenRow, error) {
+	row := q.db.QueryRow(ctx, insertAppAccessToken, arg.TokenHash, arg.ConnectedAppID, arg.ExpiresAt)
+	var i InsertAppAccessTokenRow
+	err := row.Scan(&i.TokenHash, &i.ConnectedAppID, &i.ExpiresAt)
+	return i, err
+}
+
+const insertConnectedApp = `-- name: InsertConnectedApp :one
+insert into connected_apps (
+    id, user_id, app_name, name, app_version,
+    protocol_version, capabilities, accepted_formats,
+    refresh_token_hash, refresh_token_prefix, permissions
+)
+values (
+    $1, $2, $3,
+    $4, $5,
+    $6, $7,
+    $8, $9,
+    $10, $11
+)
+returning id, app_name, name, app_version,
+          protocol_version, capabilities, accepted_formats,
+          refresh_token_prefix, permissions, connected_at, last_seen_at, revoked_at
+`
+
+type InsertConnectedAppParams struct {
+	ID                 pgtype.UUID
+	UserID             pgtype.UUID
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
+	ProtocolVersion    pgtype.Int4
+	Capabilities       []string
+	AcceptedFormats    []string
+	RefreshTokenHash   []byte
+	RefreshTokenPrefix string
+	Permissions        []string
+}
+
+type InsertConnectedAppRow struct {
+	ID                 pgtype.UUID
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
+	ProtocolVersion    pgtype.Int4
+	Capabilities       []string
+	AcceptedFormats    []string
+	RefreshTokenPrefix string
+	Permissions        []string
+	ConnectedAt        pgtype.Timestamptz
+	LastSeenAt         pgtype.Timestamptz
+	RevokedAt          pgtype.Timestamptz
+}
+
+func (q *Queries) InsertConnectedApp(ctx context.Context, arg InsertConnectedAppParams) (InsertConnectedAppRow, error) {
+	row := q.db.QueryRow(ctx, insertConnectedApp,
 		arg.ID,
-		arg.Kind,
-		arg.OwnerID,
+		arg.UserID,
+		arg.AppName,
 		arg.Name,
-		arg.Blurb,
-		arg.Tags,
-		arg.Discovery,
-		arg.Lifecycle,
-		arg.AssetVersion,
-		arg.CreditedAuthor,
-		arg.Nickname,
-		arg.IsNsfw,
-		arg.OriginFormat,
-		arg.CreatedAt,
+		arg.AppVersion,
+		arg.ProtocolVersion,
+		arg.Capabilities,
+		arg.AcceptedFormats,
+		arg.RefreshTokenHash,
+		arg.RefreshTokenPrefix,
+		arg.Permissions,
 	)
-	var created_at pgtype.Timestamptz
-	err := row.Scan(&created_at)
-	return created_at, err
+	var i InsertConnectedAppRow
+	err := row.Scan(
+		&i.ID,
+		&i.AppName,
+		&i.Name,
+		&i.AppVersion,
+		&i.ProtocolVersion,
+		&i.Capabilities,
+		&i.AcceptedFormats,
+		&i.RefreshTokenPrefix,
+		&i.Permissions,
+		&i.ConnectedAt,
+		&i.LastSeenAt,
+		&i.RevokedAt,
+	)
+	return i, err
 }
 
-const insertAssetBlock = `-- name: InsertAssetBlock :exec
-insert into asset_blocks
-  (id, asset_id, definition, title, position, hidden, layout, width, elements)
-values ($1, $2, $3, $9::text, $4, $5, $6, $7, $8)
+const insertConnectionAuthorization = `-- name: InsertConnectionAuthorization :exec
+insert into connection_authorizations (
+    request_hash, user_code_hash, redirect_uri, state, code_challenge,
+    app_name, name, app_version, protocol_version,
+    capabilities, accepted_formats, permissions, expires_at
+)
+values (
+    $1, $2, $3, $4,
+    $5, $6,
+    $7, $8,
+    $9, $10,
+    $11, $12, $13
+)
 `
 
-type InsertAssetBlockParams struct {
-	ID         pgtype.UUID
-	AssetID    pgtype.UUID
-	Definition string
-	Position   int32
-	Hidden     bool
-	Layout     string
-	Width      string
-	Elements   []byte
-	Title      pgtype.Text
+type InsertConnectionAuthorizationParams struct {
+	RequestHash     []byte
+	UserCodeHash    []byte
+	RedirectUri     string
+	State           string
+	CodeChallenge   string
+	AppName         string
+	Name            string
+	AppVersion      pgtype.Text
+	ProtocolVersion int32
+	Capabilities    []string
+	AcceptedFormats []string
+	Permissions     []string
+	ExpiresAt       pgtype.Timestamptz
 }
 
-func (q *Queries) InsertAssetBlock(ctx context.Context, arg InsertAssetBlockParams) error {
-	_, err := q.db.Exec(ctx, insertAssetBlock,
-		arg.ID,
-		arg.AssetID,
-		arg.Definition,
-		arg.Position,
-		arg.Hidden,
-		arg.Layout,
-		arg.Width,
-		arg.Elements,
-		arg.Title,
+func (q *Queries) InsertConnectionAuthorization(ctx context.Context, arg InsertConnectionAuthorizationParams) error {
+	_, err := q.db.Exec(ctx, insertConnectionAuthorization,
+		arg.RequestHash,
+		arg.UserCodeHash,
+		arg.RedirectUri,
+		arg.State,
+		arg.CodeChallenge,
+		arg.AppName,
+		arg.Name,
+		arg.AppVersion,
+		arg.ProtocolVersion,
+		arg.Capabilities,
+		arg.AcceptedFormats,
+		arg.Permissions,
+		arg.ExpiresAt,
 	)
 	return err
 }
 
-const insertDeviceLinkRequest = `-- name: InsertDeviceLinkRequest :exec
-insert into link_requests (
+const insertConnectionRequest = `-- name: InsertConnectionRequest :exec
+insert into connection_requests (
     device_code_hash, user_code_hash,
-    application_name, instance_name, application_version, protocol_version,
-    capabilities, accepted_targets, scopes, expires_at
+    app_name, name, app_version, protocol_version,
+    capabilities, accepted_formats, permissions, expires_at
 )
 values (
     $1, $2,
@@ -1434,30 +1235,30 @@ values (
 )
 `
 
-type InsertDeviceLinkRequestParams struct {
-	DeviceCodeHash     []byte
-	UserCodeHash       []byte
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    int32
-	Capabilities       []string
-	AcceptedTargets    []string
-	Scopes             []string
-	ExpiresAt          pgtype.Timestamptz
+type InsertConnectionRequestParams struct {
+	DeviceCodeHash  []byte
+	UserCodeHash    []byte
+	AppName         string
+	Name            string
+	AppVersion      pgtype.Text
+	ProtocolVersion int32
+	Capabilities    []string
+	AcceptedFormats []string
+	Permissions     []string
+	ExpiresAt       pgtype.Timestamptz
 }
 
-func (q *Queries) InsertDeviceLinkRequest(ctx context.Context, arg InsertDeviceLinkRequestParams) error {
-	_, err := q.db.Exec(ctx, insertDeviceLinkRequest,
+func (q *Queries) InsertConnectionRequest(ctx context.Context, arg InsertConnectionRequestParams) error {
+	_, err := q.db.Exec(ctx, insertConnectionRequest,
 		arg.DeviceCodeHash,
 		arg.UserCodeHash,
-		arg.ApplicationName,
-		arg.InstanceName,
-		arg.ApplicationVersion,
+		arg.AppName,
+		arg.Name,
+		arg.AppVersion,
 		arg.ProtocolVersion,
 		arg.Capabilities,
-		arg.AcceptedTargets,
-		arg.Scopes,
+		arg.AcceptedFormats,
+		arg.Permissions,
 		arg.ExpiresAt,
 	)
 	return err
@@ -1529,280 +1330,6 @@ func (q *Queries) InsertEmailVerificationToken(ctx context.Context, arg InsertEm
 	return err
 }
 
-const insertInstanceAccessToken = `-- name: InsertInstanceAccessToken :one
-with live_instance as (
-    select id
-      from linked_instances
-     where id = $2 and revoked_at is null
-     for update
-)
-insert into instance_access_tokens (token_hash, instance_id, expires_at)
-select $1, $2, $3
-  from live_instance
-returning token_hash, instance_id, expires_at
-`
-
-type InsertInstanceAccessTokenParams struct {
-	TokenHash  []byte
-	InstanceID pgtype.UUID
-	ExpiresAt  pgtype.Timestamptz
-}
-
-type InsertInstanceAccessTokenRow struct {
-	TokenHash  []byte
-	InstanceID pgtype.UUID
-	ExpiresAt  pgtype.Timestamptz
-}
-
-func (q *Queries) InsertInstanceAccessToken(ctx context.Context, arg InsertInstanceAccessTokenParams) (InsertInstanceAccessTokenRow, error) {
-	row := q.db.QueryRow(ctx, insertInstanceAccessToken, arg.TokenHash, arg.InstanceID, arg.ExpiresAt)
-	var i InsertInstanceAccessTokenRow
-	err := row.Scan(&i.TokenHash, &i.InstanceID, &i.ExpiresAt)
-	return i, err
-}
-
-const insertLegacyCounters = `-- name: InsertLegacyCounters :exec
-insert into migration_legacy_counters (asset_id, v1_downloads, v1_views, v1_updated_at)
-values ($1, $2, $3, $4)
-`
-
-type InsertLegacyCountersParams struct {
-	AssetID     pgtype.UUID
-	V1Downloads int32
-	V1Views     int32
-	V1UpdatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) InsertLegacyCounters(ctx context.Context, arg InsertLegacyCountersParams) error {
-	_, err := q.db.Exec(ctx, insertLegacyCounters,
-		arg.AssetID,
-		arg.V1Downloads,
-		arg.V1Views,
-		arg.V1UpdatedAt,
-	)
-	return err
-}
-
-const insertLegacyPath = `-- name: InsertLegacyPath :exec
-insert into asset_legacy_paths (path, asset_id) values ($1, $2)
-`
-
-type InsertLegacyPathParams struct {
-	Path    string
-	AssetID pgtype.UUID
-}
-
-func (q *Queries) InsertLegacyPath(ctx context.Context, arg InsertLegacyPathParams) error {
-	_, err := q.db.Exec(ctx, insertLegacyPath, arg.Path, arg.AssetID)
-	return err
-}
-
-const insertLinkAuthorization = `-- name: InsertLinkAuthorization :exec
-insert into link_authorizations (
-    request_hash, redirect_uri, state, code_challenge,
-    application_name, instance_name, application_version, protocol_version,
-    capabilities, accepted_targets, scopes, expires_at
-)
-values (
-    $1, $2, $3,
-    $4, $5,
-    $6, $7,
-    $8, $9,
-    $10, $11, $12
-)
-`
-
-type InsertLinkAuthorizationParams struct {
-	RequestHash        []byte
-	RedirectUri        string
-	State              string
-	CodeChallenge      string
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    int32
-	Capabilities       []string
-	AcceptedTargets    []string
-	Scopes             []string
-	ExpiresAt          pgtype.Timestamptz
-}
-
-func (q *Queries) InsertLinkAuthorization(ctx context.Context, arg InsertLinkAuthorizationParams) error {
-	_, err := q.db.Exec(ctx, insertLinkAuthorization,
-		arg.RequestHash,
-		arg.RedirectUri,
-		arg.State,
-		arg.CodeChallenge,
-		arg.ApplicationName,
-		arg.InstanceName,
-		arg.ApplicationVersion,
-		arg.ProtocolVersion,
-		arg.Capabilities,
-		arg.AcceptedTargets,
-		arg.Scopes,
-		arg.ExpiresAt,
-	)
-	return err
-}
-
-const insertLinkedInstance = `-- name: InsertLinkedInstance :one
-insert into linked_instances (
-    id, user_id, application_name, instance_name, application_version,
-    protocol_version, capabilities, accepted_targets,
-    refresh_token_hash, refresh_token_prefix, scopes
-)
-values (
-    $1, $2, $3,
-    $4, $5,
-    $6, $7,
-    $8, $9,
-    $10, $11
-)
-returning id, application_name, instance_name, application_version,
-          protocol_version, capabilities, accepted_targets,
-          refresh_token_prefix, scopes, linked_at, last_seen_at, revoked_at
-`
-
-type InsertLinkedInstanceParams struct {
-	ID                 pgtype.UUID
-	UserID             pgtype.UUID
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    pgtype.Int4
-	Capabilities       []string
-	AcceptedTargets    []string
-	RefreshTokenHash   []byte
-	RefreshTokenPrefix string
-	Scopes             []string
-}
-
-type InsertLinkedInstanceRow struct {
-	ID                 pgtype.UUID
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    pgtype.Int4
-	Capabilities       []string
-	AcceptedTargets    []string
-	RefreshTokenPrefix string
-	Scopes             []string
-	LinkedAt           pgtype.Timestamptz
-	LastSeenAt         pgtype.Timestamptz
-	RevokedAt          pgtype.Timestamptz
-}
-
-func (q *Queries) InsertLinkedInstance(ctx context.Context, arg InsertLinkedInstanceParams) (InsertLinkedInstanceRow, error) {
-	row := q.db.QueryRow(ctx, insertLinkedInstance,
-		arg.ID,
-		arg.UserID,
-		arg.ApplicationName,
-		arg.InstanceName,
-		arg.ApplicationVersion,
-		arg.ProtocolVersion,
-		arg.Capabilities,
-		arg.AcceptedTargets,
-		arg.RefreshTokenHash,
-		arg.RefreshTokenPrefix,
-		arg.Scopes,
-	)
-	var i InsertLinkedInstanceRow
-	err := row.Scan(
-		&i.ID,
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
-		&i.ProtocolVersion,
-		&i.Capabilities,
-		&i.AcceptedTargets,
-		&i.RefreshTokenPrefix,
-		&i.Scopes,
-		&i.LinkedAt,
-		&i.LastSeenAt,
-		&i.RevokedAt,
-	)
-	return i, err
-}
-
-const insertMigratedDiscordIdentity = `-- name: InsertMigratedDiscordIdentity :exec
-insert into oauth_identities (user_id, provider, subject) values ($1, 'discord', $2)
-`
-
-type InsertMigratedDiscordIdentityParams struct {
-	UserID  pgtype.UUID
-	Subject string
-}
-
-func (q *Queries) InsertMigratedDiscordIdentity(ctx context.Context, arg InsertMigratedDiscordIdentityParams) error {
-	_, err := q.db.Exec(ctx, insertMigratedDiscordIdentity, arg.UserID, arg.Subject)
-	return err
-}
-
-const insertMigratedUser = `-- name: InsertMigratedUser :exec
-insert into users
-  (id, username, role, created_at, updated_at, display_name, custom_display_name,
-   avatar_url, banner_url, nsfw_visibility, show_nsfw_contributions_on_profile,
-   default_include_tags, default_exclude_tags)
-values ($1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-`
-
-type InsertMigratedUserParams struct {
-	ID                             pgtype.UUID
-	Username                       string
-	Role                           string
-	CreatedAt                      pgtype.Timestamptz
-	DisplayName                    string
-	CustomDisplayName              string
-	AvatarUrl                      string
-	BannerUrl                      string
-	NsfwVisibility                 string
-	ShowNsfwContributionsOnProfile bool
-	DefaultIncludeTags             []byte
-	DefaultExcludeTags             []byte
-}
-
-func (q *Queries) InsertMigratedUser(ctx context.Context, arg InsertMigratedUserParams) error {
-	_, err := q.db.Exec(ctx, insertMigratedUser,
-		arg.ID,
-		arg.Username,
-		arg.Role,
-		arg.CreatedAt,
-		arg.DisplayName,
-		arg.CustomDisplayName,
-		arg.AvatarUrl,
-		arg.BannerUrl,
-		arg.NsfwVisibility,
-		arg.ShowNsfwContributionsOnProfile,
-		arg.DefaultIncludeTags,
-		arg.DefaultExcludeTags,
-	)
-	return err
-}
-
-const insertMigrationException = `-- name: InsertMigrationException :exec
-insert into migration_exceptions (id, kind, subject, detail, asset_id)
-values ($1, $2, $3, $4, $5::uuid)
-`
-
-type InsertMigrationExceptionParams struct {
-	ID      pgtype.UUID
-	Kind    string
-	Subject string
-	Detail  string
-	AssetID pgtype.UUID
-}
-
-func (q *Queries) InsertMigrationException(ctx context.Context, arg InsertMigrationExceptionParams) error {
-	_, err := q.db.Exec(ctx, insertMigrationException,
-		arg.ID,
-		arg.Kind,
-		arg.Subject,
-		arg.Detail,
-		arg.AssetID,
-	)
-	return err
-}
-
 const insertOAuthIdentity = `-- name: InsertOAuthIdentity :exec
 insert into oauth_identities (user_id, provider, subject, provider_email)
 values ($1, $2, $3, $4)
@@ -1826,15 +1353,17 @@ func (q *Queries) InsertOAuthIdentity(ctx context.Context, arg InsertOAuthIdenti
 }
 
 const insertOAuthState = `-- name: InsertOAuthState :exec
-insert into oauth_states (token_hash, intent, user_id, expires_at)
-values ($1, $2, $3, $4)
+insert into oauth_states (token_hash, intent, user_id, expires_at, app_preference, nsfw_preference)
+values ($1, $2, $3, $4, $5, $6)
 `
 
 type InsertOAuthStateParams struct {
-	TokenHash []byte
-	Intent    string
-	UserID    pgtype.UUID
-	ExpiresAt pgtype.Timestamptz
+	TokenHash      []byte
+	Intent         string
+	UserID         pgtype.UUID
+	ExpiresAt      pgtype.Timestamptz
+	AppPreference  pgtype.Text
+	NsfwPreference pgtype.Text
 }
 
 func (q *Queries) InsertOAuthState(ctx context.Context, arg InsertOAuthStateParams) error {
@@ -1843,6 +1372,37 @@ func (q *Queries) InsertOAuthState(ctx context.Context, arg InsertOAuthStatePara
 		arg.Intent,
 		arg.UserID,
 		arg.ExpiresAt,
+		arg.AppPreference,
+		arg.NsfwPreference,
+	)
+	return err
+}
+
+const insertOriginalFile = `-- name: InsertOriginalFile :exec
+insert into work_original_files
+  (id, work_id, number, blob_id, media_type, format, identifier)
+values ($1, $2, $3, $4, $5, $6, $7)
+`
+
+type InsertOriginalFileParams struct {
+	ID         pgtype.UUID
+	WorkID     pgtype.UUID
+	Number     int32
+	BlobID     pgtype.UUID
+	MediaType  string
+	Format     string
+	Identifier string
+}
+
+func (q *Queries) InsertOriginalFile(ctx context.Context, arg InsertOriginalFileParams) error {
+	_, err := q.db.Exec(ctx, insertOriginalFile,
+		arg.ID,
+		arg.WorkID,
+		arg.Number,
+		arg.BlobID,
+		arg.MediaType,
+		arg.Format,
+		arg.Identifier,
 	)
 	return err
 }
@@ -1863,68 +1423,12 @@ func (q *Queries) InsertPasswordReset(ctx context.Context, arg InsertPasswordRes
 	return err
 }
 
-const insertPreservedRecord = `-- name: InsertPreservedRecord :exec
-insert into migration_preserved_records
-  (id, source_table, source_id, asset_id, owner_id, payload)
-values ($1, $2, $3, $5::uuid, $6::uuid, $4)
-`
-
-type InsertPreservedRecordParams struct {
-	ID          pgtype.UUID
-	SourceTable string
-	SourceID    string
-	Payload     []byte
-	AssetID     pgtype.UUID
-	OwnerID     pgtype.UUID
-}
-
-func (q *Queries) InsertPreservedRecord(ctx context.Context, arg InsertPreservedRecordParams) error {
-	_, err := q.db.Exec(ctx, insertPreservedRecord,
-		arg.ID,
-		arg.SourceTable,
-		arg.SourceID,
-		arg.Payload,
-		arg.AssetID,
-		arg.OwnerID,
-	)
-	return err
-}
-
 const insertRetiredHandle = `-- name: InsertRetiredHandle :exec
 insert into retired_handles (handle) values ($1)
 `
 
 func (q *Queries) InsertRetiredHandle(ctx context.Context, handle string) error {
 	_, err := q.db.Exec(ctx, insertRetiredHandle, handle)
-	return err
-}
-
-const insertRevision = `-- name: InsertRevision :exec
-insert into asset_revisions
-  (id, asset_id, revision, blob_id, media_type, format, identifier)
-values ($1, $2, $3, $4, $5, $6, $7)
-`
-
-type InsertRevisionParams struct {
-	ID         pgtype.UUID
-	AssetID    pgtype.UUID
-	Revision   int32
-	BlobID     pgtype.UUID
-	MediaType  string
-	Format     string
-	Identifier string
-}
-
-func (q *Queries) InsertRevision(ctx context.Context, arg InsertRevisionParams) error {
-	_, err := q.db.Exec(ctx, insertRevision,
-		arg.ID,
-		arg.AssetID,
-		arg.Revision,
-		arg.BlobID,
-		arg.MediaType,
-		arg.Format,
-		arg.Identifier,
-	)
 	return err
 }
 
@@ -1981,40 +1485,122 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertU
 	return i, err
 }
 
-const installedApplicationVersions = `-- name: InstalledApplicationVersions :many
-select coalesce(instance.library_application_version,
-                instance.application_version)::text as application_version
-  from instance_library_entries as entry
-  join linked_instances as instance
-    on instance.id = entry.instance_id
-   and instance.revoked_at is null
-   and instance.capabilities && $1::text[]
- where entry.asset_id = $2
-   and coalesce(instance.library_application_version, instance.application_version) is not null
- group by coalesce(instance.library_application_version, instance.application_version)
-having count(*) >= $3::bigint
- order by coalesce(instance.library_application_version, instance.application_version)
+const insertWork = `-- name: InsertWork :one
+insert into works
+  (id, type, owner_id, name, blurb, tags, is_nsfw, visibility, lifecycle,
+   work_version, credited_author, nickname, original_format, created_at)
+values ($1, $2, $3, $4, $5, $6, $12::boolean, $7, $8,
+        $9, $10, $11, $13::text,
+        coalesce($14::timestamptz, now()))
+returning created_at
 `
 
-type InstalledApplicationVersionsParams struct {
+type InsertWorkParams struct {
+	ID             pgtype.UUID
+	Type           string
+	OwnerID        pgtype.UUID
+	Name           string
+	Blurb          string
+	Tags           []string
+	Visibility     string
+	Lifecycle      string
+	WorkVersion    string
+	CreditedAuthor string
+	Nickname       string
+	IsNsfw         pgtype.Bool
+	OriginalFormat pgtype.Text
+	CreatedAt      pgtype.Timestamptz
+}
+
+func (q *Queries) InsertWork(ctx context.Context, arg InsertWorkParams) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, insertWork,
+		arg.ID,
+		arg.Type,
+		arg.OwnerID,
+		arg.Name,
+		arg.Blurb,
+		arg.Tags,
+		arg.Visibility,
+		arg.Lifecycle,
+		arg.WorkVersion,
+		arg.CreditedAuthor,
+		arg.Nickname,
+		arg.IsNsfw,
+		arg.OriginalFormat,
+		arg.CreatedAt,
+	)
+	var created_at pgtype.Timestamptz
+	err := row.Scan(&created_at)
+	return created_at, err
+}
+
+const insertWorkBlock = `-- name: InsertWorkBlock :exec
+insert into work_blocks
+  (id, work_id, definition, title, position, hidden, layout, width, elements)
+values ($1, $2, $3, $9::text, $4, $5, $6, $7, $8)
+`
+
+type InsertWorkBlockParams struct {
+	ID         pgtype.UUID
+	WorkID     pgtype.UUID
+	Definition string
+	Position   int32
+	Hidden     bool
+	Layout     string
+	Width      string
+	Elements   []byte
+	Title      pgtype.Text
+}
+
+func (q *Queries) InsertWorkBlock(ctx context.Context, arg InsertWorkBlockParams) error {
+	_, err := q.db.Exec(ctx, insertWorkBlock,
+		arg.ID,
+		arg.WorkID,
+		arg.Definition,
+		arg.Position,
+		arg.Hidden,
+		arg.Layout,
+		arg.Width,
+		arg.Elements,
+		arg.Title,
+	)
+	return err
+}
+
+const installedAppVersions = `-- name: InstalledAppVersions :many
+select coalesce(app.library_app_version,
+                app.app_version)::text as app_version
+  from app_library_entries as entry
+  join connected_apps as app
+    on app.id = entry.connected_app_id
+   and app.revoked_at is null
+   and app.capabilities && $1::text[]
+ where entry.work_id = $2
+   and coalesce(app.library_app_version, app.app_version) is not null
+ group by coalesce(app.library_app_version, app.app_version)
+having count(*) >= $3::bigint
+ order by coalesce(app.library_app_version, app.app_version)
+`
+
+type InstalledAppVersionsParams struct {
 	Capabilities     []string
-	AssetID          pgtype.UUID
+	WorkID           pgtype.UUID
 	MinimumGroupSize int64
 }
 
-func (q *Queries) InstalledApplicationVersions(ctx context.Context, arg InstalledApplicationVersionsParams) ([]string, error) {
-	rows, err := q.db.Query(ctx, installedApplicationVersions, arg.Capabilities, arg.AssetID, arg.MinimumGroupSize)
+func (q *Queries) InstalledAppVersions(ctx context.Context, arg InstalledAppVersionsParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, installedAppVersions, arg.Capabilities, arg.WorkID, arg.MinimumGroupSize)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var items []string
 	for rows.Next() {
-		var application_version string
-		if err := rows.Scan(&application_version); err != nil {
+		var app_version string
+		if err := rows.Scan(&app_version); err != nil {
 			return nil, err
 		}
-		items = append(items, application_version)
+		items = append(items, app_version)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -2022,278 +1608,75 @@ func (q *Queries) InstalledApplicationVersions(ctx context.Context, arg Installe
 	return items, nil
 }
 
-const instanceForUsedRefreshToken = `-- name: InstanceForUsedRefreshToken :one
-select history.instance_id, instance.user_id
-  from instance_refresh_history as history
-  join linked_instances as instance on instance.id = history.instance_id
- where history.token_hash = $1
-   and history.detectable_until > now()
+const liftTakedown = `-- name: LiftTakedown :one
+with cleared as (
+    update works as work
+       set taken_down_at = null, taken_down_by = null, taken_down_reason = null,
+           updated_at = now()
+     where work.id = $1 and work.taken_down_at is not null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_version_id
+)
+select cleared.owner_id, coalesce(version.payload ->> 'name', cleared.name)::text as public_name
+  from cleared
+  left join work_versions version on version.id = cleared.published_version_id
 `
 
-type InstanceForUsedRefreshTokenRow struct {
-	InstanceID pgtype.UUID
-	UserID     pgtype.UUID
+type LiftTakedownRow struct {
+	OwnerID    pgtype.UUID
+	PublicName string
 }
 
-func (q *Queries) InstanceForUsedRefreshToken(ctx context.Context, refreshTokenHash []byte) (InstanceForUsedRefreshTokenRow, error) {
-	row := q.db.QueryRow(ctx, instanceForUsedRefreshToken, refreshTokenHash)
-	var i InstanceForUsedRefreshTokenRow
-	err := row.Scan(&i.InstanceID, &i.UserID)
+func (q *Queries) LiftTakedown(ctx context.Context, id pgtype.UUID) (LiftTakedownRow, error) {
+	row := q.db.QueryRow(ctx, liftTakedown, id)
+	var i LiftTakedownRow
+	err := row.Scan(&i.OwnerID, &i.PublicName)
 	return i, err
 }
 
-const instanceLibraryCounts = `-- name: InstanceLibraryCounts :many
-select entry.instance_id,
-       count(*)::bigint as installed,
-       count(*) filter (
-           where asset.content_generation > entry.content_generation
-       )::bigint as updates_available
-  from instance_library_entries as entry
-  join assets as asset on asset.id = entry.asset_id
-  join linked_instances as instance on instance.id = entry.instance_id
- where instance.user_id = $1
-   and instance.revoked_at is null
-   and asset.deleted_at is null
-   and asset.withheld_at is null
-   and asset.lifecycle = 'published'
- group by entry.instance_id
-`
-
-type InstanceLibraryCountsRow struct {
-	InstanceID       pgtype.UUID
-	Installed        int64
-	UpdatesAvailable int64
-}
-
-func (q *Queries) InstanceLibraryCounts(ctx context.Context, userID pgtype.UUID) ([]InstanceLibraryCountsRow, error) {
-	rows, err := q.db.Query(ctx, instanceLibraryCounts, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []InstanceLibraryCountsRow
-	for rows.Next() {
-		var i InstanceLibraryCountsRow
-		if err := rows.Scan(&i.InstanceID, &i.Installed, &i.UpdatesAvailable); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const legacyPathTarget = `-- name: LegacyPathTarget :one
-select asset.id, asset.name
-  from asset_legacy_paths legacy
-  join assets asset on asset.id = legacy.asset_id
- where legacy.path = $1
-   and asset.deleted_at is null
-   and asset.withheld_at is null
-   and asset.lifecycle = 'published'
-`
-
-type LegacyPathTargetRow struct {
-	ID   pgtype.UUID
-	Name string
-}
-
-func (q *Queries) LegacyPathTarget(ctx context.Context, path string) (LegacyPathTargetRow, error) {
-	row := q.db.QueryRow(ctx, legacyPathTarget, path)
-	var i LegacyPathTargetRow
-	err := row.Scan(&i.ID, &i.Name)
-	return i, err
-}
-
-const listAssets = `-- name: ListAssets :many
-select a.id, a.kind, revision.format, a.origin_format,
-       a.asset_version, a.credited_author, a.nickname, a.lifecycle,
-       a.name, a.blurb, a.tags,
-       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
-       a.current_revision_id, a.created_at
-  from assets a
-  left join asset_revisions revision on revision.id = a.current_revision_id
- where a.lifecycle = 'published'
-   and a.discovery = 'listed'
-   and a.withheld_at is null
-   and a.deleted_at is null
-   and ($1 = '' or a.kind = $1)
-   and (not $2::boolean or revision.format is not distinct from $3)
-   and ($4::text[] is null or a.tags @> $4)
-   and ($6::timestamptz is null
-        or (a.created_at, a.id)
-           < ($6::timestamptz, $7::uuid))
- order by a.created_at desc, a.id desc
- limit $5
-`
-
-type ListAssetsParams struct {
-	Column1  interface{}
-	Column2  bool
-	Format   string
-	Column4  []string
-	Limit    int32
-	Before   pgtype.Timestamptz
-	BeforeID pgtype.UUID
-}
-
-type ListAssetsRow struct {
-	ID                pgtype.UUID
-	Kind              string
-	Format            pgtype.Text
-	OriginFormat      pgtype.Text
-	AssetVersion      string
-	CreditedAuthor    string
-	Nickname          string
-	Lifecycle         string
-	Name              string
-	Blurb             string
-	Tags              []string
-	IsNsfw            bool
-	Discovery         string
-	CurrentRevisionID pgtype.UUID
-	CreatedAt         pgtype.Timestamptz
-}
-
-func (q *Queries) ListAssets(ctx context.Context, arg ListAssetsParams) ([]ListAssetsRow, error) {
-	rows, err := q.db.Query(ctx, listAssets,
-		arg.Column1,
-		arg.Column2,
-		arg.Format,
-		arg.Column4,
-		arg.Limit,
-		arg.Before,
-		arg.BeforeID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAssetsRow
-	for rows.Next() {
-		var i ListAssetsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Kind,
-			&i.Format,
-			&i.OriginFormat,
-			&i.AssetVersion,
-			&i.CreditedAuthor,
-			&i.Nickname,
-			&i.Lifecycle,
-			&i.Name,
-			&i.Blurb,
-			&i.Tags,
-			&i.IsNsfw,
-			&i.Discovery,
-			&i.CurrentRevisionID,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listDeletedAssets = `-- name: ListDeletedAssets :many
-select asset.id, asset.name, asset.kind, asset.deleted_at, asset.recoverable_until
-  from assets asset
-  join users owner on owner.id = asset.owner_id
- where asset.owner_id = $1 and owner.username = $2
-   and asset.deleted_at is not null and asset.recoverable_until > $3
- order by asset.deleted_at desc, asset.id desc
-`
-
-type ListDeletedAssetsParams struct {
-	OwnerID          pgtype.UUID
-	Username         string
-	RecoverableUntil pgtype.Timestamptz
-}
-
-type ListDeletedAssetsRow struct {
-	ID               pgtype.UUID
-	Name             string
-	Kind             string
-	DeletedAt        pgtype.Timestamptz
-	RecoverableUntil pgtype.Timestamptz
-}
-
-func (q *Queries) ListDeletedAssets(ctx context.Context, arg ListDeletedAssetsParams) ([]ListDeletedAssetsRow, error) {
-	rows, err := q.db.Query(ctx, listDeletedAssets, arg.OwnerID, arg.Username, arg.RecoverableUntil)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListDeletedAssetsRow
-	for rows.Next() {
-		var i ListDeletedAssetsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Kind,
-			&i.DeletedAt,
-			&i.RecoverableUntil,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listLinkedInstances = `-- name: ListLinkedInstances :many
-select id, application_name, instance_name, application_version,
-       protocol_version, capabilities, accepted_targets,
-       refresh_token_prefix, scopes, linked_at, last_seen_at, revoked_at
-  from linked_instances
+const listConnectedApps = `-- name: ListConnectedApps :many
+select id, app_name, name, app_version,
+       protocol_version, capabilities, accepted_formats,
+       refresh_token_prefix, permissions, connected_at, last_seen_at, revoked_at
+  from connected_apps
  where user_id = $1
- order by (revoked_at is not null), coalesce(last_seen_at, linked_at) desc, linked_at desc
+ order by (revoked_at is not null), coalesce(last_seen_at, connected_at) desc, connected_at desc
 `
 
-type ListLinkedInstancesRow struct {
+type ListConnectedAppsRow struct {
 	ID                 pgtype.UUID
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
 	ProtocolVersion    pgtype.Int4
 	Capabilities       []string
-	AcceptedTargets    []string
+	AcceptedFormats    []string
 	RefreshTokenPrefix string
-	Scopes             []string
-	LinkedAt           pgtype.Timestamptz
+	Permissions        []string
+	ConnectedAt        pgtype.Timestamptz
 	LastSeenAt         pgtype.Timestamptz
 	RevokedAt          pgtype.Timestamptz
 }
 
-func (q *Queries) ListLinkedInstances(ctx context.Context, userID pgtype.UUID) ([]ListLinkedInstancesRow, error) {
-	rows, err := q.db.Query(ctx, listLinkedInstances, userID)
+func (q *Queries) ListConnectedApps(ctx context.Context, userID pgtype.UUID) ([]ListConnectedAppsRow, error) {
+	rows, err := q.db.Query(ctx, listConnectedApps, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListLinkedInstancesRow
+	var items []ListConnectedAppsRow
 	for rows.Next() {
-		var i ListLinkedInstancesRow
+		var i ListConnectedAppsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.ApplicationName,
-			&i.InstanceName,
-			&i.ApplicationVersion,
+			&i.AppName,
+			&i.Name,
+			&i.AppVersion,
 			&i.ProtocolVersion,
 			&i.Capabilities,
-			&i.AcceptedTargets,
+			&i.AcceptedFormats,
 			&i.RefreshTokenPrefix,
-			&i.Scopes,
-			&i.LinkedAt,
+			&i.Permissions,
+			&i.ConnectedAt,
 			&i.LastSeenAt,
 			&i.RevokedAt,
 		); err != nil {
@@ -2307,144 +1690,244 @@ func (q *Queries) ListLinkedInstances(ctx context.Context, userID pgtype.UUID) (
 	return items, nil
 }
 
-const liveDeliveryForAsset = `-- name: LiveDeliveryForAsset :one
-select id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
-       expires_at, updates_install
-  from instance_deliveries
- where instance_id = $1
-   and asset_id = $2
-   and state in ('queued', 'released')
+const listDeletedWorks = `-- name: ListDeletedWorks :many
+select work.id, work.name, work.type, work.deleted_at, work.recoverable_until
+  from works work
+  join users owner on owner.id = work.owner_id
+ where work.owner_id = $1 and owner.username = $2
+   and work.deleted_at is not null and work.recoverable_until > $3
+ order by work.deleted_at desc, work.id desc
 `
 
-type LiveDeliveryForAssetParams struct {
-	InstanceID pgtype.UUID
-	AssetID    pgtype.UUID
+type ListDeletedWorksParams struct {
+	OwnerID          pgtype.UUID
+	Username         string
+	RecoverableUntil pgtype.Timestamptz
 }
 
-type LiveDeliveryForAssetRow struct {
+type ListDeletedWorksRow struct {
+	ID               pgtype.UUID
+	Name             string
+	Type             string
+	DeletedAt        pgtype.Timestamptz
+	RecoverableUntil pgtype.Timestamptz
+}
+
+func (q *Queries) ListDeletedWorks(ctx context.Context, arg ListDeletedWorksParams) ([]ListDeletedWorksRow, error) {
+	rows, err := q.db.Query(ctx, listDeletedWorks, arg.OwnerID, arg.Username, arg.RecoverableUntil)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListDeletedWorksRow
+	for rows.Next() {
+		var i ListDeletedWorksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Type,
+			&i.DeletedAt,
+			&i.RecoverableUntil,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorks = `-- name: ListWorks :many
+select a.id, a.type, original.format, a.original_format,
+       a.work_version, a.credited_author, a.nickname, a.lifecycle,
+       a.name, a.blurb, a.tags,
+       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
+       a.original_file_id, a.created_at
+  from works a
+  left join work_original_files original on original.id = a.original_file_id
+ where a.lifecycle = 'published'
+   and a.visibility = 'listed'
+   and a.taken_down_at is null
+   and a.deleted_at is null
+   and ($1 = '' or a.type = $1)
+   and (not $2::boolean or original.format is not distinct from $3)
+   and ($4::text[] is null or a.tags @> $4)
+   and ($6::timestamptz is null
+        or (a.created_at, a.id)
+           < ($6::timestamptz, $7::uuid))
+ order by a.created_at desc, a.id desc
+ limit $5
+`
+
+type ListWorksParams struct {
+	Column1  interface{}
+	Column2  bool
+	Format   string
+	Column4  []string
+	Limit    int32
+	Before   pgtype.Timestamptz
+	BeforeID pgtype.UUID
+}
+
+type ListWorksRow struct {
 	ID             pgtype.UUID
-	InstanceID     pgtype.UUID
-	AssetID        pgtype.UUID
-	State          string
-	SettledReason  pgtype.Text
-	QueuedAt       pgtype.Timestamptz
-	SettledAt      pgtype.Timestamptz
-	ExpiresAt      pgtype.Timestamptz
-	UpdatesInstall bool
+	Type           string
+	Format         pgtype.Text
+	OriginalFormat pgtype.Text
+	WorkVersion    string
+	CreditedAuthor string
+	Nickname       string
+	Lifecycle      string
+	Name           string
+	Blurb          string
+	Tags           []string
+	IsNsfw         bool
+	Visibility     string
+	OriginalFileID pgtype.UUID
+	CreatedAt      pgtype.Timestamptz
 }
 
-func (q *Queries) LiveDeliveryForAsset(ctx context.Context, arg LiveDeliveryForAssetParams) (LiveDeliveryForAssetRow, error) {
-	row := q.db.QueryRow(ctx, liveDeliveryForAsset, arg.InstanceID, arg.AssetID)
-	var i LiveDeliveryForAssetRow
-	err := row.Scan(
-		&i.ID,
-		&i.InstanceID,
-		&i.AssetID,
-		&i.State,
-		&i.SettledReason,
-		&i.QueuedAt,
-		&i.SettledAt,
-		&i.ExpiresAt,
-		&i.UpdatesInstall,
+func (q *Queries) ListWorks(ctx context.Context, arg ListWorksParams) ([]ListWorksRow, error) {
+	rows, err := q.db.Query(ctx, listWorks,
+		arg.Column1,
+		arg.Column2,
+		arg.Format,
+		arg.Column4,
+		arg.Limit,
+		arg.Before,
+		arg.BeforeID,
 	)
-	return i, err
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWorksRow
+	for rows.Next() {
+		var i ListWorksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Type,
+			&i.Format,
+			&i.OriginalFormat,
+			&i.WorkVersion,
+			&i.CreditedAuthor,
+			&i.Nickname,
+			&i.Lifecycle,
+			&i.Name,
+			&i.Blurb,
+			&i.Tags,
+			&i.IsNsfw,
+			&i.Visibility,
+			&i.OriginalFileID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-const liveLinkedInstance = `-- name: LiveLinkedInstance :one
-select id, user_id, application_name, instance_name, application_version,
-       protocol_version, capabilities, accepted_targets,
-       refresh_token_prefix, scopes, linked_at, last_seen_at
-  from linked_instances
+const liveConnectedApp = `-- name: LiveConnectedApp :one
+select id, user_id, app_name, name, app_version,
+       protocol_version, capabilities, accepted_formats,
+       refresh_token_prefix, permissions, connected_at, last_seen_at
+  from connected_apps
  where id = $1
    and user_id = $2
    and revoked_at is null
 `
 
-type LiveLinkedInstanceParams struct {
-	InstanceID pgtype.UUID
-	UserID     pgtype.UUID
+type LiveConnectedAppParams struct {
+	ConnectedAppID pgtype.UUID
+	UserID         pgtype.UUID
 }
 
-type LiveLinkedInstanceRow struct {
+type LiveConnectedAppRow struct {
 	ID                 pgtype.UUID
 	UserID             pgtype.UUID
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
 	ProtocolVersion    pgtype.Int4
 	Capabilities       []string
-	AcceptedTargets    []string
+	AcceptedFormats    []string
 	RefreshTokenPrefix string
-	Scopes             []string
-	LinkedAt           pgtype.Timestamptz
+	Permissions        []string
+	ConnectedAt        pgtype.Timestamptz
 	LastSeenAt         pgtype.Timestamptz
 }
 
-func (q *Queries) LiveLinkedInstance(ctx context.Context, arg LiveLinkedInstanceParams) (LiveLinkedInstanceRow, error) {
-	row := q.db.QueryRow(ctx, liveLinkedInstance, arg.InstanceID, arg.UserID)
-	var i LiveLinkedInstanceRow
+func (q *Queries) LiveConnectedApp(ctx context.Context, arg LiveConnectedAppParams) (LiveConnectedAppRow, error) {
+	row := q.db.QueryRow(ctx, liveConnectedApp, arg.ConnectedAppID, arg.UserID)
+	var i LiveConnectedAppRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
+		&i.AppName,
+		&i.Name,
+		&i.AppVersion,
 		&i.ProtocolVersion,
 		&i.Capabilities,
-		&i.AcceptedTargets,
+		&i.AcceptedFormats,
 		&i.RefreshTokenPrefix,
-		&i.Scopes,
-		&i.LinkedAt,
+		&i.Permissions,
+		&i.ConnectedAt,
 		&i.LastSeenAt,
 	)
 	return i, err
 }
 
-const liveLinkedInstances = `-- name: LiveLinkedInstances :many
-select id, user_id, application_name, instance_name, application_version,
-       protocol_version, capabilities, accepted_targets,
-       refresh_token_prefix, scopes, linked_at, last_seen_at
-  from linked_instances
+const liveConnectedApps = `-- name: LiveConnectedApps :many
+select id, user_id, app_name, name, app_version,
+       protocol_version, capabilities, accepted_formats,
+       refresh_token_prefix, permissions, connected_at, last_seen_at
+  from connected_apps
  where user_id = $1 and revoked_at is null
- order by coalesce(last_seen_at, linked_at) desc, linked_at desc
+ order by coalesce(last_seen_at, connected_at) desc, connected_at desc
 `
 
-type LiveLinkedInstancesRow struct {
+type LiveConnectedAppsRow struct {
 	ID                 pgtype.UUID
 	UserID             pgtype.UUID
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
 	ProtocolVersion    pgtype.Int4
 	Capabilities       []string
-	AcceptedTargets    []string
+	AcceptedFormats    []string
 	RefreshTokenPrefix string
-	Scopes             []string
-	LinkedAt           pgtype.Timestamptz
+	Permissions        []string
+	ConnectedAt        pgtype.Timestamptz
 	LastSeenAt         pgtype.Timestamptz
 }
 
-func (q *Queries) LiveLinkedInstances(ctx context.Context, userID pgtype.UUID) ([]LiveLinkedInstancesRow, error) {
-	rows, err := q.db.Query(ctx, liveLinkedInstances, userID)
+func (q *Queries) LiveConnectedApps(ctx context.Context, userID pgtype.UUID) ([]LiveConnectedAppsRow, error) {
+	rows, err := q.db.Query(ctx, liveConnectedApps, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []LiveLinkedInstancesRow
+	var items []LiveConnectedAppsRow
 	for rows.Next() {
-		var i LiveLinkedInstancesRow
+		var i LiveConnectedAppsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.ApplicationName,
-			&i.InstanceName,
-			&i.ApplicationVersion,
+			&i.AppName,
+			&i.Name,
+			&i.AppVersion,
 			&i.ProtocolVersion,
 			&i.Capabilities,
-			&i.AcceptedTargets,
+			&i.AcceptedFormats,
 			&i.RefreshTokenPrefix,
-			&i.Scopes,
-			&i.LinkedAt,
+			&i.Permissions,
+			&i.ConnectedAt,
 			&i.LastSeenAt,
 		); err != nil {
 			return nil, err
@@ -2457,47 +1940,182 @@ func (q *Queries) LiveLinkedInstances(ctx context.Context, userID pgtype.UUID) (
 	return items, nil
 }
 
-const lockDeviceLinkRequest = `-- name: LockDeviceLinkRequest :one
+const liveSendForWork = `-- name: LiveSendForWork :one
+select id, connected_app_id, work_id, state, settled_reason, queued_at, settled_at,
+       expires_at, updates_install
+  from sends
+ where connected_app_id = $1
+   and work_id = $2
+   and state in ('queued', 'released')
+`
+
+type LiveSendForWorkParams struct {
+	ConnectedAppID pgtype.UUID
+	WorkID         pgtype.UUID
+}
+
+type LiveSendForWorkRow struct {
+	ID             pgtype.UUID
+	ConnectedAppID pgtype.UUID
+	WorkID         pgtype.UUID
+	State          string
+	SettledReason  pgtype.Text
+	QueuedAt       pgtype.Timestamptz
+	SettledAt      pgtype.Timestamptz
+	ExpiresAt      pgtype.Timestamptz
+	UpdatesInstall bool
+}
+
+func (q *Queries) LiveSendForWork(ctx context.Context, arg LiveSendForWorkParams) (LiveSendForWorkRow, error) {
+	row := q.db.QueryRow(ctx, liveSendForWork, arg.ConnectedAppID, arg.WorkID)
+	var i LiveSendForWorkRow
+	err := row.Scan(
+		&i.ID,
+		&i.ConnectedAppID,
+		&i.WorkID,
+		&i.State,
+		&i.SettledReason,
+		&i.QueuedAt,
+		&i.SettledAt,
+		&i.ExpiresAt,
+		&i.UpdatesInstall,
+	)
+	return i, err
+}
+
+const lockConnectedAppByRefreshToken = `-- name: LockConnectedAppByRefreshToken :one
+select id, user_id, app_name, name, app_version,
+       protocol_version, capabilities, accepted_formats,
+       refresh_token_prefix, permissions, connected_at, last_seen_at
+  from connected_apps
+ where refresh_token_hash = $1 and revoked_at is null
+ for update
+`
+
+type LockConnectedAppByRefreshTokenRow struct {
+	ID                 pgtype.UUID
+	UserID             pgtype.UUID
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
+	ProtocolVersion    pgtype.Int4
+	Capabilities       []string
+	AcceptedFormats    []string
+	RefreshTokenPrefix string
+	Permissions        []string
+	ConnectedAt        pgtype.Timestamptz
+	LastSeenAt         pgtype.Timestamptz
+}
+
+func (q *Queries) LockConnectedAppByRefreshToken(ctx context.Context, refreshTokenHash []byte) (LockConnectedAppByRefreshTokenRow, error) {
+	row := q.db.QueryRow(ctx, lockConnectedAppByRefreshToken, refreshTokenHash)
+	var i LockConnectedAppByRefreshTokenRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.AppName,
+		&i.Name,
+		&i.AppVersion,
+		&i.ProtocolVersion,
+		&i.Capabilities,
+		&i.AcceptedFormats,
+		&i.RefreshTokenPrefix,
+		&i.Permissions,
+		&i.ConnectedAt,
+		&i.LastSeenAt,
+	)
+	return i, err
+}
+
+const lockConnectionAuthorization = `-- name: LockConnectionAuthorization :one
+select approved_by, denied_at, redeemed_at, redirect_uri, state, code_challenge,
+       app_name, name, app_version, protocol_version,
+       capabilities, accepted_formats, granted_permissions, expires_at
+ from connection_authorizations
+ where authorization_code_hash = $1
+ for update
+`
+
+type LockConnectionAuthorizationRow struct {
+	ApprovedBy         pgtype.UUID
+	DeniedAt           pgtype.Timestamptz
+	RedeemedAt         pgtype.Timestamptz
+	RedirectUri        string
+	State              string
+	CodeChallenge      string
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
+	ProtocolVersion    int32
+	Capabilities       []string
+	AcceptedFormats    []string
+	GrantedPermissions []string
+	ExpiresAt          pgtype.Timestamptz
+}
+
+func (q *Queries) LockConnectionAuthorization(ctx context.Context, authorizationCodeHash []byte) (LockConnectionAuthorizationRow, error) {
+	row := q.db.QueryRow(ctx, lockConnectionAuthorization, authorizationCodeHash)
+	var i LockConnectionAuthorizationRow
+	err := row.Scan(
+		&i.ApprovedBy,
+		&i.DeniedAt,
+		&i.RedeemedAt,
+		&i.RedirectUri,
+		&i.State,
+		&i.CodeChallenge,
+		&i.AppName,
+		&i.Name,
+		&i.AppVersion,
+		&i.ProtocolVersion,
+		&i.Capabilities,
+		&i.AcceptedFormats,
+		&i.GrantedPermissions,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const lockConnectionRequest = `-- name: LockConnectionRequest :one
 select approved_by, denied_at, redeemed_at, last_polled_at, poll_interval_seconds,
-       application_name, instance_name, application_version, protocol_version,
-       capabilities, accepted_targets, scopes, expires_at
-  from link_requests
+       app_name, name, app_version, protocol_version,
+       capabilities, accepted_formats, granted_permissions, expires_at
+  from connection_requests
  where device_code_hash = $1
  for update
 `
 
-type LockDeviceLinkRequestRow struct {
+type LockConnectionRequestRow struct {
 	ApprovedBy          pgtype.UUID
 	DeniedAt            pgtype.Timestamptz
 	RedeemedAt          pgtype.Timestamptz
 	LastPolledAt        pgtype.Timestamptz
 	PollIntervalSeconds int32
-	ApplicationName     string
-	InstanceName        string
-	ApplicationVersion  pgtype.Text
+	AppName             string
+	Name                string
+	AppVersion          pgtype.Text
 	ProtocolVersion     int32
 	Capabilities        []string
-	AcceptedTargets     []string
-	Scopes              []string
+	AcceptedFormats     []string
+	GrantedPermissions  []string
 	ExpiresAt           pgtype.Timestamptz
 }
 
-func (q *Queries) LockDeviceLinkRequest(ctx context.Context, deviceCodeHash []byte) (LockDeviceLinkRequestRow, error) {
-	row := q.db.QueryRow(ctx, lockDeviceLinkRequest, deviceCodeHash)
-	var i LockDeviceLinkRequestRow
+func (q *Queries) LockConnectionRequest(ctx context.Context, deviceCodeHash []byte) (LockConnectionRequestRow, error) {
+	row := q.db.QueryRow(ctx, lockConnectionRequest, deviceCodeHash)
+	var i LockConnectionRequestRow
 	err := row.Scan(
 		&i.ApprovedBy,
 		&i.DeniedAt,
 		&i.RedeemedAt,
 		&i.LastPolledAt,
 		&i.PollIntervalSeconds,
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
+		&i.AppName,
+		&i.Name,
+		&i.AppVersion,
 		&i.ProtocolVersion,
 		&i.Capabilities,
-		&i.AcceptedTargets,
-		&i.Scopes,
+		&i.AcceptedFormats,
+		&i.GrantedPermissions,
 		&i.ExpiresAt,
 	)
 	return i, err
@@ -2527,98 +2145,6 @@ func (q *Queries) LockHandle(ctx context.Context, handle string) (int32, error) 
 	var column_1 int32
 	err := row.Scan(&column_1)
 	return column_1, err
-}
-
-const lockLinkAuthorization = `-- name: LockLinkAuthorization :one
-select approved_by, denied_at, redeemed_at, redirect_uri, state, code_challenge,
-       application_name, instance_name, application_version, protocol_version,
-       capabilities, accepted_targets, scopes, expires_at
- from link_authorizations
- where authorization_code_hash = $1
- for update
-`
-
-type LockLinkAuthorizationRow struct {
-	ApprovedBy         pgtype.UUID
-	DeniedAt           pgtype.Timestamptz
-	RedeemedAt         pgtype.Timestamptz
-	RedirectUri        string
-	State              string
-	CodeChallenge      string
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    int32
-	Capabilities       []string
-	AcceptedTargets    []string
-	Scopes             []string
-	ExpiresAt          pgtype.Timestamptz
-}
-
-func (q *Queries) LockLinkAuthorization(ctx context.Context, authorizationCodeHash []byte) (LockLinkAuthorizationRow, error) {
-	row := q.db.QueryRow(ctx, lockLinkAuthorization, authorizationCodeHash)
-	var i LockLinkAuthorizationRow
-	err := row.Scan(
-		&i.ApprovedBy,
-		&i.DeniedAt,
-		&i.RedeemedAt,
-		&i.RedirectUri,
-		&i.State,
-		&i.CodeChallenge,
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
-		&i.ProtocolVersion,
-		&i.Capabilities,
-		&i.AcceptedTargets,
-		&i.Scopes,
-		&i.ExpiresAt,
-	)
-	return i, err
-}
-
-const lockLinkedInstanceByRefreshToken = `-- name: LockLinkedInstanceByRefreshToken :one
-select id, user_id, application_name, instance_name, application_version,
-       protocol_version, capabilities, accepted_targets,
-       refresh_token_prefix, scopes, linked_at, last_seen_at
-  from linked_instances
- where refresh_token_hash = $1 and revoked_at is null
- for update
-`
-
-type LockLinkedInstanceByRefreshTokenRow struct {
-	ID                 pgtype.UUID
-	UserID             pgtype.UUID
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    pgtype.Int4
-	Capabilities       []string
-	AcceptedTargets    []string
-	RefreshTokenPrefix string
-	Scopes             []string
-	LinkedAt           pgtype.Timestamptz
-	LastSeenAt         pgtype.Timestamptz
-}
-
-func (q *Queries) LockLinkedInstanceByRefreshToken(ctx context.Context, refreshTokenHash []byte) (LockLinkedInstanceByRefreshTokenRow, error) {
-	row := q.db.QueryRow(ctx, lockLinkedInstanceByRefreshToken, refreshTokenHash)
-	var i LockLinkedInstanceByRefreshTokenRow
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
-		&i.ProtocolVersion,
-		&i.Capabilities,
-		&i.AcceptedTargets,
-		&i.RefreshTokenPrefix,
-		&i.Scopes,
-		&i.LinkedAt,
-		&i.LastSeenAt,
-	)
-	return i, err
 }
 
 const lockOAuthIdentity = `-- name: LockOAuthIdentity :one
@@ -2653,136 +2179,75 @@ func (q *Queries) LockOAuthUser(ctx context.Context, userID pgtype.UUID) (int32,
 	return column_1, err
 }
 
-const migratedAccounts = `-- name: MigratedAccounts :many
-select u.id, u.username, u.role, u.created_at, u.display_name, u.custom_display_name,
-       u.avatar_url, u.banner_url, u.nsfw_visibility,
-       u.show_nsfw_contributions_on_profile,
-       u.default_include_tags, u.default_exclude_tags,
-       u.email, u.email_source, u.email_verified_at, u.password_hash,
-       identity.subject as discord_subject
-  from users u
-  left join oauth_identities identity
-    on identity.user_id = u.id and identity.provider = 'discord'
-`
-
-type MigratedAccountsRow struct {
-	ID                             pgtype.UUID
-	Username                       string
-	Role                           string
-	CreatedAt                      pgtype.Timestamptz
-	DisplayName                    string
-	CustomDisplayName              string
-	AvatarUrl                      string
-	BannerUrl                      string
-	NsfwVisibility                 string
-	ShowNsfwContributionsOnProfile bool
-	DefaultIncludeTags             []byte
-	DefaultExcludeTags             []byte
-	Email                          pgtype.Text
-	EmailSource                    pgtype.Text
-	EmailVerifiedAt                pgtype.Timestamptz
-	PasswordHash                   pgtype.Text
-	DiscordSubject                 pgtype.Text
-}
-
-func (q *Queries) MigratedAccounts(ctx context.Context) ([]MigratedAccountsRow, error) {
-	rows, err := q.db.Query(ctx, migratedAccounts)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []MigratedAccountsRow
-	for rows.Next() {
-		var i MigratedAccountsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Username,
-			&i.Role,
-			&i.CreatedAt,
-			&i.DisplayName,
-			&i.CustomDisplayName,
-			&i.AvatarUrl,
-			&i.BannerUrl,
-			&i.NsfwVisibility,
-			&i.ShowNsfwContributionsOnProfile,
-			&i.DefaultIncludeTags,
-			&i.DefaultExcludeTags,
-			&i.Email,
-			&i.EmailSource,
-			&i.EmailVerifiedAt,
-			&i.PasswordHash,
-			&i.DiscordSubject,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const migrationAssetTargetIsEmpty = `-- name: MigrationAssetTargetIsEmpty :one
-select (not exists (select 1 from assets)
-    and not exists (select 1 from asset_legacy_paths)
-    and not exists (select 1 from migration_preserved_records)
-    and not exists (select 1 from migration_legacy_counters)
-    and not exists (select 1 from migration_exceptions where asset_id is not null))::boolean as empty
-`
-
-func (q *Queries) MigrationAssetTargetIsEmpty(ctx context.Context) (bool, error) {
-	row := q.db.QueryRow(ctx, migrationAssetTargetIsEmpty)
-	var empty bool
-	err := row.Scan(&empty)
-	return empty, err
-}
-
-const migrationTargetIsEmpty = `-- name: MigrationTargetIsEmpty :one
-select (not exists (select 1 from users)
-    and not exists (select 1 from retired_handles)
-    and not exists (select 1 from oauth_identities)
-    and not exists (select 1 from migration_exceptions))::boolean as empty
-`
-
-func (q *Queries) MigrationTargetIsEmpty(ctx context.Context) (bool, error) {
-	row := q.db.QueryRow(ctx, migrationTargetIsEmpty)
-	var empty bool
-	err := row.Scan(&empty)
-	return empty, err
-}
-
-const nSFWVisibilityBySessionHash = `-- name: NSFWVisibilityBySessionHash :one
-select u.nsfw_visibility
+const nSFWPreferenceBySessionHash = `-- name: NSFWPreferenceBySessionHash :one
+select u.nsfw_preference
   from sessions session
   join users u on u.id = session.user_id
  where session.token_hash = $1 and session.expires_at > now()
 `
 
-func (q *Queries) NSFWVisibilityBySessionHash(ctx context.Context, tokenHash []byte) (string, error) {
-	row := q.db.QueryRow(ctx, nSFWVisibilityBySessionHash, tokenHash)
-	var nsfw_visibility string
-	err := row.Scan(&nsfw_visibility)
-	return nsfw_visibility, err
+func (q *Queries) NSFWPreferenceBySessionHash(ctx context.Context, tokenHash []byte) (string, error) {
+	row := q.db.QueryRow(ctx, nSFWPreferenceBySessionHash, tokenHash)
+	var nsfw_preference string
+	err := row.Scan(&nsfw_preference)
+	return nsfw_preference, err
 }
 
-const profileByDiscordSubject = `-- name: ProfileByDiscordSubject :one
-select u.id, u.username, u.show_nsfw_contributions_on_profile
-  from oauth_identities identity
-  join users u on u.id = identity.user_id
- where identity.provider = 'discord' and identity.subject = $1
+const originalFileLocation = `-- name: OriginalFileLocation :one
+select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, a.owner_id
+  from works a
+  left join public.work_versions version on version.id = a.published_version_id
+  join work_original_files r on r.id = case when version.id is null
+      then a.original_file_id else version.original_file_id end
+ where a.id = $1
+   and r.blob_id is not null
+   and a.lifecycle = 'published'
+   and a.deleted_at is null
+   and (a.taken_down_at is null or a.owner_id = $2::uuid)
 `
 
-type ProfileByDiscordSubjectRow struct {
-	ID                             pgtype.UUID
-	Username                       string
-	ShowNsfwContributionsOnProfile bool
+type OriginalFileLocationParams struct {
+	ID       pgtype.UUID
+	ViewerID pgtype.UUID
 }
 
-func (q *Queries) ProfileByDiscordSubject(ctx context.Context, subject string) (ProfileByDiscordSubjectRow, error) {
-	row := q.db.QueryRow(ctx, profileByDiscordSubject, subject)
-	var i ProfileByDiscordSubjectRow
-	err := row.Scan(&i.ID, &i.Username, &i.ShowNsfwContributionsOnProfile)
+type OriginalFileLocationRow struct {
+	WorkID         pgtype.UUID
+	OriginalFileID pgtype.UUID
+	BlobID         pgtype.UUID
+	MediaType      string
+	OwnerID        pgtype.UUID
+}
+
+func (q *Queries) OriginalFileLocation(ctx context.Context, arg OriginalFileLocationParams) (OriginalFileLocationRow, error) {
+	row := q.db.QueryRow(ctx, originalFileLocation, arg.ID, arg.ViewerID)
+	var i OriginalFileLocationRow
+	err := row.Scan(
+		&i.WorkID,
+		&i.OriginalFileID,
+		&i.BlobID,
+		&i.MediaType,
+		&i.OwnerID,
+	)
+	return i, err
+}
+
+const preferencesBySessionHash = `-- name: PreferencesBySessionHash :one
+select u.app_preference, u.nsfw_preference
+  from sessions session
+  join users u on u.id = session.user_id
+ where session.token_hash = $1 and session.expires_at > now()
+`
+
+type PreferencesBySessionHashRow struct {
+	AppPreference  pgtype.Text
+	NsfwPreference string
+}
+
+func (q *Queries) PreferencesBySessionHash(ctx context.Context, tokenHash []byte) (PreferencesBySessionHashRow, error) {
+	row := q.db.QueryRow(ctx, preferencesBySessionHash, tokenHash)
+	var i PreferencesBySessionHashRow
+	err := row.Scan(&i.AppPreference, &i.NsfwPreference)
 	return i, err
 }
 
@@ -2804,51 +2269,51 @@ func (q *Queries) ProfileByHandle(ctx context.Context, username string) (Profile
 	return i, err
 }
 
-const pruneLibraryToSnapshot = `-- name: PruneLibraryToSnapshot :execrows
-delete from instance_library_entries
- where instance_id = $1
-   and not (asset_id = any($2::uuid[]))
+const pruneLibraryToWhole = `-- name: PruneLibraryToWhole :execrows
+delete from app_library_entries
+ where connected_app_id = $1
+   and not (work_id = any($2::uuid[]))
 `
 
-type PruneLibraryToSnapshotParams struct {
-	InstanceID pgtype.UUID
-	AssetIds   []pgtype.UUID
+type PruneLibraryToWholeParams struct {
+	ConnectedAppID pgtype.UUID
+	WorkIds        []pgtype.UUID
 }
 
-func (q *Queries) PruneLibraryToSnapshot(ctx context.Context, arg PruneLibraryToSnapshotParams) (int64, error) {
-	result, err := q.db.Exec(ctx, pruneLibraryToSnapshot, arg.InstanceID, arg.AssetIds)
+func (q *Queries) PruneLibraryToWhole(ctx context.Context, arg PruneLibraryToWholeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneLibraryToWhole, arg.ConnectedAppID, arg.WorkIds)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const queueDelivery = `-- name: QueueDelivery :one
-insert into instance_deliveries (id, instance_id, asset_id, expires_at, updates_install)
+const queueSend = `-- name: QueueSend :one
+insert into sends (id, connected_app_id, work_id, expires_at, updates_install)
 select $1, $2, $3,
        $4,
        exists (
            select 1
-             from instance_library_entries as entry
-            where entry.instance_id = $2
-              and entry.asset_id = $3
+             from app_library_entries as entry
+            where entry.connected_app_id = $2
+              and entry.work_id = $3
        )
-on conflict (instance_id, asset_id) where state in ('queued', 'released') do nothing
-returning id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+on conflict (connected_app_id, work_id) where state in ('queued', 'released') do nothing
+returning id, connected_app_id, work_id, state, settled_reason, queued_at, settled_at,
           expires_at, updates_install
 `
 
-type QueueDeliveryParams struct {
-	ID         pgtype.UUID
-	InstanceID pgtype.UUID
-	AssetID    pgtype.UUID
-	ExpiresAt  pgtype.Timestamptz
+type QueueSendParams struct {
+	ID             pgtype.UUID
+	ConnectedAppID pgtype.UUID
+	WorkID         pgtype.UUID
+	ExpiresAt      pgtype.Timestamptz
 }
 
-type QueueDeliveryRow struct {
+type QueueSendRow struct {
 	ID             pgtype.UUID
-	InstanceID     pgtype.UUID
-	AssetID        pgtype.UUID
+	ConnectedAppID pgtype.UUID
+	WorkID         pgtype.UUID
 	State          string
 	SettledReason  pgtype.Text
 	QueuedAt       pgtype.Timestamptz
@@ -2857,18 +2322,18 @@ type QueueDeliveryRow struct {
 	UpdatesInstall bool
 }
 
-func (q *Queries) QueueDelivery(ctx context.Context, arg QueueDeliveryParams) (QueueDeliveryRow, error) {
-	row := q.db.QueryRow(ctx, queueDelivery,
+func (q *Queries) QueueSend(ctx context.Context, arg QueueSendParams) (QueueSendRow, error) {
+	row := q.db.QueryRow(ctx, queueSend,
 		arg.ID,
-		arg.InstanceID,
-		arg.AssetID,
+		arg.ConnectedAppID,
+		arg.WorkID,
 		arg.ExpiresAt,
 	)
-	var i QueueDeliveryRow
+	var i QueueSendRow
 	err := row.Scan(
 		&i.ID,
-		&i.InstanceID,
-		&i.AssetID,
+		&i.ConnectedAppID,
+		&i.WorkID,
 		&i.State,
 		&i.SettledReason,
 		&i.QueuedAt,
@@ -2879,8 +2344,8 @@ func (q *Queries) QueueDelivery(ctx context.Context, arg QueueDeliveryParams) (Q
 	return i, err
 }
 
-const recordDeviceLinkPoll = `-- name: RecordDeviceLinkPoll :one
-update link_requests
+const recordConnectionPoll = `-- name: RecordConnectionPoll :one
+update connection_requests
    set last_polled_at = now(),
        poll_interval_seconds = case
            when $1::boolean
@@ -2893,79 +2358,36 @@ update link_requests
 returning poll_interval_seconds
 `
 
-type RecordDeviceLinkPollParams struct {
+type RecordConnectionPollParams struct {
 	SlowDown       bool
 	DeviceCodeHash []byte
 }
 
-func (q *Queries) RecordDeviceLinkPoll(ctx context.Context, arg RecordDeviceLinkPollParams) (int32, error) {
-	row := q.db.QueryRow(ctx, recordDeviceLinkPoll, arg.SlowDown, arg.DeviceCodeHash)
+func (q *Queries) RecordConnectionPoll(ctx context.Context, arg RecordConnectionPollParams) (int32, error) {
+	row := q.db.QueryRow(ctx, recordConnectionPoll, arg.SlowDown, arg.DeviceCodeHash)
 	var poll_interval_seconds int32
 	err := row.Scan(&poll_interval_seconds)
 	return poll_interval_seconds, err
 }
 
-const recordLibraryApplicationVersion = `-- name: RecordLibraryApplicationVersion :exec
-update linked_instances
-   set library_application_version = nullif($1::text, '')
+const recordLibraryAppVersion = `-- name: RecordLibraryAppVersion :exec
+update connected_apps
+   set library_app_version = nullif($1::text, '')
  where id = $2
 `
 
-type RecordLibraryApplicationVersionParams struct {
-	ApplicationVersion string
-	InstanceID         pgtype.UUID
+type RecordLibraryAppVersionParams struct {
+	AppVersion     string
+	ConnectedAppID pgtype.UUID
 }
 
-func (q *Queries) RecordLibraryApplicationVersion(ctx context.Context, arg RecordLibraryApplicationVersionParams) error {
-	_, err := q.db.Exec(ctx, recordLibraryApplicationVersion, arg.ApplicationVersion, arg.InstanceID)
+func (q *Queries) RecordLibraryAppVersion(ctx context.Context, arg RecordLibraryAppVersionParams) error {
+	_, err := q.db.Exec(ctx, recordLibraryAppVersion, arg.AppVersion, arg.ConnectedAppID)
 	return err
 }
 
-const recordStagedMedia = `-- name: RecordStagedMedia :exec
-insert into migration_staged_media (source, blob_id, width, height)
-values ($1, $2, $3, $4)
-on conflict (source) do update
-   set blob_id = excluded.blob_id, width = excluded.width,
-       height = excluded.height, staged_at = now()
-`
-
-type RecordStagedMediaParams struct {
-	Source string
-	BlobID pgtype.UUID
-	Width  int32
-	Height int32
-}
-
-func (q *Queries) RecordStagedMedia(ctx context.Context, arg RecordStagedMediaParams) error {
-	_, err := q.db.Exec(ctx, recordStagedMedia,
-		arg.Source,
-		arg.BlobID,
-		arg.Width,
-		arg.Height,
-	)
-	return err
-}
-
-const redeemDeviceLinkRequest = `-- name: RedeemDeviceLinkRequest :execrows
-update link_requests
-   set redeemed_at = now()
- where device_code_hash = $1
-   and expires_at > now()
-   and approved_at is not null
-   and denied_at is null
-   and redeemed_at is null
-`
-
-func (q *Queries) RedeemDeviceLinkRequest(ctx context.Context, deviceCodeHash []byte) (int64, error) {
-	result, err := q.db.Exec(ctx, redeemDeviceLinkRequest, deviceCodeHash)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const redeemLinkAuthorization = `-- name: RedeemLinkAuthorization :execrows
-update link_authorizations
+const redeemConnectionAuthorization = `-- name: RedeemConnectionAuthorization :execrows
+update connection_authorizations
    set redeemed_at = now()
  where authorization_code_hash = $1
    and expires_at > now()
@@ -2974,8 +2396,26 @@ update link_authorizations
    and redeemed_at is null
 `
 
-func (q *Queries) RedeemLinkAuthorization(ctx context.Context, authorizationCodeHash []byte) (int64, error) {
-	result, err := q.db.Exec(ctx, redeemLinkAuthorization, authorizationCodeHash)
+func (q *Queries) RedeemConnectionAuthorization(ctx context.Context, authorizationCodeHash []byte) (int64, error) {
+	result, err := q.db.Exec(ctx, redeemConnectionAuthorization, authorizationCodeHash)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const redeemConnectionRequest = `-- name: RedeemConnectionRequest :execrows
+update connection_requests
+   set redeemed_at = now()
+ where device_code_hash = $1
+   and expires_at > now()
+   and approved_at is not null
+   and denied_at is null
+   and redeemed_at is null
+`
+
+func (q *Queries) RedeemConnectionRequest(ctx context.Context, deviceCodeHash []byte) (int64, error) {
+	result, err := q.db.Exec(ctx, redeemConnectionRequest, deviceCodeHash)
 	if err != nil {
 		return 0, err
 	}
@@ -2983,18 +2423,18 @@ func (q *Queries) RedeemLinkAuthorization(ctx context.Context, authorizationCode
 }
 
 const removeLibraryEntries = `-- name: RemoveLibraryEntries :execrows
-delete from instance_library_entries
- where instance_id = $1
-   and asset_id = any($2::uuid[])
+delete from app_library_entries
+ where connected_app_id = $1
+   and work_id = any($2::uuid[])
 `
 
 type RemoveLibraryEntriesParams struct {
-	InstanceID pgtype.UUID
-	AssetIds   []pgtype.UUID
+	ConnectedAppID pgtype.UUID
+	WorkIds        []pgtype.UUID
 }
 
 func (q *Queries) RemoveLibraryEntries(ctx context.Context, arg RemoveLibraryEntriesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, removeLibraryEntries, arg.InstanceID, arg.AssetIds)
+	result, err := q.db.Exec(ctx, removeLibraryEntries, arg.ConnectedAppID, arg.WorkIds)
 	if err != nil {
 		return 0, err
 	}
@@ -3018,62 +2458,114 @@ func (q *Queries) ReplacePassword(ctx context.Context, arg ReplacePasswordParams
 }
 
 const reportLibraryEntries = `-- name: ReportLibraryEntries :execrows
-insert into instance_library_entries
-    (instance_id, asset_id, content_generation, reported_at)
-select $1, asset.id,
-       coalesce(nullif(reported.generation, 0), asset.content_generation), now()
+insert into app_library_entries
+    (connected_app_id, work_id, version_number, reported_at)
+select $1, work.id,
+       coalesce(nullif(reported.version_number, 0), version.number), now()
   from (
-      select unnest($2::uuid[]) as asset_id,
-             unnest($3::integer[]) as generation
+      select unnest($2::uuid[]) as work_id,
+             unnest($3::integer[]) as version_number
   ) as reported
-  join assets as asset
-    on asset.id = reported.asset_id
-   and asset.deleted_at is null
-   and asset.lifecycle = 'published'
-on conflict (instance_id, asset_id) do update
-   set content_generation = excluded.content_generation,
+  join works as work
+    on work.id = reported.work_id
+   and work.deleted_at is null
+   and work.lifecycle = 'published'
+  join work_versions as version on version.id = work.published_version_id
+on conflict (connected_app_id, work_id) do update
+   set version_number = excluded.version_number,
        reported_at = excluded.reported_at
 `
 
 type ReportLibraryEntriesParams struct {
-	InstanceID  pgtype.UUID
-	AssetIds    []pgtype.UUID
-	Generations []int32
+	ConnectedAppID pgtype.UUID
+	WorkIds        []pgtype.UUID
+	VersionNumbers []int32
 }
 
 func (q *Queries) ReportLibraryEntries(ctx context.Context, arg ReportLibraryEntriesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, reportLibraryEntries, arg.InstanceID, arg.AssetIds, arg.Generations)
+	result, err := q.db.Exec(ctx, reportLibraryEntries, arg.ConnectedAppID, arg.WorkIds, arg.VersionNumbers)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const restoreAsset = `-- name: RestoreAsset :execrows
-update assets
+const restoreWork = `-- name: RestoreWork :execrows
+update works
    set deleted_at = null, recoverable_until = null, updated_at = $3
  where id = $1 and owner_id = $2
    and deleted_at is not null and recoverable_until > $3
 `
 
-type RestoreAssetParams struct {
+type RestoreWorkParams struct {
 	ID        pgtype.UUID
 	OwnerID   pgtype.UUID
 	UpdatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) RestoreAsset(ctx context.Context, arg RestoreAssetParams) (int64, error) {
-	result, err := q.db.Exec(ctx, restoreAsset, arg.ID, arg.OwnerID, arg.UpdatedAt)
+func (q *Queries) RestoreWork(ctx context.Context, arg RestoreWorkParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreWork, arg.ID, arg.OwnerID, arg.UpdatedAt)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const reviewDeviceLinkRequest = `-- name: ReviewDeviceLinkRequest :one
-select application_name, instance_name, application_version, protocol_version,
-       capabilities, accepted_targets, scopes, expires_at
-  from link_requests
+const reviewConnectionAuthorization = `-- name: ReviewConnectionAuthorization :one
+select redirect_uri, state, app_name, name,
+       app_version, protocol_version, capabilities,
+       accepted_formats, permissions, expires_at
+  from connection_authorizations
+ where request_hash = $1
+   and user_code_hash = $2
+   and expires_at > now()
+   and (reviewed_by is null or reviewed_by = $3)
+   and approved_at is null
+   and denied_at is null
+   and redeemed_at is null
+`
+
+type ReviewConnectionAuthorizationParams struct {
+	RequestHash  []byte
+	UserCodeHash []byte
+	ReviewedBy   pgtype.UUID
+}
+
+type ReviewConnectionAuthorizationRow struct {
+	RedirectUri     string
+	State           string
+	AppName         string
+	Name            string
+	AppVersion      pgtype.Text
+	ProtocolVersion int32
+	Capabilities    []string
+	AcceptedFormats []string
+	Permissions     []string
+	ExpiresAt       pgtype.Timestamptz
+}
+
+func (q *Queries) ReviewConnectionAuthorization(ctx context.Context, arg ReviewConnectionAuthorizationParams) (ReviewConnectionAuthorizationRow, error) {
+	row := q.db.QueryRow(ctx, reviewConnectionAuthorization, arg.RequestHash, arg.UserCodeHash, arg.ReviewedBy)
+	var i ReviewConnectionAuthorizationRow
+	err := row.Scan(
+		&i.RedirectUri,
+		&i.State,
+		&i.AppName,
+		&i.Name,
+		&i.AppVersion,
+		&i.ProtocolVersion,
+		&i.Capabilities,
+		&i.AcceptedFormats,
+		&i.Permissions,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const reviewConnectionRequest = `-- name: ReviewConnectionRequest :one
+select app_name, name, app_version, protocol_version,
+       capabilities, accepted_formats, permissions, expires_at
+  from connection_requests
  where user_code_hash = $1
    and expires_at > now()
    and (reviewed_by is null or reviewed_by = $2)
@@ -3082,161 +2574,112 @@ select application_name, instance_name, application_version, protocol_version,
    and redeemed_at is null
 `
 
-type ReviewDeviceLinkRequestParams struct {
+type ReviewConnectionRequestParams struct {
 	UserCodeHash []byte
 	ReviewedBy   pgtype.UUID
 }
 
-type ReviewDeviceLinkRequestRow struct {
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    int32
-	Capabilities       []string
-	AcceptedTargets    []string
-	Scopes             []string
-	ExpiresAt          pgtype.Timestamptz
+type ReviewConnectionRequestRow struct {
+	AppName         string
+	Name            string
+	AppVersion      pgtype.Text
+	ProtocolVersion int32
+	Capabilities    []string
+	AcceptedFormats []string
+	Permissions     []string
+	ExpiresAt       pgtype.Timestamptz
 }
 
-func (q *Queries) ReviewDeviceLinkRequest(ctx context.Context, arg ReviewDeviceLinkRequestParams) (ReviewDeviceLinkRequestRow, error) {
-	row := q.db.QueryRow(ctx, reviewDeviceLinkRequest, arg.UserCodeHash, arg.ReviewedBy)
-	var i ReviewDeviceLinkRequestRow
+func (q *Queries) ReviewConnectionRequest(ctx context.Context, arg ReviewConnectionRequestParams) (ReviewConnectionRequestRow, error) {
+	row := q.db.QueryRow(ctx, reviewConnectionRequest, arg.UserCodeHash, arg.ReviewedBy)
+	var i ReviewConnectionRequestRow
 	err := row.Scan(
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
+		&i.AppName,
+		&i.Name,
+		&i.AppVersion,
 		&i.ProtocolVersion,
 		&i.Capabilities,
-		&i.AcceptedTargets,
-		&i.Scopes,
+		&i.AcceptedFormats,
+		&i.Permissions,
 		&i.ExpiresAt,
 	)
 	return i, err
 }
 
-const reviewLinkAuthorization = `-- name: ReviewLinkAuthorization :one
-select redirect_uri, state, application_name, instance_name,
-       application_version, protocol_version, capabilities,
-       accepted_targets, scopes, expires_at
-  from link_authorizations
- where request_hash = $1
-   and expires_at > now()
-   and (reviewed_by is null or reviewed_by = $2)
-   and approved_at is null
-   and denied_at is null
-   and redeemed_at is null
-`
-
-type ReviewLinkAuthorizationParams struct {
-	RequestHash []byte
-	ReviewedBy  pgtype.UUID
-}
-
-type ReviewLinkAuthorizationRow struct {
-	RedirectUri        string
-	State              string
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    int32
-	Capabilities       []string
-	AcceptedTargets    []string
-	Scopes             []string
-	ExpiresAt          pgtype.Timestamptz
-}
-
-func (q *Queries) ReviewLinkAuthorization(ctx context.Context, arg ReviewLinkAuthorizationParams) (ReviewLinkAuthorizationRow, error) {
-	row := q.db.QueryRow(ctx, reviewLinkAuthorization, arg.RequestHash, arg.ReviewedBy)
-	var i ReviewLinkAuthorizationRow
-	err := row.Scan(
-		&i.RedirectUri,
-		&i.State,
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
-		&i.ProtocolVersion,
-		&i.Capabilities,
-		&i.AcceptedTargets,
-		&i.Scopes,
-		&i.ExpiresAt,
-	)
-	return i, err
-}
-
-const revokeLinkedInstance = `-- name: RevokeLinkedInstance :one
+const revokeConnectedApp = `-- name: RevokeConnectedApp :one
 with revoked as (
-    update linked_instances as instance
+    update connected_apps as app
        set refresh_token_hash = null,
-           application_version = null,
-           library_application_version = null,
+           app_version = null,
+           library_app_version = null,
            protocol_version = null,
            capabilities = '{}',
-           accepted_targets = '{}',
+           accepted_formats = '{}',
            revoked_at = now()
-     where instance.id = $1
-       and instance.user_id = $2
-       and instance.revoked_at is null
-    returning instance.id
+     where app.id = $1
+       and app.user_id = $2
+       and app.revoked_at is null
+    returning app.id
 ), deleted_access as (
-    delete from instance_access_tokens as token
-     where token.instance_id in (select revoked.id from revoked)
-), deleted_deliveries as (
-    delete from instance_deliveries as delivery
-     where delivery.instance_id in (select revoked.id from revoked)
+    delete from app_access_tokens as token
+     where token.connected_app_id in (select revoked.id from revoked)
+), deleted_sends as (
+    delete from sends as send
+     where send.connected_app_id in (select revoked.id from revoked)
 ), deleted_library as (
-    delete from instance_library_entries as entry
-     where entry.instance_id in (select revoked.id from revoked)
+    delete from app_library_entries as entry
+     where entry.connected_app_id in (select revoked.id from revoked)
 )
 select exists(select 1 from revoked) as revoked
 `
 
-type RevokeLinkedInstanceParams struct {
-	InstanceID pgtype.UUID
-	UserID     pgtype.UUID
+type RevokeConnectedAppParams struct {
+	ConnectedAppID pgtype.UUID
+	UserID         pgtype.UUID
 }
 
-func (q *Queries) RevokeLinkedInstance(ctx context.Context, arg RevokeLinkedInstanceParams) (bool, error) {
-	row := q.db.QueryRow(ctx, revokeLinkedInstance, arg.InstanceID, arg.UserID)
+func (q *Queries) RevokeConnectedApp(ctx context.Context, arg RevokeConnectedAppParams) (bool, error) {
+	row := q.db.QueryRow(ctx, revokeConnectedApp, arg.ConnectedAppID, arg.UserID)
 	var revoked bool
 	err := row.Scan(&revoked)
 	return revoked, err
 }
 
-const revokeLinkedInstanceByID = `-- name: RevokeLinkedInstanceByID :one
+const revokeConnectedAppByID = `-- name: RevokeConnectedAppByID :one
 with revoked as (
-    update linked_instances as instance
+    update connected_apps as app
        set refresh_token_hash = null,
-           application_version = null,
-           library_application_version = null,
+           app_version = null,
+           library_app_version = null,
            protocol_version = null,
            capabilities = '{}',
-           accepted_targets = '{}',
+           accepted_formats = '{}',
            revoked_at = now()
-     where instance.id = $1 and instance.revoked_at is null
-    returning instance.id
+     where app.id = $1 and app.revoked_at is null
+    returning app.id
 ), deleted_access as (
-    delete from instance_access_tokens as token
-     where token.instance_id in (select revoked.id from revoked)
-), deleted_deliveries as (
-    delete from instance_deliveries as delivery
-     where delivery.instance_id in (select revoked.id from revoked)
+    delete from app_access_tokens as token
+     where token.connected_app_id in (select revoked.id from revoked)
+), deleted_sends as (
+    delete from sends as send
+     where send.connected_app_id in (select revoked.id from revoked)
 ), deleted_library as (
-    delete from instance_library_entries as entry
-     where entry.instance_id in (select revoked.id from revoked)
+    delete from app_library_entries as entry
+     where entry.connected_app_id in (select revoked.id from revoked)
 )
 select exists(select 1 from revoked) as revoked
 `
 
-func (q *Queries) RevokeLinkedInstanceByID(ctx context.Context, instanceID pgtype.UUID) (bool, error) {
-	row := q.db.QueryRow(ctx, revokeLinkedInstanceByID, instanceID)
+func (q *Queries) RevokeConnectedAppByID(ctx context.Context, connectedAppID pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, revokeConnectedAppByID, connectedAppID)
 	var revoked bool
 	err := row.Scan(&revoked)
 	return revoked, err
 }
 
-const rotateInstanceRefreshToken = `-- name: RotateInstanceRefreshToken :one
+const rotateAppRefreshToken = `-- name: RotateAppRefreshToken :one
 with rotated as (
-    update linked_instances
+    update connected_apps
        set refresh_token_hash = $3,
            refresh_token_prefix = $4,
            last_seen_at = now()
@@ -3245,98 +2688,95 @@ with rotated as (
        and revoked_at is null
     returning id
 )
-insert into instance_refresh_history (token_hash, instance_id, detectable_until)
+insert into app_refresh_history (token_hash, connected_app_id, detectable_until)
 select $1, id, $2
   from rotated
-returning instance_id
+returning connected_app_id
 `
 
-type RotateInstanceRefreshTokenParams struct {
+type RotateAppRefreshTokenParams struct {
 	OldRefreshTokenHash   []byte
 	DetectableUntil       pgtype.Timestamptz
 	NewRefreshTokenHash   []byte
 	NewRefreshTokenPrefix string
-	InstanceID            pgtype.UUID
+	ConnectedAppID        pgtype.UUID
 }
 
-func (q *Queries) RotateInstanceRefreshToken(ctx context.Context, arg RotateInstanceRefreshTokenParams) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, rotateInstanceRefreshToken,
+func (q *Queries) RotateAppRefreshToken(ctx context.Context, arg RotateAppRefreshTokenParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, rotateAppRefreshToken,
 		arg.OldRefreshTokenHash,
 		arg.DetectableUntil,
 		arg.NewRefreshTokenHash,
 		arg.NewRefreshTokenPrefix,
-		arg.InstanceID,
+		arg.ConnectedAppID,
 	)
-	var instance_id pgtype.UUID
-	err := row.Scan(&instance_id)
-	return instance_id, err
+	var connected_app_id pgtype.UUID
+	err := row.Scan(&connected_app_id)
+	return connected_app_id, err
 }
 
-const sendableAssetGeneration = `-- name: SendableAssetGeneration :one
-select content_generation
-  from assets
- where id = $1
+const sendForMainFile = `-- name: SendForMainFile :one
+select send.work_id, send.chosen_format, app.id as connected_app_id
+  from sends as send
+  join connected_apps as app on app.id = send.connected_app_id
+ where send.id = $1
+   and send.state = 'released'
+   and send.lease_expires_at > now()
+   and send.expires_at > now()
+   and send.chosen_format is not null
+   and app.revoked_at is null
+   and app.permissions @> array['work:receive']
+`
+
+type SendForMainFileRow struct {
+	WorkID         pgtype.UUID
+	ChosenFormat   pgtype.Text
+	ConnectedAppID pgtype.UUID
+}
+
+func (q *Queries) SendForMainFile(ctx context.Context, sendID pgtype.UUID) (SendForMainFileRow, error) {
+	row := q.db.QueryRow(ctx, sendForMainFile, sendID)
+	var i SendForMainFileRow
+	err := row.Scan(&i.WorkID, &i.ChosenFormat, &i.ConnectedAppID)
+	return i, err
+}
+
+const sendableWorkVersion = `-- name: SendableWorkVersion :one
+select version.number
+  from works work
+  join work_versions version on version.id = work.published_version_id
+ where work.id = $1
    and deleted_at is null
-   and withheld_at is null
+   and taken_down_at is null
    and lifecycle = 'published'
 `
 
-func (q *Queries) SendableAssetGeneration(ctx context.Context, assetID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, sendableAssetGeneration, assetID)
-	var content_generation int32
-	err := row.Scan(&content_generation)
-	return content_generation, err
+func (q *Queries) SendableWorkVersion(ctx context.Context, workID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, sendableWorkVersion, workID)
+	var number int32
+	err := row.Scan(&number)
+	return number, err
 }
 
-const setAssetDiscovery = `-- name: SetAssetDiscovery :execrows
-update assets
-   set discovery = $3, updated_at = now()
- where id = $1 and owner_id = $2 and lifecycle = 'published'
-   and withheld_at is null and deleted_at is null
+const setAppPreferenceBySessionHash = `-- name: SetAppPreferenceBySessionHash :execrows
+update users u
+   set app_preference = $1, updated_at = now()
+  from sessions session
+ where session.user_id = u.id and session.token_hash = $2
+   and session.expires_at > now()
 `
 
-type SetAssetDiscoveryParams struct {
-	ID        pgtype.UUID
-	OwnerID   pgtype.UUID
-	Discovery string
+type SetAppPreferenceBySessionHashParams struct {
+	AppPreference pgtype.Text
+	TokenHash     []byte
 }
 
-func (q *Queries) SetAssetDiscovery(ctx context.Context, arg SetAssetDiscoveryParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setAssetDiscovery, arg.ID, arg.OwnerID, arg.Discovery)
+func (q *Queries) SetAppPreferenceBySessionHash(ctx context.Context, arg SetAppPreferenceBySessionHashParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setAppPreferenceBySessionHash, arg.AppPreference, arg.TokenHash)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const setCurrentRevision = `-- name: SetCurrentRevision :exec
-update assets set current_revision_id = $2, updated_at = now() where id = $1
-`
-
-type SetCurrentRevisionParams struct {
-	ID                pgtype.UUID
-	CurrentRevisionID pgtype.UUID
-}
-
-func (q *Queries) SetCurrentRevision(ctx context.Context, arg SetCurrentRevisionParams) error {
-	_, err := q.db.Exec(ctx, setCurrentRevision, arg.ID, arg.CurrentRevisionID)
-	return err
-}
-
-const setDeliveryTarget = `-- name: SetDeliveryTarget :exec
-update instance_deliveries
-   set chosen_target = $1
- where id = $2
-`
-
-type SetDeliveryTargetParams struct {
-	ChosenTarget pgtype.Text
-	ID           pgtype.UUID
-}
-
-func (q *Queries) SetDeliveryTarget(ctx context.Context, arg SetDeliveryTargetParams) error {
-	_, err := q.db.Exec(ctx, setDeliveryTarget, arg.ChosenTarget, arg.ID)
-	return err
 }
 
 const setFirstPassword = `-- name: SetFirstPassword :one
@@ -3370,43 +2810,112 @@ func (q *Queries) SetFirstPassword(ctx context.Context, arg SetFirstPasswordPara
 	return i, err
 }
 
-const setNSFWVisibilityBySessionHash = `-- name: SetNSFWVisibilityBySessionHash :execrows
+const setNSFWPreferenceBySessionHash = `-- name: SetNSFWPreferenceBySessionHash :execrows
 update users u
-   set nsfw_visibility = $1, updated_at = now()
+   set nsfw_preference = $1, updated_at = now()
   from sessions session
  where session.user_id = u.id and session.token_hash = $2
    and session.expires_at > now()
 `
 
-type SetNSFWVisibilityBySessionHashParams struct {
-	NsfwVisibility string
+type SetNSFWPreferenceBySessionHashParams struct {
+	NsfwPreference string
 	TokenHash      []byte
 }
 
-func (q *Queries) SetNSFWVisibilityBySessionHash(ctx context.Context, arg SetNSFWVisibilityBySessionHashParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setNSFWVisibilityBySessionHash, arg.NsfwVisibility, arg.TokenHash)
+func (q *Queries) SetNSFWPreferenceBySessionHash(ctx context.Context, arg SetNSFWPreferenceBySessionHashParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setNSFWPreferenceBySessionHash, arg.NsfwPreference, arg.TokenHash)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const softDeleteAsset = `-- name: SoftDeleteAsset :execrows
-update assets
-   set deleted_at = $3, recoverable_until = $4, updated_at = $3
- where id = $1 and owner_id = $2
-   and withheld_at is null and deleted_at is null
+const setNewAccountPreferences = `-- name: SetNewAccountPreferences :exec
+update users
+   set app_preference = $1::text,
+       nsfw_preference = coalesce($2::text, nsfw_preference)
+ where id = $3
 `
 
-type SoftDeleteAssetParams struct {
+type SetNewAccountPreferencesParams struct {
+	AppPreference  pgtype.Text
+	NsfwPreference pgtype.Text
+	ID             pgtype.UUID
+}
+
+func (q *Queries) SetNewAccountPreferences(ctx context.Context, arg SetNewAccountPreferencesParams) error {
+	_, err := q.db.Exec(ctx, setNewAccountPreferences, arg.AppPreference, arg.NsfwPreference, arg.ID)
+	return err
+}
+
+const setOriginalFile = `-- name: SetOriginalFile :exec
+update works set original_file_id = $2, updated_at = now() where id = $1
+`
+
+type SetOriginalFileParams struct {
+	ID             pgtype.UUID
+	OriginalFileID pgtype.UUID
+}
+
+func (q *Queries) SetOriginalFile(ctx context.Context, arg SetOriginalFileParams) error {
+	_, err := q.db.Exec(ctx, setOriginalFile, arg.ID, arg.OriginalFileID)
+	return err
+}
+
+const setSendFormat = `-- name: SetSendFormat :exec
+update sends
+   set chosen_format = $1
+ where id = $2
+`
+
+type SetSendFormatParams struct {
+	ChosenFormat pgtype.Text
+	ID           pgtype.UUID
+}
+
+func (q *Queries) SetSendFormat(ctx context.Context, arg SetSendFormatParams) error {
+	_, err := q.db.Exec(ctx, setSendFormat, arg.ChosenFormat, arg.ID)
+	return err
+}
+
+const setWorkVisibility = `-- name: SetWorkVisibility :execrows
+update works
+   set visibility = $3, updated_at = now()
+ where id = $1 and owner_id = $2 and lifecycle = 'published'
+   and taken_down_at is null and deleted_at is null
+`
+
+type SetWorkVisibilityParams struct {
+	ID         pgtype.UUID
+	OwnerID    pgtype.UUID
+	Visibility string
+}
+
+func (q *Queries) SetWorkVisibility(ctx context.Context, arg SetWorkVisibilityParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setWorkVisibility, arg.ID, arg.OwnerID, arg.Visibility)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const softDeleteWork = `-- name: SoftDeleteWork :execrows
+update works
+   set deleted_at = $3, recoverable_until = $4, updated_at = $3
+ where id = $1 and owner_id = $2
+   and taken_down_at is null and deleted_at is null
+`
+
+type SoftDeleteWorkParams struct {
 	ID               pgtype.UUID
 	OwnerID          pgtype.UUID
 	DeletedAt        pgtype.Timestamptz
 	RecoverableUntil pgtype.Timestamptz
 }
 
-func (q *Queries) SoftDeleteAsset(ctx context.Context, arg SoftDeleteAssetParams) (int64, error) {
-	result, err := q.db.Exec(ctx, softDeleteAsset,
+func (q *Queries) SoftDeleteWork(ctx context.Context, arg SoftDeleteWorkParams) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeleteWork,
 		arg.ID,
 		arg.OwnerID,
 		arg.DeletedAt,
@@ -3418,44 +2927,8 @@ func (q *Queries) SoftDeleteAsset(ctx context.Context, arg SoftDeleteAssetParams
 	return result.RowsAffected(), nil
 }
 
-const stagedMedia = `-- name: StagedMedia :many
-select source, blob_id, width, height from migration_staged_media
-`
-
-type StagedMediaRow struct {
-	Source string
-	BlobID pgtype.UUID
-	Width  int32
-	Height int32
-}
-
-func (q *Queries) StagedMedia(ctx context.Context) ([]StagedMediaRow, error) {
-	rows, err := q.db.Query(ctx, stagedMedia)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []StagedMediaRow
-	for rows.Next() {
-		var i StagedMediaRow
-		if err := rows.Scan(
-			&i.Source,
-			&i.BlobID,
-			&i.Width,
-			&i.Height,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const takeLinkRateLimit = `-- name: TakeLinkRateLimit :one
-insert into link_rate_limits as rate (key_hash, action, attempts, window_start)
+const takeConnectionRateLimit = `-- name: TakeConnectionRateLimit :one
+insert into connection_rate_limits as rate (key_hash, action, attempts, window_start)
 values ($1, $2, 1, now())
 on conflict (key_hash, action) do update
    set attempts = case
@@ -3471,39 +2944,83 @@ on conflict (key_hash, action) do update
 returning rate.attempts, rate.window_start
 `
 
-type TakeLinkRateLimitParams struct {
+type TakeConnectionRateLimitParams struct {
 	KeyHash      []byte
 	Action       string
 	WindowCutoff pgtype.Timestamptz
 }
 
-type TakeLinkRateLimitRow struct {
+type TakeConnectionRateLimitRow struct {
 	Attempts    int32
 	WindowStart pgtype.Timestamptz
 }
 
-func (q *Queries) TakeLinkRateLimit(ctx context.Context, arg TakeLinkRateLimitParams) (TakeLinkRateLimitRow, error) {
-	row := q.db.QueryRow(ctx, takeLinkRateLimit, arg.KeyHash, arg.Action, arg.WindowCutoff)
-	var i TakeLinkRateLimitRow
+func (q *Queries) TakeConnectionRateLimit(ctx context.Context, arg TakeConnectionRateLimitParams) (TakeConnectionRateLimitRow, error) {
+	row := q.db.QueryRow(ctx, takeConnectionRateLimit, arg.KeyHash, arg.Action, arg.WindowCutoff)
+	var i TakeConnectionRateLimitRow
 	err := row.Scan(&i.Attempts, &i.WindowStart)
+	return i, err
+}
+
+const takeDownWork = `-- name: TakeDownWork :one
+with taken_down as (
+    update works as work
+       set taken_down_at = now(), taken_down_by = $2, taken_down_reason = $3,
+           updated_at = now()
+     where work.id = $1 and work.lifecycle = 'published'
+       and work.taken_down_at is null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_version_id
+), stopped as (
+    update sends as send
+       set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
+     where send.work_id in (select taken_down.id from taken_down)
+       and send.state = 'queued'
+)
+select taken_down.owner_id, coalesce(version.payload ->> 'name', taken_down.name)::text as public_name
+  from taken_down
+  left join work_versions version on version.id = taken_down.published_version_id
+`
+
+type TakeDownWorkParams struct {
+	ID              pgtype.UUID
+	TakenDownBy     pgtype.UUID
+	TakenDownReason pgtype.Text
+}
+
+type TakeDownWorkRow struct {
+	OwnerID    pgtype.UUID
+	PublicName string
+}
+
+func (q *Queries) TakeDownWork(ctx context.Context, arg TakeDownWorkParams) (TakeDownWorkRow, error) {
+	row := q.db.QueryRow(ctx, takeDownWork, arg.ID, arg.TakenDownBy, arg.TakenDownReason)
+	var i TakeDownWorkRow
+	err := row.Scan(&i.OwnerID, &i.PublicName)
 	return i, err
 }
 
 const takeOAuthState = `-- name: TakeOAuthState :one
 delete from oauth_states
  where token_hash = $1 and expires_at > now()
-returning intent, user_id
+returning intent, user_id, app_preference, nsfw_preference
 `
 
 type TakeOAuthStateRow struct {
-	Intent string
-	UserID pgtype.UUID
+	Intent         string
+	UserID         pgtype.UUID
+	AppPreference  pgtype.Text
+	NsfwPreference pgtype.Text
 }
 
 func (q *Queries) TakeOAuthState(ctx context.Context, tokenHash []byte) (TakeOAuthStateRow, error) {
 	row := q.db.QueryRow(ctx, takeOAuthState, tokenHash)
 	var i TakeOAuthStateRow
-	err := row.Scan(&i.Intent, &i.UserID)
+	err := row.Scan(
+		&i.Intent,
+		&i.UserID,
+		&i.AppPreference,
+		&i.NsfwPreference,
+	)
 	return i, err
 }
 
@@ -3520,40 +3037,40 @@ func (q *Queries) TakePasswordReset(ctx context.Context, tokenHash []byte) (pgty
 	return user_id, err
 }
 
-const takeWithheldNotices = `-- name: TakeWithheldNotices :many
-update instance_library_entries as entry
-   set notified_withheld_at = asset.withheld_at
-  from asset_public.assets as asset
- where entry.instance_id = $1
-   and asset.id = entry.asset_id
-   and asset.kind = any($2::text[])
-   and asset.withheld_at is not null
-   and asset.deleted_at is null
-   and entry.notified_withheld_at is distinct from asset.withheld_at
-returning entry.asset_id, asset.name::text as name, asset.withheld_at
+const takeTakedownNotices = `-- name: TakeTakedownNotices :many
+update app_library_entries as entry
+   set notified_taken_down_at = work.taken_down_at
+  from work_public.works as work
+ where entry.connected_app_id = $1
+   and work.id = entry.work_id
+   and work.type = any($2::text[])
+   and work.taken_down_at is not null
+   and work.deleted_at is null
+   and entry.notified_taken_down_at is distinct from work.taken_down_at
+returning entry.work_id, work.name::text as name, work.taken_down_at
 `
 
-type TakeWithheldNoticesParams struct {
-	InstanceID pgtype.UUID
-	Kinds      []string
+type TakeTakedownNoticesParams struct {
+	ConnectedAppID pgtype.UUID
+	Types          []string
 }
 
-type TakeWithheldNoticesRow struct {
-	AssetID    pgtype.UUID
-	Name       string
-	WithheldAt pgtype.Timestamptz
+type TakeTakedownNoticesRow struct {
+	WorkID      pgtype.UUID
+	Name        string
+	TakenDownAt pgtype.Timestamptz
 }
 
-func (q *Queries) TakeWithheldNotices(ctx context.Context, arg TakeWithheldNoticesParams) ([]TakeWithheldNoticesRow, error) {
-	rows, err := q.db.Query(ctx, takeWithheldNotices, arg.InstanceID, arg.Kinds)
+func (q *Queries) TakeTakedownNotices(ctx context.Context, arg TakeTakedownNoticesParams) ([]TakeTakedownNoticesRow, error) {
+	rows, err := q.db.Query(ctx, takeTakedownNotices, arg.ConnectedAppID, arg.Types)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TakeWithheldNoticesRow
+	var items []TakeTakedownNoticesRow
 	for rows.Next() {
-		var i TakeWithheldNoticesRow
-		if err := rows.Scan(&i.AssetID, &i.Name, &i.WithheldAt); err != nil {
+		var i TakeTakedownNoticesRow
+		if err := rows.Scan(&i.WorkID, &i.Name, &i.TakenDownAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -3564,55 +3081,144 @@ func (q *Queries) TakeWithheldNotices(ctx context.Context, arg TakeWithheldNotic
 	return items, nil
 }
 
-const touchLinkedInstanceByAccessToken = `-- name: TouchLinkedInstanceByAccessToken :one
-update linked_instances as instance
+const touchConnectedAppByAccessToken = `-- name: TouchConnectedAppByAccessToken :one
+update connected_apps as app
    set last_seen_at = now()
-  from instance_access_tokens as token
+  from app_access_tokens as token
  where token.token_hash = $1
    and token.expires_at > now()
-   and instance.id = token.instance_id
-   and instance.revoked_at is null
-returning instance.id, instance.user_id,
-          instance.application_name, instance.instance_name,
-          instance.application_version, instance.protocol_version,
-          instance.capabilities, instance.accepted_targets,
-          instance.refresh_token_prefix, instance.scopes,
-          instance.linked_at, instance.last_seen_at
+   and app.id = token.connected_app_id
+   and app.revoked_at is null
+returning app.id, app.user_id,
+          app.app_name, app.name,
+          app.app_version, app.protocol_version,
+          app.capabilities, app.accepted_formats,
+          app.refresh_token_prefix, app.permissions,
+          app.connected_at, app.last_seen_at
 `
 
-type TouchLinkedInstanceByAccessTokenRow struct {
+type TouchConnectedAppByAccessTokenRow struct {
 	ID                 pgtype.UUID
 	UserID             pgtype.UUID
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
 	ProtocolVersion    pgtype.Int4
 	Capabilities       []string
-	AcceptedTargets    []string
+	AcceptedFormats    []string
 	RefreshTokenPrefix string
-	Scopes             []string
-	LinkedAt           pgtype.Timestamptz
+	Permissions        []string
+	ConnectedAt        pgtype.Timestamptz
 	LastSeenAt         pgtype.Timestamptz
 }
 
-func (q *Queries) TouchLinkedInstanceByAccessToken(ctx context.Context, tokenHash []byte) (TouchLinkedInstanceByAccessTokenRow, error) {
-	row := q.db.QueryRow(ctx, touchLinkedInstanceByAccessToken, tokenHash)
-	var i TouchLinkedInstanceByAccessTokenRow
+func (q *Queries) TouchConnectedAppByAccessToken(ctx context.Context, tokenHash []byte) (TouchConnectedAppByAccessTokenRow, error) {
+	row := q.db.QueryRow(ctx, touchConnectedAppByAccessToken, tokenHash)
+	var i TouchConnectedAppByAccessTokenRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
+		&i.AppName,
+		&i.Name,
+		&i.AppVersion,
 		&i.ProtocolVersion,
 		&i.Capabilities,
-		&i.AcceptedTargets,
+		&i.AcceptedFormats,
 		&i.RefreshTokenPrefix,
-		&i.Scopes,
-		&i.LinkedAt,
+		&i.Permissions,
+		&i.ConnectedAt,
 		&i.LastSeenAt,
 	)
 	return i, err
+}
+
+const updateConnectedAppCapabilities = `-- name: UpdateConnectedAppCapabilities :one
+update connected_apps
+   set app_version = $1,
+       protocol_version = $2,
+       capabilities = $3,
+       accepted_formats = $4
+ where id = $5 and revoked_at is null
+returning id, app_name, name, app_version,
+          protocol_version, capabilities, accepted_formats,
+          refresh_token_prefix, permissions, connected_at, last_seen_at
+`
+
+type UpdateConnectedAppCapabilitiesParams struct {
+	AppVersion      pgtype.Text
+	ProtocolVersion pgtype.Int4
+	Capabilities    []string
+	AcceptedFormats []string
+	ConnectedAppID  pgtype.UUID
+}
+
+type UpdateConnectedAppCapabilitiesRow struct {
+	ID                 pgtype.UUID
+	AppName            string
+	Name               string
+	AppVersion         pgtype.Text
+	ProtocolVersion    pgtype.Int4
+	Capabilities       []string
+	AcceptedFormats    []string
+	RefreshTokenPrefix string
+	Permissions        []string
+	ConnectedAt        pgtype.Timestamptz
+	LastSeenAt         pgtype.Timestamptz
+}
+
+func (q *Queries) UpdateConnectedAppCapabilities(ctx context.Context, arg UpdateConnectedAppCapabilitiesParams) (UpdateConnectedAppCapabilitiesRow, error) {
+	row := q.db.QueryRow(ctx, updateConnectedAppCapabilities,
+		arg.AppVersion,
+		arg.ProtocolVersion,
+		arg.Capabilities,
+		arg.AcceptedFormats,
+		arg.ConnectedAppID,
+	)
+	var i UpdateConnectedAppCapabilitiesRow
+	err := row.Scan(
+		&i.ID,
+		&i.AppName,
+		&i.Name,
+		&i.AppVersion,
+		&i.ProtocolVersion,
+		&i.Capabilities,
+		&i.AcceptedFormats,
+		&i.RefreshTokenPrefix,
+		&i.Permissions,
+		&i.ConnectedAt,
+		&i.LastSeenAt,
+	)
+	return i, err
+}
+
+const updateConnectedAppPermissions = `-- name: UpdateConnectedAppPermissions :one
+with changed as (
+    update connected_apps
+       set permissions = $1
+     where id = $2
+       and user_id = $3
+       and revoked_at is null
+    returning id, permissions
+), forgotten_library as (
+    delete from app_library_entries as entry
+     using changed
+     where entry.connected_app_id = changed.id
+       and not changed.permissions @> array['library:sync']
+)
+select permissions from changed
+`
+
+type UpdateConnectedAppPermissionsParams struct {
+	Permissions    []string
+	ConnectedAppID pgtype.UUID
+	UserID         pgtype.UUID
+}
+
+func (q *Queries) UpdateConnectedAppPermissions(ctx context.Context, arg UpdateConnectedAppPermissionsParams) ([]string, error) {
+	row := q.db.QueryRow(ctx, updateConnectedAppPermissions, arg.Permissions, arg.ConnectedAppID, arg.UserID)
+	var permissions []string
+	err := row.Scan(&permissions)
+	return permissions, err
 }
 
 const updateDiscordEmail = `-- name: UpdateDiscordEmail :one
@@ -3670,65 +3276,6 @@ func (q *Queries) UpdateDiscordProfile(ctx context.Context, arg UpdateDiscordPro
 		arg.BannerUrl,
 	)
 	return err
-}
-
-const updateLinkedInstanceDeclaration = `-- name: UpdateLinkedInstanceDeclaration :one
-update linked_instances
-   set application_version = $1,
-       protocol_version = $2,
-       capabilities = $3,
-       accepted_targets = $4
- where id = $5 and revoked_at is null
-returning id, application_name, instance_name, application_version,
-          protocol_version, capabilities, accepted_targets,
-          refresh_token_prefix, scopes, linked_at, last_seen_at
-`
-
-type UpdateLinkedInstanceDeclarationParams struct {
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    pgtype.Int4
-	Capabilities       []string
-	AcceptedTargets    []string
-	InstanceID         pgtype.UUID
-}
-
-type UpdateLinkedInstanceDeclarationRow struct {
-	ID                 pgtype.UUID
-	ApplicationName    string
-	InstanceName       string
-	ApplicationVersion pgtype.Text
-	ProtocolVersion    pgtype.Int4
-	Capabilities       []string
-	AcceptedTargets    []string
-	RefreshTokenPrefix string
-	Scopes             []string
-	LinkedAt           pgtype.Timestamptz
-	LastSeenAt         pgtype.Timestamptz
-}
-
-func (q *Queries) UpdateLinkedInstanceDeclaration(ctx context.Context, arg UpdateLinkedInstanceDeclarationParams) (UpdateLinkedInstanceDeclarationRow, error) {
-	row := q.db.QueryRow(ctx, updateLinkedInstanceDeclaration,
-		arg.ApplicationVersion,
-		arg.ProtocolVersion,
-		arg.Capabilities,
-		arg.AcceptedTargets,
-		arg.InstanceID,
-	)
-	var i UpdateLinkedInstanceDeclarationRow
-	err := row.Scan(
-		&i.ID,
-		&i.ApplicationName,
-		&i.InstanceName,
-		&i.ApplicationVersion,
-		&i.ProtocolVersion,
-		&i.Capabilities,
-		&i.AcceptedTargets,
-		&i.RefreshTokenPrefix,
-		&i.Scopes,
-		&i.LinkedAt,
-		&i.LastSeenAt,
-	)
-	return i, err
 }
 
 const updateOAuthIdentityEmail = `-- name: UpdateOAuthIdentityEmail :exec
@@ -4127,39 +3674,362 @@ func (q *Queries) VerifyUserEmail(ctx context.Context, arg VerifyUserEmailParams
 	return i, err
 }
 
-const withholdAsset = `-- name: WithholdAsset :one
-with withheld as (
-    update assets as asset
-       set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
-           updated_at = now()
-     where asset.id = $1 and asset.lifecycle = 'published'
-       and asset.withheld_at is null and asset.deleted_at is null
-    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
-), stopped as (
-    update instance_deliveries as delivery
-       set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
-     where delivery.asset_id in (select withheld.id from withheld)
-       and delivery.state = 'queued'
-)
-select withheld.owner_id, coalesce(snapshot.payload ->> 'name', withheld.name)::text as public_name
-  from withheld
-  left join asset_snapshots snapshot on snapshot.id = withheld.published_snapshot_id
+const workBlocks = `-- name: WorkBlocks :many
+select id, definition, title, position, hidden, layout, width, elements
+  from work_blocks
+ where work_id = $1
+ order by position
 `
 
-type WithholdAssetParams struct {
+type WorkBlocksRow struct {
+	ID         pgtype.UUID
+	Definition string
+	Title      pgtype.Text
+	Position   int32
+	Hidden     bool
+	Layout     string
+	Width      string
+	Elements   []byte
+}
+
+func (q *Queries) WorkBlocks(ctx context.Context, workID pgtype.UUID) ([]WorkBlocksRow, error) {
+	rows, err := q.db.Query(ctx, workBlocks, workID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WorkBlocksRow
+	for rows.Next() {
+		var i WorkBlocksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Definition,
+			&i.Title,
+			&i.Position,
+			&i.Hidden,
+			&i.Layout,
+			&i.Width,
+			&i.Elements,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const workByID = `-- name: WorkByID :one
+select a.id, a.type, original.format, a.original_format,
+       a.work_version, a.credited_author, a.nickname, a.lifecycle,
+       a.name, a.blurb, a.tags,
+       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
+       a.original_file_id, a.created_at
+  from works a
+  join work_original_files original on original.id = a.original_file_id
+ where a.id = $1
+`
+
+type WorkByIDRow struct {
 	ID             pgtype.UUID
-	WithheldBy     pgtype.UUID
-	WithheldReason pgtype.Text
+	Type           string
+	Format         string
+	OriginalFormat pgtype.Text
+	WorkVersion    string
+	CreditedAuthor string
+	Nickname       string
+	Lifecycle      string
+	Name           string
+	Blurb          string
+	Tags           []string
+	IsNsfw         bool
+	Visibility     string
+	OriginalFileID pgtype.UUID
+	CreatedAt      pgtype.Timestamptz
 }
 
-type WithholdAssetRow struct {
-	OwnerID    pgtype.UUID
-	PublicName string
+func (q *Queries) WorkByID(ctx context.Context, id pgtype.UUID) (WorkByIDRow, error) {
+	row := q.db.QueryRow(ctx, workByID, id)
+	var i WorkByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.Format,
+		&i.OriginalFormat,
+		&i.WorkVersion,
+		&i.CreditedAuthor,
+		&i.Nickname,
+		&i.Lifecycle,
+		&i.Name,
+		&i.Blurb,
+		&i.Tags,
+		&i.IsNsfw,
+		&i.Visibility,
+		&i.OriginalFileID,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-func (q *Queries) WithholdAsset(ctx context.Context, arg WithholdAssetParams) (WithholdAssetRow, error) {
-	row := q.db.QueryRow(ctx, withholdAsset, arg.ID, arg.WithheldBy, arg.WithheldReason)
-	var i WithholdAssetRow
-	err := row.Scan(&i.OwnerID, &i.PublicName)
+const workConnectedAppStates = `-- name: WorkConnectedAppStates :many
+select app.id, app.app_name, app.name,
+       app.last_seen_at, app.permissions, app.capabilities,
+       app.accepted_formats,
+       send.id as send_id,
+       coalesce(send.state, '')::text as send_state,
+       send.settled_reason, send.queued_at, send.settled_at,
+       send.expires_at,
+       coalesce(send.updates_install, false)::boolean as updates_install,
+       entry.version_number as installed_version
+  from connected_apps as app
+  left join lateral (
+      select waiting.id, waiting.state, waiting.settled_reason,
+             waiting.queued_at, waiting.settled_at, waiting.expires_at,
+             waiting.updates_install
+        from sends as waiting
+       where waiting.connected_app_id = app.id
+         and waiting.work_id = $1
+       order by (waiting.state in ('queued', 'released')) desc,
+                waiting.queued_at desc
+       limit 1
+  ) as send on true
+  left join app_library_entries as entry
+    on entry.connected_app_id = app.id and entry.work_id = $1
+ where app.user_id = $2 and app.revoked_at is null
+ order by coalesce(app.last_seen_at, app.connected_at) desc,
+          app.connected_at desc
+`
+
+type WorkConnectedAppStatesParams struct {
+	WorkID pgtype.UUID
+	UserID pgtype.UUID
+}
+
+type WorkConnectedAppStatesRow struct {
+	ID               pgtype.UUID
+	AppName          string
+	Name             string
+	LastSeenAt       pgtype.Timestamptz
+	Permissions      []string
+	Capabilities     []string
+	AcceptedFormats  []string
+	SendID           pgtype.UUID
+	SendState        string
+	SettledReason    pgtype.Text
+	QueuedAt         pgtype.Timestamptz
+	SettledAt        pgtype.Timestamptz
+	ExpiresAt        pgtype.Timestamptz
+	UpdatesInstall   bool
+	InstalledVersion pgtype.Int4
+}
+
+func (q *Queries) WorkConnectedAppStates(ctx context.Context, arg WorkConnectedAppStatesParams) ([]WorkConnectedAppStatesRow, error) {
+	rows, err := q.db.Query(ctx, workConnectedAppStates, arg.WorkID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WorkConnectedAppStatesRow
+	for rows.Next() {
+		var i WorkConnectedAppStatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AppName,
+			&i.Name,
+			&i.LastSeenAt,
+			&i.Permissions,
+			&i.Capabilities,
+			&i.AcceptedFormats,
+			&i.SendID,
+			&i.SendState,
+			&i.SettledReason,
+			&i.QueuedAt,
+			&i.SettledAt,
+			&i.ExpiresAt,
+			&i.UpdatesInstall,
+			&i.InstalledVersion,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const workDeletionState = `-- name: WorkDeletionState :one
+select taken_down_at, deleted_at
+  from works
+ where id = $1 and owner_id = $2
+`
+
+type WorkDeletionStateParams struct {
+	ID      pgtype.UUID
+	OwnerID pgtype.UUID
+}
+
+type WorkDeletionStateRow struct {
+	TakenDownAt pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
+}
+
+func (q *Queries) WorkDeletionState(ctx context.Context, arg WorkDeletionStateParams) (WorkDeletionStateRow, error) {
+	row := q.db.QueryRow(ctx, workDeletionState, arg.ID, arg.OwnerID)
+	var i WorkDeletionStateRow
+	err := row.Scan(&i.TakenDownAt, &i.DeletedAt)
+	return i, err
+}
+
+const workPage = `-- name: WorkPage :one
+select a.id, a.type, a.name, a.blurb, a.tags, a.is_nsfw, a.visibility,
+       a.lifecycle, a.created_at,
+       original.format as original_format, original.media_type as original_media_type,
+       original.created_at as original_arrived_at,
+       coalesce(original.identifier, '')::text as identifier,
+       coalesce(owner.username, 'unknown') as creator,
+       coalesce(a.owner_id = $2::uuid, false)::boolean as is_owner,
+       a.taken_down_reason, a.taken_down_at
+  from works a
+  left join users owner on owner.id = a.owner_id
+  left join work_original_files original on original.id = a.original_file_id
+ where a.id = $1
+   and a.deleted_at is null
+   and (a.lifecycle = 'published' or a.owner_id = $2::uuid)
+   and (a.taken_down_at is null or a.owner_id = $2::uuid)
+`
+
+type WorkPageParams struct {
+	ID       pgtype.UUID
+	ViewerID pgtype.UUID
+}
+
+type WorkPageRow struct {
+	ID                pgtype.UUID
+	Type              string
+	Name              string
+	Blurb             string
+	Tags              []string
+	IsNsfw            pgtype.Bool
+	Visibility        string
+	Lifecycle         string
+	CreatedAt         pgtype.Timestamptz
+	OriginalFormat    pgtype.Text
+	OriginalMediaType pgtype.Text
+	OriginalArrivedAt pgtype.Timestamptz
+	Identifier        string
+	Creator           string
+	IsOwner           bool
+	TakenDownReason   pgtype.Text
+	TakenDownAt       pgtype.Timestamptz
+}
+
+func (q *Queries) WorkPage(ctx context.Context, arg WorkPageParams) (WorkPageRow, error) {
+	row := q.db.QueryRow(ctx, workPage, arg.ID, arg.ViewerID)
+	var i WorkPageRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.Name,
+		&i.Blurb,
+		&i.Tags,
+		&i.IsNsfw,
+		&i.Visibility,
+		&i.Lifecycle,
+		&i.CreatedAt,
+		&i.OriginalFormat,
+		&i.OriginalMediaType,
+		&i.OriginalArrivedAt,
+		&i.Identifier,
+		&i.Creator,
+		&i.IsOwner,
+		&i.TakenDownReason,
+		&i.TakenDownAt,
+	)
+	return i, err
+}
+
+const workPageMedia = `-- name: WorkPageMedia :many
+select media.id, media.role, media.width, media.height, blob.byte_size,
+       coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
+  from works a
+  join work_media media on media.work_id = a.id
+  join blobs blob on blob.id = media.blob_id
+ where a.id = $1
+   and media.is_current
+   and media.width is not null
+   and media.height is not null
+   and media.blob_id is not null
+ order by (media.id = a.cover_media_id) desc,
+		  case media.role
+		    when 'avatar' then 1
+		    when 'avatar_alt' then 2
+		    when 'gallery' then 3
+		    when 'expression' then 4
+		    when 'pack_item' then 5
+		    else 6
+		  end,
+          media.created_at desc, media.id desc
+`
+
+type WorkPageMediaRow struct {
+	ID       pgtype.UUID
+	Role     string
+	Width    pgtype.Int4
+	Height   pgtype.Int4
+	ByteSize int64
+	IsCover  bool
+}
+
+func (q *Queries) WorkPageMedia(ctx context.Context, id pgtype.UUID) ([]WorkPageMediaRow, error) {
+	rows, err := q.db.Query(ctx, workPageMedia, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WorkPageMediaRow
+	for rows.Next() {
+		var i WorkPageMediaRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Role,
+			&i.Width,
+			&i.Height,
+			&i.ByteSize,
+			&i.IsCover,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const workStateForOwner = `-- name: WorkStateForOwner :one
+select taken_down_at, lifecycle
+  from works
+ where id = $1 and owner_id = $2 and deleted_at is null
+`
+
+type WorkStateForOwnerParams struct {
+	ID      pgtype.UUID
+	OwnerID pgtype.UUID
+}
+
+type WorkStateForOwnerRow struct {
+	TakenDownAt pgtype.Timestamptz
+	Lifecycle   string
+}
+
+func (q *Queries) WorkStateForOwner(ctx context.Context, arg WorkStateForOwnerParams) (WorkStateForOwnerRow, error) {
+	row := q.db.QueryRow(ctx, workStateForOwner, arg.ID, arg.OwnerID)
+	var i WorkStateForOwnerRow
+	err := row.Scan(&i.TakenDownAt, &i.Lifecycle)
 	return i, err
 }

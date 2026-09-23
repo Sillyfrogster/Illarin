@@ -24,18 +24,6 @@ export function removeLink(links: ProfileLink[], index: number): ProfileLink[] {
   return links.filter((_, position) => position !== index);
 }
 
-export function moveLink(
-  links: ProfileLink[],
-  index: number,
-  step: number,
-): ProfileLink[] {
-  const destination = index + step;
-  if (destination < 0 || destination >= links.length) return links;
-  const next = [...links];
-  [next[index], next[destination]] = [next[destination], next[index]];
-  return next;
-}
-
 type PublicFields = {
   avatar: boolean;
   biography: string;

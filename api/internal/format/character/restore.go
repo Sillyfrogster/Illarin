@@ -35,9 +35,9 @@ func RestorePreserved(
 			fields = nil
 		}
 		switch {
-		case row.Owner == format.OwnerAsset && row.Namespace == cardNamespace:
+		case row.Owner == format.OwnerWork && row.Namespace == cardNamespace:
 			keys.MergeAbsent(body, fields)
-		case row.Owner == format.OwnerAsset:
+		case row.Owner == format.OwnerWork:
 			if _, written := extensions[row.Namespace]; !written {
 				extensions[row.Namespace] = row.Payload
 			}

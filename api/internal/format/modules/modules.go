@@ -11,7 +11,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/pack"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/theme"
-	v1 "github.com/Sillyfrogster/Illarin/api/internal/format/v1"
 )
 
 func All() []format.Module {
@@ -19,11 +18,11 @@ func All() []format.Module {
 		character.Modules(), lorebook.Modules(), preset.Modules(), theme.Modules(), pack.Modules(),
 		extension.Modules(),
 	)
-	all := make([]format.Module, 0, len(readers)+1)
+	all := make([]format.Module, 0, len(readers))
 	for _, module := range readers {
 		all = append(all, module)
 	}
-	return append(all, v1.Module{})
+	return all
 }
 
 func Registry() (*format.Registry, error) {

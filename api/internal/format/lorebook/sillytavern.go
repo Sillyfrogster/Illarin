@@ -13,7 +13,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/book"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -49,11 +48,11 @@ func (SillyTavernModule) ID() string { return SillyTavernID }
 
 func (SillyTavernModule) Declaration() format.Declaration {
 	return format.Declaration{
-		ID: SillyTavernID, Label: "SillyTavern lorebook", Kind: Kind,
+		ID: SillyTavernID, Label: "SillyTavern lorebook", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind:       format.RecognitionSignature,
-			Containers: []probe.Container{probe.JSON},
+			Type:       format.RecognitionShape,
+			Containers: []format.Container{format.JSON},
 			Required:   map[string]format.ValueType{entriesKey: format.ValueObject},
 		}},
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -76,25 +75,25 @@ func (SillyTavernModule) Declaration() format.Declaration {
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
 			ItemBytes: block.MaxItemBytes,
 		},
-		ConsumedKeys:  []string{entriesKey},
-		Boilerplate:   nil,
-		Preservation:  format.PreservationDeclaration{Body: bookNamespace},
-		TestedOrigins: []string{SillyTavernID, format.OriginIllarin},
+		ConsumedKeys:          []string{entriesKey},
+		Boilerplate:           nil,
+		Preservation:          format.PreservationDeclaration{Body: bookNamespace},
+		TestedOriginalFormats: []string{SillyTavernID, format.OriginalFormatIllarin},
 	}
 }
 
-func (m SillyTavernModule) Claim(file probe.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m SillyTavernModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
 func (m SillyTavernModule) Parse(
 	_ context.Context,
-	file probe.Inspection,
-	claim format.Claim,
+	file format.Inspection,
+	match format.Match,
 ) (format.Parsed, error) {
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", SillyTavernID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", SillyTavernID)
 	}
 	source := maps.Clone(payload.Root)
 
@@ -121,7 +120,7 @@ func (m SillyTavernModule) Parse(
 		Content: block.EntryTable{Entries: entries},
 	}
 	return format.Parsed{
-		Kind: Kind, Format: SillyTavernID,
+		Type: Type, Format: SillyTavernID,
 		Elements:  []block.Element{element},
 		Remainder: sillyTavernRemainder(source, entries, leftovers),
 	}, nil
@@ -197,7 +196,7 @@ func sillyTavernRemainder(
 	if len(source) > 0 {
 		payload, _ := json.Marshal(source)
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: bookNamespace, Payload: payload,
+			Owner: format.OwnerWork, Namespace: bookNamespace, Payload: payload,
 		})
 	}
 	for _, entry := range entries {
@@ -215,9 +214,9 @@ func sillyTavernRemainder(
 
 func (SillyTavernModule) Write(
 	_ context.Context,
-	asset format.ExportAsset,
-) (format.Artifact, error) {
-	entries := bookEntries(asset)
+	work format.ExportWork,
+) (format.MainFile, error) {
+	entries := bookEntries(work)
 	written := make([]map[string]json.RawMessage, 0, len(entries))
 	for _, entry := range entries {
 		written = append(written, writeSillyTavernEntry(entry))
@@ -228,13 +227,13 @@ func (SillyTavernModule) Write(
 	for index, entry := range entries {
 		position[entry.ID] = index
 	}
-	for _, row := range asset.Preserved {
+	for _, row := range work.Preserved {
 		var fields map[string]json.RawMessage
 		if json.Unmarshal(row.Payload, &fields) != nil {
 			continue
 		}
 		switch {
-		case row.Owner == format.OwnerAsset && row.Namespace == bookNamespace:
+		case row.Owner == format.OwnerWork && row.Namespace == bookNamespace:
 			keys.MergeAbsent(body, fields)
 		case row.Owner == format.OwnerItem && row.Namespace == sillyTavernEntryNamespace:
 			index, kept := position[row.OwnerID]
@@ -253,9 +252,9 @@ func (SillyTavernModule) Write(
 
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the world info file: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the world info file: %w", err)
 	}
-	return format.Artifact{
+	return format.MainFile{
 		Body: document, MediaType: "application/json", Extension: ".json",
 	}, nil
 }

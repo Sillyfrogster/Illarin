@@ -3,42 +3,43 @@
 import { ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { KindMark } from "@/components/catalog/KindMark";
+import { TypeMark } from "@/components/browse/TypeMark";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  type BrowseKind,
-  type StartAssetApp,
-  startAsset,
-} from "@/lib/api/query";
-import { assetHref } from "@/lib/asset-url";
+import { type BrowseType, startWork } from "@/lib/api/query";
+import type { BuildChoices } from "@/lib/api/shapes";
 import { cn } from "@/lib/cn";
-import {
-  APP_CHOICES,
-  BUILDABLE_KINDS,
-  KIND_LABELS,
-  KINDS_ASKING_FOR_AN_APP,
-} from "@/lib/kinds";
+import { TYPE_LABELS } from "@/lib/work-types";
+import { workHref } from "@/lib/work-url";
 
-const KIND =
+const TYPE =
   "group flex min-h-14 items-center gap-3 rounded-control bg-inset px-4 font-ui text-ui font-medium text-ink outline-offset-3 transition-colors duration-200 hover:bg-accent-wash hover:text-accent disabled:opacity-45 motion-reduce:transition-none";
 
-export function StartFromNothing() {
+/** StartFromNothing offers each type the API can build from nothing, in the site's type order, asking for an app where the type needs one. */
+export function StartFromNothing({
+  choices,
+}: {
+  choices: BuildChoices | null;
+}) {
   const router = useRouter();
-  const [pending, setPending] = useState<BrowseKind | null>(null);
-  const [asking, setAsking] = useState<BrowseKind | null>(null);
+  const [pending, setPending] = useState<BrowseType | null>(null);
+  const [asking, setAsking] = useState<BrowseType | null>(null);
   const [message, setMessage] = useState("");
 
-  async function start(kind: BrowseKind, app?: StartAssetApp) {
-    setPending(kind);
+  const buildable = (Object.keys(TYPE_LABELS) as BrowseType[]).flatMap(
+    (type) => choices?.types.filter((choice) => choice.type === type) ?? [],
+  );
+
+  async function start(type: BrowseType, app?: string) {
+    setPending(type);
     setAsking(null);
     setMessage("");
     try {
-      const started = await startAsset(kind, app);
-      router.push(assetHref(started.id, started.name));
+      const started = await startWork(type, app);
+      router.push(workHref(started.id, started.name));
     } catch {
       setPending(null);
       setMessage("The draft could not be started. Try again.");
@@ -57,42 +58,49 @@ export function StartFromNothing() {
         Create an empty draft
       </h2>
       <p className="mt-2 text-ui text-mute">
-        Choose an asset kind, then add content in the editor. You can import a
-        file later.
+        Choose a type, then add content in the editor. You can import a file
+        later.
       </p>
 
+      {choices === null ? (
+        <p className="mt-5 text-meta text-mute" role="alert">
+          The types you can start could not be loaded. Reload the page to try
+          again.
+        </p>
+      ) : null}
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {BUILDABLE_KINDS.map((kind) =>
-          KINDS_ASKING_FOR_AN_APP.includes(kind) ? (
+        {buildable.map(({ type: listed, apps }) => {
+          const type = listed as BrowseType;
+          return apps.length > 0 ? (
             <Popover
-              key={kind}
-              onOpenChange={(open) => setAsking(open ? kind : null)}
-              open={asking === kind}
+              key={type}
+              onOpenChange={(open) => setAsking(open ? type : null)}
+              open={asking === type}
             >
               <PopoverTrigger
-                className={KIND}
+                className={TYPE}
                 disabled={pending !== null}
                 type="button"
               >
-                <KindLabel kind={kind} pending={pending === kind} />
+                <TypeLabel type={type} pending={pending === type} />
               </PopoverTrigger>
               <PopoverContent
                 align="start"
                 className="w-[min(24rem,calc(100vw-2rem))]"
               >
                 <p className="text-meta text-mute">
-                  Which app is this {KIND_LABELS[kind].toLowerCase()} for? This
+                  Which app is this {TYPE_LABELS[type].toLowerCase()} for? This
                   sets the fields available in the editor.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {APP_CHOICES.map((app) => (
+                  {apps.map((app) => (
                     <button
                       className={cn(
-                        KIND,
+                        TYPE,
                         "bg-accent-wash hover:bg-accent-wash/70",
                       )}
-                      key={app.value}
-                      onClick={() => void start(kind, app.value)}
+                      key={app.id}
+                      onClick={() => void start(type, app.id)}
                       type="button"
                     >
                       {app.label}
@@ -103,16 +111,16 @@ export function StartFromNothing() {
             </Popover>
           ) : (
             <button
-              className={KIND}
+              className={TYPE}
               disabled={pending !== null}
-              key={kind}
-              onClick={() => void start(kind)}
+              key={type}
+              onClick={() => void start(type)}
               type="button"
             >
-              <KindLabel kind={kind} pending={pending === kind} />
+              <TypeLabel type={type} pending={pending === type} />
             </button>
-          ),
-        )}
+          );
+        })}
       </div>
 
       {message ? (
@@ -127,11 +135,11 @@ export function StartFromNothing() {
   );
 }
 
-function KindLabel({ kind, pending }: { kind: BrowseKind; pending: boolean }) {
+function TypeLabel({ type, pending }: { type: BrowseType; pending: boolean }) {
   return (
     <>
-      <KindMark className="size-4 shrink-0 text-accent" kind={kind} />
-      {KIND_LABELS[kind]}
+      <TypeMark className="size-4 shrink-0 text-accent" type={type} />
+      {TYPE_LABELS[type]}
       {pending ? <span className="text-meta text-mute">starting…</span> : null}
       <ArrowUpRight
         aria-hidden="true"

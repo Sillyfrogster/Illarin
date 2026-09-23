@@ -14,18 +14,18 @@ import (
 
 func (LumiverseModule) Write(
 	_ context.Context,
-	asset format.ExportAsset,
-) (format.Artifact, error) {
-	held := preservedBy(asset.Preserved)
+	work format.ExportWork,
+) (format.MainFile, error) {
+	held := preservedBy(work.Preserved)
 	named := slotsByApp[Lumiverse]
 
 	body := map[string]json.RawMessage{
-		lvName:   keys.Must(asset.Header.Name),
-		lvBlocks: keys.Must(writeLumiverseBlocks(asset, held)),
+		lvName:   keys.Must(work.Header.Name),
+		lvBlocks: keys.Must(writeLumiverseBlocks(work, held)),
 	}
-	keys.WriteIfSet(body, lvDescription, asset.Header.Blurb != "", asset.Header.Blurb)
-	keys.WriteIfSet(body, lvVersion, asset.Header.AssetVersion != "", asset.Header.AssetVersion)
-	if saved := writeSavedValues(asset, held); len(saved) > 0 {
+	keys.WriteIfSet(body, lvDescription, work.Header.Blurb != "", work.Header.Blurb)
+	keys.WriteIfSet(body, lvVersion, work.Header.WorkVersion != "", work.Header.WorkVersion)
+	if saved := writeSavedValues(work, held); len(saved) > 0 {
 		body[lvSaved] = keys.Must(saved)
 	}
 	for _, group := range []struct {
@@ -37,10 +37,10 @@ func (LumiverseModule) Write(
 		{lvCompletion, block.RoleCompletionSettings, named.completion},
 		{lvAdvanced, block.RoleAdvancedSettings, named.advanced},
 	} {
-		writeNested(body, group.key, writeLumiverseSettings(asset, group.role, group.slots))
+		writeNested(body, group.key, writeLumiverseSettings(work, group.role, group.slots))
 	}
-	writeNested(body, lvBehaviour, writeLumiverseNudges(asset, named.nudges))
-	if written := writeLumiverseScripts(asset, held); len(written) > 0 {
+	writeNested(body, lvBehaviour, writeLumiverseNudges(work, named.nudges))
+	if written := writeLumiverseScripts(work, held); len(written) > 0 {
 		body[lvScripts] = keys.Must(written)
 		body[lvExtensions] = keys.Must(map[string][]map[string]json.RawMessage{
 			lvScripts: written,
@@ -50,9 +50,9 @@ func (LumiverseModule) Write(
 	restoreLumiversePreserved(body, held)
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the preset: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the preset: %w", err)
 	}
-	return format.Artifact{
+	return format.MainFile{
 		Body: document, MediaType: "application/json", Extension: ".json",
 	}, nil
 }
@@ -65,13 +65,13 @@ func writeNested(body map[string]json.RawMessage, key string, values map[string]
 }
 
 func writeLumiverseBlocks(
-	asset format.ExportAsset,
+	work format.ExportWork,
 	held kept,
 ) []map[string]json.RawMessage {
-	list := fragments(asset)
+	list := fragments(work)
 	names := lumiverseBlockNames(list, held)
 	forms := make(map[uuid.UUID][]block.Variable)
-	for _, variable := range variables(asset) {
+	for _, variable := range variables(work) {
 		if variable.FragmentID != nil {
 			forms[*variable.FragmentID] = append(forms[*variable.FragmentID], variable)
 		}
@@ -196,12 +196,12 @@ func writeLumiverseVariable(variable block.Variable, held kept) map[string]json.
 }
 
 func writeSavedValues(
-	asset format.ExportAsset,
+	work format.ExportWork,
 	held kept,
 ) map[string]map[string]json.RawMessage {
-	names := lumiverseBlockNames(fragments(asset), held)
+	names := lumiverseBlockNames(fragments(work), held)
 	saved := make(map[string]map[string]json.RawMessage)
-	for _, variable := range variables(asset) {
+	for _, variable := range variables(work) {
 		if variable.FragmentID == nil || variable.Value == nil {
 			continue
 		}
@@ -218,12 +218,12 @@ func writeSavedValues(
 }
 
 func writeLumiverseSettings(
-	asset format.ExportAsset,
+	work format.ExportWork,
 	role block.Role,
 	named []slot,
 ) map[string]json.RawMessage {
 	written := make(map[string]json.RawMessage)
-	for _, setting := range settings(asset, role) {
+	for _, setting := range settings(work, role) {
 		if !slices.ContainsFunc(named, func(s slot) bool { return s.name == setting.Name }) {
 			continue
 		}
@@ -232,9 +232,9 @@ func writeLumiverseSettings(
 	return written
 }
 
-func writeLumiverseNudges(asset format.ExportAsset, names []string) map[string]json.RawMessage {
+func writeLumiverseNudges(work format.ExportWork, names []string) map[string]json.RawMessage {
 	written := make(map[string]json.RawMessage)
-	for _, text := range nudges(asset) {
+	for _, text := range nudges(work) {
 		if slices.Contains(names, text.Name) {
 			written[text.Name] = keys.Must(text.Text)
 		}
@@ -243,10 +243,10 @@ func writeLumiverseNudges(asset format.ExportAsset, names []string) map[string]j
 }
 
 func writeLumiverseScripts(
-	asset format.ExportAsset,
+	work format.ExportWork,
 	held kept,
 ) []map[string]json.RawMessage {
-	list := scripts(asset)
+	list := scripts(work)
 	written := make([]map[string]json.RawMessage, 0, len(list))
 	for _, script := range list {
 		fields := map[string]json.RawMessage{

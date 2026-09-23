@@ -10,7 +10,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -22,17 +21,17 @@ type Media struct {
 }
 
 type Parsed struct {
-	Kind      string
-	Format    string
-	Tags      []string
-	IsNSFW    *bool
-	Media     []Media
-	CreatedAt *time.Time
-	Header    Header
-	Elements  []block.Element
-	Remainder []Remainder
-	Protected ProtectedImport
-	Readme    *Readme
+	Type           string
+	Format         string
+	Tags           []string
+	IsNSFW         *bool
+	Media          []Media
+	CreatedAt      *time.Time
+	Header         Header
+	Elements       []block.Element
+	Remainder      []Remainder
+	PrivatePrompts []PrivatePrompt
+	Readme         *Readme
 }
 
 // Readme is the README a repository shows, with the archive folder the repository sits in and the README's own folder inside it.
@@ -41,12 +40,7 @@ type Readme struct {
 	Root, Folder string
 }
 
-type ProtectedImport struct {
-	Prompts []ProtectedPrompt
-	Apps    []string
-}
-
-type ProtectedPrompt struct {
+type PrivatePrompt struct {
 	FragmentID    uuid.UUID
 	SourceKey     string
 	Text          string
@@ -56,7 +50,7 @@ type ProtectedPrompt struct {
 type Header struct {
 	Name           string
 	Blurb          string
-	AssetVersion   string
+	WorkVersion    string
 	CreditedAuthor string
 	Nickname       string
 	Identifier     string
@@ -67,7 +61,7 @@ const MaxBlurbRunes = 400
 type Owner string
 
 const (
-	OwnerAsset   Owner = "asset"
+	OwnerWork    Owner = "asset"
 	OwnerElement Owner = "element"
 	OwnerItem    Owner = "item"
 )
@@ -91,18 +85,18 @@ const (
 	InputDatabaseRow Input = "database_row"
 )
 
-type ColumnDispositionKind string
+type ColumnDispositionType string
 
 const (
-	ColumnMapped    ColumnDispositionKind = "mapped"
-	ColumnPreserved ColumnDispositionKind = "preserved"
-	ColumnDropped   ColumnDispositionKind = "dropped"
+	ColumnMapped    ColumnDispositionType = "mapped"
+	ColumnPreserved ColumnDispositionType = "preserved"
+	ColumnDropped   ColumnDispositionType = "dropped"
 )
 
 type ColumnDisposition struct {
 	Table       string
 	Column      string
-	Disposition ColumnDispositionKind
+	Disposition ColumnDispositionType
 	Destination string
 	Reason      string
 }
@@ -133,17 +127,17 @@ const (
 )
 
 type AnomalyDeclaration struct {
-	Kind        string
+	Type        string
 	Disposition AnomalyDisposition
 	Reason      string
 }
 
-type RecognitionKind string
+type RecognitionType string
 
 const (
-	RecognitionDiscriminator RecognitionKind = "discriminator"
-	RecognitionSignature     RecognitionKind = "signature"
-	RecognitionEntry         RecognitionKind = "entry"
+	RecognitionMarker RecognitionType = "marker"
+	RecognitionShape  RecognitionType = "shape"
+	RecognitionEntry  RecognitionType = "entry"
 )
 
 type ValueType string
@@ -157,8 +151,8 @@ const (
 )
 
 type Recognition struct {
-	Kind         RecognitionKind
-	Containers   []probe.Container
+	Type         RecognitionType
+	Containers   []Container
 	Path         []string
 	Entry        string
 	Values       []string
@@ -167,51 +161,51 @@ type Recognition struct {
 	SupersededBy []string
 }
 
-func ClaimByDeclaration(file probe.Inspection, declaration Declaration) (Claim, bool) {
+func MatchByDeclaration(file Inspection, declaration Declaration) (Match, bool) {
 	for _, recognition := range declaration.Recognition {
 		if supersededInFile(file, recognition) {
 			continue
 		}
 		for _, payload := range file.Payloads {
 			if len(recognition.Containers) > 0 &&
-				!slices.Contains(recognition.Containers, payload.Locator.Container) {
+				!slices.Contains(recognition.Containers, payload.Location.Container) {
 				continue
 			}
-			switch recognition.Kind {
-			case RecognitionDiscriminator:
+			switch recognition.Type {
+			case RecognitionMarker:
 				value, ok := payloadValue(payload.Root, recognition.Path)
 				if !ok || !slices.Contains(recognition.Values, value) {
 					continue
 				}
-				return Claim{
+				return Match{
 					payloadID: payload.ID, strength: authoritative, formatID: declaration.ID,
 				}, true
-			case RecognitionSignature:
+			case RecognitionShape:
 				if recognition.LegacyOnly {
 					if spec, _ := payload.String("spec"); spec != "" {
 						continue
 					}
 				}
-				if signatureMatches(payload.Root, recognition.Required) {
-					return CompatibilityClaim(payload), true
+				if shapeMatches(payload.Root, recognition.Required) {
+					return CompatibilityMatch(payload), true
 				}
 			case RecognitionEntry:
-				if payload.Locator.Name == file.ArchiveBase+recognition.Entry {
-					return CompatibilityClaim(payload), true
+				if payload.Location.Name == file.ArchiveBase+recognition.Entry {
+					return CompatibilityMatch(payload), true
 				}
 			}
 		}
 	}
-	return Claim{}, false
+	return Match{}, false
 }
 
-func supersededInFile(file probe.Inspection, recognition Recognition) bool {
+func supersededInFile(file Inspection, recognition Recognition) bool {
 	if len(recognition.SupersededBy) == 0 {
 		return false
 	}
 	for _, payload := range file.Payloads {
 		if len(recognition.Containers) > 0 &&
-			!slices.Contains(recognition.Containers, payload.Locator.Container) {
+			!slices.Contains(recognition.Containers, payload.Location.Container) {
 			continue
 		}
 		value, ok := payloadValue(payload.Root, recognition.Path)
@@ -234,7 +228,7 @@ func payloadValue(root map[string]json.RawMessage, path []string) (string, bool)
 			if json.Unmarshal(raw, &value) == nil {
 				return value, true
 			}
-			if kind := jsonValueType(raw); kind == ValueNumber || kind == ValueBoolean {
+			if valueType := jsonValueType(raw); valueType == ValueNumber || valueType == ValueBoolean {
 				return string(bytes.TrimSpace(raw)), true
 			}
 			return "", false
@@ -246,7 +240,7 @@ func payloadValue(root map[string]json.RawMessage, path []string) (string, bool)
 	return "", false
 }
 
-func signatureMatches(root map[string]json.RawMessage, required map[string]ValueType) bool {
+func shapeMatches(root map[string]json.RawMessage, required map[string]ValueType) bool {
 	for key, wanted := range required {
 		raw, ok := root[key]
 		if !ok || jsonValueType(raw) != wanted {
@@ -392,26 +386,27 @@ func scalarText(value json.RawMessage) string {
 }
 
 type Declaration struct {
-	ID               string
-	Label            string
-	Kind             string
-	Kinds            []string
-	Input            Input
-	Columns          []ColumnDisposition
-	Anomalies        []AnomalyDeclaration
-	Direction        Direction
-	Recognition      []Recognition
-	Roles            map[block.Role]DirectionalRoleSupport
-	Header           []HeaderField
-	Slots            []SlotDeclaration
-	Limits           ContentLimits
-	ConsumedKeys     []string
-	Boilerplate      []Boilerplate
-	Preservation     PreservationDeclaration
-	TestedOrigins    []string
-	PreservesOrigins []string
-	CrossPlatform    bool
-	KeepsUpload      bool
+	ID                       string
+	Label                    string
+	Type                     string
+	Types                    []string
+	Input                    Input
+	Columns                  []ColumnDisposition
+	Anomalies                []AnomalyDeclaration
+	Direction                Direction
+	Recognition              []Recognition
+	Roles                    map[block.Role]DirectionalRoleSupport
+	Header                   []HeaderField
+	Slots                    []SlotDeclaration
+	Limits                   ContentLimits
+	ConsumedKeys             []string
+	Boilerplate              []Boilerplate
+	Preservation             PreservationDeclaration
+	TestedOriginalFormats    []string
+	PreservesOriginalFormats []string
+	KeepsUpload              bool
+	// KeepsPrivatePrompts says an app reading this format keeps a work's private prompts out of sight.
+	KeepsPrivatePrompts bool
 }
 
 func ValidateDeclaration(d Declaration) error {
@@ -438,8 +433,8 @@ func validateDeclarationShape(d Declaration) error {
 		return errors.New("identity is required")
 	}
 	if d.Input == InputDatabaseRow {
-		if d.Kind != "" || len(d.Kinds) == 0 {
-			return errors.New("a database reader needs its supported kinds")
+		if d.Type != "" || len(d.Types) == 0 {
+			return errors.New("a database reader needs its supported types")
 		}
 		if !d.Direction.Read || d.Direction.Write || len(d.Recognition) > 0 {
 			return errors.New("a database reader reads rows and neither recognises nor writes files")
@@ -450,8 +445,8 @@ func validateDeclarationShape(d Declaration) error {
 		if len(d.Anomalies) == 0 {
 			return errors.New("a database reader needs an ahead-of-run anomaly policy")
 		}
-	} else if d.Kind == "" || len(d.Kinds) > 0 {
-		return errors.New("a file module needs exactly one kind")
+	} else if d.Type == "" || len(d.Types) > 0 {
+		return errors.New("a file module needs exactly one type")
 	} else if len(d.Columns) > 0 || len(d.Anomalies) > 0 {
 		return errors.New("only a database reader declares source columns and anomalies")
 	}
@@ -461,7 +456,7 @@ func validateDeclarationShape(d Declaration) error {
 	if !d.Direction.Read && !d.Direction.Write {
 		return errors.New("at least one direction is required")
 	}
-	if d.KeepsUpload && (!d.Direction.Read || !d.Direction.Write || !slices.Equal(d.TestedOrigins, []string{d.ID})) {
+	if d.KeepsUpload && (!d.Direction.Read || !d.Direction.Write || !slices.Equal(d.TestedOriginalFormats, []string{d.ID})) {
 		return errors.New("a module that keeps the upload reads and writes only its own files")
 	}
 	if d.Direction.Read && d.Input == InputFile && len(d.Recognition) == 0 {
@@ -508,15 +503,15 @@ func validateAnomalies(d Declaration) error {
 func ValidateAnomalies(anomalies []AnomalyDeclaration) error {
 	seenAnomalies := make(map[string]bool, len(anomalies))
 	for _, anomaly := range anomalies {
-		if anomaly.Kind == "" || anomaly.Reason == "" {
-			return errors.New("an anomaly needs a kind and reason")
+		if anomaly.Type == "" || anomaly.Reason == "" {
+			return errors.New("an anomaly needs a type and reason")
 		}
-		if seenAnomalies[anomaly.Kind] {
-			return fmt.Errorf("anomaly %q is declared twice", anomaly.Kind)
+		if seenAnomalies[anomaly.Type] {
+			return fmt.Errorf("anomaly %q is declared twice", anomaly.Type)
 		}
-		seenAnomalies[anomaly.Kind] = true
+		seenAnomalies[anomaly.Type] = true
 		if anomaly.Disposition != AnomalyTolerated && anomaly.Disposition != AnomalyFatal {
-			return fmt.Errorf("anomaly %q has disposition %q", anomaly.Kind, anomaly.Disposition)
+			return fmt.Errorf("anomaly %q has disposition %q", anomaly.Type, anomaly.Disposition)
 		}
 	}
 	return nil
@@ -525,7 +520,7 @@ func ValidateAnomalies(anomalies []AnomalyDeclaration) error {
 func validateHeader(d Declaration) error {
 	for _, field := range d.Header {
 		if !field.Known() {
-			return fmt.Errorf("header field %q is not one an asset carries", field)
+			return fmt.Errorf("header field %q is not one a work carries", field)
 		}
 	}
 	return nil
@@ -536,22 +531,22 @@ func validateRecognition(d Declaration) error {
 		if len(recognition.Containers) == 0 {
 			return errors.New("recognition needs at least one container")
 		}
-		switch recognition.Kind {
-		case RecognitionDiscriminator:
+		switch recognition.Type {
+		case RecognitionMarker:
 			if len(recognition.Path) == 0 || len(recognition.Values) == 0 {
-				return errors.New("a discriminator needs a location and accepted values")
+				return errors.New("a marker needs a location and accepted values")
 			}
 			for _, superseding := range recognition.SupersededBy {
 				if slices.Contains(recognition.Values, superseding) {
-					return fmt.Errorf("value %q both matches and supersedes the discriminator", superseding)
+					return fmt.Errorf("value %q both matches and supersedes the marker", superseding)
 				}
 			}
-		case RecognitionSignature:
+		case RecognitionShape:
 			if len(recognition.Required) == 0 {
-				return errors.New("a structural signature needs required keys")
+				return errors.New("a shape needs required keys")
 			}
 			if len(recognition.SupersededBy) > 0 {
-				return errors.New("only a discriminator can name what supersedes it")
+				return errors.New("only a marker can name what supersedes it")
 			}
 			for key, valueType := range recognition.Required {
 				if key == "" || !valueType.known() {
@@ -559,11 +554,11 @@ func validateRecognition(d Declaration) error {
 				}
 			}
 		case RecognitionEntry:
-			if recognition.Entry == "" || !slices.Equal(recognition.Containers, []probe.Container{probe.ZIP}) {
+			if recognition.Entry == "" || !slices.Equal(recognition.Containers, []Container{ZIP}) {
 				return errors.New("an entry recognition needs an archive and the entry it reads")
 			}
 		default:
-			return fmt.Errorf("unknown recognition kind %q", recognition.Kind)
+			return fmt.Errorf("unknown recognition type %q", recognition.Type)
 		}
 	}
 	return nil
@@ -609,7 +604,7 @@ func validateStorageContract(d Declaration) error {
 		return errors.New("payload, collection and item limits are required")
 	}
 	readsArchives := slices.ContainsFunc(d.Recognition, func(recognition Recognition) bool {
-		return slices.Contains(recognition.Containers, probe.ZIP)
+		return slices.Contains(recognition.Containers, ZIP)
 	})
 	if readsArchives && d.Limits.ArchiveFiles <= 0 {
 		return errors.New("a module that reads archives needs a limit on their files")
@@ -620,11 +615,11 @@ func validateStorageContract(d Declaration) error {
 	if d.Preservation.Body == "" {
 		return errors.New("a namespace for the format's own leftover keys is required")
 	}
-	if len(d.TestedOrigins) == 0 {
-		return errors.New("tested origins are required")
+	if len(d.TestedOriginalFormats) == 0 {
+		return errors.New("tested original formats are required")
 	}
-	for _, origin := range d.PreservesOrigins {
-		if !slices.Contains(d.TestedOrigins, origin) {
+	for _, origin := range d.PreservesOriginalFormats {
+		if !slices.Contains(d.TestedOriginalFormats, origin) {
 			return fmt.Errorf("preserved origin %q has not been tested", origin)
 		}
 	}
@@ -657,3 +652,6 @@ func (t ValueType) known() bool {
 	return t == ValueString || t == ValueNumber || t == ValueBoolean ||
 		t == ValueObject || t == ValueArray
 }
+
+// Raw names the uploaded file itself as a download or send format
+const Raw = "raw"

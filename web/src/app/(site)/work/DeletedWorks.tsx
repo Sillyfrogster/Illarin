@@ -1,0 +1,128 @@
+"use client";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { TypeMark } from "@/components/browse/TypeMark";
+import { Shell } from "@/components/layout/Shell";
+import { Button } from "@/components/ui/button";
+import { type DeletedWork, restoreWork, workKeys } from "@/lib/api/query";
+import { remainingDeletionWindow } from "@/lib/deletion-window";
+import { workDisplayName } from "@/lib/work-name";
+import { TYPE_LABELS } from "@/lib/work-types";
+
+function restoreDeadline(value: string) {
+  return new Date(value).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function DeletedWorks({
+  initialItems,
+}: {
+  initialItems: DeletedWork[];
+}) {
+  const router = useRouter();
+  const query = useQueryClient();
+  const [items, setItems] = useState(initialItems);
+  const [pending, setPending] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+
+  async function restore(item: DeletedWork) {
+    if (pending) return;
+    setPending(item.id);
+    setMessage("");
+    setItems((current) =>
+      current.filter((candidate) => candidate.id !== item.id),
+    );
+    try {
+      await restoreWork(item.id);
+      await query.invalidateQueries({ queryKey: workKeys.all });
+      router.refresh();
+    } catch {
+      setItems((current) => [item, ...current]);
+      setMessage(
+        `${workDisplayName(item.name)} could not be restored. Try again.`,
+      );
+    } finally {
+      setPending(null);
+    }
+  }
+
+  return (
+    <Shell
+      aria-labelledby="deleted-heading"
+      as="section"
+      className="scroll-mt-28 pb-chapter"
+      id="deleted"
+    >
+      <div className="border-t border-rule pt-10">
+        <h2
+          className="font-display text-title font-medium tracking-[-0.02em]"
+          id="deleted-heading"
+        >
+          Recently deleted
+        </h2>
+        <p className="mt-2 max-w-[56ch] font-prose text-ui text-mute">
+          Restore deleted work within 30 days. After that, it is permanently
+          deleted.
+        </p>
+
+        {message ? (
+          <p className="mt-4 font-ui text-meta text-stop" role="alert">
+            {message}
+          </p>
+        ) : null}
+
+        {items.length > 0 ? (
+          <ul className="mt-6 flex list-none flex-col gap-2 p-0">
+            {items.map((item) => (
+              <li
+                className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-plate bg-deep px-5 py-4"
+                key={item.id}
+              >
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-display text-section font-medium tracking-[-0.02em] [overflow-wrap:anywhere]">
+                    {workDisplayName(item.name)}
+                  </h3>
+                  <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-ui text-meta text-mute">
+                    <TypeMark
+                      className="size-3.5 text-accent"
+                      type={item.type}
+                    />
+                    {TYPE_LABELS[item.type]}
+                    <span aria-hidden="true">·</span>
+                    <span suppressHydrationWarning>
+                      {remainingDeletionWindow(item.recoverableUntil)}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    Restorable until{" "}
+                    <time dateTime={item.recoverableUntil}>
+                      {restoreDeadline(item.recoverableUntil)}
+                    </time>
+                  </p>
+                </div>
+                <Button
+                  disabled={pending !== null}
+                  loading={pending === item.id}
+                  onClick={() => restore(item)}
+                  variant="outline"
+                >
+                  <RotateCcw aria-hidden="true" />
+                  Restore
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-6 rounded-plate bg-deep px-5 py-8 text-center font-ui text-ui text-mute">
+            No deleted work to restore.
+          </p>
+        )}
+      </div>
+    </Shell>
+  );
+}

@@ -6,9 +6,9 @@ import {
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
-import type { BrowseKind } from "@/lib/api/query";
+import type { BrowseType } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { KIND_LABELS } from "@/lib/kinds";
+import { TYPE_LABELS } from "@/lib/work-types";
 
 const ICONS = {
   character: UserRound,
@@ -24,8 +24,8 @@ const SHARD = "polygon(18% 0, 100% 0, 82% 100%, 0 100%)";
 const STAR =
   "polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%)";
 
-const KINDS: Record<
-  BrowseKind,
+const TYPES: Record<
+  BrowseType,
   { ground: string; ink: string; shard: string; star: string }
 > = {
   character: {
@@ -67,14 +67,14 @@ const KINDS: Record<
 };
 
 export function DefaultCover({
-  kind,
+  type,
   compact = false,
 }: {
-  kind: BrowseKind;
+  type: BrowseType;
   compact?: boolean;
 }) {
-  const Icon = ICONS[kind];
-  const face = KINDS[kind];
+  const Icon = ICONS[type];
+  const face = TYPES[type];
 
   return (
     <span
@@ -108,7 +108,7 @@ export function DefaultCover({
       </span>
       {compact ? null : (
         <span className="relative z-1 text-label font-semibold tracking-[0.18em] uppercase">
-          {KIND_LABELS[kind]}
+          {TYPE_LABELS[type]}
         </span>
       )}
     </span>

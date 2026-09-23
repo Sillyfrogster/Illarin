@@ -1,0 +1,165 @@
+package apitest
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"net/http"
+	"testing"
+	"time"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/account"
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration"
+	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
+	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
+	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
+)
+
+func Registry(t *testing.T) *format.Registry {
+	t.Helper()
+	registry := format.NewRegistry()
+	if err := registry.Register(OpaqueModule{}); err != nil {
+		t.Fatalf("register test format: %v", err)
+	}
+	if err := registry.Register(preset.LumiverseModule{}); err != nil {
+		t.Fatalf("register Lumiverse preset format: %v", err)
+	}
+	return registry
+}
+
+func NewNotifications(pool *pgxpool.Pool) *notify.Service {
+	return notify.NewService(pool)
+}
+
+func NewAccounts(
+	pool *pgxpool.Pool,
+	sender account.EmailSender,
+	provider account.DiscordProvider,
+	library *mediaproc.Library,
+) *account.Service {
+	return account.NewService(pool, sender, provider, library, "http://localhost:3000").
+		WithPasswordCost(bcrypt.MinCost)
+}
+
+func MediaLibrary(store storage.Store) *mediaproc.Library {
+	return mediaproc.NewLibrary(store, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
+}
+
+func NewBlogService(pool *pgxpool.Pool, store storage.Store) *blog.Service {
+	return blog.NewService(pool, MediaLibrary(store), NewIntegrations(pool, nil), Site)
+}
+
+// Site is the address the test stacks put in the links they write
+const Site = "http://localhost:3000"
+
+// NewIntegrations posts to Discord through the given client; nil refuses every post
+func NewIntegrations(pool *pgxpool.Pool, client *http.Client) *integration.Service {
+	if client == nil {
+		client = &http.Client{Transport: closedTransport{}}
+	}
+	return integration.NewService(pool, SealingKey(), client, Site)
+}
+
+func SealingKey() secrets.Key {
+	key, err := secrets.NewKey(bytes.Repeat([]byte{3}, secrets.KeyBytes))
+	if err != nil {
+		panic(err)
+	}
+	return key
+}
+
+type closedTransport struct{}
+
+func (closedTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("this test stack sends nowhere")
+}
+
+func NewAppsService(pool *pgxpool.Pool) *connect.Apps {
+	return connect.NewApps(pool, "http://localhost:3000", []byte("01234567890123456789012345678901"))
+}
+
+func NewSendsService(
+	pool *pgxpool.Pool,
+	works *work.Service,
+	apps *connect.Apps,
+) *connect.Sends {
+	return connect.NewSends(pool, works, apps, SendSettings())
+}
+
+func SendSettings() connect.Settings {
+	settings := connect.DefaultSettings()
+	settings.HoldFloor = 50 * time.Millisecond
+	settings.HoldCeiling = 80 * time.Millisecond
+	settings.Recheck = 20 * time.Millisecond
+	return settings
+}
+
+type OpaqueModule struct{}
+
+func (OpaqueModule) ID() string { return "test_opaque" }
+
+func (OpaqueModule) Declaration() format.Declaration {
+	declaration := ReaderDeclaration("test_opaque", "character")
+	declaration.Label = "Test format"
+	declaration.Direction.Write = true
+	declaration.Header = []format.HeaderField{format.HeaderName, format.HeaderWorkVersion}
+	declaration.TestedOriginalFormats = append(declaration.TestedOriginalFormats, format.OriginalFormatIllarin)
+	declaration.Roles = map[block.Role]format.DirectionalRoleSupport{
+		block.RoleDescription: {
+			Read:  format.RoleSupport{Grade: format.SupportFull},
+			Write: format.RoleSupport{Grade: format.SupportFull},
+		},
+		block.RoleGreetings: {
+			Read:  format.RoleSupport{Grade: format.SupportFull},
+			Write: format.RoleSupport{Grade: format.SupportFull},
+		},
+	}
+	return declaration
+}
+
+func (OpaqueModule) Write(_ context.Context, written format.ExportWork) (format.MainFile, error) {
+	return format.MainFile{
+		Body:      []byte(written.Text(block.RoleDescription)),
+		MediaType: "text/plain", Extension: ".txt",
+	}, nil
+}
+
+func (OpaqueModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.WholeFileCompatibilityMatch(file), true
+}
+
+func (OpaqueModule) Parse(context.Context, format.Inspection, format.Match) (format.Parsed, error) {
+	return format.Parsed{
+		Type: "character", Format: "test_opaque",
+		Elements: []block.Element{
+			{Type: block.TypeProse, Role: block.RoleDescription, Content: block.Prose{Text: "Test description"}},
+			{Type: block.TypeTextSet, Role: block.RoleGreetings, Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Hello"}}}},
+		},
+	}, nil
+}
+
+func ReaderDeclaration(id, workType string) format.Declaration {
+	return format.Declaration{
+		ID: id, Type: workType, Direction: format.Direction{Read: true},
+		Recognition: []format.Recognition{{
+			Type: format.RecognitionShape, Containers: []format.Container{format.JSON},
+			Required: map[string]format.ValueType{"payload": format.ValueBoolean},
+		}},
+		Limits: format.ContentLimits{
+			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
+			ItemBytes: block.MaxItemBytes,
+		},
+		ConsumedKeys:          []string{"payload"},
+		Preservation:          format.PreservationDeclaration{Body: "test"},
+		TestedOriginalFormats: []string{id},
+	}
+}

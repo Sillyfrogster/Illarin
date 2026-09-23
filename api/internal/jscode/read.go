@@ -73,7 +73,7 @@ func (v Value) Literal() (string, bool) {
 	}
 	lex := lexer{source: v.source, at: v.start}
 	only, ok := lex.next()
-	if !ok || only.kind != text || only.end != v.end {
+	if !ok || only.tokenType != text || only.end != v.end {
 		return "", false
 	}
 	return unquote(v.source[only.start:only.end])
@@ -107,7 +107,7 @@ func (v Value) Member() []string {
 	var names []string
 	for {
 		part, ok := lex.next()
-		if !ok || part.kind != name || part.end > v.end {
+		if !ok || part.tokenType != name || part.end > v.end {
 			return nil
 		}
 		names = append(names, part.spelled(v.source))
@@ -165,7 +165,7 @@ func (v Value) entries(opener string) []Value {
 func castsTo(source []byte, from, end int) bool {
 	lex := lexer{source: source, at: from}
 	keyword, ok := lex.next()
-	if !ok || keyword.kind != name || keyword.end >= end {
+	if !ok || keyword.tokenType != name || keyword.end >= end {
 		return false
 	}
 	spelled := keyword.spelled(source)
@@ -173,7 +173,7 @@ func castsTo(source []byte, from, end int) bool {
 }
 
 func namesKey(source []byte, key token, want string) bool {
-	switch key.kind {
+	switch key.tokenType {
 	case name:
 		return key.spelled(source) == want
 	case text:
@@ -202,13 +202,13 @@ func list(source []byte, open int) ([]Value, int, bool) {
 			return nil, 0, false
 		}
 		switch {
-		case next.kind == punct && isCloser(source[next.start]):
+		case next.tokenType == punct && isCloser(source[next.start]):
 			if depth == 0 {
 				flush()
 				return parts, next.end, true
 			}
 			depth--
-		case next.kind == punct && isOpener(source[next.start]):
+		case next.tokenType == punct && isOpener(source[next.start]):
 			depth++
 		case depth == 0 && next.is(source, ","):
 			flush()
@@ -257,20 +257,20 @@ func (t *trail) callee(source []byte) []string {
 		at = 1
 	}
 	method, ok := t.back(at)
-	if !ok || method.kind != name {
+	if !ok || method.tokenType != name {
 		return nil
 	}
 	names := []string{method.spelled(source)}
 	for len(names) < maxCallee {
 		dot, dotOK := t.back(at + 1)
 		owner, ownerOK := t.back(at + 2)
-		if !dotOK || !ownerOK || !dot.isDot(source) || owner.kind != name {
+		if !dotOK || !ownerOK || !dot.isDot(source) || owner.tokenType != name {
 			break
 		}
 		names = append(names, owner.spelled(source))
 		at += 2
 	}
-	if before, ok := t.back(at + 1); ok && before.kind == name && before.spelled(source) == "function" {
+	if before, ok := t.back(at + 1); ok && before.tokenType == name && before.spelled(source) == "function" {
 		return nil
 	}
 	for i, j := 0, len(names)-1; i < j; i, j = i+1, j-1 {
@@ -282,9 +282,9 @@ func (t *trail) callee(source []byte) []string {
 // imported reads the module named when next completes an import, whether static, dynamic or required.
 func (t *trail) imported(source []byte, next token) (string, bool) {
 	switch {
-	case next.kind == text:
+	case next.tokenType == text:
 		keyword, ok := t.back(0)
-		if !ok || keyword.kind != name {
+		if !ok || keyword.tokenType != name {
 			return "", false
 		}
 		spelled := keyword.spelled(source)
@@ -294,7 +294,7 @@ func (t *trail) imported(source []byte, next token) (string, bool) {
 	case next.is(source, ")"):
 		module, _ := t.back(0)
 		keyword, _ := t.back(2)
-		if module.kind != text || !t.follows(source, 1, "(") || keyword.kind != name || t.follows(source, 3, ".") {
+		if module.tokenType != text || !t.follows(source, 1, "(") || keyword.tokenType != name || t.follows(source, 3, ".") {
 			return "", false
 		}
 		if spelled := keyword.spelled(source); spelled == "import" || spelled == "require" {
@@ -310,7 +310,7 @@ const maxTypeClause = 64
 // typeImport finds where the module is named when next is the type keyword of an import or export of types alone.
 func (t *trail) typeImport(source []byte, next token) (int, bool) {
 	keyword, ok := t.back(0)
-	if !ok || next.kind != name || next.spelled(source) != "type" || keyword.kind != name || t.follows(source, 1, ".") {
+	if !ok || next.tokenType != name || next.spelled(source) != "type" || keyword.tokenType != name || t.follows(source, 1, ".") {
 		return 0, false
 	}
 	if spelled := keyword.spelled(source); spelled != "import" && spelled != "export" {
@@ -323,7 +323,7 @@ func (t *trail) typeImport(source []byte, next token) (int, bool) {
 		if !ok {
 			return 0, false
 		}
-		if ahead.kind == text {
+		if ahead.tokenType == text {
 			return ahead.start, typeClause(source, clause)
 		}
 		clause = append(clause, ahead)
@@ -334,18 +334,18 @@ func (t *trail) typeImport(source []byte, next token) (int, bool) {
 // typeClause says whether the tokens between a type keyword and its module name only types.
 func typeClause(source []byte, clause []token) bool {
 	last := len(clause) - 1
-	if last < 1 || clause[last].kind != name || clause[last].spelled(source) != "from" {
+	if last < 1 || clause[last].tokenType != name || clause[last].spelled(source) != "from" {
 		return false
 	}
 	body := clause[:last]
 	switch {
 	case len(body) == 1:
-		return body[0].kind == name || body[0].is(source, "*")
+		return body[0].tokenType == name || body[0].is(source, "*")
 	case len(body) == 3 && body[0].is(source, "*"):
-		return body[1].kind == name && body[1].spelled(source) == "as" && body[2].kind == name
+		return body[1].tokenType == name && body[1].spelled(source) == "as" && body[2].tokenType == name
 	case body[0].is(source, "{") && body[len(body)-1].is(source, "}"):
 		for _, inside := range body[1 : len(body)-1] {
-			if inside.kind != name && !inside.is(source, ",") {
+			if inside.tokenType != name && !inside.is(source, ",") {
 				return false
 			}
 		}

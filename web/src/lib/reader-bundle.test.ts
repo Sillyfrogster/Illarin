@@ -10,11 +10,11 @@ import {
 
 const READER_FILES = [
   "src/app/blog/[slug]/page.tsx",
-  "src/components/publication/Article.tsx",
-  "src/components/publication/ArticleIdentity.tsx",
-  "src/components/publication/PostBody.tsx",
-  "src/components/publication/ArticleContents.tsx",
-  "src/components/publication/ShareArticle.tsx",
+  "src/components/blog/Article.tsx",
+  "src/components/blog/ArticleIdentity.tsx",
+  "src/components/blog/ArticleBody.tsx",
+  "src/components/blog/ArticleContents.tsx",
+  "src/components/blog/ShareArticle.tsx",
   "src/app/blog/feed.xml/route.ts",
 ];
 
@@ -23,7 +23,7 @@ test("no editor code reaches the published post page", () => {
     for (const path of reachableFrom(entry)) {
       expect(path).not.toStartWith("@tiptap");
       expect(path).not.toContain("prosemirror");
-      expect(path).not.toContain("publication/writing");
+      expect(path).not.toContain("blog/writing");
     }
   }
 });
@@ -32,7 +32,7 @@ test("the editor is the only place Tiptap is imported", () => {
   for (const path of sourceFiles()) {
     const found = importsOf(readFileSync(join(SOURCE_ROOT, path), "utf8"));
     if (found.some((one) => one.startsWith("@tiptap"))) {
-      expect(path).toContain("publication/writing");
+      expect(path).toContain("blog/writing");
     }
   }
 });

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
-import { Article } from "@/components/publication/Article";
+import { Article } from "@/components/blog/Article";
 import { fetchPublishedPost } from "@/lib/api/query";
+import { postMetadata, postStructuredData } from "@/lib/blog-metadata";
 import { postPath } from "@/lib/blog-paths";
-import { postMetadata, postStructuredData } from "@/lib/publication-metadata";
 import { readableForMetadata } from "@/lib/site-metadata";
 
 const loadPost = cache(async (slug: string) =>

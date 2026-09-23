@@ -14,7 +14,7 @@ COPY api/ ./
 
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server \
     && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/backup ./cmd/backup \
-    && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/publication-authority ./cmd/publication-authority
+    && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/make-admin ./cmd/make-admin
 
 FROM alpine:3.23
 
@@ -28,7 +28,7 @@ ENV GIN_MODE=release
 
 COPY --from=build /out/server /app/server
 COPY --from=build /out/backup /app/backup
-COPY --from=build /out/publication-authority /app/publication-authority
+COPY --from=build /out/make-admin /app/make-admin
 COPY --from=build /out/goose /app/goose
 COPY api/migrations /app/migrations
 

@@ -135,16 +135,16 @@ export function PromptFragmentBody({
   place: number;
   roomy?: boolean;
 }) {
-  const sealed = fragment.protected && !isOwner;
+  const hidden = fragment.private && !isOwner;
   const note = fragmentNote(fragment);
   return (
     <>
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <span className={ITEM_NAME}>{fragmentName(fragment, place)}</span>
-        {sealed ? (
+        {hidden ? (
           <span className={cn(TAG, "bg-accent-wash text-accent")}>
             <Lock aria-hidden="true" className="size-3" />
-            Sealed
+            Private
           </span>
         ) : null}
         {fragment.enabled ? null : (
@@ -152,18 +152,21 @@ export function PromptFragmentBody({
         )}
       </div>
       {note ? <p className={ITEM_META}>{note}</p> : null}
-      {sealed && roomy ? (
+      {hidden && roomy ? (
         <p className={cn(ITEM_BODY, "mt-1 max-w-[52ch] text-mute")}>
-          This prompt is sealed. Its text is hidden here, but an allowed app
-          still receives it in full when the preset is installed.
+          This prompt is private. Its text is hidden here, but an app its
+          creator allows still receives it in full.
         </p>
       ) : null}
-      {sealed ? null : fragment.marker ? (
+      {hidden ? null : fragment.marker ? (
         <p className={cn(ITEM_META, "italic")}>
           The app inserts its own content here.
         </p>
       ) : (
-        <Paragraphs text={fragment.text} />
+        <RichText
+          className={cn(ITEM_BODY, "max-w-[70ch]")}
+          text={fragment.text}
+        />
       )}
     </>
   );
@@ -375,16 +378,5 @@ export function ScriptBody({
         <code>{script.replace || "nothing"}</code>
       </p>
     </>
-  );
-}
-
-function Paragraphs({ text }: { text: string }) {
-  const paragraphs = text.split(/\n{2,}/).filter((line) => line.trim() !== "");
-  return (
-    <div className={cn(ITEM_BODY, "max-w-[70ch] [&>p+p]:mt-[0.85em]")}>
-      {paragraphs.map((paragraph, index) => (
-        <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
-      ))}
-    </div>
   );
 }

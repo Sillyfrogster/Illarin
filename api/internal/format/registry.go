@@ -4,21 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 var (
-	ErrInvariant         = errors.New("format registry invariant")
-	ErrConflictingClaims = fmt.Errorf("%w: conflicting authoritative claims", ErrInvariant)
-	ErrAmbiguousClaims   = fmt.Errorf("%w: ambiguous format claims", ErrInvariant)
-	ErrInvalidClaim      = fmt.Errorf("%w: invalid format claim", ErrInvariant)
-	ErrUnsupportedFormat = errors.New("unsupported format")
+	ErrInvariant          = errors.New("format registry invariant")
+	ErrConflictingMatches = fmt.Errorf("%w: conflicting authoritative matches", ErrInvariant)
+	ErrAmbiguousMatches   = fmt.Errorf("%w: ambiguous format matches", ErrInvariant)
+	ErrInvalidMatch       = fmt.Errorf("%w: invalid format match", ErrInvariant)
+	ErrUnsupportedFormat  = errors.New("unsupported format")
 )
 
 type Resolution struct {
 	Module Reader
-	Claim  Claim
+	Match  Match
 }
 
 type Registry struct {
@@ -74,9 +72,9 @@ func (r *Registry) ValidateDeclarations() error {
 		first := r.modules[firstID].Declaration()
 		for _, secondID := range ids[i+1:] {
 			second := r.modules[secondID].Declaration()
-			if signaturesOverlap(first.Recognition, second.Recognition) {
+			if shapesOverlap(first.Recognition, second.Recognition) {
 				return fmt.Errorf(
-					"modules %q and %q have overlapping structural signatures: %w",
+					"modules %q and %q have overlapping shapes: %w",
 					firstID, secondID, ErrInvariant,
 				)
 			}
@@ -85,13 +83,13 @@ func (r *Registry) ValidateDeclarations() error {
 	return nil
 }
 
-func signaturesOverlap(first, second []Recognition) bool {
+func shapesOverlap(first, second []Recognition) bool {
 	for _, a := range first {
-		if a.Kind != RecognitionSignature {
+		if a.Type != RecognitionShape {
 			continue
 		}
 		for _, b := range second {
-			if b.Kind != RecognitionSignature || incompatibleContainers(a.Containers, b.Containers) {
+			if b.Type != RecognitionShape || incompatibleContainers(a.Containers, b.Containers) {
 				continue
 			}
 			if shadows(a.Required, b.Required) || shadows(b.Required, a.Required) {
@@ -111,7 +109,7 @@ func shadows(looser, stricter map[string]ValueType) bool {
 	return true
 }
 
-func incompatibleContainers(first, second []probe.Container) bool {
+func incompatibleContainers(first, second []Container) bool {
 	if len(first) == 0 || len(second) == 0 {
 		return false
 	}
@@ -152,7 +150,7 @@ func (r *Registry) ReadableLabels() []string {
 	return labels
 }
 
-func (r *Registry) Resolve(file probe.Inspection) (Resolution, bool, error) {
+func (r *Registry) Resolve(file Inspection) (Resolution, bool, error) {
 	var candidates []Resolution
 	for _, module := range r.modules {
 		declaration := module.Declaration()
@@ -163,61 +161,61 @@ func (r *Registry) Resolve(file probe.Inspection) (Resolution, bool, error) {
 		if !ok {
 			continue
 		}
-		claim, ok := reader.Claim(file)
+		match, ok := reader.Match(file)
 		if !ok {
 			continue
 		}
-		if err := validateClaim(file, reader, claim); err != nil {
+		if err := validateMatch(file, reader, match); err != nil {
 			return Resolution{}, false, fmt.Errorf("module %q: %w", module.ID(), err)
 		}
-		candidates = append(candidates, Resolution{Module: reader, Claim: claim})
+		candidates = append(candidates, Resolution{Module: reader, Match: match})
 	}
 	if len(candidates) == 0 {
-		if err := r.unsupportedDiscriminator(file); err != nil {
+		if err := r.unsupportedMarker(file); err != nil {
 			return Resolution{}, false, err
 		}
 		return Resolution{}, false, nil
 	}
 
 	for i, first := range candidates {
-		if first.Claim.strength != authoritative {
+		if first.Match.strength != authoritative {
 			continue
 		}
 		for _, second := range candidates[i+1:] {
-			if second.Claim.strength == authoritative && second.Claim.payloadID == first.Claim.payloadID {
+			if second.Match.strength == authoritative && second.Match.payloadID == first.Match.payloadID {
 				return Resolution{}, false, fmt.Errorf(
-					"modules %q and %q claimed payload %d: %w",
-					first.Module.ID(), second.Module.ID(), first.Claim.payloadID, ErrConflictingClaims,
+					"modules %q and %q matched payload %d: %w",
+					first.Module.ID(), second.Module.ID(), first.Match.payloadID, ErrConflictingMatches,
 				)
 			}
 		}
 	}
 
-	strongest := candidates[0].Claim.strength
+	strongest := candidates[0].Match.strength
 	for _, candidate := range candidates[1:] {
-		strongest = max(strongest, candidate.Claim.strength)
+		strongest = max(strongest, candidate.Match.strength)
 	}
 	var winners []Resolution
 	for _, candidate := range candidates {
-		if candidate.Claim.strength == strongest {
+		if candidate.Match.strength == strongest {
 			winners = append(winners, candidate)
 		}
 	}
 	if len(winners) > 1 {
 		return Resolution{}, false, fmt.Errorf(
-			"modules %q and %q made equally strong claims: %w",
-			winners[0].Module.ID(), winners[1].Module.ID(), ErrAmbiguousClaims,
+			"modules %q and %q made equally strong matches: %w",
+			winners[0].Module.ID(), winners[1].Module.ID(), ErrAmbiguousMatches,
 		)
 	}
 	return winners[0], true, nil
 }
 
-func (r *Registry) unsupportedDiscriminator(file probe.Inspection) error {
+func (r *Registry) unsupportedMarker(file Inspection) error {
 	type observation struct {
-		kind    string
-		path    string
-		value   string
-		formats []string
+		workType string
+		path     string
+		value    string
+		formats  []string
 	}
 	observations := make(map[string]*observation)
 	ids := make([]string, 0, len(r.modules))
@@ -228,12 +226,12 @@ func (r *Registry) unsupportedDiscriminator(file probe.Inspection) error {
 	for _, id := range ids {
 		declaration := r.modules[id].Declaration()
 		for _, recognition := range declaration.Recognition {
-			if recognition.Kind != RecognitionDiscriminator {
+			if recognition.Type != RecognitionMarker {
 				continue
 			}
 			for _, payload := range file.Payloads {
 				if len(recognition.Containers) > 0 &&
-					!slices.Contains(recognition.Containers, payload.Locator.Container) {
+					!slices.Contains(recognition.Containers, payload.Location.Container) {
 					continue
 				}
 				value, present := payloadValue(payload.Root, recognition.Path)
@@ -248,10 +246,10 @@ func (r *Registry) unsupportedDiscriminator(file probe.Inspection) error {
 					}
 					joined += part
 				}
-				key := declaration.Kind + "\x00" + joined + "\x00" + value
+				key := declaration.Type + "\x00" + joined + "\x00" + value
 				found := observations[key]
 				if found == nil {
-					found = &observation{kind: declaration.Kind, path: joined, value: value}
+					found = &observation{workType: declaration.Type, path: joined, value: value}
 					observations[key] = found
 				}
 				found.formats = append(found.formats, declaration.ID)
@@ -269,28 +267,42 @@ func (r *Registry) unsupportedDiscriminator(file probe.Inspection) error {
 	found := observations[keys[0]]
 	if len(found.formats) == 1 {
 		return fmt.Errorf(
-			"format %q recognises discriminator %q but cannot read value %q: %w",
+			"format %q recognises marker %q but cannot read value %q: %w",
 			found.formats[0], found.path, found.value, ErrUnsupportedFormat,
 		)
 	}
 	return fmt.Errorf(
-		"formats for kind %q recognise discriminator %q but cannot read value %q: %w",
-		found.kind, found.path, found.value, ErrUnsupportedFormat,
+		"formats for type %q recognise marker %q but cannot read value %q: %w",
+		found.workType, found.path, found.value, ErrUnsupportedFormat,
 	)
 }
 
-func validateClaim(file probe.Inspection, module Reader, claim Claim) error {
-	if claim.strength != compatibility && claim.strength != authoritative {
-		return fmt.Errorf("strength %d: %w", claim.strength, ErrInvalidClaim)
+func validateMatch(file Inspection, module Reader, match Match) error {
+	if match.strength != compatibility && match.strength != authoritative {
+		return fmt.Errorf("strength %d: %w", match.strength, ErrInvalidMatch)
 	}
-	if _, ok := claim.Payload(file); !ok {
-		return fmt.Errorf("payload %d does not exist: %w", claim.payloadID, ErrInvalidClaim)
+	if _, ok := match.Payload(file); !ok {
+		return fmt.Errorf("payload %d does not exist: %w", match.payloadID, ErrInvalidMatch)
 	}
-	if claim.strength == authoritative && !ownsSpec(module, claim.formatID) {
-		return fmt.Errorf("payload names format %q, module is %q: %w", claim.formatID, module.ID(), ErrInvalidClaim)
+	if match.strength == authoritative && !ownsSpec(module, match.formatID) {
+		return fmt.Errorf("payload names format %q, module is %q: %w", match.formatID, module.ID(), ErrInvalidMatch)
 	}
-	if claim.strength == compatibility && claim.formatID != "" {
-		return fmt.Errorf("compatibility claim names format %q: %w", claim.formatID, ErrInvalidClaim)
+	if match.strength == compatibility && match.formatID != "" {
+		return fmt.Errorf("compatibility match names format %q: %w", match.formatID, ErrInvalidMatch)
 	}
 	return nil
+}
+
+// Declarations lists every module's declaration, sorted by id
+func (r *Registry) Declarations() []Declaration {
+	ids := make([]string, 0, len(r.modules))
+	for id := range r.modules {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	declarations := make([]Declaration, 0, len(ids))
+	for _, id := range ids {
+		declarations = append(declarations, r.modules[id].Declaration())
+	}
+	return declarations
 }

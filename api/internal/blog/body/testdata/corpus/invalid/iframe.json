@@ -1,0 +1,5 @@
+{
+  "note": "An iframe is not content",
+  "path": "body.content.0.type",
+  "body": {"version": 2, "content": [{"type": "iframe", "src": "https://example.com"}]}
+}

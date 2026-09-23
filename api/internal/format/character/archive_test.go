@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 func TestACharXKeepsTheFilesIllarinReadsNothingFrom(t *testing.T) {
@@ -42,8 +41,8 @@ func TestACharXGivesBackTheFilesIllarinReadsNothingFrom(t *testing.T) {
 		"lumiverse_modules.json": modules,
 	}))
 
-	written := write(t, CharXModule{}, format.ExportAsset{
-		Kind: Kind, Header: format.Header{Name: "Ana"},
+	written := write(t, CharXModule{}, format.ExportWork{
+		Type: Type, Header: format.Header{Name: "Ana"},
 		Elements: parsed.Elements, Preserved: parsed.Remainder,
 	})
 	if held := archiveEntry(t, written.Body, "lumiverse_modules.json"); !bytes.Equal(held, modules) {
@@ -58,8 +57,8 @@ func TestACardBodyNeverCarriesAnArchivedFile(t *testing.T) {
 	}))
 
 	for _, module := range []format.Module{CCv2Module{}, CCv3Module{}} {
-		written := write(t, module, format.ExportAsset{
-			Kind: Kind, Header: format.Header{Name: "Ana"},
+		written := write(t, module, format.ExportWork{
+			Type: Type, Header: format.Header{Name: "Ana"},
 			Elements: parsed.Elements, Preserved: parsed.Remainder,
 		})
 		if strings.Contains(string(written.Body), "archive:") {
@@ -74,12 +73,12 @@ func TestAnArchivedFileTooLargeToKeepTurnsTheCardAway(t *testing.T) {
 		"huge.bin": incompressible(maxArchiveMemberBytes + 1),
 	})
 	module := CharXModule{}
-	claim, held := module.Claim(file)
+	match, held := module.Match(file)
 	if !held {
-		t.Fatal("the module claimed nothing")
+		t.Fatal("the module matched nothing")
 	}
 
-	_, err := module.Parse(context.Background(), file, claim)
+	_, err := module.Parse(context.Background(), file, match)
 	reason, classified := format.FailureOf(err)
 	if !classified || reason != format.FailureLimitExceeded {
 		t.Fatalf("err = %v, want a refusal naming the limit", err)
@@ -96,7 +95,7 @@ func incompressible(size int) []byte {
 	return held
 }
 
-func TestAnArchivedFileNeverClaimsAPathTheWriterProduces(t *testing.T) {
+func TestAnArchivedFileNeverMatchesAPathTheWriterProduces(t *testing.T) {
 	t.Parallel()
 	written := []archivedFile{{path: "assets/icon/image/main.png", data: []byte("picture")}}
 	preserved := []format.Remainder{
@@ -122,13 +121,13 @@ func archived(name, body string) format.Remainder {
 		panic(err)
 	}
 	return format.Remainder{
-		Owner: format.OwnerAsset, Namespace: MemberNamespace + name, Payload: payload,
+		Owner: format.OwnerWork, Namespace: MemberNamespace + name, Payload: payload,
 	}
 }
 
 const plainCard = `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana"}}`
 
-func charxWithMembers(t *testing.T, body string, members map[string][]byte) probe.Inspection {
+func charxWithMembers(t *testing.T, body string, members map[string][]byte) format.Inspection {
 	t.Helper()
 	var file bytes.Buffer
 	archive := zip.NewWriter(&file)

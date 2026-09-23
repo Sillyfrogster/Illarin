@@ -1,6 +1,6 @@
-import type { Post, PostMedia, PublicationApp } from "@/lib/api/query";
-import type { PostDocument } from "@/lib/post-document";
-import { asPostDocument } from "@/lib/post-document";
+import type { Post, PostMedia } from "@/lib/api/query";
+import type { PostBody } from "@/lib/post-body";
+import { asPostBody } from "@/lib/post-body";
 import { type Lifecycle, lifecycleOf } from "@/lib/post-standing";
 
 export type Saving =
@@ -16,22 +16,20 @@ export type Draft = {
   title: string;
   summary: string;
   slug: string;
-  document: PostDocument;
-  release: { appId: string; version: string; address: string } | null;
+  body: PostBody;
   header: { mediaId: string; alt: string; caption: string } | null;
-  socialMediaId: string | null;
+  linkCardMediaId: string | null;
 };
 
-export type PublicationAction =
+export type PublishAction =
   | "publish"
   | "schedule"
-  | "withdraw"
+  | "unpublish"
   | "republish"
-  | "delete"
   | "recover";
 
 export type PostNotice = {
-  kind: "deleted" | "withdrawn" | "scheduled";
+  kind: "deleted" | "unpublished" | "scheduled";
   tone: "accent" | "stop";
   heading: string;
   said: string;
@@ -42,13 +40,13 @@ export type PostNotice = {
 const STANDING_NAMES = {
   draft: "a draft",
   published: "published",
-  withdrawn: "withdrawn",
+  unpublished: "unpublished",
 } as const;
 
 const STANDING: Record<Lifecycle, string> = {
   draft: "Saved privately",
   published: "Published",
-  withdrawn: "Withdrawn",
+  unpublished: "Unpublished",
   deleted: "Deleted",
 };
 
@@ -73,31 +71,19 @@ export function writerStanding(post: Post): Lifecycle {
   return lifecycleOf(post);
 }
 
-export function publicationLabel(post: Post): string {
+export function publishLabel(post: Post): string {
   const standing = writerStanding(post);
   if (standing === "deleted") return "Restore post";
-  if (standing === "withdrawn") return "Republish post";
+  if (standing === "unpublished") return "Republish post";
   return standing === "published" ? "Publish changes" : "Publish";
 }
 
-export function publicationActions(
-  post: Post,
-  admin: boolean,
-): PublicationAction[] {
+export function publishActions(post: Post): PublishAction[] {
   const standing = writerStanding(post);
   if (standing === "deleted") return ["recover"];
-  if (standing === "withdrawn") {
-    return mayDelete(post, admin) ? ["republish", "delete"] : ["republish"];
-  }
-  if (standing === "published") return ["publish", "schedule", "withdraw"];
-  return mayDelete(post, admin)
-    ? ["publish", "schedule", "delete"]
-    : ["publish", "schedule"];
-}
-
-function mayDelete(post: Post, admin: boolean): boolean {
-  if (post.status === "published") return false;
-  return admin || post.publishedAt === undefined;
+  if (standing === "unpublished") return ["republish"];
+  if (standing === "published") return ["publish", "schedule", "unpublish"];
+  return ["publish", "schedule"];
 }
 
 export function postNotices(post: Post): PostNotice[] {
@@ -117,17 +103,17 @@ export function postNotices(post: Post): PostNotice[] {
   }
 
   const notices: PostNotice[] = [];
-  const withdrawal = post.withdrawal;
-  if (post.status === "withdrawn" && withdrawal) {
+  const unpublishing = post.unpublishing;
+  if (post.status === "unpublished" && unpublishing) {
     notices.push({
-      kind: "withdrawn",
+      kind: "unpublished",
       tone: "stop",
-      heading: "Withdrawn",
-      said: `Withdrawn by @${withdrawal.by}.`,
+      heading: "Unpublished",
+      said: `Unpublished by @${unpublishing.by}.`,
       meanwhile:
-        withdrawal.explanation ||
-        "Readers see the default withdrawal message. No public explanation was provided.",
-      record: withdrawal.reason,
+        unpublishing.explanation ||
+        "Readers see the default unpublishing message. No public explanation was provided.",
+      record: unpublishing.reason,
     });
   }
 
@@ -159,9 +145,9 @@ export function postNotices(post: Post): PostNotice[] {
 
 function standingBeforeDeletion(
   post: Post,
-): "draft" | "published" | "withdrawn" {
+): "draft" | "published" | "unpublished" {
   if (post.status === "published") return "published";
-  return post.status === "withdrawn" ? "withdrawn" : "draft";
+  return post.status === "unpublished" ? "unpublished" : "draft";
 }
 
 function scheduleHeading(state: string): string {
@@ -176,7 +162,7 @@ export function draftFromPost(post: Post): Draft {
     title: post.title,
     summary: post.summary,
     slug: post.slug,
-    document: asPostDocument(post.document),
+    body: asPostBody(post.body),
     header: post.header
       ? {
           mediaId: post.header.mediaId,
@@ -184,14 +170,7 @@ export function draftFromPost(post: Post): Draft {
           caption: post.header.caption ?? "",
         }
       : null,
-    socialMediaId: post.socialMediaId ?? null,
-    release: post.release
-      ? {
-          appId: post.release.app.id,
-          version: post.release.version,
-          address: post.release.address ?? "",
-        }
-      : null,
+    linkCardMediaId: post.linkCardMediaId ?? null,
   };
 }
 
@@ -201,13 +180,4 @@ export function mergedMedia(
 ): PostMedia[] {
   const known = new Set(saved.map((one) => one.id));
   return [...saved, ...held.filter((one) => !known.has(one.id))];
-}
-
-export function namedRelease(
-  open: PublicationApp[],
-  post: Post,
-): PublicationApp[] {
-  const named = post.release?.app;
-  if (!named || open.some((app) => app.id === named.id)) return open;
-  return [named, ...open];
 }

@@ -21,10 +21,10 @@ import { SIGN_OUT_FAILURE, useSignOut } from "./use-sign-out";
 
 export function AccountMenu() {
   const pathname = usePathname();
-  const { account, publicationAuthority } = useAuth();
+  const { account, writer } = useAuth();
   const [open, setOpen] = useState(false);
   const { signingOut, failed, signOut } = useSignOut(() => setOpen(false));
-  const destinations = accountDestinations(account, publicationAuthority);
+  const destinations = accountDestinations(account, writer);
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>

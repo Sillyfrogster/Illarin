@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AddableBlock, AssetBlock, AssetElement } from "@/lib/api/query";
+import type { AddableBlock, WorkBlock, WorkElement } from "@/lib/api/query";
 import {
   arrangementRequest,
   blockDestinations,
@@ -11,7 +11,7 @@ import {
   seatElements,
 } from "./composition";
 
-function element(id: string, extra: Partial<AssetElement> = {}): AssetElement {
+function element(id: string, extra: Partial<WorkElement> = {}): WorkElement {
   return {
     content: { text: "" },
     facts: [],
@@ -19,14 +19,14 @@ function element(id: string, extra: Partial<AssetElement> = {}): AssetElement {
     isEmpty: true,
     label: id,
     pinned: false,
-    locked: false,
+    fromFile: false,
     slot: "main",
     type: "prose",
     ...extra,
-  } as AssetElement;
+  } as WorkElement;
 }
 
-function block(id: string, extra: Partial<AssetBlock> = {}): AssetBlock {
+function block(id: string, extra: Partial<WorkBlock> = {}): WorkBlock {
   return {
     allowedLayouts: ["single", "duo", "stack-2", "trio", "stack-3"],
     definition: id,
@@ -42,7 +42,7 @@ function block(id: string, extra: Partial<AssetBlock> = {}): AssetBlock {
     titleIsDefault: true,
     width: "full",
     ...extra,
-  } as AssetBlock;
+  } as WorkBlock;
 }
 
 describe("moveBlock", () => {
@@ -226,7 +226,7 @@ describe("offerGroups", () => {
     },
   ] as AddableBlock[];
 
-  test("groups the catalog by where its content ends up", () => {
+  test("groups the blocks on offer by where their content ends up", () => {
     expect(offerGroups(addable, [], "").map((group) => group.title)).toEqual([
       "Things a reader sees",
       "Anything else",

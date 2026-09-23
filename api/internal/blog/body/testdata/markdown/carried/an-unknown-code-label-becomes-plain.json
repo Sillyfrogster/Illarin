@@ -1,0 +1,20 @@
+{
+  "note": "Code Illarin has no label for keeps its source and loses its label",
+  "markdown": "```brainfuck\n+++++.\n```\n",
+  "body": {
+    "content": [
+      {
+        "language": "plain",
+        "source": "+++++.",
+        "type": "codeBlock"
+      }
+    ],
+    "version": 2
+  },
+  "warnings": [
+    {
+      "line": 1,
+      "says": "labelled plain"
+    }
+  ]
+}

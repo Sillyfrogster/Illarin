@@ -13,10 +13,10 @@ import (
 )
 
 type readBlocks struct {
-	list      block.PromptList
-	variables []block.Variable
-	leftovers map[uuid.UUID]itemLeftover
-	protected []format.ProtectedPrompt
+	list           block.PromptList
+	variables      []block.Variable
+	leftovers      map[uuid.UUID]itemLeftover
+	privatePrompts []format.PrivatePrompt
 }
 
 func readLumiverseBlocks(
@@ -25,7 +25,7 @@ func readLumiverseBlocks(
 ) (readBlocks, error) {
 	read := readBlocks{leftovers: make(map[uuid.UUID]itemLeftover, len(blocks))}
 	headings := make(map[string]uuid.UUID, len(blocks))
-	sealedKeys := make(map[string]bool)
+	privateKeys := make(map[string]bool)
 	above := uuid.Nil
 
 	for _, raw := range blocks {
@@ -38,7 +38,7 @@ func readLumiverseBlocks(
 		keys.Take(fields, lvBlockMarker, &marker)
 
 		if marker == lvHeadingMarker {
-			if err := validateLumiverseHeadingSealing(fields); err != nil {
+			if err := validateLumiverseHeadingIsPublic(fields); err != nil {
 				return readBlocks{}, err
 			}
 			group := block.PromptGroup{ID: block.NewItemID()}
@@ -69,22 +69,22 @@ func readLumiverseBlocks(
 			fragment.Placement = ""
 		}
 		fragment.GroupID = fragmentHeading(fields, headings, above)
-		private, sealed, err := readLumiverseSealedPrompt(
+		private, isPrivate, err := readLumiversePrivatePrompt(
 			fields, fragment.ID, fragment.Marker, fragment.Text, textPresent,
 		)
 		if err != nil {
 			return readBlocks{}, err
 		}
-		if sealed {
-			if sealedKeys[private.SourceKey] {
+		if isPrivate {
+			if privateKeys[private.SourceKey] {
 				return readBlocks{}, fmt.Errorf(
-					"sealed prompt key %q appears more than once", private.SourceKey,
+					"private prompt key %q appears more than once", private.SourceKey,
 				)
 			}
-			sealedKeys[private.SourceKey] = true
-			fragment.Protected = true
+			privateKeys[private.SourceKey] = true
+			fragment.Private = true
 			fragment.Text = ""
-			read.protected = append(read.protected, private)
+			read.privatePrompts = append(read.privatePrompts, private)
 		}
 
 		read.variables = append(
@@ -96,95 +96,95 @@ func readLumiverseBlocks(
 	return read, nil
 }
 
-func validateLumiverseHeadingSealing(fields map[string]json.RawMessage) error {
-	if _, present := fields[lvBlockSealKey]; present {
-		return errors.New("sealed prompt metadata belongs on a prompt fragment")
+func validateLumiverseHeadingIsPublic(fields map[string]json.RawMessage) error {
+	if _, present := fields[lvPrivateKey]; present {
+		return errors.New("private prompt metadata belongs on a prompt fragment")
 	}
-	if _, present := fields[lvBlockSealKeyLegacy]; present {
-		return errors.New("sealed prompt metadata belongs on a prompt fragment")
+	if _, present := fields[lvPrivateKeyLegacy]; present {
+		return errors.New("private prompt metadata belongs on a prompt fragment")
 	}
-	raw, present := fields[lvBlockSealed]
+	raw, present := fields[lvPrivateFlag]
 	if !present {
 		return nil
 	}
-	var sealed bool
-	if json.Unmarshal(raw, &sealed) != nil || sealed {
-		return errors.New("sealed prompt metadata belongs on a prompt fragment")
+	var isPrivate bool
+	if json.Unmarshal(raw, &isPrivate) != nil || isPrivate {
+		return errors.New("private prompt metadata belongs on a prompt fragment")
 	}
 	return nil
 }
 
-func readLumiverseSealedPrompt(
+func readLumiversePrivatePrompt(
 	fields map[string]json.RawMessage,
 	fragmentID uuid.UUID,
 	marker string,
 	text string,
 	textPresent bool,
-) (format.ProtectedPrompt, bool, error) {
-	sealedRaw, hasSealed := fields[lvBlockSealed]
-	_, hasKey := fields[lvBlockSealKey]
-	_, hasLegacyKey := fields[lvBlockSealKeyLegacy]
-	if !hasSealed && !hasKey && !hasLegacyKey {
-		return format.ProtectedPrompt{}, false, nil
+) (format.PrivatePrompt, bool, error) {
+	flagRaw, hasFlag := fields[lvPrivateFlag]
+	_, hasKey := fields[lvPrivateKey]
+	_, hasLegacyKey := fields[lvPrivateKeyLegacy]
+	if !hasFlag && !hasKey && !hasLegacyKey {
+		return format.PrivatePrompt{}, false, nil
 	}
 
-	var sealed bool
-	if !hasSealed || json.Unmarshal(sealedRaw, &sealed) != nil {
-		return format.ProtectedPrompt{}, false, fmt.Errorf(
-			"sealed prompt metadata needs sealed as true or false",
+	var isPrivate bool
+	if !hasFlag || json.Unmarshal(flagRaw, &isPrivate) != nil {
+		return format.PrivatePrompt{}, false, fmt.Errorf(
+			"a private prompt needs %q set to true or false", lvPrivateFlag,
 		)
 	}
-	if !sealed {
+	if !isPrivate {
 		if hasKey || hasLegacyKey {
-			return format.ProtectedPrompt{}, false, fmt.Errorf(
-				"sealed prompt key requires sealed to be true",
+			return format.PrivatePrompt{}, false, fmt.Errorf(
+				"a private prompt key needs %q set to true", lvPrivateFlag,
 			)
 		}
-		return format.ProtectedPrompt{}, false, nil
+		return format.PrivatePrompt{}, false, nil
 	}
 	if marker != "" {
-		return format.ProtectedPrompt{}, false, fmt.Errorf(
-			"sealed prompt cannot also be a %q marker", marker,
+		return format.PrivatePrompt{}, false, fmt.Errorf(
+			"private prompt cannot also be a %q marker", marker,
 		)
 	}
 	if hasKey == hasLegacyKey {
-		return format.ProtectedPrompt{}, false, fmt.Errorf(
-			"sealed prompt needs exactly one sealedKey or sealed_key",
+		return format.PrivatePrompt{}, false, fmt.Errorf(
+			"a private prompt needs exactly one of %q or %q", lvPrivateKey, lvPrivateKeyLegacy,
 		)
 	}
 	if !textPresent {
-		return format.ProtectedPrompt{}, false, fmt.Errorf(
-			"sealed prompt content must be text",
+		return format.PrivatePrompt{}, false, fmt.Errorf(
+			"private prompt content must be text",
 		)
 	}
 
-	keyName := lvBlockSealKey
+	keyName := lvPrivateKey
 	if hasLegacyKey {
-		keyName = lvBlockSealKeyLegacy
+		keyName = lvPrivateKeyLegacy
 	}
 	var sourceKey string
 	if json.Unmarshal(fields[keyName], &sourceKey) != nil ||
 		sourceKey == "" || sourceKey != strings.TrimSpace(sourceKey) ||
 		len([]rune(sourceKey)) > 256 {
-		return format.ProtectedPrompt{}, false, fmt.Errorf(
-			"sealed prompt key must be 1 to 256 trimmed characters",
+		return format.PrivatePrompt{}, false, fmt.Errorf(
+			"private prompt key must be 1 to 256 trimmed characters",
 		)
 	}
 
-	delete(fields, lvBlockSealed)
+	delete(fields, lvPrivateFlag)
 	delete(fields, keyName)
 	placeholder := "{{presetBlock::" + sourceKey + "}}"
 	trimmed := strings.TrimSpace(text)
 	reuse := trimmed == placeholder
 	if !reuse && strings.HasPrefix(trimmed, "{{presetBlock::") && strings.HasSuffix(trimmed, "}}") {
-		return format.ProtectedPrompt{}, false, fmt.Errorf(
-			"sealed prompt placeholder does not match key %q", sourceKey,
+		return format.PrivatePrompt{}, false, fmt.Errorf(
+			"private prompt placeholder does not match key %q", sourceKey,
 		)
 	}
 	if reuse {
 		text = ""
 	}
-	return format.ProtectedPrompt{
+	return format.PrivatePrompt{
 		FragmentID: fragmentID, SourceKey: sourceKey,
 		Text: text, ReuseExisting: reuse,
 	}, true, nil

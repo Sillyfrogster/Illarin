@@ -13,7 +13,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/jscode"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -33,10 +32,10 @@ func (SillyTavern) Declaration() format.Declaration {
 		Write: format.RoleSupport{Grade: format.SupportFull},
 	}
 	return format.Declaration{
-		ID: SillyTavernID, Label: "SillyTavern extension", Kind: Kind,
+		ID: SillyTavernID, Label: "SillyTavern extension", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionEntry, Containers: []probe.Container{probe.ZIP},
+			Type: format.RecognitionEntry, Containers: []format.Container{format.ZIP},
 			Entry: sillyTavernManifest,
 		}},
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -53,14 +52,14 @@ func (SillyTavern) Declaration() format.Declaration {
 			"display_name", "js", "author", "version", "description", "dependencies",
 			"minimum_client_version", "homePage", "homepage",
 		},
-		Preservation:  format.PreservationDeclaration{Body: SillyTavernID},
-		TestedOrigins: []string{SillyTavernID},
-		KeepsUpload:   true,
+		Preservation:          format.PreservationDeclaration{Body: SillyTavernID},
+		TestedOriginalFormats: []string{SillyTavernID},
+		KeepsUpload:           true,
 	}
 }
 
-func (module SillyTavern) Claim(file probe.Inspection) (format.Claim, bool) {
-	return claimArchive(file, module.Declaration(), sillyTavernManifest)
+func (module SillyTavern) Match(file format.Inspection) (format.Match, bool) {
+	return matchArchive(file, module.Declaration(), sillyTavernManifest)
 }
 
 type sillyTavernManifestFields struct {
@@ -69,16 +68,16 @@ type sillyTavernManifestFields struct {
 	Dependencies                               []string
 }
 
-func (SillyTavern) Parse(ctx context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
+func (SillyTavern) Parse(ctx context.Context, file format.Inspection, match format.Match) (format.Parsed, error) {
 	if err := checkArchive(file); err != nil {
 		return format.Parsed{}, err
 	}
 	if !hasEntry(file, sillyTavernManifest) {
 		return format.Parsed{}, refuseMisplaced(file, sillyTavernManifest)
 	}
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", SillyTavernID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", SillyTavernID)
 	}
 	manifest, err := readSillyTavernManifest(payload.Root)
 	if err != nil {
@@ -100,7 +99,7 @@ func (SillyTavern) Parse(ctx context.Context, file probe.Inspection, claim forma
 		return format.Parsed{}, err
 	}
 	header := format.Header{
-		Name: manifest.DisplayName, AssetVersion: manifest.Version,
+		Name: manifest.DisplayName, WorkVersion: manifest.Version,
 		CreditedAuthor: manifest.Author, Identifier: repositoryFolder(manifest.Home),
 	}
 	if utf8.RuneCountInString(manifest.Description) <= format.MaxBlurbRunes {
@@ -111,7 +110,7 @@ func (SillyTavern) Parse(ctx context.Context, file probe.Inspection, claim forma
 		elements = append(elements, *adds)
 	}
 	return format.Parsed{
-		Kind: Kind, Format: SillyTavernID, Header: header, Elements: elements, Readme: readme,
+		Type: Type, Format: SillyTavernID, Header: header, Elements: elements, Readme: readme,
 	}, nil
 }
 
@@ -253,9 +252,9 @@ func dependencyTexts(names []string) block.TextSet {
 	return dependencies
 }
 
-func (SillyTavern) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	if len(asset.Upload) == 0 {
-		return format.Artifact{}, errors.New("write the SillyTavern extension: the uploaded archive is missing")
+func (SillyTavern) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
+	if len(work.Upload) == 0 {
+		return format.MainFile{}, errors.New("write the SillyTavern extension: the uploaded archive is missing")
 	}
-	return format.Artifact{Body: asset.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
+	return format.MainFile{Body: work.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
 }

@@ -12,13 +12,12 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/book"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
 const (
 	ID   = "lorebook"
-	Kind = "lorebook"
+	Type = "lorebook"
 )
 
 const (
@@ -34,11 +33,11 @@ func (Module) ID() string { return ID }
 
 func (Module) Declaration() format.Declaration {
 	return format.Declaration{
-		ID: ID, Label: "Lorebook", Kind: Kind,
+		ID: ID, Label: "Lorebook", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind:       format.RecognitionSignature,
-			Containers: []probe.Container{probe.JSON},
+			Type:       format.RecognitionShape,
+			Containers: []format.Container{format.JSON},
 			Required:   map[string]format.ValueType{entriesKey: format.ValueArray},
 		}},
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -66,23 +65,23 @@ func (Module) Declaration() format.Declaration {
 		Preservation: format.PreservationDeclaration{
 			Body: bookNamespace, Container: []string{extensionsKey},
 		},
-		TestedOrigins:    []string{ID, format.OriginIllarin, format.OriginV1},
-		PreservesOrigins: []string{format.OriginV1},
+		TestedOriginalFormats:    []string{ID, format.OriginalFormatIllarin, format.OriginalFormatV1},
+		PreservesOriginalFormats: []string{format.OriginalFormatV1},
 	}
 }
 
-func (m Module) Claim(file probe.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m Module) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
 func (m Module) Parse(
 	_ context.Context,
-	file probe.Inspection,
-	claim format.Claim,
+	file format.Inspection,
+	match format.Match,
 ) (format.Parsed, error) {
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", ID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", ID)
 	}
 	source := maps.Clone(payload.Root)
 
@@ -106,7 +105,7 @@ func (m Module) Parse(
 	}
 	seeded := blurb(source)
 	return format.Parsed{
-		Kind: Kind, Format: ID,
+		Type: Type, Format: ID,
 		Header:    format.Header{Name: strings.TrimSpace(name), Blurb: seeded},
 		Elements:  []block.Element{element},
 		Remainder: remainder(source, entries, entryFields),
@@ -137,12 +136,12 @@ func remainder(
 	if len(source) > 0 {
 		payload, _ := json.Marshal(source)
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: bookNamespace, Payload: payload,
+			Owner: format.OwnerWork, Namespace: bookNamespace, Payload: payload,
 		})
 	}
 	for _, namespace := range slices.Sorted(maps.Keys(extensions)) {
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: namespace, Payload: extensions[namespace],
+			Owner: format.OwnerWork, Namespace: namespace, Payload: extensions[namespace],
 		})
 	}
 	for _, entry := range entries {

@@ -65,12 +65,12 @@ func TestSillyTavernExportsUseNativeMarkersAndPromptFlags(t *testing.T) {
 	}
 }
 
-func TestTheSillyTavernSignatureIsDisjointFromTheThemes(t *testing.T) {
+func TestTheSillyTavernShapeIsDisjointFromTheThemes(t *testing.T) {
 	t.Parallel()
 	themeKeys := []string{"main_text_color", "blur_strength"}
 	recognition := (SillyTavernModule{}).Declaration().Recognition
-	if len(recognition) != 1 || recognition[0].Kind != format.RecognitionSignature {
-		t.Fatalf("recognition = %+v, want one structural signature", recognition)
+	if len(recognition) != 1 || recognition[0].Type != format.RecognitionShape {
+		t.Fatalf("recognition = %+v, want one shape", recognition)
 	}
 	required := recognition[0].Required
 	if len(required) != 2 {
@@ -78,12 +78,12 @@ func TestTheSillyTavernSignatureIsDisjointFromTheThemes(t *testing.T) {
 	}
 	for _, key := range themeKeys {
 		if _, shared := required[key]; shared {
-			t.Errorf("the preset signature requires %q, which is a theme's key", key)
+			t.Errorf("the preset shape requires %q, which is a theme's key", key)
 		}
 	}
 	theme := document(t, `{"name":"Glimmer","main_text_color":"rgba(1,1,1,1)","blur_strength":8}`)
-	if _, claimed := (SillyTavernModule{}).Claim(theme); claimed {
-		t.Error("the preset module claimed a SillyTavern theme")
+	if _, matched := (SillyTavernModule{}).Match(theme); matched {
+		t.Error("the preset module matched a SillyTavern theme")
 	}
 }
 
@@ -122,7 +122,7 @@ func TestTheSillyTavernOrderDecidesTheFragmentsAndTheirSwitches(t *testing.T) {
 		t.Errorf("marker = %q, want what the file holds a place for", marker.Marker)
 	}
 
-	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, sillyTavernNamespace)
+	body := preservedPayload(t, parsed.Remainder, format.OwnerWork, sillyTavernNamespace)
 	var others []map[string]any
 	if err := json.Unmarshal(body["prompt_order"], &others); err != nil {
 		t.Fatalf("read the preserved order: %v", err)

@@ -1,4 +1,4 @@
-import { scopedFeedResponse } from "@/lib/publication-feed-route";
+import { categoryFeedResponse } from "@/lib/blog-feed-route";
 
 export const dynamic = "force-dynamic";
 
@@ -6,5 +6,5 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Response> {
-  return scopedFeedResponse("category", (await params).slug, "rss");
+  return categoryFeedResponse((await params).slug, "rss");
 }

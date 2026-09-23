@@ -1,11 +1,9 @@
 import { addressOn } from "./address";
 import { postPath } from "./blog-paths";
-import { blogUrl } from "./site-metadata";
-
-export const blogHostname = new URL(blogUrl).hostname;
+import { siteUrl } from "./site-metadata";
 
 export function blogAddress(path: string, search = ""): string {
-  return addressOn(blogUrl, path, search);
+  return addressOn(siteUrl, path, search);
 }
 
 export function postPermalink(slug: string): string {

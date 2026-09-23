@@ -5,57 +5,55 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
-
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
-type claimingModule struct {
+type matchingModule struct {
 	id            string
 	spec          string
 	authoritative bool
 }
 
-func (m claimingModule) ID() string { return m.id }
-func (m claimingModule) Declaration() Declaration {
+func (m matchingModule) ID() string { return m.id }
+func (m matchingModule) Declaration() Declaration {
 	declaration := testReaderDeclaration(m.id, "character")
 	declaration.Recognition = []Recognition{{
-		Kind: RecognitionDiscriminator, Path: []string{"spec"}, Values: []string{m.spec},
-		Containers: []probe.Container{probe.PNG},
+		Type: RecognitionMarker, Path: []string{"spec"}, Values: []string{m.spec},
+		Containers: []Container{PNG},
 	}}
 	return declaration
 }
-func (m claimingModule) Parse(context.Context, probe.Inspection, Claim) (Parsed, error) {
+func (m matchingModule) Parse(context.Context, Inspection, Match) (Parsed, error) {
 	return Parsed{Format: m.id}, nil
 }
-func (m claimingModule) Claim(file probe.Inspection) (Claim, bool) {
+func (m matchingModule) Match(file Inspection) (Match, bool) {
 	for _, payload := range file.Payloads {
 		if spec, ok := payload.String("spec"); ok && spec == m.spec {
 			if m.authoritative {
-				return AuthoritativeClaim(payload, "spec")
+				return AuthoritativeMatch(payload, "spec")
 			}
-			return CompatibilityClaim(payload), true
+			return CompatibilityMatch(payload), true
 		}
 	}
-	return Claim{}, false
+	return Match{}, false
 }
 
-func TestResolveReturnsNoModuleWhenNothingClaimsTheFile(t *testing.T) {
+func TestResolveReturnsNoModuleWhenNothingMatchesTheFile(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry()
 
-	_, ok, err := registry.Resolve(probe.Inspection{Container: probe.Unknown})
+	_, ok, err := registry.Resolve(Inspection{Container: Unknown})
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
 	if ok {
-		t.Fatal("an unclaimed file resolved to a module")
+		t.Fatal("an unmatched file resolved to a module")
 	}
 }
 
 func TestResolveRejectsAPayloadThatNamesAnUnsupportedFormat(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry()
-	if err := registry.Register(claimingModule{
+	if err := registry.Register(matchingModule{
 		id: "chara_card_v3", spec: "chara_card_v3", authoritative: true,
 	}); err != nil {
 		t.Fatalf("Register: %v", err)
@@ -70,11 +68,11 @@ func TestResolveRejectsAPayloadThatNamesAnUnsupportedFormat(t *testing.T) {
 	}
 }
 
-func TestResolvePrefersAnAuthoritativeClaimRegardlessOfRegistrationOrder(t *testing.T) {
+func TestResolvePrefersAnAuthoritativeMatchRegardlessOfRegistrationOrder(t *testing.T) {
 	t.Parallel()
 	file := probedPayload("chara_card_v3", "ccv3")
-	compatible := claimingModule{id: "compatible_reader", spec: "chara_card_v3"}
-	authority := claimingModule{id: "chara_card_v3", spec: "chara_card_v3", authoritative: true}
+	compatible := matchingModule{id: "compatible_reader", spec: "chara_card_v3"}
+	authority := matchingModule{id: "chara_card_v3", spec: "chara_card_v3", authoritative: true}
 
 	for _, modules := range [][]Module{
 		{compatible, authority},
@@ -97,7 +95,7 @@ func TestResolvePrefersAnAuthoritativeClaimRegardlessOfRegistrationOrder(t *test
 	}
 }
 
-func TestResolveRejectsTwoAuthoritativeClaimsOnOnePayload(t *testing.T) {
+func TestResolveRejectsTwoAuthoritativeMatchesOnOnePayload(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry()
 	for _, id := range []string{"first", "second"} {
@@ -107,17 +105,17 @@ func TestResolveRejectsTwoAuthoritativeClaimsOnOnePayload(t *testing.T) {
 	}
 
 	_, _, err := registry.Resolve(probedPayload("chara_card_v2", "chara"))
-	if !errors.Is(err, ErrConflictingClaims) {
-		t.Fatalf("Resolve error = %v, want ErrConflictingClaims", err)
+	if !errors.Is(err, ErrConflictingMatches) {
+		t.Fatalf("Resolve error = %v, want ErrConflictingMatches", err)
 	}
 }
 
-func TestResolveUsesThePayloadDiscriminatorRatherThanItsLocator(t *testing.T) {
+func TestResolveUsesThePayloadMarkerRatherThanItsLocation(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry()
 	for _, module := range []Module{
-		claimingModule{id: "chara_card_v3", spec: "chara_card_v3", authoritative: true},
-		claimingModule{id: "chara_card_v2", spec: "chara_card_v2", authoritative: true},
+		matchingModule{id: "chara_card_v3", spec: "chara_card_v3", authoritative: true},
+		matchingModule{id: "chara_card_v2", spec: "chara_card_v2", authoritative: true},
 	} {
 		if err := registry.Register(module); err != nil {
 			t.Fatalf("Register: %v", err)
@@ -139,38 +137,38 @@ func (m forcedAuthoritativeModule) ID() string { return m.id }
 func (m forcedAuthoritativeModule) Declaration() Declaration {
 	return testReaderDeclaration(m.id, "character")
 }
-func (m forcedAuthoritativeModule) Claim(file probe.Inspection) (Claim, bool) {
-	return Claim{
+func (m forcedAuthoritativeModule) Match(file Inspection) (Match, bool) {
+	return Match{
 		payloadID: file.Payloads[0].ID,
 		strength:  authoritative,
 		formatID:  m.id,
 	}, true
 }
-func (m forcedAuthoritativeModule) Parse(context.Context, probe.Inspection, Claim) (Parsed, error) {
+func (m forcedAuthoritativeModule) Parse(context.Context, Inspection, Match) (Parsed, error) {
 	return Parsed{Format: m.id}, nil
 }
 
-func TestResolveRejectsAuthorityForADifferentDiscriminator(t *testing.T) {
+func TestResolveRejectsAuthorityForADifferentMarker(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry()
-	if err := registry.Register(claimingModule{
+	if err := registry.Register(matchingModule{
 		id: "chara_card_v3", spec: "chara_card_v2", authoritative: true,
 	}); err != nil {
 		t.Fatalf("Register: %v", err)
 	}
 
 	_, _, err := registry.Resolve(probedPayload("chara_card_v2", "chara"))
-	if !errors.Is(err, ErrInvalidClaim) {
-		t.Fatalf("Resolve error = %v, want ErrInvalidClaim", err)
+	if !errors.Is(err, ErrInvalidMatch) {
+		t.Fatalf("Resolve error = %v, want ErrInvalidMatch", err)
 	}
 }
 
-func probedPayload(spec, locator string) probe.Inspection {
-	return probe.Inspection{
-		Container: probe.PNG,
-		Payloads: []probe.Payload{{
-			ID:      0,
-			Locator: probe.Locator{Container: probe.PNG, Name: locator},
+func probedPayload(spec, location string) Inspection {
+	return Inspection{
+		Container: PNG,
+		Payloads: []Payload{{
+			ID:       0,
+			Location: PayloadLocation{Container: PNG, Name: location},
 			Root: map[string]json.RawMessage{
 				"spec": json.RawMessage(`"` + spec + `"`),
 			},
@@ -178,14 +176,14 @@ func probedPayload(spec, locator string) probe.Inspection {
 	}
 }
 
-type containerModule struct{ claimingModule }
+type containerModule struct{ matchingModule }
 
 func (containerModule) OwnedSpecs() []string { return []string{"chara_card_v3"} }
 
 func TestResolveAcceptsAuthorityForASpecTheModuleOwns(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry()
-	if err := registry.Register(containerModule{claimingModule{
+	if err := registry.Register(containerModule{matchingModule{
 		id: "charx", spec: "chara_card_v3", authoritative: true,
 	}}); err != nil {
 		t.Fatalf("Register: %v", err)
@@ -203,14 +201,14 @@ func TestResolveAcceptsAuthorityForASpecTheModuleOwns(t *testing.T) {
 func TestResolveStillRejectsAuthorityForASpecNobodyOwns(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry()
-	if err := registry.Register(containerModule{claimingModule{
+	if err := registry.Register(containerModule{matchingModule{
 		id: "charx", spec: "chara_card_v2", authoritative: true,
 	}}); err != nil {
 		t.Fatalf("Register: %v", err)
 	}
 
 	_, _, err := registry.Resolve(probedPayload("chara_card_v2", "card.json"))
-	if !errors.Is(err, ErrInvalidClaim) {
-		t.Fatalf("Resolve error = %v, want ErrInvalidClaim", err)
+	if !errors.Is(err, ErrInvalidMatch) {
+		t.Fatalf("Resolve error = %v, want ErrInvalidMatch", err)
 	}
 }

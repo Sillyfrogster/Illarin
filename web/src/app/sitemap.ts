@@ -1,37 +1,42 @@
 import type { MetadataRoute } from "next";
 import {
-  type AssetListParams,
   type BrowsePage,
-  fetchAssets,
+  fetchWorks,
+  type WorkListParams,
 } from "@/lib/api/query";
-import { assetHref } from "@/lib/asset-url";
+import { DOCS } from "@/lib/docs";
 import { siteUrl } from "@/lib/site-metadata";
+import { workHref } from "@/lib/work-url";
 
 export const dynamic = "force-dynamic";
 
-type ListSitemapAssets = (
-  params: AssetListParams,
+type ListSitemapWorks = (
+  params: WorkListParams,
 ) => Promise<Pick<BrowsePage, "items" | "nextCursor">>;
 
 export async function buildSitemap(
-  listAssets: ListSitemapAssets,
+  listWorks: ListSitemapWorks,
 ): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [
     { url: new URL("/", siteUrl).href },
     { url: new URL("/browse", siteUrl).href },
+    { url: new URL("/docs", siteUrl).href },
+    ...DOCS.map(({ slug }) => ({
+      url: new URL(`/docs/${slug}`, siteUrl).href,
+    })),
   ];
   let cursor: BrowsePage["nextCursor"];
 
   do {
-    const page = await listAssets({
+    const page = await listWorks({
       limit: 24,
       nsfw: "shown",
       before: cursor?.before,
       beforeId: cursor?.beforeId,
     });
-    for (const asset of page.items) {
+    for (const work of page.items) {
       entries.push({
-        url: new URL(assetHref(asset.id, asset.name), siteUrl).href,
+        url: new URL(workHref(work.id, work.name), siteUrl).href,
       });
     }
     cursor = page.nextCursor;
@@ -41,5 +46,5 @@ export async function buildSitemap(
 }
 
 export default function sitemap(): Promise<MetadataRoute.Sitemap> {
-  return buildSitemap(fetchAssets);
+  return buildSitemap(fetchWorks);
 }

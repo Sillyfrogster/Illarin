@@ -1,0 +1,14 @@
+{
+  "note": "A fenced block keeps its code and its label",
+  "markdown": "```go\nfunc main() {\n\tprintln(\"one\")\n}\n```\n",
+  "body": {
+    "content": [
+      {
+        "language": "go",
+        "source": "func main() {\n\tprintln(\"one\")\n}",
+        "type": "codeBlock"
+      }
+    ],
+    "version": 2
+  }
+}

@@ -9,14 +9,14 @@ import {
   useMemo,
   useState,
 } from "react";
-import { browserFetch } from "@/lib/api/browser-mutation";
-import type { components } from "@/lib/api/schema";
+import { api } from "@/lib/api/client";
+import type { Account, SessionState } from "@/lib/api/shapes";
 
-export type SignedInAccount = components["schemas"]["Account"];
+export type SignedInAccount = Account;
 
 type AuthContextValue = {
   account: SignedInAccount | null | undefined;
-  publicationAuthority: boolean;
+  writer: boolean;
   refresh: () => Promise<void>;
   setAccount: (account: SignedInAccount | null) => void;
   signOut: () => Promise<void>;
@@ -28,28 +28,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<SignedInAccount | null | undefined>(
     undefined,
   );
-  const [publicationAuthority, setPublicationAuthority] = useState(false);
+  const [writer, setWriter] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/v1/auth/session", {
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-      if (!response.ok) {
+      const { data: state } = await api<SessionState>(
+        "GET",
+        "/v1/auth/session",
+        { cache: "no-store" },
+      );
+      if (!state) {
         setAccount(null);
-        setPublicationAuthority(false);
+        setWriter(false);
         return;
       }
-      const state = (await response.json()) as {
-        user: SignedInAccount | null;
-        publicationAuthority: boolean;
-      };
       setAccount(state.user);
-      setPublicationAuthority(state.publicationAuthority);
+      setWriter(state.writer);
     } catch {
       setAccount(null);
-      setPublicationAuthority(false);
+      setWriter(false);
     }
   }, []);
 
@@ -58,18 +55,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const signOut = useCallback(async () => {
-    const response = await browserFetch("/api/v1/auth/sign-out", {
-      method: "POST",
-      credentials: "same-origin",
-    });
+    const { response } = await api<void>("POST", "/v1/auth/sign-out");
     if (!response.ok) throw new Error("Could not sign out");
     setAccount(null);
-    setPublicationAuthority(false);
+    setWriter(false);
   }, []);
 
   const value = useMemo(
-    () => ({ account, publicationAuthority, refresh, setAccount, signOut }),
-    [account, publicationAuthority, refresh, signOut],
+    () => ({
+      account,
+      refresh,
+      setAccount,
+      signOut,
+      writer,
+    }),
+    [account, refresh, signOut, writer],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,18 +1,17 @@
 "use client";
 
 import { createContext, type ReactNode, useContext, useMemo } from "react";
+import { BLOG_HOME } from "./blog-paths";
 
-/** The two public origins, as the server knows them. Browser code reads them from here rather than from settings it cannot see. */
-export type Origins = { site: string; blog: string };
+export type Origins = { site: string };
 
 const OriginsContext = createContext<Origins | null>(null);
 
 export function OriginsProvider({
   site,
-  blog,
   children,
 }: Origins & { children: ReactNode }) {
-  const origins = useMemo(() => ({ site, blog }), [site, blog]);
+  const origins = useMemo(() => ({ site }), [site]);
   return (
     <OriginsContext.Provider value={origins}>
       {children}
@@ -26,7 +25,7 @@ export function useOrigins(): Origins {
   return origins;
 }
 
-/** The blog's hostname as a reader would type it, for showing where a post will live. */
-export function useBlogHost(): string {
-  return new URL(useOrigins().blog).host;
+export function useBlogAddress(): string {
+  const address = new URL(BLOG_HOME, useOrigins().site);
+  return address.host + address.pathname;
 }

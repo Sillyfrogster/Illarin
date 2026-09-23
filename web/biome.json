@@ -33,11 +33,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "src/app/globals.css",
-        "src/app/prototype/editor/theme.css",
-        "src/app/prototype/direction/theme.css"
-      ],
+      "includes": ["src/app/globals.css"],
       "css": {
         "parser": {
           "tailwindDirectives": true
@@ -45,10 +41,7 @@
       }
     },
     {
-      "includes": [
-        "src/lib/publication-card.tsx",
-        "src/components/ui/image-crop.tsx"
-      ],
+      "includes": ["src/lib/link-card.tsx", "src/components/ui/image-crop.tsx"],
       "linter": {
         "rules": {
           "performance": {
@@ -58,10 +51,7 @@
       }
     },
     {
-      "includes": [
-        "src/app/globals.css",
-        "src/app/prototype/direction/theme.css"
-      ],
+      "includes": ["src/app/globals.css"],
       "linter": {
         "rules": {
           "complexity": {

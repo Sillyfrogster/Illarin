@@ -1,0 +1,15 @@
+{
+  "note": "A source attribute a client hoped would be kept beside the media id",
+  "path": "body.content.0.src",
+  "body": {
+    "version": 2,
+    "content": [
+      {
+        "type": "image",
+        "mediaId": "0f3b1c4e-6a2d-4a19-9c51-2f7d8e5b41a0",
+        "src": "https://example.com/picture.png",
+        "alt": "A picture"
+      }
+    ]
+  }
+}

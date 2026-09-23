@@ -3,18 +3,18 @@ package format
 import "slices"
 
 const (
-	extensionKind     = "extension"
+	extensionType     = "extension"
 	installCapability = "extension-install"
 )
 
-// InstalledKinds names the kinds an app installs and runs, where every other kind is content it reads.
-func InstalledKinds() []string {
-	return []string{extensionKind}
+// InstalledTypes names the types an app installs and runs, where every other type is content it reads.
+func InstalledTypes() []string {
+	return []string{extensionType}
 }
 
-// InstallCapabilities names what an instance must declare, one entry per app, before an asset of this kind is sent to it.
-func InstallCapabilities(kind string, formats []string) []string {
-	if !slices.Contains(InstalledKinds(), kind) {
+// InstallCapabilities names what a connected app must declare, one entry per app, before a work of this type is sent to it.
+func InstallCapabilities(workType string, formats []string) []string {
+	if !slices.Contains(InstalledTypes(), workType) {
 		return nil
 	}
 	needed := make([]string, 0, len(Apps()))

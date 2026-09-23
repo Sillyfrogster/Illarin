@@ -1,16 +1,20 @@
 "use client";
 
 import { Check, Copy } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
+import { buttonVariants } from "./button";
 
 const CONFIRMATION_MS = 2000;
 
+/** Copies text on a click and shows a check while it confirms */
 export function CopyButton({
+  children,
   text,
   label,
   className,
 }: {
+  children?: ReactNode;
   text: string;
   label: string;
   className?: string;
@@ -24,10 +28,13 @@ export function CopyButton({
     return () => clearTimeout(timer);
   }, [copied]);
 
+  const Icon = copied ? Check : Copy;
   return (
     <button
       className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-ink",
+        children
+          ? buttonVariants({ variant: "outline" })
+          : "flex size-11 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-ink",
         className,
       )}
       onClick={async () => {
@@ -44,11 +51,13 @@ export function CopyButton({
       <span className="sr-only">
         {failed ? `${label} could not be copied` : copied ? "Copied" : label}
       </span>
-      {copied ? (
-        <Check aria-hidden="true" className="size-4 text-accent" />
-      ) : (
-        <Copy aria-hidden="true" className="size-4" />
-      )}
+      <Icon
+        aria-hidden="true"
+        className={cn("size-4", copied && "text-accent")}
+      />
+      {children ? (
+        <span aria-hidden="true">{copied ? "Copied" : children}</span>
+      ) : null}
     </button>
   );
 }

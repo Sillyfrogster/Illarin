@@ -1,0 +1,70 @@
+{
+  "note": "Prose carries every mark Illarin has",
+  "markdown": "Illarin ships **bold**, *italic*, ~~struck~~ and `inline code` prose.\n",
+  "body": {
+    "content": [
+      {
+        "content": [
+          {
+            "text": "Illarin ships ",
+            "type": "text"
+          },
+          {
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ],
+            "text": "bold",
+            "type": "text"
+          },
+          {
+            "text": ", ",
+            "type": "text"
+          },
+          {
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ],
+            "text": "italic",
+            "type": "text"
+          },
+          {
+            "text": ", ",
+            "type": "text"
+          },
+          {
+            "marks": [
+              {
+                "type": "strike"
+              }
+            ],
+            "text": "struck",
+            "type": "text"
+          },
+          {
+            "text": " and ",
+            "type": "text"
+          },
+          {
+            "marks": [
+              {
+                "type": "code"
+              }
+            ],
+            "text": "inline code",
+            "type": "text"
+          },
+          {
+            "text": " prose.",
+            "type": "text"
+          }
+        ],
+        "type": "paragraph"
+      }
+    ],
+    "version": 2
+  }
+}

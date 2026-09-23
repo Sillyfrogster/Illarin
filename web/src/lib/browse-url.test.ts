@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { buildBrowseHref, readBrowseFilters } from "./browse-url";
+import { buildBrowseHref, chooseFilter, readBrowseFilters } from "./browse-url";
 
 describe("browse URL state", () => {
   test("round-trips the complete search expression through one q parameter", () => {
     const expression = '  moon tag:"original character" mood:gentle  ';
     const href = buildBrowseHref({
-      kind: "character",
-      platform: "raw",
+      type: "character",
       q: expression,
       facet: ["tone=gentle"],
     });
@@ -14,8 +13,7 @@ describe("browse URL state", () => {
 
     expect(url.searchParams.getAll("q")).toEqual([expression]);
     expect(readBrowseFilters(Object.fromEntries(url.searchParams))).toEqual({
-      kind: "character",
-      platform: "raw",
+      type: "character",
       q: expression,
       facet: ["tone=gentle"],
     });
@@ -23,12 +21,35 @@ describe("browse URL state", () => {
 
   test("keeps creator profile filters on the creator profile", () => {
     expect(
-      buildBrowseHref({ kind: "lorebook", q: "moonlit" }, "/@verified.creator"),
-    ).toBe("/@verified.creator?kind=lorebook&q=moonlit");
+      buildBrowseHref({ type: "lorebook", q: "moonlit" }, "/@verified.creator"),
+    ).toBe("/@verified.creator?type=lorebook&q=moonlit");
   });
 
-  test("keeps Pack as a catalog kind", () => {
-    expect(readBrowseFilters({ kind: "pack" }).kind).toBe("pack");
-    expect(buildBrowseHref({ kind: "pack" })).toBe("/browse?kind=pack");
+  test("keeps Pack as a type", () => {
+    expect(readBrowseFilters({ type: "pack" }).type).toBe("pack");
+    expect(buildBrowseHref({ type: "pack" })).toBe("/browse?type=pack");
+  });
+
+  test("still reads the type from links that say kind", () => {
+    expect(readBrowseFilters({ kind: "lorebook" }).type).toBe("lorebook");
+  });
+
+  test("choosing a filter replaces its earlier value and keeps the others", () => {
+    const filters = {
+      type: "character" as const,
+      q: "moon",
+      facet: ["lorebook=true", "alternate_greetings=1"],
+    };
+
+    expect(chooseFilter(filters, "alternate_greetings", "2-4")).toEqual({
+      ...filters,
+      facet: ["lorebook=true", "alternate_greetings=2-4"],
+    });
+    expect(chooseFilter(filters, "lorebook", null).facet).toEqual([
+      "alternate_greetings=1",
+    ]);
+    expect(
+      chooseFilter({ facet: ["lorebook=true"] }, "lorebook", null).facet,
+    ).toBeUndefined();
   });
 });

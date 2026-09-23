@@ -13,7 +13,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -45,12 +44,12 @@ const twoEntries = `{
 	]
 }`
 
-func TestTheModuleReadsAndWritesTheLorebookKind(t *testing.T) {
+func TestTheModuleReadsAndWritesTheLorebookType(t *testing.T) {
 	t.Parallel()
 	declaration := Module{}.Declaration()
-	if declaration.Kind != Kind || declaration.ID != ID {
+	if declaration.Type != Type || declaration.ID != ID {
 		t.Errorf("declaration identity = %q/%q, want %q/%q",
-			declaration.ID, declaration.Kind, ID, Kind)
+			declaration.ID, declaration.Type, ID, Type)
 	}
 	if !declaration.Direction.Read || !declaration.Direction.Write {
 		t.Errorf("direction = %+v, want read and write", declaration.Direction)
@@ -59,61 +58,61 @@ func TestTheModuleReadsAndWritesTheLorebookKind(t *testing.T) {
 		t.Fatalf("declaration: %v", err)
 	}
 	if len(declaration.Recognition) != 1 ||
-		declaration.Recognition[0].Kind != format.RecognitionSignature {
-		t.Errorf("recognition = %+v, want one structural signature", declaration.Recognition)
+		declaration.Recognition[0].Type != format.RecognitionShape {
+		t.Errorf("recognition = %+v, want one shape", declaration.Recognition)
 	}
 	if len(declaration.Slots) != 0 || len(declaration.Boilerplate) != 0 {
 		t.Errorf("declaration invented slots %v or boilerplate %v",
 			declaration.Slots, declaration.Boilerplate)
 	}
-	if !slices.Contains(declaration.TestedOrigins, ID) ||
-		!slices.Contains(declaration.TestedOrigins, format.OriginIllarin) {
-		t.Errorf("tested origins = %v, want its own format and Illarin", declaration.TestedOrigins)
+	if !slices.Contains(declaration.TestedOriginalFormats, ID) ||
+		!slices.Contains(declaration.TestedOriginalFormats, format.OriginalFormatIllarin) {
+		t.Errorf("tested origins = %v, want its own format and Illarin", declaration.TestedOriginalFormats)
 	}
 	if slices.Contains(declaration.ConsumedKeys, "description") {
 		t.Error("the module declared the book's description consumed")
 	}
 }
 
-func TestTheSignatureDoesNotOverlapAnotherModules(t *testing.T) {
+func TestTheShapeDoesNotOverlapAnotherModules(t *testing.T) {
 	t.Parallel()
 	if err := testRegistry(t).ValidateDeclarations(); err != nil {
 		t.Fatalf("declarations across every module: %v", err)
 	}
 }
 
-func TestOnlyADocumentHoldingEntriesIsClaimed(t *testing.T) {
+func TestOnlyADocumentHoldingEntriesIsMatched(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
-		name     string
-		body     string
-		claimant string
+		name      string
+		body      string
+		matchedBy string
 	}{
-		{name: "a book", body: `{"entries": []}`, claimant: ID},
-		{name: "a book with fields around it", body: twoEntries, claimant: ID},
+		{name: "a book", body: `{"entries": []}`, matchedBy: ID},
+		{name: "a book with fields around it", body: twoEntries, matchedBy: ID},
 		{
-			name:     "a card before any spec existed",
-			body:     `{"name":"a","description":"b","personality":"c","scenario":"d","first_mes":"e"}`,
-			claimant: "chara_card_v2",
+			name:      "a card before any spec existed",
+			body:      `{"name":"a","description":"b","personality":"c","scenario":"d","first_mes":"e"}`,
+			matchedBy: "chara_card_v2",
 		},
 		{
-			name:     "entries as an object",
-			body:     `{"entries": {"0": {}}}`,
-			claimant: SillyTavernID,
+			name:      "entries as an object",
+			body:      `{"entries": {"0": {}}}`,
+			matchedBy: SillyTavernID,
 		},
-		{name: "nothing recognisable", body: `{"colours": []}`, claimant: ""},
+		{name: "nothing recognisable", body: `{"colours": []}`, matchedBy: ""},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			resolution, claimed, err := testRegistry(t).Resolve(document(t, test.body))
+			resolution, matched, err := testRegistry(t).Resolve(document(t, test.body))
 			if err != nil {
 				t.Fatalf("resolve: %v", err)
 			}
-			claimant := ""
-			if claimed {
-				claimant = resolution.Module.ID()
+			matchedBy := ""
+			if matched {
+				matchedBy = resolution.Module.ID()
 			}
-			if claimant != test.claimant {
-				t.Fatalf("claimed by %q, want %q", claimant, test.claimant)
+			if matchedBy != test.matchedBy {
+				t.Fatalf("matched by %q, want %q", matchedBy, test.matchedBy)
 			}
 		})
 	}
@@ -123,8 +122,8 @@ func TestReadingABookFillsTheEntryRoleAndKeepsTheRest(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, twoEntries)
 
-	if parsed.Kind != Kind || parsed.Format != ID {
-		t.Fatalf("parsed kind %q format %q, want %q and %q", parsed.Kind, parsed.Format, Kind, ID)
+	if parsed.Type != Type || parsed.Format != ID {
+		t.Fatalf("parsed type %q format %q, want %q and %q", parsed.Type, parsed.Format, Type, ID)
 	}
 	if parsed.Header.Name != "Zenless lore" {
 		t.Errorf("name = %q, want the book's own", parsed.Header.Name)
@@ -146,13 +145,13 @@ func TestReadingABookFillsTheEntryRoleAndKeepsTheRest(t *testing.T) {
 		t.Errorf("second entry = %+v, want switched off and case sensitive", second)
 	}
 
-	body := preservedPayload(t, parsed.Remainder, format.OwnerAsset, bookNamespace)
+	body := preservedPayload(t, parsed.Remainder, format.OwnerWork, bookNamespace)
 	for _, key := range []string{"description", "scan_depth", "token_budget"} {
 		if _, held := body[key]; !held {
 			t.Errorf("the book's %s was not preserved", key)
 		}
 	}
-	if _, held := preserved(parsed.Remainder, format.OwnerAsset, "risuai"); !held {
+	if _, held := preserved(parsed.Remainder, format.OwnerWork, "risuai"); !held {
 		t.Error("the extensions namespace was not preserved as its own namespace")
 	}
 	entry := preservedPayload(t, parsed.Remainder, format.OwnerItem, entryNamespace)
@@ -209,7 +208,7 @@ func TestAMalformedFieldInOneEntryCostsThatFieldAlone(t *testing.T) {
 func TestEntriesThatAreNotAListRefuseTheImport(t *testing.T) {
 	t.Parallel()
 	file := document(t, `{"entries": {"0": {"content": "x"}}}`)
-	_, err := Module{}.Parse(context.Background(), file, format.CompatibilityClaim(file.Payloads[0]))
+	_, err := Module{}.Parse(context.Background(), file, format.CompatibilityMatch(file.Payloads[0]))
 	if reason, classified := format.FailureOf(err); !classified ||
 		reason != format.FailureMalformedInput {
 		t.Fatalf("parse error = %v, want a malformed input refusal", err)
@@ -219,8 +218,8 @@ func TestEntriesThatAreNotAListRefuseTheImport(t *testing.T) {
 func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, twoEntries)
-	written, err := Module{}.Write(context.Background(), format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements,
+	written, err := Module{}.Write(context.Background(), format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements,
 		Preserved: parsed.Remainder,
 	})
 	if err != nil {
@@ -235,7 +234,7 @@ func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 		t.Fatalf("read the written book: %v", err)
 	}
 	if string(body["name"]) != `"Zenless lore"` {
-		t.Errorf("written name = %s, want the asset's own", body["name"])
+		t.Errorf("written name = %s, want the work's own", body["name"])
 	}
 	for _, key := range []string{"description", "scan_depth", "token_budget", "extensions"} {
 		if _, held := body[key]; !held {
@@ -273,8 +272,8 @@ func TestABookWrittenBackCarriesItsContentAndEverythingPreserved(t *testing.T) {
 
 func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 	t.Parallel()
-	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: Kind, Origin: ID,
+	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
+		Type: Type, OriginalFormat: ID,
 		Elements: []block.Element{
 			{
 				ID: uuid.New(), Type: block.TypeEntryTable, Role: block.RoleLorebookEntries,
@@ -303,18 +302,18 @@ func TestTheLossReportNamesWhatALorebookFileCannotCarry(t *testing.T) {
 
 func TestNoCardWriterIsOfferedForABook(t *testing.T) {
 	t.Parallel()
-	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: "character", Origin: ID,
+	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
+		Type: "character", OriginalFormat: ID,
 	})
 	if len(targets) != 0 {
-		t.Fatalf("offered %+v for a lorebook origin under the character kind, want none", targets)
+		t.Fatalf("offered %+v for a lorebook original format under the character type, want none", targets)
 	}
 }
 
 func TestAnImportedBookIsPlacedIntoTheLorebookCatalog(t *testing.T) {
 	t.Parallel()
 	parsed := parse(t, twoEntries)
-	blocks, err := block.Place(parsed.Kind, parsed.Elements)
+	blocks, err := block.Place(parsed.Type, parsed.Elements)
 	if err != nil {
 		t.Fatalf("place: %v", err)
 	}
@@ -329,7 +328,7 @@ func TestAnImportedBookIsPlacedIntoTheLorebookCatalog(t *testing.T) {
 	if len(placed.Elements) != 1 || placed.Elements[0].Role != block.RoleLorebookEntries {
 		t.Fatalf("elements = %+v, want the entry table alone", placed.Elements)
 	}
-	if !placed.Pinned(block.RoleLorebookEntries, Kind) {
+	if !placed.Pinned(block.RoleLorebookEntries, Type) {
 		t.Error("the entries can be taken off the page a lorebook is")
 	}
 }
@@ -348,14 +347,14 @@ func testRegistry(t *testing.T) *format.Registry {
 func parse(t *testing.T, body string) format.Parsed {
 	t.Helper()
 	file := document(t, body)
-	resolution, claimed, err := testRegistry(t).Resolve(file)
+	resolution, matched, err := testRegistry(t).Resolve(file)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if !claimed {
-		t.Fatal("no module claimed the book")
+	if !matched {
+		t.Fatal("no module matched the book")
 	}
-	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -409,10 +408,10 @@ func preservedPayload(
 	return payload
 }
 
-func document(t *testing.T, body string) probe.Inspection {
+func document(t *testing.T, body string) format.Inspection {
 	t.Helper()
 	data := []byte(body)
-	file, err := probe.Inspect(
+	file, err := format.Inspect(
 		context.Background(), memoryStore{data: data}, uuid.New(), int64(len(data)), "book.json",
 	)
 	if err != nil {

@@ -2,111 +2,67 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AnnouncementStatus } from "@/components/updates/AnnouncementStatus";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import type {
-  AssetDetail,
-  AssetElement,
-  AssetImage,
   ReadinessItem,
+  WorkDetail,
+  WorkElement,
+  WorkImage,
 } from "@/lib/api/query";
+import { fetchWaitingReplacement, type UploadOperation } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import type { PageTarget } from "@/lib/readiness";
-import { DeleteControl } from "../DeleteControl";
-import { DiscoveryControl } from "../DiscoveryControl";
 import { ElementFields, elementHint } from "../ElementEditors";
+import { MakePublicConfirmation } from "../MakePublicConfirmation";
 import { PreservedPanel } from "../PreservedPanel";
-import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
-import { SealedPanel } from "../SealedPanel";
+import { PreservedPromptsPanel } from "../PreservedPromptsPanel";
+import { fragmentName } from "../PresetElements";
 import {
-  elementSealsAPrompt,
   NO_ALLOWED_APP,
-  SealedPolicy,
-} from "../SealedPolicy";
-import { UnsealConfirmation } from "../UnsealConfirmation";
-import { WithholdControl } from "../WithholdControl";
-import { BlockCatalog } from "./BlockCatalog";
-import { type Destination, destinationsIn, JumpPalette } from "./JumpPalette";
-import { PublicationRail } from "./PublicationRail";
+  PrivatePromptsControl,
+} from "../PrivatePromptsControl";
+import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
+import { TakedownControl } from "../TakedownControl";
+import { AddBlock } from "./AddBlock";
+import { FoundImagesPanel } from "./FoundImagesPanel";
+import { useFoundImages } from "./found-images";
+import { PublishDialog } from "./PublishDialog";
 import { RemoveBlock } from "./RemoveBlock";
-import { firstCursor } from "./save";
+import { ReplacementStep } from "./ReplacementStep";
 import { useWorkspace } from "./state";
-import { VaultPanel } from "./VaultPanel";
-import { useVault } from "./vault";
-import { WorkspaceDock } from "./WorkspaceDock";
+import { EditToggle, WorkspaceDock } from "./WorkspaceDock";
 
 export type WorkspaceSurfacesProps = {
   creator: string;
-  discovery: AssetDetail["discovery"];
+  visibility: WorkDetail["visibility"];
   hasOriginal: boolean;
-  images: AssetImage[];
-  kind: string;
+  images: WorkImage[];
+  typeName: string;
   readiness?: ReadinessItem[];
-  sealedBlocks?: number;
-  sealsPrompts: boolean;
-  unpublishedChanges: boolean;
-  withheld: boolean;
+  preservedPrompts?: number;
+  hasPrivatePrompts: boolean;
+  takenDown: boolean;
 };
 
 export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const workspace = useWorkspace();
   const { account } = useAuth();
   const reduced = useReducedMotion();
-  const [jumping, setJumping] = useState(false);
-  const vault = useVault(workspace.assetId, workspace.isOwner);
-  const canWithhold = Boolean(
-    account?.role === "admin" && !workspace.isDraft && !props.withheld,
+  const foundImages = useFoundImages(workspace.workId, workspace.isOwner);
+  const canTakeDown = Boolean(
+    account?.role === "admin" && !workspace.isDraft && !props.takenDown,
   );
-  const _previewing =
-    workspace.isOwner && !workspace.editing && workspace.sweep > 0;
-
-  useEffect(() => {
-    if (!workspace.editing) return;
-    function onKey(event: KeyboardEvent) {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k")
-        return;
-      event.preventDefault();
-      setJumping((open) => !open);
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [workspace.editing]);
-
-  function go(destination: Destination) {
-    setJumping(false);
-    const block = workspace.blocks.find(
-      (item) => item.id === destination.blockId,
-    );
-    document
-      .getElementById(`block-${destination.blockId}`)
-      ?.scrollIntoView({ block: "start" });
-    if (!block || !destination.elementId) return;
-    const element = block.elements.find(
-      (item) => item.id === destination.elementId,
-    );
-    if (!element) return;
-    const cursor = firstCursor(element);
-    if (cursor) {
-      workspace.setCursor(cursor);
-      return;
-    }
-    workspace.openPane({
-      blockId: block.id,
-      elementId: element.id,
-      kind: "element",
-    });
-  }
-
   function goToPage(target: PageTarget) {
     workspace.closePane();
     if (target.where === "block") {
-      go({ blockId: target.blockId, id: target.blockId, label: "", where: "" });
+      goToBlock(target.blockId);
       return;
     }
     document
       .getElementById(
-        target.where === "name" ? "asset-name" : "adult-content-answer",
+        target.where === "name" ? "work-name" : "adult-content-answer",
       )
       ?.scrollIntoView({ block: "center" });
     if (target.where === "name") workspace.setCursor("identity:name");
@@ -127,10 +83,10 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 
   return (
     <>
-      {!workspace.isOwner && canWithhold && workspace.pane === null ? (
+      {!workspace.isOwner && canTakeDown && workspace.pane === null ? (
         <button
           className="fixed right-4 bottom-4 z-30 inline-flex min-h-11 items-center gap-2 rounded-control bg-ink px-4 text-meta font-medium text-field shadow-popover outline-offset-3"
-          onClick={() => workspace.openPane({ kind: "access" })}
+          onClick={() => workspace.openPane({ kind: "staff" })}
           type="button"
         >
           <ShieldAlert aria-hidden="true" size={16} />
@@ -142,24 +98,27 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 
       {workspace.editing ? (
         <WorkspaceDock
-          detail={detail(props, workspace.isDraft, workspace.saveState)}
-          onJump={() => setJumping(true)}
-          publicationLabel={workspace.isDraft ? "Publish" : "Review update"}
-          waiting={vault.pictures.length}
+          detail={detail(workspace.isDraft, workspace.saveState)}
+          takenDown={props.takenDown}
+          typeName={props.typeName}
+          visibility={props.visibility}
+          waiting={foundImages.pictures.length}
         />
+      ) : workspace.isOwner && !props.takenDown ? (
+        <EditToggle typeName={props.typeName} />
       ) : null}
 
       <AnimatePresence>
         {pane?.kind === "conflict" ? (
           <WorkspaceRail
-            description="Your writing is still on the page. Copy anything worth keeping, then reload to work from the newer copy."
+            description="Your writing is still on the page. Copy anything worth keeping, then reload to work from the newer drafted changes."
             key="conflict"
-            title="A newer working copy exists"
+            title="Newer drafted changes exist"
             tone="stop"
           >
             <div className="flex flex-col gap-5">
               <p className="text-ui text-mute">
-                This asset was saved in another session. Copy any unsaved text,
+                This page was saved in another session. Copy any unsaved text,
                 then reload to edit the latest version.
               </p>
               <button
@@ -183,27 +142,8 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             title={element.label || edited.title}
           >
             <div className="flex flex-col gap-5">
-              {workspace.message === NO_ALLOWED_APP ? (
-                <p
-                  className="rounded-control bg-stop-wash p-3 text-meta text-ink"
-                  role="alert"
-                >
-                  {workspace.message}
-                </p>
-              ) : null}
-              {elementSealsAPrompt(element) ? (
-                <SealedPolicy
-                  pending={workspace.busy}
-                  policy={{
-                    allowedApps: workspace.allowedApps,
-                    eligibleApps: workspace.eligibleApps,
-                    onChange: workspace.setAllowedApps,
-                  }}
-                  unanswered={workspace.message === NO_ALLOWED_APP}
-                />
-              ) : null}
               <Fields
-                assetId={workspace.assetId}
+                workId={workspace.workId}
                 blockId={edited.id}
                 element={element}
                 images={props.images}
@@ -212,14 +152,14 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           </WorkspaceRail>
         ) : null}
 
-        {pane?.kind === "catalog" ? (
+        {pane?.kind === "add-block" ? (
           <WorkspaceRail
             description="Blocks are grouped by where their content ends up. Nothing here is a decision you have to make now."
-            key="catalog"
+            key="add-block"
             onClose={workspace.closePane}
             title="Add a block"
           >
-            <BlockCatalog />
+            <AddBlock />
           </WorkspaceRail>
         ) : null}
 
@@ -235,103 +175,102 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           </WorkspaceRail>
         ) : null}
 
-        {pane?.kind === "vault" ? (
+        {pane?.kind === "found-images" ? (
           <WorkspaceRail
-            description="The README showed these pictures. Place each one into the block its section became, or let it go."
-            key="vault"
+            description="These came with your upload. Place each one in a block, or remove it."
+            key="found-images"
             onClose={workspace.closePane}
-            title="Pictures from the README"
+            title="Found images"
           >
-            <VaultPanel
-              onRelease={vault.release}
-              onReload={vault.reload}
-              pictures={vault.pictures}
+            <FoundImagesPanel
+              onRelease={foundImages.release}
+              onReload={foundImages.reload}
+              pictures={foundImages.pictures}
             />
           </WorkspaceRail>
         ) : null}
 
         {pane?.kind === "publication" ? (
-          <WorkspaceRail
-            description="Nothing here reaches readers until you publish. Content and notes stay private in the meantime."
+          <PublishDialog
             key="publication"
+            typeName={props.typeName}
+            onGo={(target) =>
+              target.where === "replacement"
+                ? workspace.openPane({ kind: "replacement" })
+                : goToPage(target)
+            }
+            readiness={props.readiness ?? []}
+            unlisted={props.visibility === "unlisted"}
+          />
+        ) : null}
+
+        {pane?.kind === "replacement" ? (
+          <WorkspaceRail
+            description={`Edited this ${props.typeName} in another app? Upload the file here and review what changed before you publish.`}
+            key="replacement"
+            title="Upload a new version"
             onClose={workspace.closePane}
-            title="Publication"
           >
-            <PublicationRail
-              kind={props.kind}
-              onGo={goToPage}
-              readiness={props.readiness}
-              unlisted={props.discovery === "unlisted"}
-              unpublishedChanges={props.unpublishedChanges}
-            />
-            {workspace.isOwner && !workspace.isDraft ? (
-              <AnnouncementStatus assetId={workspace.assetId} />
+            <Replacement />
+            {props.hasOriginal ? (
+              <PreservedPanel workId={workspace.workId} />
             ) : null}
           </WorkspaceRail>
         ) : null}
 
-        {pane?.kind === "access" ? (
+        {pane?.kind === "private-prompts" ? (
           <WorkspaceRail
-            description="Access changes apply the moment you make them. They do not wait for a save or a publication."
-            key="access"
+            description="Readers see a private prompt's name, never its text."
+            key="private-prompts"
             onClose={workspace.closePane}
-            title="Access and published state"
+            title="Private prompts"
           >
             <div className="flex flex-col gap-7">
-              {workspace.isOwner && !workspace.isDraft ? (
-                <DiscoveryControl
-                  assetId={workspace.assetId}
-                  frozen={props.withheld}
-                  initialDiscovery={props.discovery}
-                />
+              <PrivatePromptsControl
+                pending={workspace.busy}
+                policy={{
+                  allowedApps: workspace.allowedApps,
+                  eligibleApps: workspace.eligibleApps,
+                  onChange: workspace.setAllowedApps,
+                }}
+                unanswered={workspace.message === NO_ALLOWED_APP}
+              />
+              <PromptPrivacy />
+              {!workspace.isDraft && props.hasPrivatePrompts ? (
+                <RecordedPromptsPanel workId={workspace.workId} />
               ) : null}
-              {workspace.isOwner && props.hasOriginal ? (
-                <PreservedPanel assetId={workspace.assetId} />
-              ) : null}
-              {workspace.isOwner && !workspace.isDraft && props.sealsPrompts ? (
-                <RecordedPromptsPanel assetId={workspace.assetId} />
-              ) : null}
-              {workspace.isOwner && props.sealedBlocks ? (
-                <SealedPanel
-                  assetId={workspace.assetId}
-                  count={props.sealedBlocks}
-                />
-              ) : null}
-              {workspace.isOwner ? (
-                <DeleteControl
-                  assetId={workspace.assetId}
-                  creator={props.creator}
-                  frozen={props.withheld}
-                  isDraft={workspace.isDraft}
-                  kind={props.kind}
-                />
-              ) : null}
-              {canWithhold ? (
-                <WithholdControl
-                  assetId={workspace.assetId}
-                  creator={props.creator}
+              {props.preservedPrompts ? (
+                <PreservedPromptsPanel
+                  workId={workspace.workId}
+                  count={props.preservedPrompts}
                 />
               ) : null}
             </div>
           </WorkspaceRail>
         ) : null}
+
+        {pane?.kind === "staff" && canTakeDown ? (
+          <WorkspaceRail
+            key="staff"
+            onClose={workspace.closePane}
+            title="Staff tools"
+          >
+            <TakedownControl
+              workId={workspace.workId}
+              creator={props.creator}
+              typeName={props.typeName}
+            />
+          </WorkspaceRail>
+        ) : null}
       </AnimatePresence>
 
-      {workspace.unsealing ? (
-        <UnsealConfirmation
-          keepsASeal={workspace.unsealing.keepsASeal}
-          onExpose={workspace.confirmUnseal}
-          onKeepSealed={workspace.cancelUnseal}
+      {workspace.makingPublic ? (
+        <MakePublicConfirmation
+          keepsAPrivatePrompt={workspace.makingPublic.keepsAPrivatePrompt}
+          onMakePublic={workspace.confirmMakePublic}
+          onKeepPrivate={workspace.cancelMakePublic}
           pending={workspace.busy}
-          prompts={workspace.unsealing.prompts}
-        />
-      ) : null}
-
-      {jumping ? (
-        <JumpPalette
-          destinations={destinationsIn(workspace.blocks)}
-          onClose={() => setJumping(false)}
-          onGo={go}
+          prompts={workspace.makingPublic.prompts}
         />
       ) : null}
 
@@ -353,28 +292,87 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   );
 }
 
+function goToBlock(blockId: string) {
+  document
+    .getElementById(`block-${blockId}`)
+    ?.scrollIntoView({ block: "start" });
+}
+
+/** PromptPrivacy switches each prompt the work holds between public and private. */
+function PromptPrivacy() {
+  const workspace = useWorkspace();
+  const lists = workspace.blocks.flatMap((block) =>
+    block.elements.flatMap((element) =>
+      element.type === "prompt_list" && "fragments" in element.content
+        ? [{ block, element, content: element.content }]
+        : [],
+    ),
+  );
+  return lists.map(({ block, element, content }) => (
+    <fieldset
+      className="flex min-w-0 flex-col gap-1 border-0 p-0"
+      key={element.id}
+    >
+      <legend className="mb-2 text-ui font-medium text-ink">
+        {element.label || block.title}
+      </legend>
+      {content.fragments.map((fragment, index) =>
+        fragment.marker ? null : (
+          <label
+            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep has-checked:bg-accent-wash"
+            key={fragment.id ?? index}
+          >
+            <input
+              checked={fragment.private ?? false}
+              className="size-4 shrink-0 accent-[var(--v-action)]"
+              disabled={workspace.busy}
+              onChange={(event) =>
+                workspace.writeElement(block.id, {
+                  ...element,
+                  content: {
+                    ...content,
+                    fragments: content.fragments.map((one, at) =>
+                      at === index
+                        ? { ...one, private: event.target.checked }
+                        : one,
+                    ),
+                  },
+                })
+              }
+              type="checkbox"
+            />
+            <span className="min-w-0 wrap-anywhere">
+              {fragmentName(fragment, index)}
+            </span>
+          </label>
+        ),
+      )}
+    </fieldset>
+  ));
+}
+
 function Fields({
-  assetId,
+  workId,
   blockId,
   element,
   images,
 }: {
-  assetId: string;
+  workId: string;
   blockId: string;
-  element: AssetElement;
-  images: AssetImage[];
+  element: WorkElement;
+  images: WorkImage[];
 }) {
   const workspace = useWorkspace();
   return (
     <ElementFields
-      assetId={assetId}
+      workId={workId}
       chosen={workspace.chosenItems[element.id] ?? null}
       element={element}
       images={images}
       onChange={(next) => workspace.writeElement(blockId, next)}
       onChoose={(key) => workspace.chooseItem(element.id, key)}
       onImageAdded={() => workspace.say("Picture added.")}
-      pending={workspace.busy}
+      pending={false}
     />
   );
 }
@@ -396,16 +394,57 @@ function ActivationSweep() {
   );
 }
 
-function detail(
-  props: WorkspaceSurfacesProps,
-  isDraft: boolean,
-  state: string,
-): string {
+function detail(isDraft: boolean, state: string): string {
   if (state === "failed")
     return "Your edits are still on this page. Try saving again.";
   if (isDraft) return "Only you can open this page.";
-  if (props.unpublishedChanges || state === "unsaved") {
+  if (state === "private" || state === "unsaved" || state === "saving") {
     return "Readers do not have your changes yet.";
   }
   return "All changes are published.";
+}
+
+function Replacement() {
+  const workspace = useWorkspace();
+  const router = useRouter();
+  const [waiting, setWaiting] = useState<UploadOperation | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    void fetchWaitingReplacement(workspace.workId)
+      .then((upload) => {
+        if (active) {
+          setWaiting(upload);
+          setLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (active)
+          setError(
+            "Could not load your upload. Close this panel and try again.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [workspace.workId]);
+  function settled() {
+    workspace.closePane();
+    router.refresh();
+  }
+  return error ? (
+    <p role="alert" className="text-ui text-stop">
+      {error}
+    </p>
+  ) : loaded ? (
+    <ReplacementStep
+      onApplied={settled}
+      onDiscarded={settled}
+      waiting={waiting}
+      onWaiting={setWaiting}
+    />
+  ) : (
+    <output>Loading…</output>
+  );
 }

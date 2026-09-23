@@ -1,0 +1,30 @@
+{
+  "note": "A link keeps its address and loses its hover title",
+  "markdown": "[Notes](https://example.com/notes \"Hover text\")\n",
+  "body": {
+    "content": [
+      {
+        "content": [
+          {
+            "marks": [
+              {
+                "href": "https://example.com/notes",
+                "type": "link"
+              }
+            ],
+            "text": "Notes",
+            "type": "text"
+          }
+        ],
+        "type": "paragraph"
+      }
+    ],
+    "version": 2
+  },
+  "warnings": [
+    {
+      "line": 1,
+      "says": "hover title"
+    }
+  ]
+}

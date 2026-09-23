@@ -11,13 +11,12 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
 const (
 	ID   = "pack_lumiverse"
-	Kind = "pack"
+	Type = "pack"
 
 	packNamespace = ID
 	itemNamespace = ID + "_item"
@@ -29,10 +28,10 @@ func (Module) ID() string { return ID }
 
 func (Module) Declaration() format.Declaration {
 	return format.Declaration{
-		ID: ID, Label: "Lumiverse pack", Kind: Kind,
+		ID: ID, Label: "Lumiverse pack", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionSignature, Containers: []probe.Container{probe.JSON},
+			Type: format.RecognitionShape, Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				"packName": format.ValueString, "lumiaItems": format.ValueArray,
 				"loomItems": format.ValueArray,
@@ -53,7 +52,7 @@ func (Module) Declaration() format.Declaration {
 			},
 		},
 		Header: []format.HeaderField{
-			format.HeaderName, format.HeaderAssetVersion, format.HeaderCreditedAuthor,
+			format.HeaderName, format.HeaderWorkVersion, format.HeaderCreditedAuthor,
 		},
 		Slots: []format.SlotDeclaration{
 			{Name: "lumiaName", Type: format.ValueString},
@@ -69,25 +68,25 @@ func (Module) Declaration() format.Declaration {
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
 			ItemBytes: block.MaxItemBytes,
 		},
-		ConsumedKeys:     []string{"packName", "packAuthor", "version", "lumiaItems"},
-		Preservation:     format.PreservationDeclaration{Body: packNamespace},
-		TestedOrigins:    []string{ID, format.OriginIllarin, format.OriginV1},
-		PreservesOrigins: []string{format.OriginV1},
+		ConsumedKeys:             []string{"packName", "packAuthor", "version", "lumiaItems"},
+		Preservation:             format.PreservationDeclaration{Body: packNamespace},
+		TestedOriginalFormats:    []string{ID, format.OriginalFormatIllarin, format.OriginalFormatV1},
+		PreservesOriginalFormats: []string{format.OriginalFormatV1},
 	}
 }
 
-func (module Module) Claim(file probe.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, module.Declaration())
+func (module Module) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, module.Declaration())
 }
 
 func (Module) Parse(
 	_ context.Context,
-	file probe.Inspection,
-	claim format.Claim,
+	file format.Inspection,
+	match format.Match,
 ) (format.Parsed, error) {
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", ID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", ID)
 	}
 	source := maps.Clone(payload.Root)
 	var name string
@@ -98,7 +97,7 @@ func (Module) Parse(
 	keys.Take(source, "packAuthor", &header.CreditedAuthor)
 	var version json.Number
 	if keys.Take(source, "version", &version) {
-		header.AssetVersion = version.String()
+		header.WorkVersion = version.String()
 	}
 
 	var rawItems []json.RawMessage
@@ -118,7 +117,7 @@ func (Module) Parse(
 		Content: block.RecordList{Schema: block.LumiaRecordSchema, Records: records},
 	}
 	return format.Parsed{
-		Kind: Kind, Format: ID, Header: header, Elements: []block.Element{element},
+		Type: Type, Format: ID, Header: header, Elements: []block.Element{element},
 		Remainder: remainder(source, leftovers),
 	}, nil
 }
@@ -180,7 +179,7 @@ func remainder(
 	rows := make([]format.Remainder, 0, len(items)+1)
 	if len(source) > 0 {
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: packNamespace, Payload: keys.Must(source),
+			Owner: format.OwnerWork, Namespace: packNamespace, Payload: keys.Must(source),
 		})
 	}
 	for id, fields := range items {
@@ -192,28 +191,28 @@ func remainder(
 	return rows
 }
 
-func (Module) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	body, itemFields := preserved(asset.Preserved)
+func (Module) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
+	body, itemFields := preserved(work.Preserved)
 	var unread []json.RawMessage
 	_ = json.Unmarshal(body["lumiaItems"], &unread)
 	delete(body, "lumiaItems")
 
-	body["packName"] = keys.Must(asset.Header.Name)
-	if _, unread := body["packAuthor"]; !unread || asset.Header.CreditedAuthor != "" {
-		body["packAuthor"] = keys.Must(asset.Header.CreditedAuthor)
+	body["packName"] = keys.Must(work.Header.Name)
+	if _, unread := body["packAuthor"]; !unread || work.Header.CreditedAuthor != "" {
+		body["packAuthor"] = keys.Must(work.Header.CreditedAuthor)
 	}
 	_, unreadVersion := body["version"]
-	if asset.Header.AssetVersion == "" && !unreadVersion {
+	if work.Header.WorkVersion == "" && !unreadVersion {
 		body["version"] = keys.Must(1)
-	} else if asset.Header.AssetVersion != "" {
-		if _, err := strconv.ParseFloat(asset.Header.AssetVersion, 64); err == nil {
-			body["version"] = json.RawMessage(asset.Header.AssetVersion)
+	} else if work.Header.WorkVersion != "" {
+		if _, err := strconv.ParseFloat(work.Header.WorkVersion, 64); err == nil {
+			body["version"] = json.RawMessage(work.Header.WorkVersion)
 		} else {
-			body["version"] = keys.Must(asset.Header.AssetVersion)
+			body["version"] = keys.Must(work.Header.WorkVersion)
 		}
 	}
-	if asset.Cover != nil && asset.Cover.URL != "" {
-		body["coverUrl"] = keys.Must(asset.Cover.URL)
+	if work.Cover != nil && work.Cover.URL != "" {
+		body["coverUrl"] = keys.Must(work.Cover.URL)
 	}
 	if _, present := body["packExtras"]; !present {
 		body["packExtras"] = keys.Must([]any{})
@@ -223,7 +222,7 @@ func (Module) Write(_ context.Context, asset format.ExportAsset) (format.Artifac
 	}
 
 	items := make([]json.RawMessage, 0, len(unread))
-	if content, ok := asset.Content(block.RolePackItems); ok {
+	if content, ok := work.Content(block.RolePackItems); ok {
 		if list, isList := content.(block.RecordList); isList && list.Schema == block.LumiaRecordSchema {
 			for _, record := range list.Records {
 				fields := map[string]json.RawMessage{
@@ -237,7 +236,7 @@ func (Module) Write(_ context.Context, asset format.ExportAsset) (format.Artifac
 				writeModeledUnlessUnread(fields, unread, "authorName", record.AuthorName, "")
 				writeModeledUnlessUnread(fields, unread, "version", record.Version, 1)
 				if record.AvatarURL != nil {
-					if image, found := asset.Images[*record.AvatarURL]; found && image.URL != "" {
+					if image, found := work.Images[*record.AvatarURL]; found && image.URL != "" {
 						fields["avatarUrl"] = keys.Must(image.URL)
 					}
 				}
@@ -251,9 +250,9 @@ func (Module) Write(_ context.Context, asset format.ExportAsset) (format.Artifac
 
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the Lumiverse pack: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the Lumiverse pack: %w", err)
 	}
-	return format.Artifact{Body: document, MediaType: "application/json", Extension: ".json"}, nil
+	return format.MainFile{Body: document, MediaType: "application/json", Extension: ".json"}, nil
 }
 
 func writeModeledUnlessUnread[T comparable](
@@ -275,7 +274,7 @@ func preserved(rows []format.Remainder) (
 	items := make(map[uuid.UUID]map[string]json.RawMessage)
 	for _, row := range rows {
 		switch {
-		case row.Owner == format.OwnerAsset && row.Namespace == packNamespace:
+		case row.Owner == format.OwnerWork && row.Namespace == packNamespace:
 			body = keys.Object(row.Payload)
 		case row.Owner == format.OwnerItem && row.Namespace == itemNamespace:
 			items[row.OwnerID] = keys.Object(row.Payload)

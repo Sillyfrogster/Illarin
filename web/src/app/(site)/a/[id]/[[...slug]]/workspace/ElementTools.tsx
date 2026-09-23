@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, SquarePen, Trash2 } from "lucide-react";
-import type { AssetBlock, AssetElement } from "@/lib/api/query";
+import type { WorkBlock, WorkElement } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { editsInTheRail } from "@/lib/page-arrangement";
 import { moveElement, removeElement } from "./composition";
@@ -14,8 +14,8 @@ export function ElementTools({
   block,
   element,
 }: {
-  block: AssetBlock;
-  element: AssetElement;
+  block: WorkBlock;
+  element: WorkElement;
 }) {
   const workspace = useWorkspace();
   const position = block.elements.findIndex((item) => item.id === element.id);

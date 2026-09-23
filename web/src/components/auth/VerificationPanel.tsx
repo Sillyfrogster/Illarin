@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Said, TextInput, Trouble } from "@/components/ui/field";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { readRefusal } from "@/lib/answer";
+import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
 import { safeInternalReturnPath } from "@/lib/internal-return";
 
@@ -37,14 +38,16 @@ export function VerificationPanel() {
 
     async function verify() {
       try {
-        const response = await browserFetch("/api/v1/auth/verify-email", {
-          body: JSON.stringify({ token }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        });
-        const answer = (await response.json()) as { error?: string };
+        const { response, error } = await api<unknown>(
+          "POST",
+          "/v1/auth/verify-email",
+          { body: { token } },
+        );
         if (!response.ok) {
-          setSaid(answer.error ?? "This verification link could not be used.");
+          setSaid(
+            readRefusal(error).error ??
+              "This verification link could not be used.",
+          );
           setStanding("refused");
           return;
         }
@@ -73,17 +76,15 @@ export function VerificationPanel() {
     setSaid("");
 
     try {
-      const response = await browserFetch("/api/v1/account/email", {
-        body: JSON.stringify({
-          email: String(new FormData(form).get("email") ?? ""),
-        }),
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        method: "PATCH",
-      });
-      const answer = (await response.json()) as { error?: string };
+      const { response, error } = await api<unknown>(
+        "PATCH",
+        "/v1/account/email",
+        { body: { email: String(new FormData(form).get("email") ?? "") } },
+      );
       if (!response.ok) {
-        setSaid(answer.error ?? "The email address could not be changed.");
+        setSaid(
+          readRefusal(error).error ?? "The email address could not be changed.",
+        );
         return;
       }
       await refresh();
@@ -122,7 +123,7 @@ export function VerificationPanel() {
           Your address is verified
         </h2>
         <p className="mt-3 font-prose text-prose text-mute">
-          You can now publish assets and link applications.
+          You can now publish your work and link applications.
         </p>
         <div className="mt-7">
           <Button asChild size="large" variant="primary">

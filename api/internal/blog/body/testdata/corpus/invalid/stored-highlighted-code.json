@@ -1,0 +1,15 @@
+{
+  "note": "Highlighted markup is not stored beside the code",
+  "path": "body.content.0.highlighted",
+  "body": {
+    "version": 2,
+    "content": [
+      {
+        "type": "codeBlock",
+        "language": "go",
+        "source": "one := 1",
+        "highlighted": "<span class=\"k\">one</span>"
+      }
+    ]
+  }
+}

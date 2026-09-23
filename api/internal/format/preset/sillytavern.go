@@ -8,7 +8,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -83,11 +82,11 @@ func (SillyTavernModule) ID() string { return SillyTavernID }
 func (SillyTavernModule) Declaration() format.Declaration {
 	named := slotsByApp[SillyTavern]
 	return format.Declaration{
-		ID: SillyTavernID, Label: "SillyTavern preset", Kind: Kind,
+		ID: SillyTavernID, Label: "SillyTavern preset", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind:       format.RecognitionSignature,
-			Containers: []probe.Container{probe.JSON},
+			Type:       format.RecognitionShape,
+			Containers: []format.Container{format.JSON},
 			Required: map[string]format.ValueType{
 				stPrompts: format.ValueArray, stOrder: format.ValueArray,
 			},
@@ -142,7 +141,7 @@ func (SillyTavernModule) Declaration() format.Declaration {
 		Preservation: format.PreservationDeclaration{
 			Body: sillyTavernNamespace, Container: []string{stExtensions},
 		},
-		TestedOrigins: []string{SillyTavernID, format.OriginIllarin},
+		TestedOriginalFormats: []string{SillyTavernID, format.OriginalFormatIllarin},
 	}
 }
 
@@ -178,18 +177,18 @@ func hasHeadingOrHistoryPlacement(content block.Content) bool {
 	return false
 }
 
-func (m SillyTavernModule) Claim(file probe.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m SillyTavernModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
 func (m SillyTavernModule) Parse(
 	_ context.Context,
-	file probe.Inspection,
-	claim format.Claim,
+	file format.Inspection,
+	match format.Match,
 ) (format.Parsed, error) {
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", SillyTavernID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", SillyTavernID)
 	}
 	source := maps.Clone(payload.Root)
 
@@ -234,7 +233,7 @@ func (m SillyTavernModule) Parse(
 	}
 
 	return format.Parsed{
-		Kind: Kind, Format: SillyTavernID,
+		Type: Type, Format: SillyTavernID,
 		Elements: elements,
 		Remainder: sillyTavernPreservation.remainder(
 			source, leftovers,

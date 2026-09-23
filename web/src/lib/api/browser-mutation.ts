@@ -7,9 +7,3 @@ export function markBrowserMutation(method: string, headers: Headers) {
     headers.set(BROWSER_MUTATION_HEADER, "1");
   }
 }
-
-export function browserFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  const headers = new Headers(init.headers);
-  markBrowserMutation(init.method ?? "GET", headers);
-  return fetch(input, { ...init, headers });
-}

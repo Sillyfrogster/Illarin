@@ -1,29 +1,32 @@
 import type { ReplacementPreview } from "@/lib/api/query";
-import { previewConflicts } from "@/lib/asset-publication";
 import { replacementSubjectLabel } from "@/lib/replacement-subject";
+import { previewConflicts } from "@/lib/work-publish";
 
 export function ReplacementWarnings({
   preview,
 }: {
-  preview: Pick<ReplacementPreview, "conflicts" | "missingWording" | "seals">;
+  preview: Pick<
+    ReplacementPreview,
+    "conflicts" | "missingWording" | "privatePrompts"
+  >;
 }) {
   const conflicts = previewConflicts(preview);
   const missingWording = preview.missingWording ?? [];
   return (
     <>
-      {preview.seals > 0 ? (
+      {preview.privatePrompts > 0 ? (
         <p className="rounded-control bg-accent-wash p-3 text-meta text-ink">
-          This file seals {preview.seals} prompt
-          {preview.seals === 1 ? "" : "s"}. Applying it means readers can only
-          install this asset through a linked app.
+          This file has {preview.privatePrompts} private prompt
+          {preview.privatePrompts === 1 ? "" : "s"}. Applying it means readers
+          can only install it through an app you allow.
         </p>
       ) : null}
       {missingWording.length > 0 ? (
         <p className="rounded-control bg-stop-wash p-3 text-meta text-ink">
           This file does not include the wording for:{" "}
           {missingWording.join(", ")}. Illarin will keep{" "}
-          {missingWording.length === 1 ? "that prompt" : "those prompts"} sealed
-          and empty.
+          {missingWording.length === 1 ? "that prompt" : "those prompts"}{" "}
+          private and empty.
         </p>
       ) : null}
       {conflicts.length > 0 ? (

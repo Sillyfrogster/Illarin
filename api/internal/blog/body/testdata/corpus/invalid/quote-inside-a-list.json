@@ -1,0 +1,23 @@
+{
+  "note": "A quotation cannot go inside a list item",
+  "path": "body.content.0.content.0.content.0.type",
+  "body": {
+    "version": 2,
+    "content": [
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "quote",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "No"}]}]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

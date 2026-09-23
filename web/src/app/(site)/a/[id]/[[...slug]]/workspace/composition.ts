@@ -1,8 +1,8 @@
 import type {
   AddableBlock,
-  ArrangeAssetBlocksRequest,
-  AssetBlock,
-  AssetElement,
+  ArrangeWorkBlocksRequest,
+  WorkBlock,
+  WorkElement,
 } from "@/lib/api/query";
 import { type BlockLayout, LAYOUTS } from "@/lib/page-arrangement";
 
@@ -13,10 +13,10 @@ export type BlockOffer = { addable: AddableBlock; alreadyOn: boolean };
 export type OfferGroup = { key: string; title: string; offers: BlockOffer[] };
 
 export function moveBlock(
-  blocks: AssetBlock[],
+  blocks: WorkBlock[],
   blockId: string,
   to: number,
-): AssetBlock[] {
+): WorkBlock[] {
   const from = blocks.findIndex((block) => block.id === blockId);
   if (from < 0 || to === from || to < 0 || to >= blocks.length) return blocks;
   const next = [...blocks];
@@ -26,7 +26,7 @@ export function moveBlock(
 }
 
 export function blockDestinations(
-  blocks: AssetBlock[],
+  blocks: WorkBlock[],
   blockId: string,
 ): BlockDestination[] {
   const from = blocks.findIndex((block) => block.id === blockId);
@@ -46,8 +46,8 @@ export function blockDestinations(
 
 export function seatElements(
   layout: BlockLayout,
-  elements: AssetElement[],
-): AssetElement[] {
+  elements: WorkElement[],
+): WorkElement[] {
   const slots = LAYOUTS[layout].slots;
   return elements.map((element, index) => {
     const slot = slots[Math.min(index, slots.length - 1)];
@@ -55,18 +55,15 @@ export function seatElements(
   });
 }
 
-export function relaidBlock(
-  block: AssetBlock,
-  layout: BlockLayout,
-): AssetBlock {
+export function relaidBlock(block: WorkBlock, layout: BlockLayout): WorkBlock {
   return { ...block, elements: seatElements(layout, block.elements), layout };
 }
 
 export function moveElement(
-  block: AssetBlock,
+  block: WorkBlock,
   elementId: string,
   to: number,
-): AssetBlock {
+): WorkBlock {
   const elements = block.elements;
   const from = elements.findIndex((element) => element.id === elementId);
   if (from < 0 || to === from || to < 0 || to >= elements.length) return block;
@@ -76,10 +73,7 @@ export function moveElement(
   return { ...block, elements: seatElements(block.layout, next) };
 }
 
-export function removeElement(
-  block: AssetBlock,
-  elementId: string,
-): AssetBlock {
+export function removeElement(block: WorkBlock, elementId: string): WorkBlock {
   const dropped = block.elements.find((element) => element.id === elementId);
   if (!dropped || dropped.pinned) return block;
   return {
@@ -93,7 +87,7 @@ export function removeElement(
 
 export function offerGroups(
   addable: AddableBlock[],
-  blocks: AssetBlock[],
+  blocks: WorkBlock[],
   search: string,
 ): OfferGroup[] {
   const onThePage = new Set(blocks.map((block) => block.definition));
@@ -125,9 +119,9 @@ export function offerGroups(
 }
 
 export function arrangementRequest(
-  order: AssetBlock[],
-  saved: AssetBlock[],
-): ArrangeAssetBlocksRequest {
+  order: WorkBlock[],
+  saved: WorkBlock[],
+): ArrangeWorkBlocksRequest {
   const widths = new Map(saved.map((block) => [block.id, block.width]));
   return {
     blocks: order.map((block) => ({

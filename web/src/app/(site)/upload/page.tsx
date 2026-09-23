@@ -1,33 +1,35 @@
 import { Check, LockKeyhole, PencilLine, Upload } from "lucide-react";
 import Image from "next/image";
 import { Shell } from "@/components/layout/Shell";
+import { fetchBuildChoices } from "@/lib/api/query";
 import { pageMetadata } from "@/lib/site-metadata";
 import { UploadFlow } from "./UploadFlow";
 
 export const metadata = pageMetadata(
-  "Publish an asset",
+  "Upload",
   "Import a file you already have, or start a new character, lorebook, preset, theme or pack.",
 );
 
-export default function UploadPage() {
+export default async function UploadPage() {
+  const choices = await fetchBuildChoices().catch(() => null);
+
   return (
     <Shell className="max-w-[78rem] pt-12 pb-16 lg:pt-14">
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-16">
         <div className="min-w-0">
           <h1 className="font-display text-[clamp(2rem,3vw,2.75rem)] leading-[1.1] font-medium tracking-[-0.035em] text-ink text-balance">
-            Create an asset
+            Share your work
           </h1>
           <p className="mt-3 max-w-[48ch] text-ui text-mute">
             Import a file you already have, or start a new draft in the editor.
           </p>
-          <UploadFlow />
+          <UploadFlow choices={choices} />
         </div>
         <aside className="grid min-w-0 gap-6 rounded-plate bg-inset p-5 sm:grid-cols-[12rem_1fr] sm:items-center lg:sticky lg:top-[calc(var(--header-height)+2.5rem)] lg:grid-cols-1">
           <Image
             alt=""
-            className="mx-auto h-auto w-full max-w-[15rem] rounded-control sm:max-w-none"
+            className="mx-auto hidden h-auto w-full max-w-[15rem] rounded-control sm:block sm:max-w-none"
             height={1402}
-            priority
             sizes="(max-width: 639px) 240px, (max-width: 1023px) 192px, 264px"
             src="/publish/watcher-studio.png"
             width={1122}
@@ -47,7 +49,7 @@ export default function UploadPage() {
                   <strong className="block font-medium text-ink">
                     Start a draft
                   </strong>
-                  Bring a file or choose an asset kind.
+                  Bring a file or choose a type.
                 </p>
               </li>
               <li className="flex items-start gap-3">

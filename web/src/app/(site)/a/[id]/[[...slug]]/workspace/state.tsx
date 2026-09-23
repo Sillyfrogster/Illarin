@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -13,30 +13,33 @@ import {
 } from "react";
 import {
   type AddableBlock,
-  type AssetBlock,
-  type AssetElement,
-  type AssetIdentityRequest,
-  saveAssetBlock,
-  saveAssetIdentity,
+  fetchWork,
+  saveWorkBlock,
+  saveWorkDetails,
+  type WorkBlock,
+  type WorkDetailsRequest,
+  type WorkElement,
 } from "@/lib/api/query";
-import { useWorkingCopy, WORKING_COPY_STALE } from "@/lib/working-copy";
+import type { AppName } from "@/lib/api/shapes";
 import {
-  type AllowedApp,
-  hasSealedPrompts,
-  NO_ALLOWED_APP,
-} from "../SealedPolicy";
-import { unsealedPrompts } from "../UnsealConfirmation";
+  DRAFTED_CHANGES_SAVED,
+  DRAFTED_CHANGES_STALE,
+  useDraftedChanges,
+} from "@/lib/drafted-changes";
+import { promptsMadePublic } from "../MakePublicConfirmation";
+import { hasPrivatePrompts, NO_ALLOWED_APP } from "../PrivatePromptsControl";
 import { type Arrangement, useArrangement } from "./arrangement";
 import { seatElements } from "./composition";
-import { identityHasChanged } from "./identity";
+import { detailsHasChanged } from "./details";
 import {
+  acknowledgeBlock,
   blockSaveRequest,
   changedBlockIds,
   replaceBlock,
   replaceElement,
 } from "./save";
 
-export type Identity = AssetIdentityRequest;
+export type Details = WorkDetailsRequest;
 
 export type SaveState =
   | "saving"
@@ -46,53 +49,56 @@ export type SaveState =
   | "published";
 
 export type Pane =
-  | { kind: "access" }
-  | { kind: "vault" }
+  | { kind: "private-prompts" }
+  | { kind: "staff" }
+  | { kind: "found-images" }
   | { kind: "publication" }
+  | { kind: "replacement" }
   | { kind: "conflict" }
-  | { kind: "catalog" }
+  | { kind: "add-block" }
   | { kind: "remove"; blockId: string }
   | { kind: "element"; blockId: string; elementId: string };
 
-type Unsealing = { prompts: string[]; keepsASeal: boolean };
+type MakingPublic = { prompts: string[]; keepsAPrivatePrompt: boolean };
 
 type Workspace = {
-  assetId: string;
+  workId: string;
   isOwner: boolean;
   isDraft: boolean;
   editing: boolean;
   sweep: number;
-  blocks: AssetBlock[];
+  blocks: WorkBlock[];
   addableBlocks: AddableBlock[];
   arrangement: Arrangement;
-  identity: Identity;
-  allowedApps: AllowedApp[];
-  eligibleApps: AllowedApp[];
+  details: Details;
+  allowedApps: AppName[];
+  eligibleApps: AppName[];
   cursor: string | null;
   chosenItems: Record<string, string>;
   dirty: boolean;
+  unpublishedChanges: boolean;
   pane: Pane | null;
   saveState: SaveState;
   message: string;
   busy: boolean;
-  unsealing: Unsealing | null;
+  makingPublic: MakingPublic | null;
   startEditing: () => void;
   stopEditing: () => void;
   setCursor: (cursor: string | null) => void;
   chooseItem: (elementId: string, key: string | null) => void;
-  setBlocks: (blocks: AssetBlock[]) => void;
-  writeBlock: (block: AssetBlock) => void;
-  applyServerBlocks: (blocks: AssetBlock[]) => void;
-  editBlockList: (change: (blocks: AssetBlock[]) => AssetBlock[]) => void;
-  writeElement: (blockId: string, element: AssetElement) => void;
-  writeIdentity: (identity: Identity) => void;
-  setAllowedApps: (apps: AllowedApp[]) => void;
+  setBlocks: (blocks: WorkBlock[]) => void;
+  writeBlock: (block: WorkBlock) => void;
+  applyServerBlocks: (blocks: WorkBlock[]) => void;
+  editBlockList: (change: (blocks: WorkBlock[]) => WorkBlock[]) => void;
+  writeElement: (blockId: string, element: WorkElement) => void;
+  writeDetails: (details: Details) => void;
+  setAllowedApps: (apps: AppName[]) => void;
   openPane: (pane: Pane) => void;
   closePane: () => void;
   say: (message: string) => void;
   save: () => void;
-  confirmUnseal: () => void;
-  cancelUnseal: () => void;
+  confirmMakePublic: () => void;
+  cancelMakePublic: () => void;
 };
 
 const WorkspaceContext = createContext<Workspace | null>(null);
@@ -103,45 +109,55 @@ export function useWorkspace() {
   return workspace;
 }
 
-export function AssetWorkspace({
+export function WorkspaceProvider({
   addableBlocks,
-  assetId,
+  workId,
   isOwner,
   isDraft,
   blocks,
-  identity,
+  details,
   allowedApps,
   eligibleApps,
   unpublishedChanges,
   children,
 }: {
   addableBlocks: AddableBlock[];
-  assetId: string;
+  workId: string;
   isOwner: boolean;
   isDraft: boolean;
-  blocks: AssetBlock[];
-  identity: Identity;
-  allowedApps: AllowedApp[];
-  eligibleApps: AllowedApp[];
+  blocks: WorkBlock[];
+  details: Details;
+  allowedApps: AppName[];
+  eligibleApps: AppName[];
   unpublishedChanges: boolean;
   children: ReactNode;
 }) {
-  const candidate = useWorkingCopy();
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
+  const candidate = useDraftedChanges();
+  const searchParams = useSearchParams();
+  const [editing, setEditing] = useState(
+    isOwner && searchParams.get("edit") === "true",
+  );
   const [sweep, setSweep] = useState(0);
   const [draft, setDraft] = useState(blocks);
   const [saved, setSaved] = useState(blocks);
-  const [draftIdentity, setDraftIdentity] = useState(identity);
-  const [savedIdentity, setSavedIdentity] = useState(identity);
-  const [apps, setApps] = useState<AllowedApp[]>(allowedApps);
+  const [draftDetails, setDraftDetails] = useState(details);
+  const [savedDetails, setSavedDetails] = useState(details);
+  const savedDetailsRef = useRef(savedDetails);
+  useEffect(() => {
+    savedDetailsRef.current = savedDetails;
+  }, [savedDetails]);
+  const [apps, setApps] = useState<AppName[]>(allowedApps);
+  const [savedApps, setSavedApps] = useState<AppName[]>(allowedApps);
   const [cursor, setCursor] = useState<string | null>(null);
   const [chosenItems, setChosenItems] = useState<Record<string, string>>({});
   const [pane, setPane] = useState<Pane | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [unpublished, setUnpublished] = useState(unpublishedChanges);
+  const [conflicted, setConflicted] = useState(false);
+  const saving = useRef(false);
   const [message, setMessage] = useState("");
-  const [unsealing, setUnsealing] = useState<Unsealing | null>(null);
+  const [makingPublic, setMakingPublic] = useState<MakingPublic | null>(null);
   const exposeConfirmed = useRef(false);
   const lastCursor = useRef<string | null>(null);
   const savedBlocks = useRef(blocks);
@@ -151,13 +167,39 @@ export function AssetWorkspace({
   }, [saved]);
 
   useEffect(() => {
-    const stale = () =>
+    const stale = () => {
+      setConflicted(true);
       setPane((open) =>
         open?.kind === "publication" ? open : { kind: "conflict" },
       );
-    window.addEventListener(WORKING_COPY_STALE, stale);
-    return () => window.removeEventListener(WORKING_COPY_STALE, stale);
+    };
+    window.addEventListener(DRAFTED_CHANGES_STALE, stale);
+    return () => window.removeEventListener(DRAFTED_CHANGES_STALE, stale);
   }, []);
+
+  useEffect(() => setUnpublished(unpublishedChanges), [unpublishedChanges]);
+
+  useEffect(() => {
+    let active = true;
+    const read = async () => {
+      const stamp = candidate.version;
+      try {
+        const page = await fetchWork(workId, undefined, true);
+        if (active && page && candidate.version === stamp)
+          setUnpublished(Boolean(page.unpublishedChanges));
+      } catch {
+        /* The save status is kept until the next successful read. */
+      }
+    };
+    const saved = () => {
+      void read();
+    };
+    window.addEventListener(DRAFTED_CHANGES_SAVED, saved);
+    return () => {
+      active = false;
+      window.removeEventListener(DRAFTED_CHANGES_SAVED, saved);
+    };
+  }, [candidate, workId]);
 
   useEffect(() => {
     if (!message) return;
@@ -166,8 +208,11 @@ export function AssetWorkspace({
   }, [message]);
 
   const changed = useMemo(() => changedBlockIds(draft, saved), [draft, saved]);
-  const hasIdentityChanges = identityHasChanged(draftIdentity, savedIdentity);
-  const dirty = changed.length > 0 || hasIdentityChanges;
+  const hasDetailsChanges = detailsHasChanged(draftDetails, savedDetails);
+  const appsChanged =
+    draft.some((block) => hasPrivatePrompts(block.elements)) &&
+    !sameApps(apps, savedApps);
+  const dirty = changed.length > 0 || hasDetailsChanges || appsChanged;
 
   const saveState: SaveState = busy
     ? "saving"
@@ -175,25 +220,22 @@ export function AssetWorkspace({
       ? "failed"
       : dirty
         ? "unsaved"
-        : isDraft || unpublishedChanges
+        : isDraft || unpublished
           ? "private"
           : "published";
 
-  const openSealedElement = useCallback((pages: AssetBlock[]) => {
-    for (const block of pages) {
-      const asking = block.elements.find((element) =>
-        hasSealedPrompts([element]),
-      );
-      if (!asking) continue;
-      setPane({ blockId: block.id, elementId: asking.id, kind: "element" });
-      return;
-    }
-  }, []);
-
   const save = useCallback(
     (expose = false) => {
-      if (busy || !dirty) return;
-      const pending = changedBlockIds(draft, saved);
+      if (saving.current || !dirty || conflicted) return;
+      const changedBlocks = changedBlockIds(draft, saved);
+      const promptHolder = draft.find((block) =>
+        block.elements.some((element) => element.type === "prompt_list"),
+      );
+      // A change to the allowed apps alone travels on the block that holds the prompts
+      const pending =
+        changedBlocks.length === 0 && appsChanged && promptHolder
+          ? [promptHolder.id]
+          : changedBlocks;
       const before = new Map(saved.map((block) => [block.id, block]));
 
       if (!expose && !exposeConfirmed.current) {
@@ -206,63 +248,64 @@ export function AssetWorkspace({
             const was = original.elements.find(
               (item) => item.id === element.id,
             );
-            if (was) exposed.push(...unsealedPrompts(was, element));
+            if (was) exposed.push(...promptsMadePublic(was, element));
           }
         }
         if (exposed.length > 0) {
-          const keepsASeal = draft.some((block) =>
-            hasSealedPrompts(block.elements),
+          const keepsAPrivatePrompt = draft.some((block) =>
+            hasPrivatePrompts(block.elements),
           );
-          setUnsealing({ prompts: exposed, keepsASeal });
+          setMakingPublic({ prompts: exposed, keepsAPrivatePrompt });
           return;
         }
       }
 
-      const sealed = draft.some((block) => hasSealedPrompts(block.elements));
-      if (sealed && apps.length === 0) {
+      const keepsPrivatePrompts = draft.some((block) =>
+        hasPrivatePrompts(block.elements),
+      );
+      if (keepsPrivatePrompts && apps.length === 0) {
         setFailed(true);
         setMessage(NO_ALLOWED_APP);
-        openSealedElement(draft);
+        setPane({ kind: "private-prompts" });
         return;
       }
 
+      saving.current = true;
       setBusy(true);
       setFailed(false);
       setMessage("");
       void (async () => {
-        let written = draft;
         try {
           for (const id of pending) {
-            const block = written.find((item) => item.id === id);
+            const block = draft.find((item) => item.id === id);
             if (!block) continue;
-            const result = await saveAssetBlock(
+            const result = await saveWorkBlock(
               candidate,
-              assetId,
+              workId,
               block.id,
               blockSaveRequest(block, {
-                exposeProtected: expose || exposeConfirmed.current || undefined,
-                allowedApps: sealed
-                  ? apps
+                makePromptsPublic:
+                  expose || exposeConfirmed.current || undefined,
+                allowedApps: keepsPrivatePrompts
+                  ? apps.map((app) => app.id)
                   : allowedApps.length > 0
                     ? []
                     : undefined,
               }),
             );
-            written = replaceBlock(written, result);
+            setSaved((current) => replaceBlock(current, result));
+            setDraft((current) =>
+              current.map((held) =>
+                held.id === id ? acknowledgeBlock(held, block, result) : held,
+              ),
+            );
           }
-          if (hasIdentityChanges) {
-            await saveAssetIdentity(candidate, assetId, draftIdentity);
-            setSavedIdentity(draftIdentity);
+          if (hasDetailsChanges) {
+            await saveWorkDetails(candidate, workId, draftDetails);
+            setSavedDetails(draftDetails);
           }
+          setSavedApps(apps);
           exposeConfirmed.current = false;
-          setDraft(written);
-          setSaved(written);
-          setMessage(
-            isDraft
-              ? "Saved. Only you can open this page."
-              : "Saved privately. Readers still have the published version.",
-          );
-          router.refresh();
         } catch (error) {
           setFailed(true);
           setMessage(
@@ -271,6 +314,7 @@ export function AssetWorkspace({
               : "The save failed. Everything you wrote is still on the page.",
           );
         } finally {
+          saving.current = false;
           setBusy(false);
         }
       })();
@@ -278,21 +322,34 @@ export function AssetWorkspace({
     [
       allowedApps.length,
       apps,
-      assetId,
-      busy,
+      appsChanged,
+      workId,
+      conflicted,
       candidate,
       dirty,
       draft,
-      draftIdentity,
-      hasIdentityChanges,
-      isDraft,
-      openSealedElement,
-      router,
+      draftDetails,
+      hasDetailsChanges,
       saved,
     ],
   );
 
-  const applyServerBlocks = useCallback((incoming: AssetBlock[]) => {
+  useEffect(() => {
+    if (!dirty || busy || failed || makingPublic || conflicted) return;
+    const timer = window.setTimeout(() => save(), 600);
+    return () => window.clearTimeout(timer);
+  }, [dirty, busy, failed, makingPublic, conflicted, save]);
+
+  useEffect(() => {
+    if (!dirty && !busy) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, busy]);
+
+  const applyServerBlocks = useCallback((incoming: WorkBlock[]) => {
     setDraft((current) => {
       const changed = new Set(changedBlockIds(current, savedBlocks.current));
       const held = new Map(current.map((block) => [block.id, block]));
@@ -306,21 +363,27 @@ export function AssetWorkspace({
   }, []);
 
   useEffect(() => {
+    if (saving.current) return;
     applyServerBlocks(blocks);
   }, [applyServerBlocks, blocks]);
 
   useEffect(() => {
-    const incomingIdentity = {
-      blurb: identity.blurb,
-      isNsfw: identity.isNsfw,
-      name: identity.name,
+    if (saving.current) return;
+    const incomingDetails = {
+      blurb: details.blurb,
+      isNsfw: details.isNsfw,
+      name: details.name,
     };
-    setDraftIdentity(incomingIdentity);
-    setSavedIdentity(incomingIdentity);
-  }, [identity.blurb, identity.isNsfw, identity.name]);
+    setDraftDetails((current) =>
+      detailsHasChanged(current, savedDetailsRef.current)
+        ? current
+        : incomingDetails,
+    );
+    setSavedDetails(incomingDetails);
+  }, [details.blurb, details.isNsfw, details.name]);
 
   const editBlockList = useCallback(
-    (change: (blocks: AssetBlock[]) => AssetBlock[]) => {
+    (change: (blocks: WorkBlock[]) => WorkBlock[]) => {
       setDraft(change);
       setSaved(change);
     },
@@ -334,7 +397,7 @@ export function AssetWorkspace({
 
   const arrangement = useArrangement({
     applyServerBlocks,
-    assetId,
+    workId,
     blocks: draftBlocks,
     candidate,
     editBlockList,
@@ -356,7 +419,7 @@ export function AssetWorkspace({
         event.key !== "Escape" ||
         event.defaultPrevented ||
         event.isComposing ||
-        unsealing
+        makingPublic
       )
         return;
       if (
@@ -371,28 +434,29 @@ export function AssetWorkspace({
     };
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
-  }, [editing, pane, stopEditing, unsealing]);
+  }, [editing, pane, stopEditing, makingPublic]);
 
   const value: Workspace = {
     addableBlocks,
     arrangement,
-    assetId,
+    workId,
     isOwner,
     isDraft,
     editing,
     sweep,
     blocks: draft,
-    identity: draftIdentity,
+    details: draftDetails,
     allowedApps: apps,
     eligibleApps,
     cursor,
     chosenItems,
     dirty,
+    unpublishedChanges: unpublished,
     pane,
     saveState,
     message,
     busy,
-    unsealing,
+    makingPublic,
     startEditing: () => {
       setEditing(true);
       setSweep((count) => count + 1);
@@ -421,8 +485,11 @@ export function AssetWorkspace({
           block.id === blockId ? replaceElement(block, element) : block,
         ),
       ),
-    writeIdentity: setDraftIdentity,
-    setAllowedApps: setApps,
+    writeDetails: setDraftDetails,
+    setAllowedApps: (next) => {
+      setApps(next);
+      setFailed(false);
+    },
     openPane: (next) => {
       setPane(next);
       setCursor(null);
@@ -430,12 +497,15 @@ export function AssetWorkspace({
     closePane: () => setPane(null),
     say: setMessage,
     save: () => save(),
-    confirmUnseal: () => {
+    confirmMakePublic: () => {
       exposeConfirmed.current = true;
-      setUnsealing(null);
+      setMakingPublic(null);
       save(true);
     },
-    cancelUnseal: () => setUnsealing(null),
+    cancelMakePublic: () => {
+      setMakingPublic(null);
+      setFailed(true);
+    },
   };
 
   return (
@@ -445,11 +515,16 @@ export function AssetWorkspace({
   );
 }
 
+function sameApps(one: AppName[], other: AppName[]): boolean {
+  const ids = new Set(one.map((app) => app.id));
+  return one.length === other.length && other.every((app) => ids.has(app.id));
+}
+
 function keepWriting(
-  server: AssetBlock,
-  draft: AssetBlock,
-  saved: AssetBlock | undefined,
-): AssetBlock {
+  server: WorkBlock,
+  draft: WorkBlock,
+  saved: WorkBlock | undefined,
+): WorkBlock {
   const known = new Set(
     [...draft.elements, ...(saved?.elements ?? [])].map((one) => one.id),
   );

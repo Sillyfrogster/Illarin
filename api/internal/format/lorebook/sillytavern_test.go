@@ -51,17 +51,17 @@ func TestASillyTavernWorldInfoFileIsRecognisedAsItsOwnFormat(t *testing.T) {
 	t.Parallel()
 	registry := testRegistry(t)
 
-	resolution, claimed, err := registry.Resolve(document(t, worldInfo))
-	if err != nil || !claimed {
-		t.Fatalf("resolve the world info file: claimed %v, %v", claimed, err)
+	resolution, matched, err := registry.Resolve(document(t, worldInfo))
+	if err != nil || !matched {
+		t.Fatalf("resolve the world info file: matched %v, %v", matched, err)
 	}
 	if resolution.Module.ID() != SillyTavernID {
 		t.Errorf("world info read as %q, want %q", resolution.Module.ID(), SillyTavernID)
 	}
 
-	resolution, claimed, err = registry.Resolve(document(t, twoEntries))
-	if err != nil || !claimed {
-		t.Fatalf("resolve the listed book: claimed %v, %v", claimed, err)
+	resolution, matched, err = registry.Resolve(document(t, twoEntries))
+	if err != nil || !matched {
+		t.Fatalf("resolve the listed book: matched %v, %v", matched, err)
 	}
 	if resolution.Module.ID() != ID {
 		t.Errorf("the listed book read as %q, want %q", resolution.Module.ID(), ID)
@@ -156,8 +156,8 @@ func TestARoundTripThroughSillyTavernComesBackTheSame(t *testing.T) {
 	parsed := parse(t, worldInfo)
 	table := onlyEntryTable(t, parsed.Elements)
 
-	artifact, err := SillyTavernModule{}.Write(context.Background(), format.ExportAsset{
-		Kind: Kind,
+	artifact, err := SillyTavernModule{}.Write(context.Background(), format.ExportWork{
+		Type: Type,
 		Elements: []block.Element{{
 			Role: block.RoleLorebookEntries, Type: block.TypeEntryTable, Content: table,
 		}},

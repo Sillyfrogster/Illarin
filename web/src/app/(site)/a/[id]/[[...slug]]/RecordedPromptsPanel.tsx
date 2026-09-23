@@ -3,17 +3,19 @@
 import { ChevronRight, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import {
-  fetchProtectionMismatches,
-  type ProtectionMismatch,
+  fetchPrivatePromptMismatches,
+  type PrivatePromptMismatch,
   resolvePromptCorrespondence,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 
 const ABSENT = "absent";
 
-export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
+export function RecordedPromptsPanel({ workId }: { workId: string }) {
   const [open, setOpen] = useState(false);
-  const [versions, setVersions] = useState<ProtectionMismatch[] | null>(null);
+  const [versions, setVersions] = useState<PrivatePromptMismatch[] | null>(
+    null,
+  );
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(0);
   const [message, setMessage] = useState("");
@@ -22,16 +24,16 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
     setOpen(true);
     if (versions !== null) return;
     setMessage("");
-    setVersions(await fetchProtectionMismatches(assetId));
+    setVersions(await fetchPrivatePromptMismatches(workId));
   }
 
-  async function settle(version: ProtectionMismatch) {
+  async function settle(version: PrivatePromptMismatch) {
     if (pending) return;
     setPending(version.version.number);
     setMessage("");
     try {
       await resolvePromptCorrespondence(
-        assetId,
+        workId,
         version.version.number,
         version.unmatched.map((prompt) => ({
           current: prompt.id,
@@ -71,7 +73,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
             "grid gap-1 [&>span]:text-meta [&>span]:text-mute [&>strong]:text-ui [&>strong]:font-medium"
           }
         >
-          <strong>Match your sealed prompts to older versions</strong>
+          <strong>Match your private prompts to older versions</strong>
           <span>Unmatched versions hide all prompts and block downloads</span>
         </span>
         <ChevronRight
@@ -87,7 +89,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
       {open ? (
         <div className={"pb-3.5"} id="recorded-prompts-menu">
           <p className={"text-meta text-mute"}>
-            Your sealed prompts changed identity, so Illarin cannot tell which
+            Your private prompts changed identity, so Illarin cannot tell which
             prompt in an older version they are. Until you say, that version
             keeps every prompt hidden and refuses downloads.
           </p>
@@ -97,7 +99,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
             </p>
           ) : versions.length === 0 ? (
             <p className={"mt-3 text-meta text-mute italic"}>
-              Every recorded version matches your sealed prompts.
+              Every recorded version matches your private prompts.
             </p>
           ) : (
             <ul
@@ -108,7 +110,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
               {versions.map((version) => (
                 <li key={version.version.id}>
                   <h3>
-                    Update {version.version.number}
+                    Version {version.version.number}
                     {version.version.summary
                       ? `: ${version.version.summary}`
                       : ""}
@@ -152,7 +154,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
                   >
                     {pending === version.version.number
                       ? "Saving matches…"
-                      : `Save matches for update ${version.version.number}`}
+                      : `Save matches for version ${version.version.number}`}
                   </button>
                 </li>
               ))}
@@ -186,7 +188,7 @@ export function RecordedPromptsPanel({ assetId }: { assetId: string }) {
 
 function answerKey(
   answers: Record<string, string>,
-  version: ProtectionMismatch,
+  version: PrivatePromptMismatch,
   promptId: string,
 ): string {
   return answers[`${version.version.id}:${promptId}`] ?? ABSENT;
@@ -194,7 +196,7 @@ function answerKey(
 
 function answerFor(
   answers: Record<string, string>,
-  version: ProtectionMismatch,
+  version: PrivatePromptMismatch,
   promptId: string,
 ): string | undefined {
   const chosen = answerKey(answers, version, promptId);

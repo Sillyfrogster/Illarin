@@ -1,0 +1,42 @@
+{
+  "note": "Headings run from level two to level four and are given addresses",
+  "markdown": "## Release notes\n\n### What changed\n\n#### The details\n",
+  "body": {
+    "content": [
+      {
+        "anchor": "release-notes",
+        "content": [
+          {
+            "text": "Release notes",
+            "type": "text"
+          }
+        ],
+        "level": 2,
+        "type": "heading"
+      },
+      {
+        "anchor": "what-changed",
+        "content": [
+          {
+            "text": "What changed",
+            "type": "text"
+          }
+        ],
+        "level": 3,
+        "type": "heading"
+      },
+      {
+        "anchor": "the-details",
+        "content": [
+          {
+            "text": "The details",
+            "type": "text"
+          }
+        ],
+        "level": 4,
+        "type": "heading"
+      }
+    ],
+    "version": 2
+  }
+}

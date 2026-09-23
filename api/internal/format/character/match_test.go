@@ -1,0 +1,82 @@
+package character
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
+)
+
+func TestCCv2UsesTheSpecRepresentationWithoutShadowFields(t *testing.T) {
+	t.Parallel()
+	file := document(object(`{
+		"spec":"chara_card_v2",
+		"data":{"description":"canonical"},
+		"description":"shadow",
+		"personality":"shadow only"
+	}`))
+
+	match, ok := (CCv2Module{}).Match(file)
+	if !ok {
+		t.Fatal("CCv2 did not match its own spec")
+	}
+	fields, ok := Fields(file, match)
+	if !ok {
+		t.Fatal("selected CCv2 representation is missing")
+	}
+	if got := stringField(t, fields, "description"); got != "canonical" {
+		t.Fatalf("description = %q, want canonical", got)
+	}
+	if _, merged := fields["personality"]; merged {
+		t.Fatal("a top-level shadow field was merged into the spec representation")
+	}
+}
+
+func TestCCv2UsesLegacyShapeOnlyWithoutARecognizedSpec(t *testing.T) {
+	t.Parallel()
+	legacy := object(`{
+		"name":"Legacy",
+		"description":"Description",
+		"personality":"Personality",
+		"scenario":"Scenario",
+		"first_mes":"Hello"
+	}`)
+
+	if _, ok := (CCv2Module{}).Match(document(legacy)); !ok {
+		t.Fatal("CCv2 did not make a compatibility match for a legacy shape")
+	}
+
+	legacy["spec"] = json.RawMessage(`"chara_card_v3"`)
+	file := document(legacy)
+	if _, ok := (CCv2Module{}).Match(file); ok {
+		t.Fatal("CCv2 matched legacy shadow fields beside a recognized CCv3 spec")
+	}
+	if _, ok := (CCv3Module{}).Match(file); !ok {
+		t.Fatal("CCv3 did not match its own spec")
+	}
+}
+
+func document(root map[string]json.RawMessage) format.Inspection {
+	return format.Inspection{Payloads: []format.Payload{{
+		ID:       0,
+		Location: format.PayloadLocation{Container: format.JSON},
+		Root:     root,
+	}}}
+}
+
+func object(source string) map[string]json.RawMessage {
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(source), &root); err != nil {
+		panic(err)
+	}
+	return root
+}
+
+func stringField(t *testing.T, root map[string]json.RawMessage, name string) string {
+	t.Helper()
+	var value string
+	if err := json.Unmarshal(root[name], &value); err != nil {
+		t.Fatalf("read %s: %v", name, err)
+	}
+	return value
+}

@@ -15,20 +15,26 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
-	"github.com/Sillyfrogster/Illarin/api/internal/asset"
-	"github.com/Sillyfrogster/Illarin/api/internal/assetdestination"
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
+	"github.com/Sillyfrogster/Illarin/api/internal/blog"
 	"github.com/Sillyfrogster/Illarin/api/internal/config"
-	"github.com/Sillyfrogster/Illarin/api/internal/delivery"
+	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/Sillyfrogster/Illarin/api/internal/discord"
+	"github.com/Sillyfrogster/Illarin/api/internal/download"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/modules"
-	apihttp "github.com/Sillyfrogster/Illarin/api/internal/http"
-	"github.com/Sillyfrogster/Illarin/api/internal/linking"
+	"github.com/Sillyfrogster/Illarin/api/internal/integration"
 	mediaproc "github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/notification"
+	"github.com/Sillyfrogster/Illarin/api/internal/notify"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
 	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
-	"github.com/Sillyfrogster/Illarin/api/internal/publication"
 	"github.com/Sillyfrogster/Illarin/api/internal/secrets"
+	"github.com/Sillyfrogster/Illarin/api/internal/staff"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/summary"
+	"github.com/Sillyfrogster/Illarin/api/internal/upload"
+	"github.com/Sillyfrogster/Illarin/api/internal/version"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
@@ -71,35 +77,36 @@ func run() error {
 		return err
 	}
 
-	svc := asset.NewServiceForSite(
+	svc := work.NewServiceForSite(
 		pool, registry, blob, cfg.ProbeLimits, cfg.SiteURL, cfg.AccountStorageCapBytes,
 	)
-	recomputed, err := svc.RecomputeStaleExportProjections(runtimeContext)
+	uploads := upload.NewService(pool, svc)
+	recomputed, err := summary.RecomputeStaleFormats(runtimeContext, pool, registry)
 	if err != nil {
-		return fmt.Errorf("export projections: %w", err)
+		return fmt.Errorf("export summaries: %w", err)
 	}
 	if recomputed > 0 {
-		log.Printf("recomputed the export projection for %d assets", recomputed)
+		log.Printf("recomputed the export summary for %d works", recomputed)
 	}
-	remeasured, err := svc.RecomputeStaleFacetProjections(runtimeContext)
+	remeasured, err := summary.RecomputeStaleFilters(runtimeContext, pool, registry)
 	if err != nil {
-		return fmt.Errorf("facet projections: %w", err)
+		return fmt.Errorf("facet summaries: %w", err)
 	}
 	if remeasured > 0 {
-		log.Printf("recomputed the facet projection for %d assets", remeasured)
+		log.Printf("recomputed the facet summary for %d works", remeasured)
 	}
 	var background sync.WaitGroup
 	background.Add(2)
 	go func() {
 		defer background.Done()
-		svc.RunIngestWorkers(runtimeContext, cfg.IngestWorkers, func(err error) {
-			log.Printf("ingest worker: %v", err)
+		uploads.RunUploadWorkers(runtimeContext, cfg.UploadWorkers, func(err error) {
+			log.Printf("upload worker: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
-		svc.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("blob sweeper: %v", err)
+		storage.NewCleanup(pool, blob).RunCleanup(runtimeContext, func(err error) {
+			log.Printf("blob cleanup: %v", err)
 		})
 	}()
 	defer func() {
@@ -141,18 +148,32 @@ func run() error {
 	}
 	images := mediaproc.NewLibrary(blob, mediaproc.NewProcessor(mediaproc.DefaultLimits()), 1)
 	accounts := account.NewService(pool, verificationSender, discordProvider, images, cfg.SiteURL)
-	sealing, err := secrets.NewKey(cfg.PublicationSecretKey)
+	sealing, err := secrets.NewKey(cfg.IntegrationSecretKey)
 	if err != nil {
-		return fmt.Errorf("publication secret key: %w", err)
+		return fmt.Errorf("integration secret key: %w", err)
 	}
-	publishing := publication.DefaultPublishing(sealing, cfg.SiteURL, cfg.BlogURL)
-	publications := publication.NewService(pool, images, publication.DefaultRates(), publishing)
-	updateDestinations := assetdestination.NewService(pool, sealing, publishing.Sender, cfg.SiteURL)
-	svc.OnUpdatePublished(updateDestinations.Announce, asset.TellWatchers)
-	links := linking.NewService(pool, cfg.SiteURL, cfg.LinkingHMACKey)
-	deliveries := delivery.NewService(pool, svc, links, delivery.DefaultSettings())
-	notifications := notification.NewService(pool)
-	background.Add(9)
+	integrations := integration.NewService(pool, sealing, &http.Client{Timeout: 10 * time.Second}, cfg.SiteURL)
+	posts := blog.NewService(pool, images, integrations, cfg.SiteURL)
+	versions := version.NewService(pool, svc)
+	versions.OnPublished(integrations.Announce, version.TellFollowers)
+	githubReleases := upload.NewGitHubReleases(uploads, versions)
+	background.Add(1)
+	go func() {
+		defer background.Done()
+		githubReleases.Run(runtimeContext, func(err error) { log.Printf("GitHub release import: %v", err) })
+	}()
+	pages := page.NewService(pool, svc)
+	pages.OnFirstPublication(integrations.AnnounceFirst)
+	apps := connect.NewApps(pool, cfg.SiteURL, cfg.LinkingHMACKey)
+	sends := connect.NewSends(pool, svc, apps, connect.DefaultSettings())
+	notifications := notify.NewService(pool)
+	background.Add(7)
+	go func() {
+		defer background.Done()
+		staff.NewService(svc).RunRollup(runtimeContext, func(err error) {
+			log.Printf("daily totals: %v", err)
+		})
+	}()
 	go func() {
 		defer background.Done()
 		notifications.RunFanOut(runtimeContext, func(err error) {
@@ -161,63 +182,58 @@ func run() error {
 	}()
 	go func() {
 		defer background.Done()
-		notifications.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("notification sweeper: %v", err)
+		notifications.RunCleanup(runtimeContext, func(err error) {
+			log.Printf("notification cleanup: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
-		updateDestinations.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("asset update destination sweeper: %v", err)
+		integrations.RunAnnouncements(runtimeContext, func(err error) {
+			log.Printf("Discord announcements: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
-		updateDestinations.RunAnnouncements(runtimeContext, func(err error) {
-			log.Printf("asset update announcement: %v", err)
+		sends.RunCleanup(runtimeContext, func(err error) {
+			log.Printf("send cleanup: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
-		deliveries.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("delivery sweeper: %v", err)
+		posts.RunScheduler(runtimeContext, func(err error) {
+			log.Printf("blog scheduler: %v", err)
 		})
 	}()
 	go func() {
 		defer background.Done()
-		publications.RunSweeper(runtimeContext, func(err error) {
-			log.Printf("publication sweeper: %v", err)
-		})
-	}()
-	go func() {
-		defer background.Done()
-		publications.RunScheduler(runtimeContext, func(err error) {
-			log.Printf("publication scheduler: %v", err)
-		})
-	}()
-	go func() {
-		defer background.Done()
-		publications.RunRecovery(runtimeContext, func(err error) {
-			log.Printf("publication recovery: %v", err)
-		})
-	}()
-	go func() {
-		defer background.Done()
-		publications.RunDeliveries(runtimeContext, func(err error) {
-			log.Printf("publication delivery: %v", err)
+		posts.RunRecovery(runtimeContext, func(err error) {
+			log.Printf("blog recovery: %v", err)
 		})
 	}()
 
 	r := gin.New()
-	r.Use(apihttp.Recovery(log.Default()))
-	handlers := apihttp.NewHandlers(
-		svc, accounts, links, deliveries, publications, updateDestinations, notifications, cfg.MaxUploadBytes,
-	)
-	readiness := func(ctx context.Context) error {
+	r.Use(api.Recovery(log.Default()))
+	running := services{
+		Works:          svc,
+		Pages:          pages,
+		Blocks:         edit.NewService(pool, svc),
+		Versions:       versions,
+		Uploads:        uploads,
+		GitHubReleases: githubReleases,
+		Downloads:      download.NewService(pool, svc),
+		Accounts:       accounts,
+		Apps:           apps,
+		Sends:          sends,
+		Blog:           posts,
+		Integrations:   integrations,
+		Notifications:  notifications,
+		MaxUploadBytes: cfg.MaxUploadBytes,
+	}
+	ready := func(ctx context.Context) error {
 		if err := pool.Ping(ctx); err != nil {
 			return err
 		}
-		for _, directory := range []string{"blobs", "derivatives"} {
+		for _, directory := range []string{"blobs", "image-cache"} {
 			info, err := os.Stat(filepath.Join(cfg.UploadsDir, directory))
 			if err != nil {
 				return err
@@ -228,11 +244,11 @@ func run() error {
 		}
 		return nil
 	}
-	if err := apihttp.Register(r, handlers, cfg.Deadlines, readiness); err != nil {
+	if err := registerRoutes(r, running, cfg.Deadlines, ready); err != nil {
 		return fmt.Errorf("routes: %w", err)
 	}
 
-	server := apihttp.NewServer(":"+cfg.Port, r, cfg.Server)
+	server := newServer(":"+cfg.Port, r, cfg.Server)
 	log.Printf("listening on %s", server.Addr)
 	serverError := make(chan error, 1)
 	go func() { serverError <- server.ListenAndServe() }()

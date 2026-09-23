@@ -1,10 +1,10 @@
-import { ArrowUpRight, KeyRound, Plug, Send } from "lucide-react";
-import Link from "next/link";
+import { Compass, KeyRound, Plug, Send } from "lucide-react";
 import { AccountSettings } from "@/components/auth/AccountSettings";
+import { ConnectedApps } from "@/components/connect/ConnectedApps";
 import { Shell } from "@/components/layout/Shell";
-import { LinkedInstances } from "@/components/linking/LinkedInstances";
+import { BrowsePreferences } from "@/components/preferences/BrowsePreferences";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
-import { Button } from "@/components/ui/button";
+import { DiscordChannel } from "@/components/updates/DiscordChannel";
 import { pageMetadata } from "@/lib/site-metadata";
 
 const DISCORD_NOTICES: Record<string, string> = {
@@ -18,7 +18,7 @@ const DISCORD_NOTICES: Record<string, string> = {
 
 export const metadata = pageMetadata(
   "Account settings",
-  "Manage your sign-in methods and linked applications.",
+  "Manage what Browse shows you, your sign-in methods and connected apps.",
 );
 
 export default async function SettingsPage({
@@ -38,7 +38,7 @@ export default async function SettingsPage({
           Account settings
         </h1>
         <p className="mt-3 font-prose text-ui text-mute">
-          Manage your sign-in methods and linked applications.
+          Manage what Browse shows you, your sign-in methods and connected apps.
         </p>
       </header>
 
@@ -47,8 +47,15 @@ export default async function SettingsPage({
           <PublicProfileCard />
           <nav
             aria-label="Account settings"
-            className="mt-5 grid grid-cols-1 gap-1 sm:grid-cols-3 lg:grid-cols-1"
+            className="mt-5 grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-1"
           >
+            <a
+              className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              href="#browse"
+            >
+              <Compass aria-hidden="true" className="size-4 text-accent" />
+              Browse
+            </a>
             <a
               className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
               href="#ways-in"
@@ -58,23 +65,37 @@ export default async function SettingsPage({
             </a>
             <a
               className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
-              href="#linked-applications"
+              href="#connected-apps"
             >
               <Plug aria-hidden="true" className="size-4 text-accent" />
-              Linked applications
+              Connected apps
             </a>
             <a
               className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
-              href="#update-destinations"
+              href="#discord-channel"
             >
               <Send aria-hidden="true" className="size-4 text-accent" />
-              Update destinations
+              Discord channel
             </a>
           </nav>
         </aside>
 
         <div className="min-w-0">
-          <section aria-labelledby="ways-in">
+          <section aria-labelledby="browse">
+            <h2
+              className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
+              id="browse"
+            >
+              Browse
+            </h2>
+            <div className="mt-5">
+              <BrowsePreferences />
+            </div>
+          </section>
+          <section
+            aria-labelledby="ways-in"
+            className="mt-12 border-t border-rule pt-9"
+          >
             <h2
               className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
               id="ways-in"
@@ -87,29 +108,24 @@ export default async function SettingsPage({
               />
             </div>
           </section>
-          <div className="mt-12 border-t border-rule pt-9 [&_#linked-applications]:scroll-mt-[calc(var(--header-height)+3rem)]">
-            <LinkedInstances />
+          <div className="mt-12 border-t border-rule pt-9 [&_#connected-apps]:scroll-mt-[calc(var(--header-height)+3rem)]">
+            <ConnectedApps />
           </div>
           <section
-            aria-labelledby="update-destinations"
+            aria-labelledby="discord-channel"
             className="mt-12 border-t border-rule pt-8"
           >
             <h2
               className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
-              id="update-destinations"
+              id="discord-channel"
             >
-              Asset update destinations
+              Discord channel
             </h2>
-            <p className="mt-2 max-w-[52ch] font-prose text-ui text-mute">
-              Connect a Discord channel or webhook, then choose defaults for
-              each asset.
+            <p className="mt-2 mb-5 max-w-[52ch] font-prose text-ui text-mute">
+              When you publish a new version of a public work, Illarin can post
+              its summary and a link here.
             </p>
-            <Button asChild className="mt-5" variant="secondary">
-              <Link href="/settings/update-destinations">
-                Manage destinations
-                <ArrowUpRight aria-hidden="true" />
-              </Link>
-            </Button>
+            <DiscordChannel scope="account" />
           </section>
         </div>
       </div>

@@ -15,7 +15,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
-import { useOrigins } from "@/lib/origins";
 import { AppearanceMenu } from "./AppearanceMenu";
 import { DestinationIcon } from "./DestinationIcon";
 import {
@@ -31,12 +30,11 @@ const ROW =
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { account, publicationAuthority } = useAuth();
-  const { blog } = useOrigins();
+  const { account, writer } = useAuth();
   const [open, setOpen] = useState(false);
   const { signingOut, failed, signOut } = useSignOut(() => setOpen(false));
   const publish = publishAction(account);
-  const destinations = accountDestinations(account, publicationAuthority);
+  const destinations = accountDestinations(account, writer);
 
   const previousPathname = useRef(pathname);
   useEffect(() => {
@@ -70,7 +68,7 @@ export function MobileNav() {
         </SheetDescription>
 
         <nav className="grid px-[calc(var(--gutter)-0.75rem)] pt-3">
-          {primaryDestinations(blog).map((item) => (
+          {primaryDestinations().map((item) => (
             <Link
               key={item.href}
               href={item.href}

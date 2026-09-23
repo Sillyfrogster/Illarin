@@ -15,7 +15,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/lorebook"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -112,9 +111,9 @@ func TestBothPresetModulesReadAndWriteWithAFullDeclaration(t *testing.T) {
 	for _, module := range Modules() {
 		declaration := module.Declaration()
 		t.Run(declaration.ID, func(t *testing.T) {
-			if declaration.Kind != Kind || declaration.ID != module.ID() {
+			if declaration.Type != Type || declaration.ID != module.ID() {
 				t.Errorf("declaration identity = %q/%q, want %q under %q",
-					declaration.ID, declaration.Kind, module.ID(), Kind)
+					declaration.ID, declaration.Type, module.ID(), Type)
 			}
 			if !declaration.Direction.Read || !declaration.Direction.Write {
 				t.Errorf("direction = %+v, want read and write", declaration.Direction)
@@ -178,7 +177,7 @@ func TestAPresetWrittenBackCarriesItsContentAndEveryPreservedKey(t *testing.T) {
 					t.Errorf("description = %s, want the catalog blurb", body["description"])
 				}
 				if string(body["presetVersion"]) != `"1.2"` {
-					t.Errorf("version = %s, want the asset's own", body["presetVersion"])
+					t.Errorf("version = %s, want the work's own", body["presetVersion"])
 				}
 				var samplers map[string]json.RawMessage
 				if err := json.Unmarshal(body["samplerOverrides"], &samplers); err != nil {
@@ -243,7 +242,7 @@ func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
 			if err := block.ValidateContentLimits(parsed.Elements); err != nil {
 				t.Fatalf("content limits: %v", err)
 			}
-			blocks, err := block.Place(parsed.Kind, parsed.Elements)
+			blocks, err := block.Place(parsed.Type, parsed.Elements)
 			if err != nil {
 				t.Fatalf("place: %v", err)
 			}
@@ -254,7 +253,7 @@ func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
 			if !slices.Contains(definitions, block.PresetCore) {
 				t.Fatalf("placed %v, want the prompt fragments among them", definitions)
 			}
-			if !blocks[0].Pinned(block.RolePromptFragments, Kind) {
+			if !blocks[0].Pinned(block.RolePromptFragments, Type) {
 				t.Error("the prompt fragments can be taken off the page a preset is")
 			}
 		})
@@ -263,13 +262,13 @@ func TestAnImportedPresetIsPlacedIntoThePresetCatalog(t *testing.T) {
 
 func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 	t.Parallel()
-	for _, test := range []struct{ origin, offered string }{
+	for _, test := range []struct{ originalFormat, offered string }{
 		{LumiverseID, LumiverseID},
 		{SillyTavernID, SillyTavernID},
 	} {
-		t.Run(test.origin, func(t *testing.T) {
-			targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-				Kind: Kind, Origin: test.origin,
+		t.Run(test.originalFormat, func(t *testing.T) {
+			targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
+				Type: Type, OriginalFormat: test.originalFormat,
 				Elements: []block.Element{{
 					ID: uuid.New(), Type: block.TypePromptList, Role: block.RolePromptFragments,
 					Content: block.PromptList{Fragments: []block.PromptFragment{{Text: "kept"}}},
@@ -284,8 +283,8 @@ func TestNeitherPresetWriterIsOfferedForTheOthersOrigin(t *testing.T) {
 
 func TestAPresetBuiltHereIsOfferedBothWriters(t *testing.T) {
 	t.Parallel()
-	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: Kind,
+	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
+		Type: Type,
 		Elements: []block.Element{{
 			ID: uuid.New(), Type: block.TypePromptList, Role: block.RolePromptFragments,
 			Content: block.PromptList{Fragments: []block.PromptFragment{{Text: "kept"}}},
@@ -383,28 +382,28 @@ func testRegistry(t *testing.T) *format.Registry {
 func parse(t *testing.T, body string) format.Parsed {
 	t.Helper()
 	file := document(t, body)
-	resolution, claimed, err := testRegistry(t).Resolve(file)
+	resolution, matched, err := testRegistry(t).Resolve(file)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if !claimed {
-		t.Fatal("no module claimed the preset")
+	if !matched {
+		t.Fatal("no module matched the preset")
 	}
-	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	return parsed
 }
 
-func write(t *testing.T, module format.Reader, parsed format.Parsed) format.Artifact {
+func write(t *testing.T, module format.Reader, parsed format.Parsed) format.MainFile {
 	t.Helper()
 	writer, writes := module.(format.Writer)
 	if !writes {
 		t.Fatalf("%s does not write", module.ID())
 	}
-	written, err := writer.Write(context.Background(), format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements,
+	written, err := writer.Write(context.Background(), format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements,
 		Preserved: parsed.Remainder,
 	})
 	if err != nil {
@@ -483,10 +482,10 @@ func preservedPayload(
 	return payload
 }
 
-func document(t *testing.T, body string) probe.Inspection {
+func document(t *testing.T, body string) format.Inspection {
 	t.Helper()
 	data := []byte(body)
-	file, err := probe.Inspect(
+	file, err := format.Inspect(
 		context.Background(), memoryStore{data: data}, uuid.New(), int64(len(data)), "preset.json",
 	)
 	if err != nil {
@@ -555,8 +554,8 @@ func TestNeitherModuleKnowsTheOthersSlotNames(t *testing.T) {
 	if _, written := body["topP"]; written {
 		t.Error("a name belonging to the other preset format was written into the file")
 	}
-	targets := testRegistry(t).OfferedTargets(format.CapabilitySubject{
-		Kind: Kind, Origin: SillyTavernID,
+	targets := testRegistry(t).OfferedFormats(format.CapabilitySubject{
+		Type: Type, OriginalFormat: SillyTavernID,
 		Elements: []block.Element{{
 			ID: uuid.New(), Type: block.TypeSettingGroup, Role: block.RoleSamplerSettings,
 			Content: block.SettingGroup{Settings: []block.Setting{

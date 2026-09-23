@@ -16,7 +16,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format/pack"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/theme"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -49,7 +48,7 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 		t.Fatal("read local probe corpus")
 	}
 
-	checked, claimed := 0, 0
+	checked, matched := 0, 0
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -61,7 +60,7 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		file, err := probe.Inspect(
+		file, err := format.Inspect(
 			context.Background(), corpusStore{data: data}, uuid.New(), int64(len(data)), "fixture.bin",
 		)
 		if err != nil {
@@ -75,17 +74,17 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 		if !resolved {
 			return nil
 		}
-		claimed++
-		parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+		matched++
+		parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 		if err != nil {
 			return err
 		}
 		declared := resolution.Module.Declaration()
-		if parsed.Kind != declared.Kind || parsed.Format != resolution.Module.ID() {
-			t.Errorf("%s parsed as kind %q format %q", entry.Name(), parsed.Kind, parsed.Format)
+		if parsed.Type != declared.Type || parsed.Format != resolution.Module.ID() {
+			t.Errorf("%s parsed as type %q format %q", entry.Name(), parsed.Type, parsed.Format)
 		}
 		for _, sidecar := range unreadArchiveEntries(file) {
-			if !slices.Contains(preservedNamespaces(parsed.Remainder), sidecar) {
+			if !slices.Contains(preservedData(parsed.Remainder), sidecar) {
 				t.Errorf("%s lost the archived %s", entry.Name(), sidecar)
 			}
 		}
@@ -97,20 +96,20 @@ func TestLocalCorpusRunsThroughEveryModule(t *testing.T) {
 	if checked == 0 {
 		t.Fatal("local probe corpus is empty")
 	}
-	if claimed == 0 {
+	if matched == 0 {
 		t.Fatal("no fixture in the local probe corpus resolved to a module")
 	}
 }
 
 // unreadArchiveEntries names the archived files a card carries and Illarin reads nothing from.
-func unreadArchiveEntries(file probe.Inspection) []string {
-	if file.Container != probe.ZIP {
+func unreadArchiveEntries(file format.Inspection) []string {
+	if file.Container != format.ZIP {
 		return nil
 	}
 	pictures := make(map[string]bool, len(file.Images))
 	for _, image := range file.Images {
-		if image.Locator.Container == probe.ZIP {
-			pictures[image.Locator.Name] = true
+		if image.Location.Container == format.ZIP {
+			pictures[image.Location.Name] = true
 		}
 	}
 	unread := make([]string, 0)
@@ -123,7 +122,7 @@ func unreadArchiveEntries(file probe.Inspection) []string {
 	return unread
 }
 
-func preservedNamespaces(rows []format.Remainder) []string {
+func preservedData(rows []format.Remainder) []string {
 	kept := make([]string, 0, len(rows))
 	for _, row := range rows {
 		kept = append(kept, row.Namespace)

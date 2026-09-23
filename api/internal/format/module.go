@@ -4,8 +4,6 @@ import (
 	"context"
 	"io"
 	"slices"
-
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 type Module interface {
@@ -15,8 +13,8 @@ type Module interface {
 
 type Reader interface {
 	Module
-	Claim(probe.Inspection) (Claim, bool)
-	Parse(ctx context.Context, file probe.Inspection, claim Claim) (Parsed, error)
+	Match(Inspection) (Match, bool)
+	Parse(ctx context.Context, file Inspection, match Match) (Parsed, error)
 }
 
 type DatabaseReader interface {
@@ -36,50 +34,50 @@ func ownsSpec(module Module, spec string) bool {
 	return ok && slices.Contains(owner.OwnedSpecs(), spec)
 }
 
-type claimStrength uint8
+type matchStrength uint8
 
 const (
-	compatibility claimStrength = iota + 1
+	compatibility matchStrength = iota + 1
 	authoritative
 )
 
-type Claim struct {
+type Match struct {
 	payloadID uint32
-	strength  claimStrength
+	strength  matchStrength
 	formatID  string
 	byteSize  int64
 }
 
 const wholeFilePayloadID = ^uint32(0)
 
-func WholeFileCompatibilityClaim(file probe.Inspection) Claim {
-	return Claim{
+func WholeFileCompatibilityMatch(file Inspection) Match {
+	return Match{
 		payloadID: wholeFilePayloadID, strength: compatibility, byteSize: file.ByteSize(),
 	}
 }
 
-func AuthoritativeClaim(payload probe.Payload, discriminator string) (Claim, bool) {
-	formatID, ok := payload.String(discriminator)
+func AuthoritativeMatch(payload Payload, marker string) (Match, bool) {
+	formatID, ok := payload.String(marker)
 	if !ok || formatID == "" {
-		return Claim{}, false
+		return Match{}, false
 	}
-	return Claim{payloadID: payload.ID, strength: authoritative, formatID: formatID}, true
+	return Match{payloadID: payload.ID, strength: authoritative, formatID: formatID}, true
 }
 
-func CompatibilityClaim(payload probe.Payload) Claim {
-	return Claim{payloadID: payload.ID, strength: compatibility}
+func CompatibilityMatch(payload Payload) Match {
+	return Match{payloadID: payload.ID, strength: compatibility}
 }
 
-func (c Claim) Payload(file probe.Inspection) (probe.Payload, bool) {
+func (c Match) Payload(file Inspection) (Payload, bool) {
 	if c.payloadID == wholeFilePayloadID {
-		return probe.Payload{ID: wholeFilePayloadID, ByteSize: c.byteSize}, true
+		return Payload{ID: wholeFilePayloadID, ByteSize: c.byteSize}, true
 	}
 	for _, payload := range file.Payloads {
 		if payload.ID == c.payloadID {
 			return payload, true
 		}
 	}
-	return probe.Payload{}, false
+	return Payload{}, false
 }
 
 type LabelledText struct {

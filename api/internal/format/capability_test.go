@@ -16,8 +16,8 @@ type writerModule struct {
 
 func (m writerModule) ID() string               { return m.declaration.ID }
 func (m writerModule) Declaration() Declaration { return m.declaration }
-func (writerModule) Write(context.Context, ExportAsset) (Artifact, error) {
-	return Artifact{}, nil
+func (writerModule) Write(context.Context, ExportWork) (MainFile, error) {
+	return MainFile{}, nil
 }
 
 func writerDeclaration(id string, grades map[block.Role]SupportGrade) Declaration {
@@ -29,12 +29,12 @@ func writerDeclaration(id string, grades map[block.Role]SupportGrade) Declaratio
 		}
 	}
 	return Declaration{
-		ID: id, Label: id, Kind: "character", Direction: Direction{Write: true},
-		Roles:         roles,
-		Limits:        ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
-		ConsumedKeys:  []string{"payload"},
-		Preservation:  PreservationDeclaration{Body: "card"},
-		TestedOrigins: []string{id, OriginIllarin},
+		ID: id, Label: id, Type: "character", Direction: Direction{Write: true},
+		Roles:                 roles,
+		Limits:                ContentLimits{PayloadBytes: 1024, CollectionItems: 100, ItemBytes: 100},
+		ConsumedKeys:          []string{"payload"},
+		Preservation:          PreservationDeclaration{Body: "card"},
+		TestedOriginalFormats: []string{id, OriginalFormatIllarin},
 	}
 }
 
@@ -81,41 +81,41 @@ func filledCharacter(extra ...block.Element) []block.Element {
 	}, extra...)
 }
 
-func targetNamed(targets []Target, id string) (Target, bool) {
-	for _, target := range targets {
-		if target.Format == id {
-			return target, true
+func formatNamed(offered []Offered, id string) (Offered, bool) {
+	for _, one := range offered {
+		if one.Format == id {
+			return one, true
 		}
 	}
-	return Target{}, false
+	return Offered{}, false
 }
 
-func TestAnUntestedOriginOffersNoTarget(t *testing.T) {
+func TestAnUntestedOriginOffersNoFormat(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t, writerDeclaration("preset_lumiverse", fullCharacterGrades()))
-	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Origin: "chara_card_v2", Elements: filledCharacter(),
+	offered := registry.OfferedFormats(CapabilitySubject{
+		Type: "character", OriginalFormat: "chara_card_v2", Elements: filledCharacter(),
 	})
-	if len(targets) != 0 {
-		t.Fatalf("targets = %+v, want none for an untested origin", targets)
+	if len(offered) != 0 {
+		t.Fatalf("offered = %+v, want none for an untested original format", offered)
 	}
 }
 
-func TestAnAssetBuiltFromNothingIsOfferedEveryWriterTestedAgainstIllarin(t *testing.T) {
+func TestAnWorkBuiltFromNothingIsOfferedEveryWriterTestedAgainstIllarin(t *testing.T) {
 	t.Parallel()
 	registry := registryOf(t,
 		writerDeclaration("chara_card_v2", fullCharacterGrades()),
 		writerDeclaration("chara_card_v3", fullCharacterGrades()),
 	)
-	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(),
+	offered := registry.OfferedFormats(CapabilitySubject{
+		Type: "character", Elements: filledCharacter(),
 	})
-	if len(targets) != 2 {
-		t.Fatalf("targets = %+v, want both writers", targets)
+	if len(offered) != 2 {
+		t.Fatalf("offered = %+v, want both writers", offered)
 	}
 }
 
-func TestATargetThatDropsARequiredRoleIsNotOffered(t *testing.T) {
+func TestAFormatThatDropsARequiredRoleIsNotOffered(t *testing.T) {
 	t.Parallel()
 	grades := fullCharacterGrades()
 	grades[block.RoleGreetings] = SupportNone
@@ -123,14 +123,14 @@ func TestATargetThatDropsARequiredRoleIsNotOffered(t *testing.T) {
 		writerDeclaration("chara_card_v2", grades),
 		writerDeclaration("chara_card_v3", fullCharacterGrades()),
 	)
-	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(),
+	offered := registry.OfferedFormats(CapabilitySubject{
+		Type: "character", Elements: filledCharacter(),
 	})
-	if _, offered := targetNamed(targets, "chara_card_v2"); offered {
-		t.Error("a target that drops every greeting was offered")
+	if _, found := formatNamed(offered, "chara_card_v2"); found {
+		t.Error("a format that drops every greeting was offered")
 	}
-	if _, offered := targetNamed(targets, "chara_card_v3"); !offered {
-		t.Error("the target that carries the greetings was not offered")
+	if _, found := formatNamed(offered, "chara_card_v3"); !found {
+		t.Error("the format that carries the greetings was not offered")
 	}
 }
 
@@ -139,19 +139,19 @@ func TestEmptyInAndEmptyOutIsNoLossAndBlocksNothing(t *testing.T) {
 	grades := fullCharacterGrades()
 	grades[block.RoleGreetings] = SupportNone
 	registry := registryOf(t, writerDeclaration("chara_card_v2", grades))
-	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind:     "character",
+	offered := registry.OfferedFormats(CapabilitySubject{
+		Type:     "character",
 		Elements: []block.Element{described(block.RoleDescription, "Keeps the archive.")},
 	})
-	if len(targets) != 1 {
-		t.Fatalf("targets = %+v, want the target offered", targets)
+	if len(offered) != 1 {
+		t.Fatalf("offered = %+v, want the format offered", offered)
 	}
-	if losses := targets[0].Losses(); len(losses) != 0 {
+	if losses := offered[0].Losses(); len(losses) != 0 {
 		t.Errorf("losses = %+v, want none reported for a field nobody filled in", losses)
 	}
 }
 
-func TestATargetDroppingEveryOptionalRoleIsStillOffered(t *testing.T) {
+func TestAFormatDroppingEveryOptionalRoleIsStillOffered(t *testing.T) {
 	t.Parallel()
 	grades := map[block.Role]SupportGrade{
 		block.RoleDescription: SupportFull,
@@ -168,14 +168,14 @@ func TestATargetDroppingEveryOptionalRoleIsStillOffered(t *testing.T) {
 		}
 	}
 	registry := registryOf(t, writerDeclaration("chara_card_v2", grades))
-	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(optional...),
+	offered := registry.OfferedFormats(CapabilitySubject{
+		Type: "character", Elements: filledCharacter(optional...),
 	})
-	if len(targets) != 1 {
-		t.Fatalf("targets = %+v, want the target offered with its losses stated", targets)
+	if len(offered) != 1 {
+		t.Fatalf("offered = %+v, want the format offered with its losses stated", offered)
 	}
-	if len(targets[0].Losses()) != len(optional) {
-		t.Errorf("losses = %+v, want one per dropped optional role", targets[0].Losses())
+	if len(offered[0].Losses()) != len(optional) {
+		t.Errorf("losses = %+v, want one per dropped optional role", offered[0].Losses())
 	}
 }
 
@@ -203,8 +203,8 @@ func TestAPartialGradeFiresOnlyWhereItsConditionHolds(t *testing.T) {
 	}
 	registry := registryOf(t, declaration)
 
-	plain := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(),
+	plain := registry.OfferedFormats(CapabilitySubject{
+		Type: "character", Elements: filledCharacter(),
 	})
 	if losses := plain[0].Losses(); len(losses) != 0 {
 		t.Errorf("losses = %+v, want none where the condition does not hold", losses)
@@ -214,8 +214,8 @@ func TestAPartialGradeFiresOnlyWhereItsConditionHolds(t *testing.T) {
 	set := named.Content.(block.TextSet)
 	set.Texts[0].Name = "First meeting"
 	named.Content = set
-	withName := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character",
+	withName := registry.OfferedFormats(CapabilitySubject{
+		Type: "character",
 		Elements: []block.Element{
 			described(block.RoleDescription, "Keeps the archive."), named,
 		},
@@ -240,12 +240,12 @@ func TestADestinationNoteRidesOnACarriedVerdict(t *testing.T) {
 		},
 	}
 	registry := registryOf(t, declaration)
-	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind:     "character",
+	offered := registry.OfferedFormats(CapabilitySubject{
+		Type:     "character",
 		Elements: filledCharacter(described(block.RoleCreatorNotes, "Built over a weekend.")),
 	})
 	var found RoleLoss
-	for _, role := range targets[0].Roles {
+	for _, role := range offered[0].Roles {
 		if role.Role == block.RoleCreatorNotes {
 			found = role
 		}
@@ -253,8 +253,8 @@ func TestADestinationNoteRidesOnACarriedVerdict(t *testing.T) {
 	if found.Verdict != Carried || found.Destination == "" {
 		t.Fatalf("creator notes verdict = %+v, want carried with a destination", found)
 	}
-	if len(targets[0].Losses()) != 0 {
-		t.Errorf("losses = %+v, want a destination note counted as no loss", targets[0].Losses())
+	if len(offered[0].Losses()) != 0 {
+		t.Errorf("losses = %+v, want a destination note counted as no loss", offered[0].Losses())
 	}
 }
 
@@ -271,41 +271,23 @@ func TestTheRecommendationPrefersReachOverCarryingTheMost(t *testing.T) {
 		ID: uuid.New(), Type: block.TypeImageSet, Role: block.RoleGallery,
 		Content: block.ImageSet{Images: []block.ImageItem{{ID: uuid.New(), MediaID: uuid.New()}}},
 	}
-	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(gallery),
+	offered := registry.OfferedFormats(CapabilitySubject{
+		Type: "character", Elements: filledCharacter(gallery),
 	})
 	recommended, lossiest := "", ""
-	for _, target := range targets {
-		if target.Recommended {
-			recommended = target.Format
+	for _, one := range offered {
+		if one.Recommended {
+			recommended = one.Format
 		}
-		if len(target.Losses()) == 0 {
-			lossiest = target.Format
+		if len(one.Losses()) == 0 {
+			lossiest = one.Format
 		}
 	}
 	if lossiest != "byaf" {
-		t.Fatalf("the narrow target lost something; the rules do not disagree here")
+		t.Fatalf("the narrow format lost something; the rules do not disagree here")
 	}
 	if recommended != "chara_card_v3" {
 		t.Fatalf("recommended = %q, want the format more apps can open", recommended)
-	}
-}
-
-func TestACrossPlatformTargetIsRefusedWithoutAnAllowance(t *testing.T) {
-	t.Parallel()
-	declaration := writerDeclaration("preset_sillytavern", fullCharacterGrades())
-	declaration.CrossPlatform = true
-	declaration.TestedOrigins = append(declaration.TestedOrigins, "chara_card_v2")
-	registry := registryOf(t, declaration)
-	subject := CapabilitySubject{
-		Kind: "character", Origin: "chara_card_v2", Elements: filledCharacter(),
-	}
-	if targets := registry.OfferedTargets(subject); len(targets) != 0 {
-		t.Fatalf("targets = %+v, want a cross-platform target withheld", targets)
-	}
-	subject.AllowedCrossPlatform = []string{"preset_sillytavern"}
-	if targets := registry.OfferedTargets(subject); len(targets) != 1 {
-		t.Fatal("an allowed cross-platform target was still withheld")
 	}
 }
 
@@ -318,11 +300,31 @@ func TestPreservedDataTravelsByOriginMatchAlone(t *testing.T) {
 	stranger := writerDeclaration("theme_lumiverse", fullCharacterGrades())
 	stranger.Preservation = PreservationDeclaration{Body: "bundle"}
 
-	if !TravelsWithOrigin(card, sibling) {
+	registry := registryOf(t, card, sibling, stranger)
+
+	if !registry.TravelsWithOriginalFormat(card.ID, sibling) {
 		t.Error("preserved data did not travel to its own family")
 	}
-	if TravelsWithOrigin(card, stranger) {
+	if registry.TravelsWithOriginalFormat(card.ID, stranger) {
 		t.Error("preserved data reached another family")
+	}
+}
+
+func TestPreservedDataFromARetiredOriginTravelsWhereTheFormatKeepsIt(t *testing.T) {
+	t.Parallel()
+	keeper := writerDeclaration("lorebook_lumiverse", fullCharacterGrades())
+	keeper.Preservation = PreservationDeclaration{Body: "lorebook"}
+	keeper.PreservesOriginalFormats = []string{"retired"}
+	keeper.TestedOriginalFormats = append(keeper.TestedOriginalFormats, "retired")
+	other := writerDeclaration("theme_lumiverse", fullCharacterGrades())
+	other.Preservation = PreservationDeclaration{Body: "bundle"}
+	registry := registryOf(t, keeper, other)
+
+	if !registry.TravelsWithOriginalFormat("retired", keeper) {
+		t.Error("preserved data from a retired original format did not reach the format that keeps it")
+	}
+	if registry.TravelsWithOriginalFormat("retired", other) {
+		t.Error("preserved data from a retired original format reached a format that does not keep it")
 	}
 }
 
@@ -356,12 +358,12 @@ func TestTheRecommendationPrefersTheFormatWhoseContentActuallyArrives(t *testing
 		ID: uuid.New(), Type: block.TypeImageSet, Role: block.RoleGallery,
 		Content: block.ImageSet{Images: []block.ImageItem{{ID: uuid.New(), MediaID: uuid.New()}}},
 	}
-	targets := registry.OfferedTargets(CapabilitySubject{
-		Kind: "character", Elements: filledCharacter(gallery),
+	offered := registry.OfferedFormats(CapabilitySubject{
+		Type: "character", Elements: filledCharacter(gallery),
 	})
-	for _, target := range targets {
-		if target.Recommended && target.Format != "charx" {
-			t.Fatalf("recommended %s, want the one that needs no note", target.Format)
+	for _, one := range offered {
+		if one.Recommended && one.Format != "charx" {
+			t.Fatalf("recommended %s, want the one that needs no note", one.Format)
 		}
 	}
 }

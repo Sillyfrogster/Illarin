@@ -31,7 +31,7 @@ func placedExtension(t *testing.T) []Block {
 	return blocks
 }
 
-func TestAnExtensionPlacesItsArchiveReadingsInLockedBlocks(t *testing.T) {
+func TestAnExtensionPlacesItsArchiveReadingsInBlocksFromTheFile(t *testing.T) {
 	t.Parallel()
 	blocks := placedExtension(t)
 	if len(blocks) != 2 || blocks[0].Definition != ExtensionPermissions || blocks[1].Definition != ExtensionSource {
@@ -43,8 +43,8 @@ func TestAnExtensionPlacesItsArchiveReadingsInLockedBlocks(t *testing.T) {
 			t.Errorf("%s is required %t and hideable %t, want both", holder.Definition, definition.Required, definition.Hideable)
 		}
 		for _, element := range holder.Elements {
-			if !holder.Pinned(element.Role, "extension") || !holder.Locked(element.Role, "extension") {
-				t.Errorf("%s in %s is not pinned and locked", element.Role, holder.Definition)
+			if !holder.Pinned(element.Role, "extension") || !holder.FromFile(element.Role, "extension") {
+				t.Errorf("%s in %s is not pinned and from the file", element.Role, holder.Definition)
 			}
 		}
 	}
@@ -75,15 +75,15 @@ func TestAnExtensionPlacesOnlyTheBlocksItsArchiveSupplies(t *testing.T) {
 	if len(blocks[1].Elements) != 1 {
 		t.Errorf("source holds %+v, want only the details the archive supplied", blocks[1].Elements)
 	}
-	if !blocks[0].Locked(RoleExtensionDependencies, "extension") {
-		t.Error("dependencies are not locked")
+	if !blocks[0].FromFile(RoleExtensionDependencies, "extension") {
+		t.Error("dependencies are not from the file")
 	}
 	if offers, _ := Offers("extension"); len(offers) != len(shared) {
 		t.Errorf("the extension tray offers %d blocks, want only the shared ones", len(offers))
 	}
 }
 
-func TestWhatAnExtensionAddsSitsInALockedBlockAfterItsPermissions(t *testing.T) {
+func TestWhatAnExtensionAddsSitsInABlockFromTheFileAfterItsPermissions(t *testing.T) {
 	t.Parallel()
 	blocks, err := Place("extension", append(extensionElements(), Element{
 		Type: TypeFieldList, Role: RoleExtensionAdditions, Content: FieldList{Fields: []FieldItem{
@@ -106,15 +106,15 @@ func TestWhatAnExtensionAddsSitsInALockedBlockAfterItsPermissions(t *testing.T) 
 	if definition.Title != "What it adds" || !definition.Required || !definition.Hideable {
 		t.Errorf("definition = %+v, want a required, hideable block titled What it adds", definition)
 	}
-	if !adds.Pinned(RoleExtensionAdditions, "extension") || !adds.Locked(RoleExtensionAdditions, "extension") {
-		t.Error("what it adds is not pinned and locked")
+	if !adds.Pinned(RoleExtensionAdditions, "extension") || !adds.FromFile(RoleExtensionAdditions, "extension") {
+		t.Error("what it adds is not pinned and from the file")
 	}
 	if facts := adds.Elements[0].Facts(); len(facts) != 1 || facts[0] != "2 additions" {
 		t.Errorf("facts = %v, want 2 additions", facts)
 	}
 }
 
-func TestALockedElementMovesAndHidesButKeepsItsContent(t *testing.T) {
+func TestAnElementFromTheFileMovesAndHidesButKeepsItsContent(t *testing.T) {
 	t.Parallel()
 	before := placedExtension(t)
 	after := cloneBlocks(before)
@@ -122,7 +122,7 @@ func TestALockedElementMovesAndHidesButKeepsItsContent(t *testing.T) {
 	after[0].Position, after[1].Position = 1, 0
 	after[0], after[1] = after[1], after[0]
 	if err := ValidateBuilderConstraints("extension", before, after); err != nil {
-		t.Fatalf("moving and hiding locked blocks was refused: %v", err)
+		t.Fatalf("moving and hiding blocks from the file was refused: %v", err)
 	}
 
 	edited := cloneBlocks(before)
@@ -131,17 +131,17 @@ func TestALockedElementMovesAndHidesButKeepsItsContent(t *testing.T) {
 	}}
 	err := ValidateBuilderConstraints("extension", before, edited)
 	if err == nil || !strings.Contains(err.Error(), "archive") {
-		t.Fatalf("editing a locked element = %v, want a refusal that names the archive", err)
+		t.Fatalf("editing an element from the file = %v, want a refusal that names the archive", err)
 	}
 }
 
-func TestALockedElementCannotArriveThroughAnEdit(t *testing.T) {
+func TestAnElementFromTheFileCannotArriveThroughAnEdit(t *testing.T) {
 	t.Parallel()
 	before := placedExtension(t)
 	after := cloneBlocks(before)
 	after[1].Elements[0].ID = uuid.New()
 	if err := ValidateBuilderConstraints("extension", before, after); err == nil {
-		t.Fatal("a new locked element was accepted from an edit")
+		t.Fatal("a new element from the file was accepted from an edit")
 	}
 }
 

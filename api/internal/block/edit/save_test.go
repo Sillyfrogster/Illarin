@@ -1,0 +1,666 @@
+package edit_test
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/google/uuid"
+)
+
+func TestAPrivatePromptKeepsItsTextForTheOwnerAndNotAReader(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartPreset(t, r, session, "lumiverse")
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
+	const privateText = "The reader must never receive these words."
+	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"name":"Private instructions","role":"system","text":"` + privateText + `","private":true,"enabled":true}]}`)
+	apps := []string{"lumiverse"}
+	core.AllowedApps = &apps
+
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+		t.Fatalf("save private prompt status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+	owner := apitest.FetchStartedWork(t, r, session, started.ID)
+	if !strings.Contains(string(owner.Blocks[0].Elements[0].Content), privateText) {
+		t.Fatal("the owner did not receive the restored private prompt")
+	}
+	if got := apitest.SaveDetails(t, r, session, started.ID, `{"name":"Private prompt preset","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
+	}
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
+		t.Fatalf("publish private prompt preset status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+
+	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
+	if reader.Code != http.StatusOK {
+		t.Fatalf("reader status = %d, want 200: %s", reader.Code, reader.Body.String())
+	}
+	if strings.Contains(reader.Body.String(), privateText) {
+		t.Fatal("a reader response contained the private prompt")
+	}
+
+	missingPolicy := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
+	missingPolicy.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[{"role":"system","text":"new private text","private":true,"enabled":true}]}`)
+	missingPolicy.AllowedApps = &[]string{}
+	refused := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, missingPolicy)
+	if refused.Code != http.StatusBadRequest {
+		t.Fatalf("make private without an allowed app status = %d, want 400: %s", refused.Code, refused.Body.String())
+	}
+}
+
+func TestSeveralPrivatePromptsCanReturnToPublicContent(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartPreset(t, r, session, "lumiverse")
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
+	const publicText = "Readers can use this instruction."
+	const firstSecret = "Only allowed applications receive this first instruction."
+	const secondSecret = "Only allowed applications receive this second instruction."
+	groupID := uuid.NewString()
+	core.Elements[0].Content = json.RawMessage(`{
+		"groups":[{"id":"` + groupID + `","name":"Private guidance"}],
+		"fragments":[
+			{"name":"Visible","role":"system","text":"` + publicText + `","enabled":true},
+			{"name":"First private","role":"user","placement":"pre_history","text":"` + firstSecret + `","private":true,"enabled":false,"groupId":"` + groupID + `"},
+			{"name":"Second private","role":"assistant","placement":"post_history","text":"` + secondSecret + `","private":true,"enabled":true,"groupId":"` + groupID + `"}
+		]
+	}`)
+	apps := []string{"lumiverse"}
+	core.AllowedApps = &apps
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+		t.Fatalf("save several private prompts status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+
+	owner := apitest.FetchStartedWork(t, r, session, started.ID)
+	if !owner.HasPrivatePrompts || len(owner.AllowedApps) != 1 || owner.AllowedApps[0] != (apitest.AppName{ID: "lumiverse", Label: "Lumiverse"}) {
+		t.Fatalf("private prompt policy = has private prompts %t, allowed apps %v", owner.HasPrivatePrompts, owner.AllowedApps)
+	}
+	ownerContent := string(owner.Blocks[0].Elements[0].Content)
+	for _, want := range []string{publicText, firstSecret, secondSecret, "First private", "pre_history", "Private guidance"} {
+		if !strings.Contains(ownerContent, want) {
+			t.Errorf("owner response does not contain %q: %s", want, ownerContent)
+		}
+	}
+	if got := apitest.SaveDetails(t, r, session, started.ID, `{"name":"Several private prompts","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+		t.Fatalf("save details status = %d, want 204: %s", got.Code, got.Body.String())
+	}
+	if got := apitest.PublishWork(t, r, session, started.ID); got.Code != http.StatusOK {
+		t.Fatalf("publish private prompt preset status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+
+	reader := apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
+	if reader.Code != http.StatusOK {
+		t.Fatalf("reader status = %d, want 200: %s", reader.Code, reader.Body.String())
+	}
+	if !strings.Contains(reader.Body.String(), publicText) {
+		t.Fatal("a reader did not receive the ordinary prompt")
+	}
+	for _, secret := range []string{firstSecret, secondSecret} {
+		if strings.Contains(reader.Body.String(), secret) {
+			t.Fatalf("a reader response contained %q", secret)
+		}
+	}
+
+	core = apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
+	content := strings.ReplaceAll(string(core.Elements[0].Content), `"private":true`, `"private":false`)
+	core.Elements[0].Content = json.RawMessage(content)
+	core.AllowedApps = &[]string{}
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusConflict {
+		t.Fatalf("make public without confirming status = %d, want 409: %s", got.Code, got.Body.String())
+	}
+	confirmed := true
+	core.MakePromptsPublic = &confirmed
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+		t.Fatalf("make the final prompts public status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+	owner = apitest.FetchStartedWork(t, r, session, started.ID)
+	if owner.HasPrivatePrompts || len(owner.AllowedApps) != 0 {
+		t.Fatalf("prompt made public policy = has private prompts %t, allowed apps %v", owner.HasPrivatePrompts, owner.AllowedApps)
+	}
+
+	reader = apitest.Send(t, r, httptest.NewRequest(http.MethodGet, "/v1/works/"+started.ID, nil))
+	if reader.Code != http.StatusOK {
+		t.Fatalf("reader after making it public status = %d, want 200: %s", reader.Code, reader.Body.String())
+	}
+	for _, want := range []string{publicText, firstSecret, secondSecret} {
+		if !strings.Contains(reader.Body.String(), want) {
+			t.Errorf("reader response after making it public does not contain %q", want)
+		}
+	}
+}
+
+func TestACreatorSavesDescriptionAndGreetingContent(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "character_core"))
+	core.Elements[0].Content = json.RawMessage(`{"text":"She keeps the memories that books forget."}`)
+	response := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core)
+	if response.Code != http.StatusOK {
+		t.Fatalf("save description status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+
+	messagesBlock := apitest.BlockNamed(t, started.Blocks, "messages")
+	messages := apitest.EditableBlock(messagesBlock)
+	messages.Elements[0].Content = json.RawMessage(`{"texts":[{"text":"The west shelf moved again. Come in."}]}`)
+	response = apitest.SaveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
+	if response.Code != http.StatusOK {
+		t.Fatalf("save greeting status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+
+	saved := apitest.FetchStartedWork(t, r, session, started.ID)
+	core = apitest.EditableBlock(apitest.BlockNamed(t, saved.Blocks, "character_core"))
+	messages = apitest.EditableBlock(apitest.BlockNamed(t, saved.Blocks, "messages"))
+	if string(core.Elements[0].Content) != `{"text":"She keeps the memories that books forget."}` {
+		t.Errorf("saved description = %s", core.Elements[0].Content)
+	}
+	var greetings struct {
+		Texts []struct {
+			ID   uuid.UUID `json:"id"`
+			Text string    `json:"text"`
+		} `json:"texts"`
+	}
+	if err := json.Unmarshal(messages.Elements[0].Content, &greetings); err != nil {
+		t.Fatalf("read the saved greetings: %v", err)
+	}
+	if len(greetings.Texts) != 1 || greetings.Texts[0].Text != "The west shelf moved again. Come in." {
+		t.Errorf("saved greetings = %s", messages.Elements[0].Content)
+	}
+	if greetings.Texts[0].ID == uuid.Nil {
+		t.Error("the saved greeting carries no id")
+	}
+}
+
+func TestACreatorCanChooseAndReleaseABlockTitle(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+
+	chosen := "Who she is"
+	core.Title = &chosen
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	if response.Code != http.StatusOK {
+		t.Fatalf("save chosen title status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+	saved := apitest.BlockNamed(t, apitest.FetchStartedWork(t, r, session, started.ID).Blocks, "character_core")
+	if saved.Title != chosen || saved.TitleIsDefault {
+		t.Fatalf("chosen title = %q, default = %t", saved.Title, saved.TitleIsDefault)
+	}
+
+	core.Title = nil
+	response = apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	if response.Code != http.StatusOK {
+		t.Fatalf("release title status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+	saved = apitest.BlockNamed(t, apitest.FetchStartedWork(t, r, session, started.ID).Blocks, "character_core")
+	if saved.Title != "The character" || !saved.TitleIsDefault {
+		t.Fatalf("released title = %q, default = %t", saved.Title, saved.TitleIsDefault)
+	}
+}
+
+func TestSavingMalformedElementContentNamesWhatMustChange(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements[0].Content = json.RawMessage(`{}`)
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("malformed content status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Description", "text"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestSavingAnElementOutsideTheChosenLayoutNamesTheAvailableSlots(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements[0].Slot = "aside"
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("invalid slot status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Description", "aside", "top", "middle", "bottom"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestSavingARoleOnTheWrongElementTypeNamesTheRequiredType(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements[0].Type = "text_set"
+	core.Elements[0].Content = json.RawMessage(`{"texts":[]}`)
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("wrong type status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Description", "prose"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestASecondElementForASingularRoleIsRefusedWhereItIsCreated(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements[2].Role = "description"
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("second description status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Description", "once", "extra"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestAPinnedElementCannotBeRemovedFromItsBlock(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements = core.Elements[1:]
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("removed pinned element status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Description", "The character", "Restore"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestSavingAnElementWithAnUnknownDisplayNamesTheClosedChoices(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements[0].Display = "glowing"
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("unknown display status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Description", "display", "rich", "verbatim"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestSavingTextWithoutDisplayNamesTheClosedChoices(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements[0].Display = ""
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("missing display status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Description", "display", "rich", "verbatim"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestSavingDuplicateElementIdentityNamesWhatMustChange(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements[1].ID = core.Elements[0].ID
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("duplicate element id status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Description", "Personality", "same id"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestSavingAReplacementElementIdentityIsRefused(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements[0].ID = "00000000-0000-4000-8000-000000000001"
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("replacement element id status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Description", "existing id"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestMalformedElementIdentityNamesTheRequiredShape(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Elements[0].ID = "not-a-uuid"
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("malformed element id status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"id", "UUID"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestBlockSaveDoesNotAcceptUnrelatedArrangementActions(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	messagesBlock := apitest.BlockNamed(t, started.Blocks, "messages")
+	body := struct {
+		apitest.SaveBlockBody
+		Hidden bool `json:"hidden"`
+	}{SaveBlockBody: apitest.EditableBlock(messagesBlock), Hidden: true}
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("encode later action: %v", err)
+	}
+	request := httptest.NewRequest(
+		http.MethodPut,
+		"/v1/works/"+started.ID+"/blocks/"+messagesBlock.ID,
+		strings.NewReader(string(encoded)),
+	)
+	request.Header.Set("Content-Type", "application/json")
+	response := apitest.Send(t, r, apitest.Authorized(request, session))
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("later arrangement fields status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"title", "elements"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestACreatorCanNarrowARequiredBlock(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Width = "half"
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("narrow required block status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+	saved := apitest.BlockNamed(t, apitest.FetchStartedWork(t, r, session, started.ID).Blocks, "character_core")
+	if saved.Width != "half" || saved.Layout != "stack-3" {
+		t.Errorf("saved arrangement = %s at %s, want stack-3 at half", saved.Layout, saved.Width)
+	}
+}
+
+func TestChoosingALayoutThatNeedsMoreWidthNamesTheFirstFix(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Layout = "trio"
+	for i, slot := range []string{"left", "middle", "right"} {
+		core.Elements[i].Slot = slot
+	}
+
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("trio at two thirds status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"trio", "full width", "Widen it first"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestNarrowingBelowTheCurrentLayoutNamesTheFirstFix(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	coreBlock := apitest.BlockNamed(t, started.Blocks, "character_core")
+	core := apitest.EditableBlock(coreBlock)
+	core.Layout = "trio"
+	core.Width = "full"
+	for i, slot := range []string{"left", "middle", "right"} {
+		core.Elements[i].Slot = slot
+	}
+	response := apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+	if response.Code != http.StatusOK {
+		t.Fatalf("prepare trio status = %d, want 200: %s", response.Code, response.Body.String())
+	}
+
+	core.Width = "half"
+	response = apitest.SaveBlock(t, r, session, started.ID, coreBlock.ID, core)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("narrow trio status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"trio", "full width", "Choose another layout before narrowing it"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestALayoutTheDefinitionDoesNotOfferNamesTheAvailableChoices(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	messagesBlock := apitest.BlockNamed(t, started.Blocks, "messages")
+	messages := apitest.EditableBlock(messagesBlock)
+	messages.Layout = "duo"
+	for i, slot := range []string{"left", "right"} {
+		messages.Elements[i].Slot = slot
+	}
+
+	response := apitest.SaveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("unoffered layout status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Messages", "stack-2", "stack-3"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.T) {
+	t.Parallel()
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(
+		t, 1<<20, api.DefaultDeadlines(),
+	)
+	started := apitest.StartCharacter(t, r, session)
+	messagesBlock := apitest.BlockNamed(t, started.Blocks, "messages")
+
+	var stored []block.Element
+	var encoded []byte
+	if err := pool.QueryRow(t.Context(), `
+		select elements from work_blocks where id = $1
+	`, messagesBlock.ID).Scan(&encoded); err != nil {
+		t.Fatalf("read messages elements: %v", err)
+	}
+	if err := json.Unmarshal(encoded, &stored); err != nil {
+		t.Fatalf("decode messages elements: %v", err)
+	}
+	stored = append(stored, block.Element{
+		ID: uuid.New(), Type: block.TypeTextSet, Role: block.RoleGroupGreetings,
+		Slot: "bottom", Options: block.Options{Display: block.DisplayRich},
+		Content: block.TextSet{Texts: []block.TextItem{{ID: block.NewItemID(), Text: "Only for the whole party."}}},
+	})
+	stored[0].Slot = "top"
+	stored[1].Slot = "middle"
+	encoded, err := json.Marshal(stored)
+	if err != nil {
+		t.Fatalf("encode messages elements: %v", err)
+	}
+	if _, err := pool.Exec(t.Context(), `
+		update work_blocks set layout = 'stack-3', elements = $2 where id = $1
+	`, messagesBlock.ID, encoded); err != nil {
+		t.Fatalf("prepare three messages: %v", err)
+	}
+
+	savedWork := apitest.FetchStartedWork(t, r, session, started.ID)
+	messagesBlock = apitest.BlockNamed(t, savedWork.Blocks, "messages")
+	messages := apitest.EditableBlock(messagesBlock)
+	messages.Layout = "stack-2"
+
+	response := apitest.SaveBlock(t, r, session, started.ID, messagesBlock.ID, messages)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("three messages in stack-2 status = %d, want 400: %s", response.Code, response.Body.String())
+	}
+	for _, want := range []string{"Group-only greetings", "stack-2", "Move or remove"} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
+		}
+	}
+}
+
+func TestRemovingPrivatePromptsDropsTheirPayloadsAndThenThePolicy(t *testing.T) {
+	t.Parallel()
+	_, r, session, _, pool := harness.NewVerifiedRoutersWithPool(t, 1<<20, api.DefaultDeadlines())
+	started := apitest.StartPreset(t, r, session, "lumiverse")
+	core := apitest.EditableBlock(apitest.BlockNamed(t, started.Blocks, "preset_core"))
+	core.Elements[0].Content = json.RawMessage(`{"groups":[],"fragments":[
+		{"name":"Visible","role":"system","text":"Readers keep this one.","enabled":true},
+		{"name":"First private","role":"system","text":"Only allowed applications receive this first instruction.","private":true,"enabled":true},
+		{"name":"Second private","role":"system","text":"Only allowed applications receive this second instruction.","private":true,"enabled":true}
+	]}`)
+	apps := []string{"lumiverse"}
+	core.AllowedApps = &apps
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, core); got.Code != http.StatusOK {
+		t.Fatalf("make two prompts private status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 2 || policies != 1 {
+		t.Fatalf("after making them private: %d payloads and %d policy rows, want 2 and 1", payloads, policies)
+	}
+
+	owner := apitest.FetchStartedWork(t, r, session, started.ID)
+	shorter := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
+	shorter.Elements[0].Content = withoutFragment(t, owner, "First private")
+	shorter.AllowedApps = &apps
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, shorter); got.Code != http.StatusOK {
+		t.Fatalf("remove one private prompt status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 1 || policies != 1 {
+		t.Fatalf("after one removal: %d payloads and %d policy rows, want 1 and 1", payloads, policies)
+	}
+
+	owner = apitest.FetchStartedWork(t, r, session, started.ID)
+	shortest := apitest.EditableBlock(apitest.BlockNamed(t, owner.Blocks, "preset_core"))
+	shortest.Elements[0].Content = withoutFragment(t, owner, "Second private")
+	shortest.AllowedApps = &[]string{}
+	if got := apitest.SaveBlock(t, r, session, started.ID, started.Blocks[0].ID, shortest); got.Code != http.StatusOK {
+		t.Fatalf("remove the final private prompt status = %d, want 200: %s", got.Code, got.Body.String())
+	}
+	if payloads, policies := apitest.PrivatePromptCounts(t, pool, started.ID); payloads != 0 || policies != 0 {
+		t.Fatalf("after the final removal: %d payloads and %d policy rows, want none", payloads, policies)
+	}
+
+	owner = apitest.FetchStartedWork(t, r, session, started.ID)
+	if owner.HasPrivatePrompts || len(owner.AllowedApps) != 0 {
+		t.Fatalf("after the final removal: has private prompts %t, allowed apps %v",
+			owner.HasPrivatePrompts, owner.AllowedApps)
+	}
+}
+
+func withoutFragment(t *testing.T, owner apitest.StartedWork, name string) json.RawMessage {
+	t.Helper()
+	var content struct {
+		Groups    json.RawMessage   `json:"groups"`
+		Fragments []json.RawMessage `json:"fragments"`
+	}
+	if err := json.Unmarshal(owner.Blocks[0].Elements[0].Content, &content); err != nil {
+		t.Fatalf("decode prompt content: %v", err)
+	}
+	kept := make([]json.RawMessage, 0, len(content.Fragments))
+	for _, fragment := range content.Fragments {
+		var named struct {
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal(fragment, &named); err != nil {
+			t.Fatalf("decode fragment: %v", err)
+		}
+		if named.Name != name {
+			kept = append(kept, fragment)
+		}
+	}
+	if len(kept) == len(content.Fragments) {
+		t.Fatalf("no fragment named %q to remove", name)
+	}
+	content.Fragments = kept
+	rebuilt, err := json.Marshal(content)
+	if err != nil {
+		t.Fatalf("encode prompt content: %v", err)
+	}
+	return rebuilt
+}

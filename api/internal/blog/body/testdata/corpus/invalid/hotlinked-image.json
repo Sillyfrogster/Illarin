@@ -1,0 +1,14 @@
+{
+  "note": "An address where an uploaded image belongs",
+  "path": "body.content.0.mediaId",
+  "body": {
+    "version": 2,
+    "content": [
+      {
+        "type": "image",
+        "mediaId": "https://example.com/picture.png",
+        "alt": "A picture hosted somewhere else"
+      }
+    ]
+  }
+}

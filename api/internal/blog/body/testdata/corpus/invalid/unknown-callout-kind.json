@@ -1,0 +1,14 @@
+{
+  "note": "A callout kind Illarin does not have",
+  "path": "body.content.0.kind",
+  "body": {
+    "version": 2,
+    "content": [
+      {
+        "type": "callout",
+        "kind": "danger",
+        "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Careful."}]}]
+      }
+    ]
+  }
+}

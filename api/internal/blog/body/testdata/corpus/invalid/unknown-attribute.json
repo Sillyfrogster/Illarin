@@ -1,0 +1,8 @@
+{
+  "note": "An attribute a client hoped the server would keep",
+  "path": "body.content.0.style",
+  "body": {
+    "version": 2,
+    "content": [{"type": "paragraph", "style": "color:red", "content": [{"type": "text", "text": "Red"}]}]
+  }
+}

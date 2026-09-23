@@ -1,20 +1,35 @@
 import { describe, expect, test } from "bun:test";
-import type { AssetBlock, AssetElement } from "@/lib/api/query";
+import type { WorkBlock, WorkElement } from "@/lib/api/query";
 import {
+  acknowledgeBlock,
   blockSaveRequest,
   changedBlockIds,
-  firstCursor,
   isEmptyContent,
   replaceBlock,
   replaceElement,
   writesInPlace,
 } from "./save";
 
+test("a save response keeps typing and sizing done while it was in flight", () => {
+  const sent = block("one", [element("a", "prose", { text: "First edit" })]);
+  const current = {
+    ...sent,
+    width: "half" as const,
+    elements: [element("a", "prose", { text: "Still writing" })],
+  };
+  const server = { ...sent, title: "Server title" };
+  const merged = acknowledgeBlock(current, sent, server);
+  expect(merged.title).toBe("Server title");
+  expect(merged.width).toBe("half");
+  expect(merged.elements[0].content).toEqual({ text: "Still writing" });
+  expect(changedBlockIds([merged], [server])).toEqual(["one"]);
+});
+
 function element(
   id: string,
-  type: AssetElement["type"],
-  content: AssetElement["content"],
-): AssetElement {
+  type: WorkElement["type"],
+  content: WorkElement["content"],
+): WorkElement {
   return {
     content,
     facts: [],
@@ -22,13 +37,13 @@ function element(
     isEmpty: false,
     label: id,
     pinned: false,
-    locked: false,
+    fromFile: false,
     slot: id,
     type,
   };
 }
 
-function block(id: string, elements: AssetElement[]): AssetBlock {
+function block(id: string, elements: WorkElement[]): WorkBlock {
   return {
     allowedLayouts: ["single"],
     definition: "character",
@@ -78,7 +93,7 @@ describe("changedBlockIds", () => {
   test("ignores a block the server changed on its own", () => {
     const before = [block("one", [element("a", "prose", { text: "Same" })])];
     const after = [
-      { ...before[0], facts: undefined, isEmpty: true } as AssetBlock,
+      { ...before[0], facts: undefined, isEmpty: true } as WorkBlock,
     ];
 
     expect(changedBlockIds(after, before)).toEqual([]);
@@ -120,21 +135,6 @@ describe("isEmptyContent", () => {
     expect(
       isEmptyContent(element("c", "field_list", { fields: [{ value: "1" }] })),
     ).toBe(false);
-  });
-});
-
-describe("firstCursor", () => {
-  test("points at the first field of an element written in place", () => {
-    expect(firstCursor(element("a", "prose", { text: "" }))).toBe("a:text");
-    expect(firstCursor(element("b", "text_set", { texts: [] }))).toBe(
-      "b:0:text",
-    );
-  });
-
-  test("points nowhere for an element edited beside the page", () => {
-    expect(
-      firstCursor(element("c", "entry_table", { entries: [] })),
-    ).toBeNull();
   });
 });
 

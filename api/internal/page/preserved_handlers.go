@@ -1,0 +1,67 @@
+package page
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
+	"github.com/gin-gonic/gin"
+)
+
+func (h *Handlers) ListPreservedData(c *gin.Context) {
+	id, ok := api.PathID(c, "id")
+	if !ok {
+		return
+	}
+	owner, ok := api.Verified(c, "reading preserved data")
+	if !ok {
+		return
+	}
+	found, err := h.works.PreservedData(c.Request.Context(), owner.ID, id)
+	switch {
+	case errors.Is(err, work.ErrNotFound):
+		api.Refuse(c, http.StatusNotFound, "No such work.")
+	case err != nil:
+		api.Refuse(c, http.StatusInternalServerError, "Could not load extra file data. Try again.")
+	default:
+		served := make([]PreservedData, 0, len(found))
+		for _, namespace := range found {
+			served = append(served, PreservedData{
+				Name: namespace.Name, Label: format.PreservedLabel(namespace.Name), Bytes: namespace.Bytes,
+			})
+		}
+		c.JSON(http.StatusOK, served)
+	}
+}
+
+func (h *Handlers) DeletePreservedData(c *gin.Context) {
+	id, ok := api.PathID(c, "id")
+	if !ok {
+		return
+	}
+	namespace := c.Param("namespace")
+	version, ok := api.DraftedChangesVersion(c)
+	if !ok {
+		return
+	}
+	owner, ok := api.Verified(c, "deleting preserved data")
+	if !ok {
+		return
+	}
+	candidate := &work.Candidate{Version: version}
+	err := h.works.DeletePreservedData(
+		c.Request.Context(), owner.ID, id, namespace, candidate)
+	if CandidateResult(c, candidate, err) {
+		return
+	}
+	switch {
+	case errors.Is(err, work.ErrNotFound):
+		api.Refuse(c, http.StatusNotFound, "This work preserves no such data.")
+	case err != nil:
+		api.Refuse(c, http.StatusInternalServerError, "Could not delete the preserved data.")
+	default:
+		c.Status(http.StatusNoContent)
+	}
+}

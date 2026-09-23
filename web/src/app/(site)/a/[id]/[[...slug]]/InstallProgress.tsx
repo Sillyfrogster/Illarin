@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import type { InstallStep, InstallTrack } from "@/lib/install-track";
 
-/** InstallProgress shows where an extension is on its way to one of the reader's instances. */
+/** InstallProgress shows where an extension is on its way to one of the reader's connected apps. */
 export function InstallProgress({
   track,
   busy,
@@ -15,8 +15,8 @@ export function InstallProgress({
   busy: boolean;
   onDismiss: () => void;
 }) {
-  const { instance } = track;
-  const name = `${instance.applicationName} — ${instance.instanceName}`;
+  const { app } = track;
+  const name = `${app.appName} — ${app.name}`;
 
   return (
     <section aria-label={name} aria-live="polite" className="max-w-[42ch]">
@@ -43,7 +43,7 @@ export function InstallProgress({
       ) : (
         <p className="mt-3 text-meta text-mute">{track.note}</p>
       )}
-      {instance.delivery && !track.live ? (
+      {app.send && !track.live ? (
         <div className="mt-3">
           <Button
             className="-ml-3"

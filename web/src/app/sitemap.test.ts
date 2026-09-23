@@ -1,34 +1,35 @@
 import { expect, test } from "bun:test";
-import type { AssetListParams, BrowseAsset, BrowsePage } from "@/lib/api/query";
+import type { BrowsePage, BrowseWork, WorkListParams } from "@/lib/api/query";
 import { buildSitemap } from "./sitemap";
 
 const FIRST_ID = "11111111-1111-4111-8111-111111111111";
 const SECOND_ID = "22222222-2222-4222-8222-222222222222";
 
-function asset(id: string, name: string): BrowseAsset {
+function work(id: string, name: string): BrowseWork {
   return {
     id,
     name,
+    apps: [],
     creator: "garden.keeper",
-    kind: "theme",
+    type: "theme",
     isNsfw: false,
     cover: null,
   };
 }
 
 test("sitemap follows the whole browse listing", async () => {
-  const requests: AssetListParams[] = [];
+  const requests: WorkListParams[] = [];
   const pages: Array<Pick<BrowsePage, "items" | "nextCursor">> = [
     {
-      items: [asset(FIRST_ID, "First garden")],
+      items: [work(FIRST_ID, "First garden")],
       nextCursor: {
         before: "2026-08-13T12:00:00Z",
         beforeId: FIRST_ID,
       },
     },
     {
-      items: [asset(SECOND_ID, "Second garden")],
-      nextCursor: null,
+      items: [work(SECOND_ID, "Second garden")],
+      nextCursor: undefined,
     },
   ];
 
@@ -42,6 +43,9 @@ test("sitemap follows the whole browse listing", async () => {
   expect(entries.map((entry) => entry.url)).toEqual([
     "http://localhost:8000/",
     "http://localhost:8000/browse",
+    "http://localhost:8000/docs",
+    "http://localhost:8000/docs/app-integration",
+    "http://localhost:8000/docs/extension-publishing",
     `http://localhost:8000/a/${FIRST_ID}/first-garden`,
     `http://localhost:8000/a/${SECOND_ID}/second-garden`,
   ]);
@@ -54,11 +58,11 @@ test("sitemap follows the whole browse listing", async () => {
 });
 
 test("sitemap asks for the listing a stranger sees, adult work included", async () => {
-  const requests: AssetListParams[] = [];
+  const requests: WorkListParams[] = [];
 
   await buildSitemap(async (params) => {
     requests.push(params);
-    return { items: [], nextCursor: null };
+    return { items: [], nextCursor: undefined };
   });
 
   expect(requests).toEqual([

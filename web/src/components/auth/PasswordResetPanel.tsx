@@ -6,8 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, TextInput, Trouble } from "@/components/ui/field";
-import { refusalMessage } from "@/lib/answer";
-import { browserFetch } from "@/lib/api/browser-mutation";
+import { readRefusal, refusalMessage } from "@/lib/answer";
+import { api } from "@/lib/api/client";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -20,16 +20,9 @@ async function post(
   fallback: string,
 ): Promise<Result> {
   try {
-    const response = await browserFetch(endpoint, {
-      body: JSON.stringify(body),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    });
+    const { response, error } = await api<void>("POST", endpoint, { body });
     if (response.ok) return { ok: true };
-    return {
-      error: refusalMessage(await response.json(), fallback),
-      ok: false,
-    };
+    return { error: refusalMessage(readRefusal(error), fallback), ok: false };
   } catch {
     return { error: UNREACHABLE, ok: false };
   }
@@ -83,7 +76,7 @@ export function PasswordResetRequestPanel() {
     const form = new FormData(event.currentTarget);
 
     const result = await post(
-      "/api/v1/auth/password-reset",
+      "/v1/auth/password-reset",
       { email: String(form.get("email") ?? "") },
       "The reset request could not be sent.",
     );
@@ -159,7 +152,7 @@ export function PasswordResetCompletionPanel() {
     const form = new FormData(event.currentTarget);
 
     const result = await post(
-      "/api/v1/auth/password-reset/complete",
+      "/v1/auth/password-reset/complete",
       { password: String(form.get("password") ?? ""), token },
       "This password reset link could not be used.",
     );

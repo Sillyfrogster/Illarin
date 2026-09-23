@@ -204,7 +204,7 @@ func TestAnExtensionNamedForTheCardBodyStaysInsideIt(t *testing.T) {
 func namespaces(parsed format.Parsed) map[string][]byte {
 	found := make(map[string][]byte)
 	for _, remainder := range parsed.Remainder {
-		if remainder.Owner == format.OwnerAsset {
+		if remainder.Owner == format.OwnerWork {
 			found[remainder.Namespace] = remainder.Payload
 		}
 	}

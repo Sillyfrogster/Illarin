@@ -1,0 +1,24 @@
+{
+  "note": "A hard line break is said out loud because a paragraph has no lines",
+  "markdown": "One line  \nand the next.\n",
+  "body": {
+    "content": [
+      {
+        "content": [
+          {
+            "text": "One line and the next.",
+            "type": "text"
+          }
+        ],
+        "type": "paragraph"
+      }
+    ],
+    "version": 2
+  },
+  "warnings": [
+    {
+      "line": 1,
+      "says": "line break"
+    }
+  ]
+}

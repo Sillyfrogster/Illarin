@@ -14,7 +14,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/jscode"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -35,10 +34,10 @@ func (Spindle) Declaration() format.Declaration {
 		Write: format.RoleSupport{Grade: format.SupportFull},
 	}
 	return format.Declaration{
-		ID: SpindleID, Label: "Spindle extension", Kind: Kind,
+		ID: SpindleID, Label: "Spindle extension", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind: format.RecognitionEntry, Containers: []probe.Container{probe.ZIP},
+			Type: format.RecognitionEntry, Containers: []format.Container{format.ZIP},
 			Entry: spindleManifest,
 		}},
 		Roles: map[block.Role]format.DirectionalRoleSupport{
@@ -56,14 +55,14 @@ func (Spindle) Declaration() format.Declaration {
 			"version", "name", "identifier", "author", "github", "homepage", "description",
 			"permissions", "entry_backend", "entry_frontend", "minimum_lumiverse_version",
 		},
-		Preservation:  format.PreservationDeclaration{Body: SpindleID},
-		TestedOrigins: []string{SpindleID},
-		KeepsUpload:   true,
+		Preservation:          format.PreservationDeclaration{Body: SpindleID},
+		TestedOriginalFormats: []string{SpindleID},
+		KeepsUpload:           true,
 	}
 }
 
-func (module Spindle) Claim(file probe.Inspection) (format.Claim, bool) {
-	return claimArchive(file, module.Declaration(), spindleManifest)
+func (module Spindle) Match(file format.Inspection) (format.Match, bool) {
+	return matchArchive(file, module.Declaration(), spindleManifest)
 }
 
 type spindleManifestFields struct {
@@ -72,16 +71,16 @@ type spindleManifestFields struct {
 	Permissions                                         []string
 }
 
-func (s Spindle) Parse(ctx context.Context, file probe.Inspection, claim format.Claim) (format.Parsed, error) {
+func (s Spindle) Parse(ctx context.Context, file format.Inspection, match format.Match) (format.Parsed, error) {
 	if err := checkArchive(file); err != nil {
 		return format.Parsed{}, err
 	}
 	if !hasEntry(file, spindleManifest) {
 		return format.Parsed{}, refuseMisplaced(file, spindleManifest)
 	}
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", SpindleID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", SpindleID)
 	}
 	manifest, err := readSpindleManifest(payload.Root)
 	if err != nil {
@@ -104,7 +103,7 @@ func (s Spindle) Parse(ctx context.Context, file probe.Inspection, claim format.
 		return format.Parsed{}, err
 	}
 	header := format.Header{
-		Name: manifest.Name, AssetVersion: manifest.Version,
+		Name: manifest.Name, WorkVersion: manifest.Version,
 		CreditedAuthor: manifest.Author, Identifier: manifest.Identifier,
 	}
 	if utf8.RuneCountInString(manifest.Description) <= format.MaxBlurbRunes {
@@ -115,7 +114,7 @@ func (s Spindle) Parse(ctx context.Context, file probe.Inspection, claim format.
 		elements = append(elements, *adds)
 	}
 	return format.Parsed{
-		Kind: Kind, Format: SpindleID, Header: header, Elements: elements, Readme: readme,
+		Type: Type, Format: SpindleID, Header: header, Elements: elements, Readme: readme,
 	}, nil
 }
 
@@ -159,7 +158,7 @@ var spindleSides = []spindleSide{
 }
 
 // spindleCode names the file Lumiverse runs for each side the extension has, the built entry or the source it builds from.
-func spindleCode(file probe.Inspection, root map[string]json.RawMessage) ([]string, error) {
+func spindleCode(file format.Inspection, root map[string]json.RawMessage) ([]string, error) {
 	var code []string
 	for _, side := range spindleSides {
 		var declared string
@@ -276,9 +275,9 @@ func spindleElements(manifest spindleManifestFields) []block.Element {
 	}
 }
 
-func (Spindle) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	if len(asset.Upload) == 0 {
-		return format.Artifact{}, errors.New("write the Spindle extension: the uploaded archive is missing")
+func (Spindle) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
+	if len(work.Upload) == 0 {
+		return format.MainFile{}, errors.New("write the Spindle extension: the uploaded archive is missing")
 	}
-	return format.Artifact{Body: asset.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
+	return format.MainFile{Body: work.Upload, MediaType: "application/zip", Extension: ".zip"}, nil
 }

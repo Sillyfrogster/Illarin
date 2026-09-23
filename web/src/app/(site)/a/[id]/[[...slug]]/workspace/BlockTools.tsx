@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { AssetBlock } from "@/lib/api/query";
+import type { WorkBlock } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import {
   BLOCK_WIDTHS,
@@ -68,7 +68,7 @@ export function BlockTools({
   suggestedWidth,
   total,
 }: {
-  block: AssetBlock;
+  block: WorkBlock;
   grip: BlockGrip;
   position: number;
   suggestedWidth?: BlockWidth;

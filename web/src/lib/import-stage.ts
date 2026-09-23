@@ -1,18 +1,18 @@
-import type { IngestOperation } from "./api/query";
+import type { UploadOperation } from "./api/query";
 
-export type ImportedAsset = NonNullable<IngestOperation["asset"]>;
+export type ImportedWork = NonNullable<UploadOperation["work"]>;
 
 export type ImportStage =
   | { at: "choosing" }
   | { at: "reading"; heading: string }
   | { at: "lost"; message: string }
   | { at: "refused"; message: string }
-  | { at: "arrived"; asset: ImportedAsset };
+  | { at: "arrived"; work: ImportedWork };
 
 const STILL_READING = "Reading your file";
 
 export function importStage(
-  operation: IngestOperation | null,
+  operation: UploadOperation | null,
   message: string,
 ): ImportStage {
   if (!operation) return { at: "choosing" };
@@ -25,8 +25,8 @@ export function importStage(
     };
   }
 
-  if (operation.status === "success" && operation.asset) {
-    return { asset: operation.asset, at: "arrived" };
+  if (operation.status === "success" && operation.work) {
+    return { work: operation.work, at: "arrived" };
   }
 
   if (message) return { at: "lost", message };

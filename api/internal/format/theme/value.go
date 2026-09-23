@@ -6,11 +6,11 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 )
 
-func readSetting(raw json.RawMessage, kind block.SettingType) (*block.Value, bool) {
+func readSetting(raw json.RawMessage, valueType block.SettingType) (*block.Value, bool) {
 	if string(raw) == "null" {
 		return nil, true
 	}
-	switch kind {
+	switch valueType {
 	case block.SettingNumber:
 		var value float64
 		if json.Unmarshal(raw, &value) == nil {
@@ -58,8 +58,8 @@ func writeSetting(setting block.Setting) json.RawMessage {
 	return json.RawMessage("null")
 }
 
-func themeSettings(assetContent block.Content) []block.Setting {
-	group, ok := assetContent.(block.SettingGroup)
+func themeSettings(fileContent block.Content) []block.Setting {
+	group, ok := fileContent.(block.SettingGroup)
 	if !ok {
 		return nil
 	}

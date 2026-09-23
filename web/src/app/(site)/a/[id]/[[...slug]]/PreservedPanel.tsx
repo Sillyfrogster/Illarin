@@ -3,21 +3,18 @@
 import { ChevronRight, RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
-  deletePreservedNamespace,
-  fetchPreservedNamespaces,
-  type PreservedNamespace,
+  deletePreservedData,
+  fetchPreservedData,
+  type PreservedData,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { describePreservedNamespace } from "@/lib/preserved";
-import { useWorkingCopy } from "@/lib/working-copy";
+import { useDraftedChanges } from "@/lib/drafted-changes";
 
-export function PreservedPanel({ assetId }: { assetId: string }) {
-  const candidate = useWorkingCopy();
+export function PreservedPanel({ workId }: { workId: string }) {
+  const candidate = useDraftedChanges();
   const [open, setOpen] = useState(false);
-  const [namespaces, setNamespaces] = useState<PreservedNamespace[] | null>(
-    null,
-  );
-  const [deleting, setDeleting] = useState<PreservedNamespace | null>(null);
+  const [namespaces, setNamespaces] = useState<PreservedData[] | null>(null);
+  const [deleting, setDeleting] = useState<PreservedData | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -25,7 +22,7 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
     setOpen(true);
     if (namespaces !== null) return;
     setMessage("");
-    const found = await fetchPreservedNamespaces(assetId);
+    const found = await fetchPreservedData(workId);
     setNamespaces(found);
   }
 
@@ -34,7 +31,7 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
     setPending(true);
     setMessage("");
     try {
-      await deletePreservedNamespace(candidate, assetId, namespace);
+      await deletePreservedData(candidate, workId, namespace);
       setNamespaces(
         (current) =>
           current?.filter((held) => held.name !== namespace) ?? current,
@@ -109,7 +106,7 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
             >
               {namespaces.map((namespace) => (
                 <li key={namespace.name}>
-                  <span>{describePreservedNamespace(namespace.name)}</span>
+                  <span>{namespace.label}</span>
                   <button
                     className={
                       "flex size-11 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-stop"
@@ -121,9 +118,7 @@ export function PreservedPanel({ assetId }: { assetId: string }) {
                     }}
                   >
                     <Trash2 size={15} aria-hidden="true" />
-                    <span className="sr-only">
-                      Remove {describePreservedNamespace(namespace.name)}
-                    </span>
+                    <span className="sr-only">Remove {namespace.label}</span>
                   </button>
                 </li>
               ))}
@@ -170,13 +165,13 @@ function DeleteNamespaceDialog({
   onCancel,
   onDelete,
 }: {
-  namespace: PreservedNamespace;
+  namespace: PreservedData;
   pending: boolean;
   onCancel: () => void;
   onDelete: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const description = describePreservedNamespace(namespace.name);
+  const description = namespace.label;
 
   useEffect(() => dialog.current?.showModal(), []);
 

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { postContents } from "@/lib/post-contents";
 import {
-  POST_DOCUMENT_VERSION,
+  POST_BODY_VERSION,
   type PostBlock,
-  type PostDocument,
-} from "@/lib/post-document";
+  type PostBody,
+} from "@/lib/post-body";
+import { postContents } from "@/lib/post-contents";
 
 function heading(
   level: number,
@@ -14,8 +14,8 @@ function heading(
   return { type: "heading", level, anchor, content: [{ type: "text", text }] };
 }
 
-function document(...content: PostBlock[]): PostDocument {
-  return { version: POST_DOCUMENT_VERSION, content };
+function document(...content: PostBlock[]): PostBody {
+  return { version: POST_BODY_VERSION, content };
 }
 
 test("three headings derive the contents in reading order", () => {

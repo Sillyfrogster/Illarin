@@ -99,7 +99,7 @@ var schemas = map[Type]schema{
 	},
 	TypeStylesheetSet: {
 		empty: func() Content {
-			return StylesheetSet{Stylesheets: []Stylesheet{}, Assets: []StylesheetAsset{}}
+			return StylesheetSet{Stylesheets: []Stylesheet{}, Files: []StylesheetFile{}}
 		},
 		decode: decodeAs[StylesheetSet],
 	},

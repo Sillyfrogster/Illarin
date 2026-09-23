@@ -9,57 +9,18 @@ import (
 
 const (
 	linkingKey     = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-	publicationKey = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+	integrationKey = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
 )
 
 func setLinkingKey(t *testing.T) {
 	t.Helper()
 	t.Setenv("LINKING_HMAC_KEY", linkingKey)
-	t.Setenv("PUBLICATION_SECRET_KEY", publicationKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", integrationKey)
 }
 
-func setBlogURL(t *testing.T) {
-	t.Helper()
-	t.Setenv("BLOG_URL", "https://blog.illarin.test")
-}
-
-func TestLoadRequiresTheBlogOrigin(t *testing.T) {
-	setLinkingKey(t)
+func TestLoadRequiresAnExactUnpaddedIntegrationSecretKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-
-	for _, value := range []string{
-		"",
-		"blog.illarin.test",
-		"ftp://blog.illarin.test",
-		"https://blog.illarin.test/blog",
-		"https://blog.illarin.test/?draft=1",
-		"https://blog.illarin.test/#top",
-		"https://user:secret@blog.illarin.test",
-	} {
-		t.Setenv("BLOG_URL", value)
-		if _, err := Load(); err == nil {
-			t.Errorf("Load accepted BLOG_URL %q", value)
-		}
-	}
-
-	for _, value := range []string{"https://blog.illarin.test", "http://blog.localhost:8000/"} {
-		t.Setenv("BLOG_URL", value)
-		cfg, err := Load()
-		if err != nil {
-			t.Errorf("Load refused BLOG_URL %q: %v", value, err)
-			continue
-		}
-		if cfg.BlogURL != value {
-			t.Errorf("BlogURL = %q, want %q", cfg.BlogURL, value)
-		}
-	}
-}
-
-func TestLoadRequiresAnExactUnpaddedPublicationSecretKey(t *testing.T) {
-	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
-	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 	t.Setenv("LINKING_HMAC_KEY", linkingKey)
 
 	for _, key := range []string{
@@ -73,20 +34,19 @@ func TestLoadRequiresAnExactUnpaddedPublicationSecretKey(t *testing.T) {
 		}
 	}
 
-	t.Setenv("PUBLICATION_SECRET_KEY", publicationKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", integrationKey)
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load with a 32-byte key: %v", err)
 	}
-	if len(cfg.PublicationSecretKey) != 32 {
-		t.Errorf("PublicationSecretKey is %d bytes, want 32", len(cfg.PublicationSecretKey))
+	if len(cfg.IntegrationSecretKey) != 32 {
+		t.Errorf("IntegrationSecretKey is %d bytes, want 32", len(cfg.IntegrationSecretKey))
 	}
 }
 
-func TestThePublicationSecretKeyCannotBeTheLinkingKey(t *testing.T) {
+func TestTheIntegrationSecretKeyCannotBeTheLinkingKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 	t.Setenv("LINKING_HMAC_KEY", linkingKey)
 	t.Setenv("PUBLICATION_SECRET_KEY", linkingKey)
 
@@ -99,7 +59,6 @@ func TestLoadRequiresDatabaseURL(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 
 	_, err := Load()
 	if err == nil {
@@ -111,7 +70,6 @@ func TestLoadUsesDefaultPort(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 	t.Setenv("PORT", "")
 
 	cfg, err := Load()
@@ -126,8 +84,7 @@ func TestLoadUsesDefaultPort(t *testing.T) {
 func TestLoadRequiresAnExactUnpaddedLinkingKey(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
-	t.Setenv("PUBLICATION_SECRET_KEY", publicationKey)
+	t.Setenv("PUBLICATION_SECRET_KEY", integrationKey)
 
 	for _, key := range []string{
 		"",
@@ -154,7 +111,6 @@ func TestLoadRejectsAnUnreadableUploadCeiling(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 	t.Setenv("MAX_UPLOAD_BYTES", "55mb")
 
 	if _, err := Load(); err == nil {
@@ -166,7 +122,6 @@ func TestLoadRejectsIncompleteSMTPSettings(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 	t.Setenv("SMTP_ADDR", "smtp.example.com:587")
 	t.Setenv("SMTP_FROM", "")
 
@@ -177,7 +132,6 @@ func TestLoadRejectsIncompleteSMTPSettings(t *testing.T) {
 
 func TestReleaseRequiresAnAccountEmailTransport(t *testing.T) {
 	setLinkingKey(t)
-	setBlogURL(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_test")
 	t.Setenv("UPLOADS_DIR", t.TempDir())
 	for _, name := range []string{
@@ -208,7 +162,6 @@ func TestLoadReadsMicrosoft365SecretFromAFile(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 	t.Setenv("MICROSOFT_365_TENANT_ID", "tenant")
 	t.Setenv("MICROSOFT_365_CLIENT_ID", "client")
 	t.Setenv("MICROSOFT_365_MAILBOX", "mail@illarin.test")
@@ -231,7 +184,6 @@ func TestLoadRejectsIncompleteMicrosoft365Settings(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 	t.Setenv("MICROSOFT_365_TENANT_ID", "tenant")
 
 	if _, err := Load(); err == nil {
@@ -239,18 +191,17 @@ func TestLoadRejectsIncompleteMicrosoft365Settings(t *testing.T) {
 	}
 }
 
-func TestLoadUsesSettledIngestLimits(t *testing.T) {
+func TestLoadUsesSettledUploadLimits(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 	for _, name := range []string{
 		"MAX_UPLOAD_BYTES",
 		"MAX_ARCHIVE_ENTRIES",
 		"MAX_ARCHIVE_ENTRY_BYTES",
 		"MAX_ARCHIVE_BYTES",
 		"MAX_ARCHIVE_COMPRESSION_RATIO",
-		"INGEST_WORKERS",
+		"UPLOAD_WORKERS",
 		"STORAGE_FREE_SPACE_RESERVE_BYTES",
 		"ACCOUNT_STORAGE_CAP_BYTES",
 	} {
@@ -276,8 +227,8 @@ func TestLoadUsesSettledIngestLimits(t *testing.T) {
 	if cfg.ProbeLimits.MaxCompressionRatio != 100 {
 		t.Errorf("compression ratio = %v, want 100", cfg.ProbeLimits.MaxCompressionRatio)
 	}
-	if cfg.IngestWorkers != 2 {
-		t.Errorf("ingest workers = %d, want 2", cfg.IngestWorkers)
+	if cfg.UploadWorkers != 2 {
+		t.Errorf("upload workers = %d, want 2", cfg.UploadWorkers)
 	}
 	if cfg.StorageFreeSpaceReserveBytes != 5<<30 {
 		t.Errorf("storage reserve = %d, want 5 GB", cfg.StorageFreeSpaceReserveBytes)
@@ -287,17 +238,16 @@ func TestLoadUsesSettledIngestLimits(t *testing.T) {
 	}
 }
 
-func TestLoadReadsIngestLimitOverrides(t *testing.T) {
+func TestLoadReadsUploadLimitOverrides(t *testing.T) {
 	setLinkingKey(t)
 	t.Setenv("DATABASE_URL", "postgres://localhost/illarin_dev")
 	t.Setenv("UPLOADS_DIR", "/tmp/uploads")
-	setBlogURL(t)
 	t.Setenv("MAX_UPLOAD_BYTES", "101")
 	t.Setenv("MAX_ARCHIVE_ENTRIES", "102")
 	t.Setenv("MAX_ARCHIVE_ENTRY_BYTES", "103")
 	t.Setenv("MAX_ARCHIVE_BYTES", "104")
 	t.Setenv("MAX_ARCHIVE_COMPRESSION_RATIO", "10.5")
-	t.Setenv("INGEST_WORKERS", "3")
+	t.Setenv("UPLOAD_WORKERS", "3")
 	t.Setenv("STORAGE_FREE_SPACE_RESERVE_BYTES", "105")
 	t.Setenv("ACCOUNT_STORAGE_CAP_BYTES", "106")
 
@@ -307,8 +257,8 @@ func TestLoadReadsIngestLimitOverrides(t *testing.T) {
 	}
 	if cfg.MaxUploadBytes != 101 || cfg.ProbeLimits.MaxArchiveEntries != 102 ||
 		cfg.ProbeLimits.MaxEntryBytes != 103 || cfg.ProbeLimits.MaxArchiveBytes != 104 ||
-		cfg.ProbeLimits.MaxCompressionRatio != 10.5 || cfg.IngestWorkers != 3 ||
+		cfg.ProbeLimits.MaxCompressionRatio != 10.5 || cfg.UploadWorkers != 3 ||
 		cfg.StorageFreeSpaceReserveBytes != 105 || cfg.AccountStorageCapBytes != 106 {
-		t.Fatalf("overridden ingest settings = %+v", cfg)
+		t.Fatalf("overridden upload settings = %+v", cfg)
 	}
 }

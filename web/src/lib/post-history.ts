@@ -57,7 +57,7 @@ export function noteWords(done: PostAction): string {
 }
 
 export function revisionWords(capturedFor: string): string {
-  if (capturedFor === "publication") return "Published";
+  if (capturedFor === "publish") return "Published";
   if (capturedFor === "schedule") return "Scheduled";
   return "Checkpoint";
 }

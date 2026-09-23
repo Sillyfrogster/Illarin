@@ -1,0 +1,44 @@
+{
+  "note": "A table whose rows hold different numbers of cells",
+  "path": "body.content.0.content.1",
+  "body": {
+    "version": 2,
+    "content": [
+      {
+        "type": "table",
+        "content": [
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "One"}]}]
+              },
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Two"}]}]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "One"}]}]
+              },
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Two"}]}]
+              },
+              {
+                "type": "tableCell",
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Three"}]}]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

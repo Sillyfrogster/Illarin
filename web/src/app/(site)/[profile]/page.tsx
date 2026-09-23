@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
-import { fetchAssets, fetchDeletedAssets, fetchProfile } from "@/lib/api/query";
+import { fetchProfile, fetchWorks } from "@/lib/api/query";
 import { buildBrowseHref, readBrowseFilters } from "@/lib/browse-url";
-import { readProfileAddress } from "@/lib/profile-address";
-import { pageMetadata, readableForMetadata } from "@/lib/site-metadata";
-import { ProfileListing } from "./ProfileListing";
+import { profilePath, readProfileAddress } from "@/lib/profile-address";
+import {
+  CARD_SIZE,
+  pageMetadata,
+  readableForMetadata,
+  siteUrl,
+} from "@/lib/site-metadata";
+import { ProfilePage } from "./ProfilePage";
 
 const loadProfile = cache(async (segment: string) => {
-  const address = readProfileAddress(decodeURIComponent(segment));
-  return address
-    ? { address, profile: await fetchProfile(address.handle) }
-    : null;
+  const handle = readProfileAddress(decodeURIComponent(segment));
+  return handle ? fetchProfile(handle, (await cookies()).toString()) : null;
 });
 
 export async function generateMetadata({
@@ -20,18 +23,32 @@ export async function generateMetadata({
 }: {
   params: Promise<{ profile: string }>;
 }): Promise<Metadata> {
-  const found = await readableForMetadata(loadProfile((await params).profile));
-  if (!found?.profile) return { title: "Not found" };
+  const profile = await readableForMetadata(
+    loadProfile((await params).profile),
+  );
+  if (!profile) return { title: "Not found" };
 
-  const { profile } = found;
   const metadata = pageMetadata(
     profile.displayName
       ? `${profile.displayName} (@${profile.handle})`
       : `@${profile.handle}`,
     profile.biography ||
-      `Characters, lorebooks, presets, themes and packs published by ${profile.handle} on Illarin.`,
+      `Characters, lorebooks, presets, themes and extensions published by ${profile.handle} on Illarin.`,
   );
-  return { ...metadata, alternates: { canonical: `/@${profile.handle}` } };
+  const canonical = profilePath(profile.handle);
+  const card = `${canonical}/card.png`;
+  return {
+    ...metadata,
+    alternates: { canonical },
+    openGraph: {
+      ...metadata.openGraph,
+      url: canonical,
+      images: [
+        { url: card, alt: profile.displayName || profile.handle, ...CARD_SIZE },
+      ],
+    },
+    twitter: { ...metadata.twitter, images: [card] },
+  };
 }
 
 export default async function CreatorProfileListing({
@@ -43,34 +60,29 @@ export default async function CreatorProfileListing({
 }) {
   const { profile: encodedProfile } = await params;
   const requested = decodeURIComponent(encodedProfile);
-  const [filters, found, cookie] = await Promise.all([
+  const [filters, profile, cookie] = await Promise.all([
     searchParams.then(readBrowseFilters),
     loadProfile(encodedProfile),
     cookies().then((value) => value.toString()),
   ]);
-  if (!found?.profile) notFound();
-
-  const { address, profile } = found;
+  if (!profile) notFound();
 
   const canonical = `@${profile.handle}`;
-  const here = buildBrowseHref(filters, `/${canonical}`);
-  if (address.form === "legacy") permanentRedirect(here);
-  if (requested !== canonical) redirect(here);
+  if (requested !== canonical) {
+    redirect(buildBrowseHref(filters, `/${canonical}`));
+  }
 
-  const [initialPage, deletedAssets] = await Promise.all([
-    fetchAssets(
-      { ...filters, creator: profile.handle, limit: 24 },
-      cookie,
-    ).catch(() => null),
-    fetchDeletedAssets(profile.handle, cookie),
-  ]);
+  const initialPage = await fetchWorks(
+    { ...filters, creator: profile.handle, limit: 24 },
+    cookie,
+  ).catch(() => null);
 
   return (
-    <ProfileListing
-      profile={profile}
+    <ProfilePage
+      address={`${siteUrl}/${canonical}`}
       filters={filters}
+      initial={profile}
       initialPage={initialPage}
-      deletedAssets={deletedAssets}
     />
   );
 }

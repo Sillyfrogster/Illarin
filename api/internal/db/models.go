@@ -8,296 +8,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Asset struct {
-	ID                  pgtype.UUID
-	Kind                string
-	CurrentRevisionID   pgtype.UUID
-	OwnerID             pgtype.UUID
-	Name                string
-	Blurb               string
-	Tags                []string
-	CoverMediaID        pgtype.UUID
-	IsNsfw              pgtype.Bool
-	Discovery           string
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	IndexedAt           pgtype.Timestamptz
-	WithheldAt          pgtype.Timestamptz
-	WithheldBy          pgtype.UUID
-	WithheldReason      pgtype.Text
-	DeletedAt           pgtype.Timestamptz
-	RecoverableUntil    pgtype.Timestamptz
-	Lifecycle           string
-	AssetVersion        string
-	CreditedAuthor      string
-	Nickname            string
-	OriginFormat        pgtype.Text
-	ContentGeneration   int32
-	PublishedSnapshotID pgtype.UUID
-	WorkingCopyVersion  int64
+type AppAccessToken struct {
+	TokenHash      []byte
+	ConnectedAppID pgtype.UUID
+	CreatedAt      pgtype.Timestamptz
+	ExpiresAt      pgtype.Timestamptz
 }
 
-type AssetBlock struct {
-	ID         pgtype.UUID
-	AssetID    pgtype.UUID
-	Definition string
-	Title      pgtype.Text
-	Position   int32
-	Hidden     bool
-	Layout     string
-	Width      string
-	Elements   []byte
+type AppLibraryEntry struct {
+	ConnectedAppID      pgtype.UUID
+	WorkID              pgtype.UUID
+	VersionNumber       int32
+	ReportedAt          pgtype.Timestamptz
+	NotifiedTakenDownAt pgtype.Timestamptz
 }
 
-type AssetLegacyPath struct {
-	Path      string
-	AssetID   pgtype.UUID
-	CreatedAt pgtype.Timestamptz
-}
-
-type AssetMedium struct {
-	ID          pgtype.UUID
-	AssetID     pgtype.UUID
-	Role        string
-	Width       pgtype.Int4
-	Height      pgtype.Int4
-	CreatedAt   pgtype.Timestamptz
-	BlobID      pgtype.UUID
-	IsExtracted bool
-	IsCurrent   bool
-}
-
-type AssetPreservedDatum struct {
-	ID        pgtype.UUID
-	AssetID   pgtype.UUID
-	OwnerKind string
-	OwnerID   pgtype.UUID
-	Namespace string
-	Payload   []byte
-}
-
-type AssetProjection struct {
-	AssetID          pgtype.UUID
-	Export           []byte
-	ExportStamp      string
-	ExportComputedAt pgtype.Timestamptz
-	Facets           []byte
-	FacetStamp       string
-	FacetComputedAt  pgtype.Timestamptz
-}
-
-type AssetPublicAsset struct {
-	ID                  pgtype.UUID
-	Kind                string
-	CurrentRevisionID   interface{}
-	OwnerID             pgtype.UUID
-	Name                interface{}
-	Blurb               interface{}
-	Tags                interface{}
-	CoverMediaID        pgtype.UUID
-	IsNsfw              bool
-	Discovery           string
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	IndexedAt           pgtype.Timestamptz
-	WithheldAt          pgtype.Timestamptz
-	WithheldBy          pgtype.UUID
-	WithheldReason      pgtype.Text
-	DeletedAt           pgtype.Timestamptz
-	RecoverableUntil    pgtype.Timestamptz
-	Lifecycle           string
-	AssetVersion        interface{}
-	CreditedAuthor      interface{}
-	Nickname            interface{}
-	OriginFormat        interface{}
-	ContentGeneration   int32
-	PublishedSnapshotID pgtype.UUID
-}
-
-type AssetPublicAssetBlock struct {
-	ID         pgtype.UUID
-	AssetID    pgtype.UUID
-	Definition string
-	Title      pgtype.Text
-	Position   int32
-	Hidden     bool
-	Layout     string
-	Width      string
-	Elements   []byte
-}
-
-type AssetPublicAssetMedium struct {
-	ID          pgtype.UUID
-	AssetID     pgtype.UUID
-	Role        string
-	Width       pgtype.Int4
-	Height      pgtype.Int4
-	CreatedAt   pgtype.Timestamptz
-	BlobID      pgtype.UUID
-	IsExtracted bool
-	IsCurrent   bool
-}
-
-type AssetPublicAssetPreservedDatum struct {
-	ID        pgtype.UUID
-	AssetID   pgtype.UUID
-	OwnerKind string
-	OwnerID   pgtype.UUID
-	Namespace string
-	Payload   []byte
-}
-
-type AssetPublicAssetProjection struct {
-	AssetID          pgtype.UUID
-	Export           []byte
-	ExportStamp      string
-	ExportComputedAt pgtype.Timestamptz
-	Facets           []byte
-	FacetStamp       string
-	FacetComputedAt  pgtype.Timestamptz
-}
-
-type AssetPublicProtectedContent struct {
-	AssetID     pgtype.UUID
-	OwnerKind   string
-	OwnerID     pgtype.UUID
-	PayloadType string
-	Payload     []byte
-	SourceKey   pgtype.Text
-	Digest      []byte
-}
-
-type AssetRevision struct {
-	ID         pgtype.UUID
-	AssetID    pgtype.UUID
-	Revision   int32
-	MediaType  string
-	CreatedAt  pgtype.Timestamptz
-	BlobID     pgtype.UUID
-	Format     string
-	Identifier string
-}
-
-type AssetSnapshot struct {
-	ID                    pgtype.UUID
-	AssetID               pgtype.UUID
-	Number                int32
-	RecordedAt            pgtype.Timestamptz
-	InitialRecorded       bool
-	VersionLabel          string
-	ContentGeneration     int32
-	SourceRevisionID      pgtype.UUID
-	Payload               []byte
-	ProtectedPayloads     []byte
-	Summary               string
-	Notes                 string
-	NotesEditedAt         pgtype.Timestamptz
-	WithdrawnAt           pgtype.Timestamptz
-	WithdrawalExplanation pgtype.Text
-}
-
-type AssetSnapshotMedium struct {
-	SnapshotID pgtype.UUID
-	AssetID    pgtype.UUID
-	MediaID    pgtype.UUID
-}
-
-type AssetSnapshotProjection struct {
-	SnapshotID pgtype.UUID
-	Projection []byte
-}
-
-type AssetSnapshotPromptMatch struct {
-	SnapshotID         pgtype.UUID
-	CurrentFragmentID  pgtype.UUID
-	RecordedFragmentID pgtype.UUID
-	ResolvedAt         pgtype.Timestamptz
-}
-
-type AssetUpdateDelivery struct {
-	ID              pgtype.UUID
-	EventID         pgtype.UUID
-	DestinationID   pgtype.UUID
-	DestinationName string
-	DestinationKind string
-	State           string
-	SettledReason   pgtype.Text
-	MessageID       pgtype.Text
-	Run             int32
-	Attempts        int32
-	LeaseToken      pgtype.UUID
-	LeaseExpiresAt  pgtype.Timestamptz
-	DueAt           pgtype.Timestamptz
-	SettledAt       pgtype.Timestamptz
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
-}
-
-type AssetUpdateDeliveryAttempt struct {
-	ID          pgtype.UUID
-	DeliveryID  pgtype.UUID
-	Run         int32
-	Number      int32
-	Outcome     string
-	Status      pgtype.Int4
-	Detail      string
-	TookMs      int32
-	AttemptedAt pgtype.Timestamptz
-}
-
-type AssetUpdateDestination struct {
-	ID                  pgtype.UUID
-	OwnerID             pgtype.UUID
-	Kind                string
-	Name                string
-	Host                string
-	Address             []byte
-	SigningSecret       []byte
-	SigningSecretSetAt  pgtype.Timestamptz
-	PreviousSecret      []byte
-	PreviousSecretUntil pgtype.Timestamptz
-	GuildID             pgtype.Text
-	ChannelID           pgtype.Text
-	State               string
-	VerifiedAt          pgtype.Timestamptz
-	DisabledAt          pgtype.Timestamptz
-	Version             int64
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-}
-
-type AssetUpdateDestinationDefault struct {
-	AssetID       pgtype.UUID
-	DestinationID pgtype.UUID
-}
-
-type AssetUpdateEvent struct {
-	ID              pgtype.UUID
-	AssetID         pgtype.UUID
-	SnapshotID      pgtype.UUID
-	Type            string
-	OccurredAt      pgtype.Timestamptz
-	UnlistedConsent bool
-	Payload         []byte
-}
-
-type AssetVaultPicture struct {
-	ID        pgtype.UUID
-	AssetID   pgtype.UUID
-	MediaID   pgtype.UUID
-	Address   string
-	Name      string
-	BlockID   pgtype.UUID
-	Section   string
-	Position  int32
-	CreatedAt pgtype.Timestamptz
-}
-
-type AssetWatch struct {
-	AccountID pgtype.UUID
-	AssetID   pgtype.UUID
-	State     string
-	SetAt     pgtype.Timestamptz
+type AppRefreshHistory struct {
+	TokenHash       []byte
+	ConnectedAppID  pgtype.UUID
+	RotatedAt       pgtype.Timestamptz
+	DetectableUntil pgtype.Timestamptz
 }
 
 type Blob struct {
@@ -307,7 +37,7 @@ type Blob struct {
 	StorageKey string
 }
 
-type BlobSweepMark struct {
+type BlobCleanupMark struct {
 	BlobID   pgtype.UUID
 	MarkedAt pgtype.Timestamptz
 }
@@ -319,109 +49,80 @@ type BlobTombstone struct {
 	ActorID    pgtype.UUID
 }
 
-type DownloadEvent struct {
-	ID                 int64
-	AssetID            pgtype.UUID
-	RevisionID         pgtype.UUID
-	ExportTarget       string
-	HandedOffAt        pgtype.Timestamptz
-	AuthorizationClass string
-	Discovery          string
+type BlogActivityLog struct {
+	ID            pgtype.UUID
+	ActorID       pgtype.UUID
+	Action        string
+	CategoryID    pgtype.UUID
+	SubjectID     pgtype.UUID
+	RecordedAt    pgtype.Timestamptz
+	Credential    string
+	PostID        pgtype.UUID
+	RevisionID    pgtype.UUID
+	BeforeState   pgtype.Text
+	AfterState    pgtype.Text
+	ScheduleID    pgtype.UUID
+	IntegrationID pgtype.UUID
+	AttemptID     pgtype.UUID
 }
 
-type EmailVerificationToken struct {
-	TokenHash []byte
-	UserID    pgtype.UUID
-	Email     string
-	ExpiresAt pgtype.Timestamptz
+type BlogCategory struct {
+	ID        pgtype.UUID
+	Slug      string
+	Label     string
+	Position  int32
+	RetiredAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
 }
 
-type InboxEntry struct {
-	ID          pgtype.UUID
-	AccountID   pgtype.UUID
-	Type        string
-	AssetID     pgtype.UUID
-	Words       []byte
-	CreatedAt   pgtype.Timestamptz
-	ReadAt      pgtype.Timestamptz
-	UpdateCount int32
+type BlogDiscordRepair struct {
+	ID              pgtype.UUID
+	ActorID         pgtype.UUID
+	AttemptID       pgtype.UUID
+	TargetMessageID string
+	Fingerprint     string
+	Result          []byte
+	CreatedAt       pgtype.Timestamptz
 }
 
-type IngestOperation struct {
+type BlogWriter struct {
+	UserID     pgtype.UUID
+	SwitchedBy pgtype.UUID
+	Since      pgtype.Timestamptz
+}
+
+type ConnectedApp struct {
 	ID                 pgtype.UUID
-	OwnerID            pgtype.UUID
-	BlobID             pgtype.UUID
-	Filename           string
-	Status             string
-	Name               pgtype.Text
-	Blurb              pgtype.Text
-	Tags               []string
-	IsNsfw             pgtype.Bool
-	Discovery          string
-	AssetID            pgtype.UUID
-	FailureReason      pgtype.Text
-	Attempts           int32
-	AvailableAt        pgtype.Timestamptz
-	LeaseToken         pgtype.UUID
-	LeaseExpiresAt     pgtype.Timestamptz
-	CreatedAt          pgtype.Timestamptz
-	UpdatedAt          pgtype.Timestamptz
-	TargetAssetID      pgtype.UUID
-	FailureMessage     pgtype.Text
-	CandidateVersion   pgtype.Int8
-	ReplacementPreview []byte
+	UserID             pgtype.UUID
+	Name               string
+	RefreshTokenPrefix string
+	Permissions        []string
+	ConnectedAt        pgtype.Timestamptz
+	LastSeenAt         pgtype.Timestamptz
+	RevokedAt          pgtype.Timestamptz
+	RefreshTokenHash   []byte
+	AppName            string
+	AppVersion         pgtype.Text
+	ProtocolVersion    pgtype.Int4
+	Capabilities       []string
+	AcceptedFormats    []string
+	LibraryAppVersion  pgtype.Text
 }
 
-type InstanceAccessToken struct {
-	TokenHash  []byte
-	InstanceID pgtype.UUID
-	CreatedAt  pgtype.Timestamptz
-	ExpiresAt  pgtype.Timestamptz
-}
-
-type InstanceDelivery struct {
-	ID             pgtype.UUID
-	InstanceID     pgtype.UUID
-	AssetID        pgtype.UUID
-	State          string
-	Attempts       int32
-	QueuedAt       pgtype.Timestamptz
-	LeaseExpiresAt pgtype.Timestamptz
-	ChosenTarget   pgtype.Text
-	SettledAt      pgtype.Timestamptz
-	SettledReason  pgtype.Text
-	ExpiresAt      pgtype.Timestamptz
-	UpdatesInstall bool
-}
-
-type InstanceLibraryEntry struct {
-	InstanceID         pgtype.UUID
-	AssetID            pgtype.UUID
-	ContentGeneration  int32
-	ReportedAt         pgtype.Timestamptz
-	NotifiedWithheldAt pgtype.Timestamptz
-}
-
-type InstanceRefreshHistory struct {
-	TokenHash       []byte
-	InstanceID      pgtype.UUID
-	RotatedAt       pgtype.Timestamptz
-	DetectableUntil pgtype.Timestamptz
-}
-
-type LinkAuthorization struct {
+type ConnectionAuthorization struct {
 	RequestHash           []byte
 	AuthorizationCodeHash []byte
 	RedirectUri           string
 	State                 string
 	CodeChallenge         string
-	ApplicationName       string
-	InstanceName          string
-	ApplicationVersion    pgtype.Text
+	AppName               string
+	Name                  string
+	AppVersion            pgtype.Text
 	ProtocolVersion       int32
 	Capabilities          []string
-	AcceptedTargets       []string
-	Scopes                []string
+	AcceptedFormats       []string
+	Permissions           []string
 	ReviewedBy            pgtype.UUID
 	ApprovedBy            pgtype.UUID
 	ApprovedAt            pgtype.Timestamptz
@@ -430,25 +131,27 @@ type LinkAuthorization struct {
 	RedeemedAt            pgtype.Timestamptz
 	CreatedAt             pgtype.Timestamptz
 	ExpiresAt             pgtype.Timestamptz
+	UserCodeHash          []byte
+	GrantedPermissions    []string
 }
 
-type LinkRateLimit struct {
+type ConnectionRateLimit struct {
 	KeyHash     []byte
 	Action      string
 	Attempts    int32
 	WindowStart pgtype.Timestamptz
 }
 
-type LinkRequest struct {
+type ConnectionRequest struct {
 	DeviceCodeHash      []byte
 	UserCodeHash        []byte
-	ApplicationName     string
-	InstanceName        string
-	ApplicationVersion  pgtype.Text
+	AppName             string
+	Name                string
+	AppVersion          pgtype.Text
 	ProtocolVersion     int32
 	Capabilities        []string
-	AcceptedTargets     []string
-	Scopes              []string
+	AcceptedFormats     []string
+	Permissions         []string
 	ReviewTokenHash     []byte
 	ReviewedBy          pgtype.UUID
 	ApprovedBy          pgtype.UUID
@@ -460,37 +163,85 @@ type LinkRequest struct {
 	CreatedAt           pgtype.Timestamptz
 	ExpiresAt           pgtype.Timestamptz
 	PollIntervalSeconds int32
+	GrantedPermissions  []string
 }
 
-type LinkedInstance struct {
-	ID                        pgtype.UUID
-	UserID                    pgtype.UUID
-	InstanceName              string
-	RefreshTokenPrefix        string
-	Scopes                    []string
-	LinkedAt                  pgtype.Timestamptz
-	LastSeenAt                pgtype.Timestamptz
-	RevokedAt                 pgtype.Timestamptz
-	RefreshTokenHash          []byte
-	ApplicationName           string
-	ApplicationVersion        pgtype.Text
-	ProtocolVersion           pgtype.Int4
-	Capabilities              []string
-	AcceptedTargets           []string
-	LibraryApplicationVersion pgtype.Text
+type CreatorFollow struct {
+	AccountID pgtype.UUID
+	CreatorID pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+}
+
+type DailyTotal struct {
+	Day    pgtype.Date
+	Kind   string
+	WorkID pgtype.UUID
+	Count  int32
+}
+
+type DiscordPost struct {
+	ID        pgtype.UUID
+	WebhookID pgtype.UUID
+	Body      []byte
+	Tries     int32
+	DueAt     pgtype.Timestamptz
+	SentAt    pgtype.Timestamptz
+	FailedAt  pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
+type DiscordWebhook struct {
+	ID        pgtype.UUID
+	OwnerID   pgtype.UUID
+	Address   []byte
+	UpdatedAt pgtype.Timestamptz
+}
+
+type DownloadRecord struct {
+	ID             int64
+	WorkID         pgtype.UUID
+	OriginalFileID pgtype.UUID
+	Format         string
+	HandedOffAt    pgtype.Timestamptz
+	Access         string
+	Visibility     string
+}
+
+type EmailVerificationToken struct {
+	TokenHash []byte
+	UserID    pgtype.UUID
+	Email     string
+	ExpiresAt pgtype.Timestamptz
+}
+
+type Event struct {
+	Kind   string
+	WorkID pgtype.UUID
+	Day    pgtype.Date
+}
+
+type InboxEntry struct {
+	ID          pgtype.UUID
+	AccountID   pgtype.UUID
+	Type        string
+	WorkID      pgtype.UUID
+	Words       []byte
+	CreatedAt   pgtype.Timestamptz
+	ReadAt      pgtype.Timestamptz
+	UpdateCount int32
 }
 
 type MigrationException struct {
 	ID         pgtype.UUID
-	Kind       string
+	Type       string
 	Subject    string
 	Detail     string
-	AssetID    pgtype.UUID
+	WorkID     pgtype.UUID
 	RecordedAt pgtype.Timestamptz
 }
 
 type MigrationLegacyCounter struct {
-	AssetID     pgtype.UUID
+	WorkID      pgtype.UUID
 	V1Downloads int32
 	V1Views     int32
 	V1UpdatedAt pgtype.Timestamptz
@@ -501,7 +252,7 @@ type MigrationPreservedRecord struct {
 	ID          pgtype.UUID
 	SourceTable string
 	SourceID    string
-	AssetID     pgtype.UUID
+	WorkID      pgtype.UUID
 	OwnerID     pgtype.UUID
 	Payload     []byte
 }
@@ -518,7 +269,7 @@ type Notification struct {
 	ID          pgtype.UUID
 	AccountID   pgtype.UUID
 	Type        string
-	AssetID     pgtype.UUID
+	WorkID      pgtype.UUID
 	Words       []byte
 	CreatedAt   pgtype.Timestamptz
 	ReadAt      pgtype.Timestamptz
@@ -529,7 +280,7 @@ type NotificationEvent struct {
 	ID         pgtype.UUID
 	Type       string
 	AccountID  pgtype.UUID
-	AssetID    pgtype.UUID
+	WorkID     pgtype.UUID
 	Words      []byte
 	RecordedAt pgtype.Timestamptz
 }
@@ -544,10 +295,12 @@ type OauthIdentity struct {
 }
 
 type OauthState struct {
-	TokenHash []byte
-	Intent    string
-	UserID    pgtype.UUID
-	ExpiresAt pgtype.Timestamptz
+	TokenHash      []byte
+	Intent         string
+	UserID         pgtype.UUID
+	ExpiresAt      pgtype.Timestamptz
+	AppPreference  pgtype.Text
+	NsfwPreference pgtype.Text
 }
 
 type PasswordResetToken struct {
@@ -559,17 +312,13 @@ type PasswordResetToken struct {
 type Post struct {
 	ID               pgtype.UUID
 	AuthorID         pgtype.UUID
-	GrantID          pgtype.UUID
 	CategoryID       pgtype.UUID
 	Status           string
 	Slug             pgtype.Text
 	Title            string
 	Summary          string
-	Document         []byte
-	DocumentVersion  int32
-	ReleaseAppID     pgtype.UUID
-	ReleaseVersion   pgtype.Text
-	ReleaseUrl       pgtype.Text
+	Body             []byte
+	BodyVersion      int32
 	WorkingVersion   int32
 	PublishedAt      pgtype.Timestamptz
 	UpdatedPublicAt  pgtype.Timestamptz
@@ -579,7 +328,7 @@ type Post struct {
 	HeaderMediaID    pgtype.UUID
 	HeaderAlt        pgtype.Text
 	HeaderCaption    pgtype.Text
-	SocialMediaID    pgtype.UUID
+	LinkCardMediaID  pgtype.UUID
 	DeletedAt        pgtype.Timestamptz
 	RecoverableUntil pgtype.Timestamptz
 	DeletedBy        pgtype.UUID
@@ -599,9 +348,6 @@ type PostByline struct {
 	DisplayName   string
 	ContactEmail  string
 	AvatarMediaID pgtype.UUID
-	AppID         pgtype.UUID
-	AppSlug       pgtype.Text
-	AppName       pgtype.Text
 	CapturedAt    pgtype.Timestamptz
 }
 
@@ -629,17 +375,14 @@ type PostRevision struct {
 	Summary         string
 	Slug            string
 	CategoryID      pgtype.UUID
-	Document        []byte
-	DocumentVersion int32
-	ReleaseAppID    pgtype.UUID
-	ReleaseVersion  pgtype.Text
-	ReleaseUrl      pgtype.Text
+	Body            []byte
+	BodyVersion     int32
 	CapturedBy      pgtype.UUID
 	CapturedAt      pgtype.Timestamptz
 	HeaderMediaID   pgtype.UUID
 	HeaderAlt       pgtype.Text
 	HeaderCaption   pgtype.Text
-	SocialMediaID   pgtype.UUID
+	LinkCardMediaID pgtype.UUID
 	CapturedFor     string
 }
 
@@ -658,12 +401,7 @@ type PostSchedule struct {
 	UpdatedAt      pgtype.Timestamptz
 	SettledAt      pgtype.Timestamptz
 	Note           string
-}
-
-type PostScheduleDestination struct {
-	ScheduleID    pgtype.UUID
-	DestinationID pgtype.UUID
-	MentionRole   bool
+	PostToDiscord  bool
 }
 
 type PostSlug struct {
@@ -673,14 +411,35 @@ type PostSlug struct {
 	ReservedAt pgtype.Timestamptz
 }
 
-type PostWithdrawal struct {
-	ID          pgtype.UUID
-	PostID      pgtype.UUID
-	RevisionID  pgtype.UUID
-	Reason      string
-	Explanation string
-	WithdrawnBy pgtype.UUID
-	WithdrawnAt pgtype.Timestamptz
+type PostUnpublishing struct {
+	ID            pgtype.UUID
+	PostID        pgtype.UUID
+	RevisionID    pgtype.UUID
+	Reason        string
+	Explanation   string
+	UnpublishedBy pgtype.UUID
+	UnpublishedAt pgtype.Timestamptz
+}
+
+type PrivatePrompt struct {
+	WorkID      pgtype.UUID
+	OwnerType   string
+	OwnerID     pgtype.UUID
+	PayloadType string
+	Payload     []byte
+	SourceKey   pgtype.Text
+	Digest      []byte
+}
+
+type PrivatePromptApp struct {
+	WorkID pgtype.UUID
+	App    string
+}
+
+type ProfileFeaturedWork struct {
+	UserID   pgtype.UUID
+	Position int32
+	WorkID   pgtype.UUID
 }
 
 type ProfileMedium struct {
@@ -692,37 +451,6 @@ type ProfileMedium struct {
 	CreatedAt pgtype.Timestamptz
 }
 
-type ProfileRestriction struct {
-	UserID       pgtype.UUID
-	RestrictedBy pgtype.UUID
-	Reason       string
-	RestrictedAt pgtype.Timestamptz
-}
-
-type ProfileRestrictionAudit struct {
-	ID         pgtype.UUID
-	ActorID    pgtype.UUID
-	SubjectID  pgtype.UUID
-	Action     string
-	Reason     string
-	RecordedAt pgtype.Timestamptz
-}
-
-type ProtectedContent struct {
-	AssetID     pgtype.UUID
-	OwnerKind   string
-	OwnerID     pgtype.UUID
-	PayloadType string
-	Payload     []byte
-	SourceKey   pgtype.Text
-	Digest      []byte
-}
-
-type ProtectedDeliveryApp struct {
-	AssetID pgtype.UUID
-	App     string
-}
-
 type PublicProfile struct {
 	UserID        pgtype.UUID
 	DisplayName   string
@@ -731,6 +459,8 @@ type PublicProfile struct {
 	AvatarMediaID pgtype.UUID
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
+	BannerMediaID pgtype.UUID
+	BannerTint    pgtype.Text
 }
 
 type PublicProfileLink struct {
@@ -740,202 +470,70 @@ type PublicProfileLink struct {
 	Url      string
 }
 
-type PublicationApp struct {
-	ID          pgtype.UUID
-	Slug        string
-	Name        string
-	HomeUrl     string
-	MarkMediaID pgtype.UUID
-	Position    int32
-	RetiredAt   pgtype.Timestamptz
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
+type RestrictedProfile struct {
+	UserID       pgtype.UUID
+	RestrictedBy pgtype.UUID
+	Reason       string
+	RestrictedAt pgtype.Timestamptz
 }
 
-type PublicationAppDestination struct {
-	AppID         pgtype.UUID
-	DestinationID pgtype.UUID
-	ByDefault     bool
-}
-
-type PublicationAudit struct {
-	ID            pgtype.UUID
-	ActorID       pgtype.UUID
-	Action        string
-	AppID         pgtype.UUID
-	CategoryID    pgtype.UUID
-	GrantID       pgtype.UUID
-	SubjectID     pgtype.UUID
-	RecordedAt    pgtype.Timestamptz
-	TokenID       pgtype.UUID
-	Credential    string
-	PostID        pgtype.UUID
-	RevisionID    pgtype.UUID
-	BeforeState   pgtype.Text
-	AfterState    pgtype.Text
-	ScheduleID    pgtype.UUID
-	DestinationID pgtype.UUID
-	DeliveryID    pgtype.UUID
-}
-
-type PublicationAuthority struct {
-	UserID     pgtype.UUID
-	AssignedAt pgtype.Timestamptz
-}
-
-type PublicationCategory struct {
-	ID        pgtype.UUID
-	Slug      string
-	Label     string
-	Position  int32
-	RetiredAt pgtype.Timestamptz
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-}
-
-type PublicationDelivery struct {
-	ID              pgtype.UUID
-	EventID         pgtype.UUID
-	DestinationID   pgtype.UUID
-	DestinationName string
-	State           string
-	Attempts        int32
-	LeaseToken      pgtype.UUID
-	LeaseExpiresAt  pgtype.Timestamptz
-	DueAt           pgtype.Timestamptz
-	SettledAt       pgtype.Timestamptz
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
-	Run             int32
-	SettledReason   pgtype.Text
-	MentionRole     bool
-	MessageID       pgtype.Text
-}
-
-type PublicationDeliveryAttempt struct {
-	ID          pgtype.UUID
-	DeliveryID  pgtype.UUID
-	Number      int32
-	Outcome     string
-	Status      pgtype.Int4
-	Detail      string
-	TookMs      int32
-	AttemptedAt pgtype.Timestamptz
-	Run         int32
-}
-
-type PublicationDestination struct {
-	ID                  pgtype.UUID
-	Kind                string
-	Name                string
-	Host                string
-	Address             []byte
-	SigningSecret       []byte
-	State               string
-	VerifiedAt          pgtype.Timestamptz
-	DisabledAt          pgtype.Timestamptz
-	CreatedBy           pgtype.UUID
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
-	Events              []string
-	PreviousSecret      []byte
-	PreviousSecretUntil pgtype.Timestamptz
-	SigningSecretSetAt  pgtype.Timestamptz
-	GuildID             pgtype.Text
-	ChannelID           pgtype.Text
-	WebhookName         pgtype.Text
-	RoleID              pgtype.Text
-	RoleName            pgtype.Text
-}
-
-type PublicationDiscordRepair struct {
-	ID              pgtype.UUID
-	ActorID         pgtype.UUID
-	DeliveryID      pgtype.UUID
-	TargetMessageID string
-	Fingerprint     string
-	Result          []byte
-	CreatedAt       pgtype.Timestamptz
-}
-
-type PublicationEvent struct {
+type RestrictedProfileAudit struct {
 	ID         pgtype.UUID
-	PostID     pgtype.UUID
-	RevisionID pgtype.UUID
-	Type       string
-	OccurredAt pgtype.Timestamptz
-	Note       string
-}
-
-type PublicationGrant struct {
-	ID                     pgtype.UUID
-	UserID                 pgtype.UUID
-	AppID                  pgtype.UUID
-	DefaultCategoryID      pgtype.UUID
-	GrantedBy              pgtype.UUID
-	GrantedAt              pgtype.Timestamptz
-	RevokedAt              pgtype.Timestamptz
-	Active                 bool
-	DestinationsOverridden bool
-}
-
-type PublicationGrantCategory struct {
-	GrantID    pgtype.UUID
-	CategoryID pgtype.UUID
-}
-
-type PublicationGrantDestination struct {
-	GrantID       pgtype.UUID
-	DestinationID pgtype.UUID
-	ByDefault     bool
-}
-
-type PublicationIdempotency struct {
-	TokenID     pgtype.UUID
-	Operation   string
-	Key         string
-	Fingerprint []byte
-	Status      pgtype.Int4
-	Response    []byte
-	ClaimedAt   pgtype.Timestamptz
-	CompletedAt pgtype.Timestamptz
-}
-
-type PublicationMedium struct {
-	ID        pgtype.UUID
-	BlobID    pgtype.UUID
-	Width     int32
-	Height    int32
-	CreatedAt pgtype.Timestamptz
-}
-
-type PublicationRateLimit struct {
-	TokenID     pgtype.UUID
-	Operation   string
-	Attempts    int32
-	WindowStart pgtype.Timestamptz
-}
-
-type PublicationToken struct {
-	ID         pgtype.UUID
-	GrantID    pgtype.UUID
-	Name       string
-	Prefix     string
-	TokenHash  []byte
-	CreatedAt  pgtype.Timestamptz
-	ExpiresAt  pgtype.Timestamptz
-	LastUsedAt pgtype.Timestamptz
-	RevokedAt  pgtype.Timestamptz
+	ActorID    pgtype.UUID
+	SubjectID  pgtype.UUID
+	Action     string
+	Reason     string
+	RecordedAt pgtype.Timestamptz
 }
 
 type RetiredHandle struct {
 	Handle string
 }
 
+type Send struct {
+	ID             pgtype.UUID
+	ConnectedAppID pgtype.UUID
+	WorkID         pgtype.UUID
+	State          string
+	Attempts       int32
+	QueuedAt       pgtype.Timestamptz
+	LeaseExpiresAt pgtype.Timestamptz
+	ChosenFormat   pgtype.Text
+	SettledAt      pgtype.Timestamptz
+	SettledReason  pgtype.Text
+	ExpiresAt      pgtype.Timestamptz
+	UpdatesInstall bool
+}
+
 type Session struct {
 	TokenHash []byte
 	UserID    pgtype.UUID
 	ExpiresAt pgtype.Timestamptz
+}
+
+type UploadOperation struct {
+	ID                 pgtype.UUID
+	OwnerID            pgtype.UUID
+	BlobID             pgtype.UUID
+	Filename           string
+	Status             string
+	Name               pgtype.Text
+	Blurb              pgtype.Text
+	Tags               []string
+	IsNsfw             pgtype.Bool
+	Visibility         string
+	WorkID             pgtype.UUID
+	FailureReason      pgtype.Text
+	Attempts           int32
+	AvailableAt        pgtype.Timestamptz
+	LeaseToken         pgtype.UUID
+	LeaseExpiresAt     pgtype.Timestamptz
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	TargetWorkID       pgtype.UUID
+	FailureMessage     pgtype.Text
+	CandidateVersion   pgtype.Int8
+	ReplacementPreview []byte
 }
 
 type User struct {
@@ -947,7 +545,7 @@ type User struct {
 	EmailSource                    pgtype.Text
 	CreatedAt                      pgtype.Timestamptz
 	UpdatedAt                      pgtype.Timestamptz
-	NsfwVisibility                 string
+	NsfwPreference                 string
 	ShowNsfwContributionsOnProfile bool
 	Role                           string
 	DisplayName                    string
@@ -956,4 +554,228 @@ type User struct {
 	BannerUrl                      string
 	DefaultIncludeTags             []byte
 	DefaultExcludeTags             []byte
+	AppPreference                  pgtype.Text
+}
+
+type Work struct {
+	ID                    pgtype.UUID
+	Type                  string
+	OriginalFileID        pgtype.UUID
+	OwnerID               pgtype.UUID
+	Name                  string
+	Blurb                 string
+	Tags                  []string
+	CoverMediaID          pgtype.UUID
+	IsNsfw                pgtype.Bool
+	Visibility            string
+	CreatedAt             pgtype.Timestamptz
+	UpdatedAt             pgtype.Timestamptz
+	IndexedAt             pgtype.Timestamptz
+	TakenDownAt           pgtype.Timestamptz
+	TakenDownBy           pgtype.UUID
+	TakenDownReason       pgtype.Text
+	DeletedAt             pgtype.Timestamptz
+	RecoverableUntil      pgtype.Timestamptz
+	Lifecycle             string
+	WorkVersion           string
+	CreditedAuthor        string
+	Nickname              string
+	OriginalFormat        pgtype.Text
+	PublishedVersionID    pgtype.UUID
+	DraftedChangesVersion int64
+}
+
+type WorkBlock struct {
+	ID         pgtype.UUID
+	WorkID     pgtype.UUID
+	Definition string
+	Title      pgtype.Text
+	Position   int32
+	Hidden     bool
+	Layout     string
+	Width      string
+	Elements   []byte
+}
+
+type WorkFollow struct {
+	AccountID pgtype.UUID
+	WorkID    pgtype.UUID
+	State     string
+	SetAt     pgtype.Timestamptz
+}
+
+type WorkFoundImage struct {
+	ID        pgtype.UUID
+	WorkID    pgtype.UUID
+	MediaID   pgtype.UUID
+	Address   string
+	Name      string
+	BlockID   pgtype.UUID
+	Section   string
+	Position  int32
+	CreatedAt pgtype.Timestamptz
+}
+
+type WorkLegacyPath struct {
+	Path      string
+	WorkID    pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+}
+
+type WorkMedium struct {
+	ID          pgtype.UUID
+	WorkID      pgtype.UUID
+	Role        string
+	Width       pgtype.Int4
+	Height      pgtype.Int4
+	CreatedAt   pgtype.Timestamptz
+	BlobID      pgtype.UUID
+	IsExtracted bool
+	IsCurrent   bool
+}
+
+type WorkOriginalFile struct {
+	ID         pgtype.UUID
+	WorkID     pgtype.UUID
+	Number     int32
+	MediaType  string
+	CreatedAt  pgtype.Timestamptz
+	BlobID     pgtype.UUID
+	Format     string
+	Identifier string
+}
+
+type WorkPreservedDatum struct {
+	ID        pgtype.UUID
+	WorkID    pgtype.UUID
+	OwnerType string
+	OwnerID   pgtype.UUID
+	Namespace string
+	Payload   []byte
+}
+
+type WorkPublicPrivatePrompt struct {
+	WorkID      pgtype.UUID
+	OwnerType   string
+	OwnerID     pgtype.UUID
+	PayloadType string
+	Payload     []byte
+	SourceKey   pgtype.Text
+	Digest      []byte
+}
+
+type WorkPublicWork struct {
+	ID                 pgtype.UUID
+	Type               string
+	OriginalFileID     interface{}
+	OwnerID            pgtype.UUID
+	Name               interface{}
+	Blurb              interface{}
+	Tags               interface{}
+	CoverMediaID       pgtype.UUID
+	IsNsfw             bool
+	Visibility         string
+	CreatedAt          pgtype.Timestamptz
+	UpdatedAt          pgtype.Timestamptz
+	IndexedAt          pgtype.Timestamptz
+	TakenDownAt        pgtype.Timestamptz
+	TakenDownBy        pgtype.UUID
+	TakenDownReason    pgtype.Text
+	DeletedAt          pgtype.Timestamptz
+	RecoverableUntil   pgtype.Timestamptz
+	Lifecycle          string
+	WorkVersion        interface{}
+	CreditedAuthor     interface{}
+	Nickname           interface{}
+	OriginalFormat     interface{}
+	VersionNumber      pgtype.Int4
+	PublishedVersionID pgtype.UUID
+}
+
+type WorkPublicWorkBlock struct {
+	ID         pgtype.UUID
+	WorkID     pgtype.UUID
+	Definition string
+	Title      pgtype.Text
+	Position   int32
+	Hidden     bool
+	Layout     string
+	Width      string
+	Elements   []byte
+}
+
+type WorkPublicWorkMedium struct {
+	ID          pgtype.UUID
+	WorkID      pgtype.UUID
+	Role        string
+	Width       pgtype.Int4
+	Height      pgtype.Int4
+	CreatedAt   pgtype.Timestamptz
+	BlobID      pgtype.UUID
+	IsExtracted bool
+	IsCurrent   bool
+}
+
+type WorkPublicWorkPreservedDatum struct {
+	ID        pgtype.UUID
+	WorkID    pgtype.UUID
+	OwnerType string
+	OwnerID   pgtype.UUID
+	Namespace string
+	Payload   []byte
+}
+
+type WorkPublicWorkSummary struct {
+	WorkID           pgtype.UUID
+	Export           []byte
+	ExportStamp      string
+	ExportComputedAt pgtype.Timestamptz
+	Facets           []byte
+	FacetStamp       string
+	FacetComputedAt  pgtype.Timestamptz
+}
+
+type WorkSummary struct {
+	WorkID           pgtype.UUID
+	Export           []byte
+	ExportStamp      string
+	ExportComputedAt pgtype.Timestamptz
+	Facets           []byte
+	FacetStamp       string
+	FacetComputedAt  pgtype.Timestamptz
+}
+
+type WorkVersion struct {
+	ID                    pgtype.UUID
+	WorkID                pgtype.UUID
+	Number                int32
+	RecordedAt            pgtype.Timestamptz
+	InitialRecorded       bool
+	VersionLabel          string
+	OriginalFileID        pgtype.UUID
+	Payload               []byte
+	PrivatePrompts        []byte
+	Summary               string
+	Notes                 string
+	NotesEditedAt         pgtype.Timestamptz
+	WithdrawnAt           pgtype.Timestamptz
+	WithdrawalExplanation pgtype.Text
+}
+
+type WorkVersionMedium struct {
+	VersionID pgtype.UUID
+	WorkID    pgtype.UUID
+	MediaID   pgtype.UUID
+}
+
+type WorkVersionPromptMatch struct {
+	VersionID          pgtype.UUID
+	CurrentFragmentID  pgtype.UUID
+	RecordedFragmentID pgtype.UUID
+	ResolvedAt         pgtype.Timestamptz
+}
+
+type WorkVersionSummary struct {
+	VersionID pgtype.UUID
+	Summary   []byte
 }

@@ -41,7 +41,7 @@ body:
     attributes:
       label: Where
       description: The page address, or the part of the site it happened on.
-      placeholder: /characters/some-character
+      placeholder: /browse
     validations:
       required: false
   - type: input

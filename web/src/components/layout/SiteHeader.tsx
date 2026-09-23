@@ -14,7 +14,6 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { LineLink } from "@/components/ui/line-link";
 import { useAuth } from "@/lib/auth";
-import { useOrigins } from "@/lib/origins";
 import { AccountMenu } from "./AccountMenu";
 import {
   isCurrentPage,
@@ -27,11 +26,46 @@ import { Notch } from "./Notch";
 export function SiteHeader() {
   const pathname = usePathname();
   const { account } = useAuth();
-  const { blog } = useOrigins();
   const publish = publishAction(account);
   const { scrollY } = useScroll();
   const depth = useTransform(scrollY, [0, 40], [0.16, 0.36], { clamp: true });
   const lift = useMotionTemplate`drop-shadow(0 6px 10px rgb(0 0 0 / ${depth}))`;
+
+  if (pathname === "/")
+    return (
+      <header
+        data-theme="dark"
+        style={{ colorScheme: "dark" }}
+        className="fixed inset-x-0 top-0 z-80 flex h-22 items-center gap-6 bg-linear-to-b from-[#100e1699] to-transparent px-[clamp(24px,4.2vw,88px)] font-ui text-ink [--v-ink:#fbf8ff] [--v-mute:#cfc2d8] [--v-deep:#26202c] md:h-27 md:gap-14"
+      >
+        <Link
+          href="/"
+          aria-label="Illarin home"
+          className="flex min-h-11 items-center text-ink"
+        >
+          <BrandLogo className="w-28 md:w-32" />
+        </Link>
+        <nav
+          aria-label="Primary"
+          className="hidden items-center gap-8 text-meta sm:flex"
+        >
+          {primaryDestinations().map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex min-h-11 items-center text-ink"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="ml-auto flex items-center gap-1">
+          <MobileNav />
+          <NotificationBell />
+          <AccountMenu />
+        </div>
+      </header>
+    );
 
   return (
     <motion.header
@@ -46,7 +80,7 @@ export function SiteHeader() {
               className="hidden items-center gap-2 md:flex"
               aria-label="Primary"
             >
-              {primaryDestinations(blog).map((item) => (
+              {primaryDestinations().map((item) => (
                 <LineLink
                   key={item.href}
                   href={item.href}

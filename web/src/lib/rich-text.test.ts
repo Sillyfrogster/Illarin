@@ -31,7 +31,7 @@ function words(children: RichInline[]): string {
     .join("");
 }
 
-describe("restricted markdown", () => {
+describe("page markdown", () => {
   test("keeps a plain paragraph exactly as it was written", () => {
     const rich = readRichText("She closes the book on a ribbon.");
     expect(rich.blocks).toEqual([
@@ -71,7 +71,7 @@ describe("restricted markdown", () => {
     expect(rich.formattingRemoved).toBe(false);
   });
 
-  test("reads headings, both kinds of list, and a block quote", () => {
+  test("reads headings, both sorts of list, and a block quote", () => {
     const rich = readRichText(
       "## Her days\n\n- tea\n- toast\n\n3. third\n4. fourth\n\n> she said so",
     );
@@ -383,12 +383,12 @@ describe("which of an element's text is prose", () => {
     ).toEqual(["Keeps **good** notes."]);
   });
 
-  test("a prompt fragment is the prompt, so it is not prose", () => {
+  test("a prompt fragment's text is read as page markdown", () => {
     expect(
       richTextsOf({
         type: "prompt_list",
         content: { fragments: [{ text: "<instructions>Stay in character." }] },
       }),
-    ).toEqual([]);
+    ).toEqual(["<instructions>Stay in character."]);
   });
 });

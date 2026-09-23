@@ -5,14 +5,19 @@ import {
   Mail,
   NotebookPen,
   Settings,
+  ShieldCheck,
+  Signature,
   UserPlus,
 } from "lucide-react";
 import type { AccountDestination } from "./destinations";
 
 const icons: Record<AccountDestination["id"], LucideIcon> = {
   profile: CircleUserRound,
+  work: NotebookPen,
   settings: Settings,
-  publication: NotebookPen,
+  posts: NotebookPen,
+  "blog-admin": Signature,
+  staff: ShieldCheck,
   verify: Mail,
   "sign-in": LogIn,
   "sign-up": UserPlus,

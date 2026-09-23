@@ -9,8 +9,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
-	"github.com/Sillyfrogster/Illarin/api/internal/protected"
 	"github.com/google/uuid"
 )
 
@@ -48,20 +46,20 @@ const (
 )
 
 const (
-	lvBlockID            = "id"
-	lvBlockName          = "name"
-	lvBlockRole          = "role"
-	lvBlockText          = "content"
-	lvBlockMarker        = "marker"
-	lvBlockEnabled       = "enabled"
-	lvBlockPosition      = "position"
-	lvBlockDepth         = "depth"
-	lvBlockGroup         = "group"
-	lvBlockVars          = "variables"
-	lvBlockSealed        = "sealed"
-	lvBlockSealKey       = "sealedKey"
-	lvBlockSealKeyLegacy = "sealed_key"
-	lvHeadingMarker      = "category"
+	lvBlockID          = "id"
+	lvBlockName        = "name"
+	lvBlockRole        = "role"
+	lvBlockText        = "content"
+	lvBlockMarker      = "marker"
+	lvBlockEnabled     = "enabled"
+	lvBlockPosition    = "position"
+	lvBlockDepth       = "depth"
+	lvBlockGroup       = "group"
+	lvBlockVars        = "variables"
+	lvPrivateFlag      = "sealed"
+	lvPrivateKey       = "sealedKey"
+	lvPrivateKeyLegacy = "sealed_key"
+	lvHeadingMarker    = "category"
 )
 
 const (
@@ -115,11 +113,11 @@ func (LumiverseModule) ID() string { return LumiverseID }
 func (LumiverseModule) Declaration() format.Declaration {
 	named := slotsByApp[Lumiverse]
 	return format.Declaration{
-		ID: LumiverseID, Label: "Lumiverse preset", Kind: Kind,
+		ID: LumiverseID, Label: "Lumiverse preset", Type: Type,
 		Direction: format.Direction{Read: true, Write: true},
 		Recognition: []format.Recognition{{
-			Kind:       format.RecognitionDiscriminator,
-			Containers: []probe.Container{probe.JSON},
+			Type:       format.RecognitionMarker,
+			Containers: []format.Container{format.JSON},
 			Path:       []string{lvSchemaVersion},
 			Values:     []string{"1", "2"},
 		}},
@@ -163,7 +161,7 @@ func (LumiverseModule) Declaration() format.Declaration {
 			},
 		},
 		Header: []format.HeaderField{
-			format.HeaderName, format.HeaderBlurb, format.HeaderAssetVersion,
+			format.HeaderName, format.HeaderBlurb, format.HeaderWorkVersion,
 		},
 		Slots: declaredSlots(Lumiverse),
 		Limits: format.ContentLimits{
@@ -178,8 +176,9 @@ func (LumiverseModule) Declaration() format.Declaration {
 		Preservation: format.PreservationDeclaration{
 			Body: lumiverseNamespace, Container: []string{lvExtensions},
 		},
-		TestedOrigins:    []string{LumiverseID, format.OriginIllarin, format.OriginV1},
-		PreservesOrigins: []string{format.OriginV1},
+		TestedOriginalFormats:    []string{LumiverseID, format.OriginalFormatIllarin, format.OriginalFormatV1},
+		PreservesOriginalFormats: []string{format.OriginalFormatV1},
+		KeepsPrivatePrompts:      true,
 	}
 }
 
@@ -190,18 +189,18 @@ func lumiverseSettingSupport(named []slot) format.DirectionalRoleSupport {
 	}
 }
 
-func (m LumiverseModule) Claim(file probe.Inspection) (format.Claim, bool) {
-	return format.ClaimByDeclaration(file, m.Declaration())
+func (m LumiverseModule) Match(file format.Inspection) (format.Match, bool) {
+	return format.MatchByDeclaration(file, m.Declaration())
 }
 
 func (m LumiverseModule) Parse(
 	_ context.Context,
-	file probe.Inspection,
-	claim format.Claim,
+	file format.Inspection,
+	match format.Match,
 ) (format.Parsed, error) {
-	payload, ok := claim.Payload(file)
+	payload, ok := match.Payload(file)
 	if !ok {
-		return format.Parsed{}, fmt.Errorf("%s payload: the claimed payload is missing", LumiverseID)
+		return format.Parsed{}, fmt.Errorf("%s payload: the matched payload is missing", LumiverseID)
 	}
 	source := maps.Clone(payload.Root)
 
@@ -268,25 +267,15 @@ func (m LumiverseModule) Parse(
 	keys.Take(source, lvVersion, &version)
 
 	return format.Parsed{
-		Kind: Kind, Format: LumiverseID,
-		Header:   format.Header{Name: name, Blurb: boundBlurb(source), AssetVersion: version},
+		Type: Type, Format: LumiverseID,
+		Header:   format.Header{Name: name, Blurb: boundBlurb(source), WorkVersion: version},
 		Elements: elements,
 		Remainder: lumiversePreservation.remainder(
 			source, read.leftovers,
 			scriptLeftovers(scripts, lumiverseScriptNamespace, scriptFields),
 		),
-		Protected: protectedImport(read.protected),
+		PrivatePrompts: read.privatePrompts,
 	}, nil
-}
-
-func protectedImport(prompts []format.ProtectedPrompt) format.ProtectedImport {
-	if len(prompts) == 0 {
-		return format.ProtectedImport{}
-	}
-	return format.ProtectedImport{
-		Prompts: prompts,
-		Apps:    []string{protected.AppLumiverse},
-	}
 }
 
 func boundBlurb(source map[string]json.RawMessage) string {

@@ -102,6 +102,8 @@ export function richTextsOf(element: {
       return texts(items(content.fields), "value");
     case "link_list":
       return texts(items(content.links), "note");
+    case "prompt_list":
+      return texts(items(content.fragments), "text");
     case "variable_schema":
       return texts(items(content.variables), "description");
     case "record_list":

@@ -31,7 +31,7 @@ export type CollectionRow = {
   name: string;
   off?: boolean;
   search: string;
-  sealed?: boolean;
+  private?: boolean;
 };
 
 export function CollectionStep({
@@ -247,10 +247,12 @@ function CollectionList({
                         {row.detail}
                       </span>
                     ) : null}
-                    {row.off || row.sealed ? (
+                    {row.off || row.private ? (
                       <span className="mt-1.5 flex flex-wrap gap-1.5">
                         {row.off ? <RowBadge>Switched off</RowBadge> : null}
-                        {row.sealed ? <RowBadge accent>Sealed</RowBadge> : null}
+                        {row.private ? (
+                          <RowBadge accent>Private</RowBadge>
+                        ) : null}
                       </span>
                     ) : null}
                   </span>

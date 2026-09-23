@@ -19,7 +19,7 @@ func themeRemainder(namespace string, source map[string]json.RawMessage, items .
 	rows := make([]format.Remainder, 0, len(items)+1)
 	if len(source) > 0 {
 		rows = append(rows, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: namespace, Payload: raw(source),
+			Owner: format.OwnerWork, Namespace: namespace, Payload: raw(source),
 		})
 	}
 	for _, item := range items {
@@ -35,19 +35,19 @@ func themeRemainder(namespace string, source map[string]json.RawMessage, items .
 }
 
 type keptTheme struct {
-	asset map[string]json.RawMessage
+	work  map[string]json.RawMessage
 	items map[string]map[uuid.UUID]map[string]json.RawMessage
 }
 
 func keepTheme(rows []format.Remainder) keptTheme {
 	kept := keptTheme{
-		asset: make(map[string]json.RawMessage),
+		work:  make(map[string]json.RawMessage),
 		items: make(map[string]map[uuid.UUID]map[string]json.RawMessage),
 	}
 	for _, row := range rows {
 		switch row.Owner {
-		case format.OwnerAsset:
-			kept.asset[row.Namespace] = row.Payload
+		case format.OwnerWork:
+			kept.work[row.Namespace] = row.Payload
 		case format.OwnerItem:
 			if kept.items[row.Namespace] == nil {
 				kept.items[row.Namespace] = make(map[uuid.UUID]map[string]json.RawMessage)
@@ -59,7 +59,7 @@ func keepTheme(rows []format.Remainder) keptTheme {
 }
 
 func (k keptTheme) body(namespace string) map[string]json.RawMessage {
-	return maps.Clone(keys.Object(k.asset[namespace]))
+	return maps.Clone(keys.Object(k.work[namespace]))
 }
 
 func (k keptTheme) item(namespace string, id uuid.UUID) map[string]json.RawMessage {

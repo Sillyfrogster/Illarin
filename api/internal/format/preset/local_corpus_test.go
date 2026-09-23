@@ -38,18 +38,18 @@ func TestEveryLocalPresetSurvivesADownload(t *testing.T) {
 		read++
 		t.Run(entry.Name(), func(t *testing.T) {
 			file := document(t, string(data))
-			resolution, claimed, err := testRegistry(t).Resolve(file)
-			if err != nil || !claimed {
-				t.Fatalf("resolve: claimed=%v err=%v", claimed, err)
+			resolution, matched, err := testRegistry(t).Resolve(file)
+			if err != nil || !matched {
+				t.Fatalf("resolve: matched=%v err=%v", matched, err)
 			}
-			parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+			parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 			if err != nil {
 				t.Fatalf("parse: %v", err)
 			}
 			if err := block.ValidateContentLimits(parsed.Elements); err != nil {
 				t.Fatalf("content limits: %v", err)
 			}
-			if _, err := block.Place(parsed.Kind, parsed.Elements); err != nil {
+			if _, err := block.Place(parsed.Type, parsed.Elements); err != nil {
 				t.Fatalf("place: %v", err)
 			}
 

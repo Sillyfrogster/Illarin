@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const Kind = "theme"
+const Type = "theme"
 
 type App string
 

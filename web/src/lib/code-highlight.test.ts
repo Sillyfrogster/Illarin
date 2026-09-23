@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { highlightCode, LANGUAGE_LABELS } from "./code-highlight";
-import { POST_LANGUAGES } from "./post-document";
+import { POST_LANGUAGES } from "./post-body";
 
 test("every language Illarin labels code with can be highlighted and named", () => {
   for (const name of POST_LANGUAGES) {

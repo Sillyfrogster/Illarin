@@ -14,7 +14,6 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/preset"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -105,9 +104,9 @@ func TestBothThemeModulesDeclareTheirPublicContract(t *testing.T) {
 	t.Parallel()
 	for _, module := range Modules() {
 		declaration := module.Declaration()
-		if declaration.Kind != Kind || declaration.ID != module.ID() {
+		if declaration.Type != Type || declaration.ID != module.ID() {
 			t.Errorf("declaration identity = %s/%s, want %s/%s",
-				declaration.Kind, declaration.ID, Kind, module.ID())
+				declaration.Type, declaration.ID, Type, module.ID())
 		}
 		if !declaration.Direction.Read || !declaration.Direction.Write {
 			t.Errorf("%s direction = %+v, want read and write", module.ID(), declaration.Direction)
@@ -130,7 +129,7 @@ func TestBothThemeModulesDeclareTheirPublicContract(t *testing.T) {
 	registry := testRegistry(t)
 	for _, module := range preset.Modules() {
 		if err := registry.Register(module); err != nil {
-			t.Fatalf("theme signature overlaps %s: %v", module.ID(), err)
+			t.Fatalf("theme shape overlaps %s: %v", module.ID(), err)
 		}
 	}
 }
@@ -179,7 +178,7 @@ func TestSillyTavernReportsAndAvoidsFlatteningExtraColourModes(t *testing.T) {
 	elements := []block.Element{{
 		ID: uuid.New(), Type: block.TypeColorSet, Role: block.RoleThemeTokens, Content: palette,
 	}}
-	targets := registry.OfferedTargets(format.CapabilitySubject{Kind: Kind, Elements: elements})
+	targets := registry.OfferedFormats(format.CapabilitySubject{Type: Type, Elements: elements})
 	if len(targets) != 1 {
 		t.Fatalf("targets = %+v, want the SillyTavern target", targets)
 	}
@@ -228,8 +227,8 @@ func TestLumiverseThemeKeepsItsHeaderPaletteComponentsAndFont(t *testing.T) {
 		t.Fatalf("palette = %+v, want the nine dark-mode colours", palette)
 	}
 	styles := elementFor(t, parsed.Elements, block.RoleStylesheets).(block.StylesheetSet)
-	if len(styles.Stylesheets) != 2 || len(styles.Assets) != 1 ||
-		!bytes.Equal(styles.Assets[0].Data, []byte("font fixture")) {
+	if len(styles.Stylesheets) != 2 || len(styles.Files) != 1 ||
+		!bytes.Equal(styles.Files[0].Data, []byte("font fixture")) {
 		t.Fatalf("stylesheets = %+v, want two components and the font", styles)
 	}
 	encodedStyles, err := json.Marshal(styles)
@@ -301,8 +300,8 @@ func TestSillyTavernStylesheetLossMatchesWhatItCanWrite(t *testing.T) {
 				ID: uuid.New(), Type: block.TypeStylesheetSet, Role: block.RoleStylesheets,
 				Content: test.styles,
 			})
-			targets := registry.OfferedTargets(format.CapabilitySubject{
-				Kind: Kind, Elements: elements,
+			targets := registry.OfferedFormats(format.CapabilitySubject{
+				Type: Type, Elements: elements,
 			})
 			if len(targets) != 1 || targets[0].Format != SillyTavernID {
 				t.Fatalf("targets = %+v, want only the SillyTavern theme", targets)
@@ -347,15 +346,15 @@ func TestSillyTavernJoinsOnlyEnabledComponentStylesheetsAfterTheMainSheet(t *tes
 	}
 }
 
-func TestLumiverseMarkerOutsideTheDeclaredSetIsNotClaimed(t *testing.T) {
+func TestLumiverseMarkerOutsideTheDeclaredSetIsNotMatched(t *testing.T) {
 	t.Parallel()
 	file := inspect(t, themeBundle(t, strings.Replace(lumiverseTheme, `"format":3`, `"format":4`, 1), nil), "future.lumitheme")
-	if _, claimed := (LumiverseModule{}).Claim(file); claimed {
-		t.Error("format marker 4 was claimed as though it were 3")
+	if _, matched := (LumiverseModule{}).Match(file); matched {
+		t.Error("format marker 4 was matched as though it were 3")
 	}
 }
 
-func roleLoss(target format.Target, role block.Role) (format.RoleLoss, bool) {
+func roleLoss(target format.Offered, role block.Role) (format.RoleLoss, bool) {
 	for _, loss := range target.Roles {
 		if loss.Role == role {
 			return loss, true
@@ -375,27 +374,27 @@ func elementFor(t *testing.T, elements []block.Element, role block.Role) block.C
 	return nil
 }
 
-func parse(t *testing.T, file probe.Inspection) format.Parsed {
+func parse(t *testing.T, file format.Inspection) format.Parsed {
 	t.Helper()
-	resolution, claimed, err := testRegistry(t).Resolve(file)
+	resolution, matched, err := testRegistry(t).Resolve(file)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if !claimed {
-		t.Fatal("no module claimed the theme")
+	if !matched {
+		t.Fatal("no module matched the theme")
 	}
-	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	return parsed
 }
 
-func write(t *testing.T, module format.Reader, parsed format.Parsed) format.Artifact {
+func write(t *testing.T, module format.Reader, parsed format.Parsed) format.MainFile {
 	t.Helper()
 	writer := module.(format.Writer)
-	written, err := writer.Write(context.Background(), format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
+	written, err := writer.Write(context.Background(), format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
 	})
 	if err != nil {
 		t.Fatalf("write %s: %v", module.ID(), err)
@@ -423,9 +422,9 @@ func (s memoryStore) ReadRange(_ context.Context, _ uuid.UUID, offset, length in
 	return io.NopCloser(bytes.NewReader(s.data[offset : offset+length])), nil
 }
 
-func inspect(t *testing.T, data []byte, filename string) probe.Inspection {
+func inspect(t *testing.T, data []byte, filename string) format.Inspection {
 	t.Helper()
-	file, err := probe.Inspect(
+	file, err := format.Inspect(
 		context.Background(), memoryStore{data: data}, uuid.New(), int64(len(data)), filename,
 	)
 	if err != nil {
@@ -434,12 +433,12 @@ func inspect(t *testing.T, data []byte, filename string) probe.Inspection {
 	return file
 }
 
-func themeBundle(t *testing.T, document string, assets map[string][]byte) []byte {
+func themeBundle(t *testing.T, document string, files map[string][]byte) []byte {
 	t.Helper()
 	var output bytes.Buffer
 	archive := zip.NewWriter(&output)
 	writeArchiveEntry(t, archive, "theme.json", []byte(document))
-	for name, data := range assets {
+	for name, data := range files {
 		writeArchiveEntry(t, archive, name, data)
 	}
 	if err := archive.Close(); err != nil {

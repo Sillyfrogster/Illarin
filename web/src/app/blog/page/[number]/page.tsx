@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import { ScopedArchive } from "@/components/publication/Archive";
+import { ScopedArchive } from "@/components/blog/Archive";
 import { fetchPostArchive } from "@/lib/api/query";
-import { BLOG_HOME, pageAddress } from "@/lib/blog-paths";
 import {
   BLOG_DESCRIPTION,
   BLOG_HEADING,
   blogMetadata,
-} from "@/lib/publication-metadata";
+} from "@/lib/blog-metadata";
+import { BLOG_HOME, pageAddress } from "@/lib/blog-paths";
 
 export async function generateMetadata({
   params,

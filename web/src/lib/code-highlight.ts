@@ -13,7 +13,7 @@ import typescript from "highlight.js/lib/languages/typescript";
 import xml from "highlight.js/lib/languages/xml";
 import yaml from "highlight.js/lib/languages/yaml";
 import { createLowlight } from "lowlight";
-import type { PostLanguage } from "./post-document";
+import type { PostLanguage } from "./post-body";
 
 export const LANGUAGE_LABELS: Record<PostLanguage, string> = {
   plain: "Plain text",

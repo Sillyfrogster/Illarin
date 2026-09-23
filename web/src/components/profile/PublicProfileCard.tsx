@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CreatorPortrait } from "@/components/media/CreatorPortrait";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api/client";
 import type { Profile } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
 import { whatIsPublic } from "@/lib/profile-draft";
@@ -18,13 +19,12 @@ export function PublicProfileCard() {
     if (!handle) return;
     let current = true;
     void (async () => {
-      const response = await fetch(`/api/v1/profiles/${handle}`, {
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-      if (!response.ok || !current) return;
-      const found = (await response.json()) as Profile;
-      if (current) setProfile(found);
+      const { data: found } = await api<Profile>(
+        "GET",
+        `/v1/profiles/${handle}`,
+        { cache: "no-store" },
+      );
+      if (found && current) setProfile(found);
     })();
     return () => {
       current = false;
@@ -59,7 +59,7 @@ export function PublicProfileCard() {
         </p>
       </div>
       <Button asChild className="w-full justify-between" variant="secondary">
-        <Link href="/settings/profile">
+        <Link href={`/@${profile.handle}`}>
           Edit profile
           <ArrowRight aria-hidden="true" />
         </Link>

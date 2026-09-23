@@ -7,10 +7,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func Place(kind string, tagged []Element) ([]Block, error) {
-	definitions, ok := Catalog(kind)
+func Place(workType string, tagged []Element) ([]Block, error) {
+	definitions, ok := Definitions(workType)
 	if !ok {
-		return nil, fmt.Errorf("no block catalog for kind %q", kind)
+		return nil, fmt.Errorf("no block definitions for type %q", workType)
 	}
 
 	placed := make([]bool, len(tagged))
@@ -46,7 +46,7 @@ func Place(kind string, tagged []Element) ([]Block, error) {
 	for i, element := range tagged {
 		if !placed[i] {
 			return nil, fmt.Errorf(
-				"kind %q has nowhere to put a %s element", kind, element.Role,
+				"type %q has nowhere to put a %s element", workType, element.Role,
 			)
 		}
 	}
@@ -61,7 +61,7 @@ func (d Definition) fill(tagged []Element, placed []bool) ([]Element, error) {
 			return nil, err
 		}
 		if found < 0 {
-			if !defined.Pinned || defined.Locked {
+			if !defined.Pinned || defined.FromFile {
 				continue
 			}
 			content, err := defined.Type.Empty()
@@ -111,12 +111,12 @@ func (d Definition) take(defined DefinedElement, tagged []Element, placed []bool
 // readFromUpload says whether every element of the block comes only from an uploaded file.
 func (d Definition) readFromUpload() bool {
 	return len(d.Elements) > 0 && !slices.ContainsFunc(d.Elements, func(defined DefinedElement) bool {
-		return !defined.Locked
+		return !defined.FromFile
 	})
 }
 
-func (b Block) Pinned(role Role, kind string) bool {
-	definition, ok := b.Definition.Definition(kind)
+func (b Block) Pinned(role Role, workType string) bool {
+	definition, ok := b.Definition.Definition(workType)
 	if !ok {
 		return false
 	}
@@ -124,12 +124,12 @@ func (b Block) Pinned(role Role, kind string) bool {
 	return ok && defined.Pinned
 }
 
-// Locked says whether the element is read from an upload and never edited on Illarin.
-func (b Block) Locked(role Role, kind string) bool {
-	definition, ok := b.Definition.Definition(kind)
+// FromFile says whether the element is read from an upload and never edited on Illarin.
+func (b Block) FromFile(role Role, workType string) bool {
+	definition, ok := b.Definition.Definition(workType)
 	if !ok {
 		return false
 	}
 	defined, ok := definition.element(role)
-	return ok && defined.Locked
+	return ok && defined.FromFile
 }

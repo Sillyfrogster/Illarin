@@ -1,0 +1,48 @@
+{
+  "note": "A numbered list that starts elsewhere is said out loud",
+  "markdown": "3. Third\n4. Fourth\n",
+  "body": {
+    "content": [
+      {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "text": "Third",
+                    "type": "text"
+                  }
+                ],
+                "type": "paragraph"
+              }
+            ],
+            "type": "listItem"
+          },
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "text": "Fourth",
+                    "type": "text"
+                  }
+                ],
+                "type": "paragraph"
+              }
+            ],
+            "type": "listItem"
+          }
+        ],
+        "type": "orderedList"
+      }
+    ],
+    "version": 2
+  },
+  "warnings": [
+    {
+      "line": 1,
+      "says": "starts at 1"
+    }
+  ]
+}

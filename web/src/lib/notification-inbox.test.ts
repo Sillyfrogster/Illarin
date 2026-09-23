@@ -10,7 +10,7 @@ import {
   unreadLabel,
 } from "./notification-inbox";
 
-const ASSET = {
+const WORK = {
   id: "0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a",
   name: "Moonlit Archive",
 };
@@ -19,9 +19,9 @@ const NOW = new Date("2026-09-14T12:00:00Z");
 function entry(overrides: Partial<Notification> = {}): Notification {
   return {
     id: "8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
-    type: "asset_withheld",
+    type: "work_taken_down",
     createdAt: "2026-09-14T09:00:00Z",
-    asset: ASSET,
+    work: WORK,
     reason: "Copyright report under review",
     ...overrides,
   };
@@ -31,18 +31,18 @@ function before(milliseconds: number): string {
   return new Date(NOW.getTime() - milliseconds).toISOString();
 }
 
-test("a withheld asset says Illarin staff withheld it, gives the reason and opens the asset", () => {
+test("a taken-down work says Illarin staff took it down, gives the reason and opens the work", () => {
   expect(notificationWords(entry())).toEqual({
-    lead: "Illarin staff withheld",
+    lead: "Illarin staff took down",
     subject: "Moonlit Archive",
     detail: "Copyright report under review",
     href: "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive",
   });
 });
 
-test("a restored asset says Illarin staff restored it and that readers can reach it again", () => {
+test("a restored work says Illarin staff restored it and that readers can reach it again", () => {
   expect(
-    notificationWords(entry({ type: "asset_restored", reason: undefined })),
+    notificationWords(entry({ type: "work_restored", reason: undefined })),
   ).toEqual({
     lead: "Illarin staff restored",
     subject: "Moonlit Archive",
@@ -56,7 +56,7 @@ test("a restricted profile says Illarin staff restricted it, gives the reason an
     notificationWords(
       entry({
         type: "profile_restricted",
-        asset: undefined,
+        work: undefined,
         reason: "Impersonating another creator",
       }),
     ),
@@ -71,7 +71,7 @@ test("a restricted profile says Illarin staff restricted it, gives the reason an
 test("a restored profile says Illarin staff restored it and that it can be edited again", () => {
   expect(
     notificationWords(
-      entry({ type: "profile_restored", asset: undefined, reason: undefined }),
+      entry({ type: "profile_restored", work: undefined, reason: undefined }),
     ),
   ).toEqual({
     lead: "Illarin staff restored",
@@ -81,11 +81,11 @@ test("a restored profile says Illarin staff restored it and that it can be edite
   });
 });
 
-test("an updated asset names the update, its version and summary, and opens that update in the history", () => {
+test("an updated work names the update, its version and summary, and opens that update in the history", () => {
   expect(
     notificationWords(
       entry({
-        type: "asset_updated",
+        type: "work_updated",
         reason: undefined,
         update: {
           number: 3,
@@ -96,9 +96,9 @@ test("an updated asset names the update, its version and summary, and opens that
       }),
     ),
   ).toEqual({
-    lead: "New update to",
+    lead: "New version of",
     subject: "Moonlit Archive",
-    detail: "Update 3, v2.1: Rewrote her opening",
+    detail: "Version 3, v2.1: Rewrote her opening",
     href: "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive?history#version-3",
   });
 });
@@ -107,7 +107,7 @@ test("an update without a version label leaves the label out", () => {
   expect(
     notificationWords(
       entry({
-        type: "asset_updated",
+        type: "work_updated",
         reason: undefined,
         update: {
           number: 2,
@@ -116,13 +116,39 @@ test("an update without a version label leaves the label out", () => {
         },
       }),
     ).detail,
-  ).toBe("Update 2: Fixed a typo in her greeting");
+  ).toBe("Version 2: Fixed a typo in her greeting");
+});
+
+test("a creator's new work names the creator and opens the work", () => {
+  expect(
+    notificationWords(
+      entry({
+        type: "work_published",
+        reason: undefined,
+        creator: { handle: "wren", name: "Wren Ashdown" },
+      }),
+    ),
+  ).toEqual({
+    lead: "Wren Ashdown published",
+    subject: "Moonlit Archive",
+    detail: "",
+    href: "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive",
+  });
+  expect(
+    notificationWords(
+      entry({
+        type: "work_published",
+        reason: undefined,
+        creator: { handle: "wren", name: "" },
+      }),
+    ).lead,
+  ).toBe("@wren published");
 });
 
 test("a folded entry says how many updates arrived and still shows the latest", () => {
   const words = notificationWords(
     entry({
-      type: "asset_updated",
+      type: "work_updated",
       reason: undefined,
       update: {
         number: 7,
@@ -132,9 +158,9 @@ test("a folded entry says how many updates arrived and still shows the latest", 
       },
     }),
   );
-  expect(words.lead).toBe("5 new updates to");
+  expect(words.lead).toBe("5 new versions of");
   expect(words.subject).toBe("Moonlit Archive");
-  expect(words.detail).toBe("Update 7, v3: Added a third greeting");
+  expect(words.detail).toBe("Version 7, v3: Added a third greeting");
   expect(words.href).toBe(
     "/a/0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a/moonlit-archive?history#version-7",
   );
@@ -144,18 +170,18 @@ test("an entry holding two updates counts them and one holding a single update d
   const folded = (count: number) =>
     notificationWords(
       entry({
-        type: "asset_updated",
+        type: "work_updated",
         reason: undefined,
         update: { number: 4, count, summary: "Rewrote her opening" },
       }),
     ).lead;
-  expect(folded(1)).toBe("New update to");
-  expect(folded(2)).toBe("2 new updates to");
+  expect(folded(1)).toBe("New version of");
+  expect(folded(2)).toBe("2 new versions of");
 });
 
-test("an entry that names no asset still reads plainly and has nowhere to send the reader", () => {
-  const words = notificationWords(entry({ asset: undefined }));
-  expect(words.subject).toBe("One of your assets");
+test("an entry that names no work still reads plainly and has nowhere to send the reader", () => {
+  const words = notificationWords(entry({ work: undefined }));
+  expect(words.subject).toBe("One of your works");
   expect(words.href).toBeNull();
 });
 
@@ -213,7 +239,7 @@ test("marking read keeps the time an entry was first opened", () => {
 });
 
 test("marking everything read stamps each unread entry and keeps the cursor", () => {
-  const cursor = { before: "2026-09-10T00:00:00Z", beforeId: ASSET.id };
+  const cursor = { before: "2026-09-10T00:00:00Z", beforeId: WORK.id };
   const page: NotificationList = {
     items: [entry(), entry({ id: "x", readAt: "2026-09-13T08:00:00Z" })],
     nextCursor: cursor,
@@ -231,7 +257,7 @@ test("marking everything read stamps each unread entry and keeps the cursor", ()
 test("removing an entry takes only that entry out of the page and keeps the cursor", () => {
   const gone = entry();
   const kept = entry({ id: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d" });
-  const cursor = { before: "2026-09-10T00:00:00Z", beforeId: ASSET.id };
+  const cursor = { before: "2026-09-10T00:00:00Z", beforeId: WORK.id };
   const page: NotificationList = { items: [gone, kept], nextCursor: cursor };
 
   expect(removed(page, gone.id)).toEqual({ items: [kept], nextCursor: cursor });

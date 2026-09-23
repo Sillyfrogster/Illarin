@@ -1,18 +1,28 @@
 import type { SignedInAccount } from "@/lib/auth";
+import { BLOG_HOME } from "@/lib/blog-paths";
 
 const UPLOAD_RETURN = encodeURIComponent("/upload");
 
 export type Destination = { label: string; href: string };
 
-/** The primary places to go. The blog is its own origin, so its entry is a full address. */
-export function primaryDestinations(blog: string): Destination[] {
+export function primaryDestinations(): Destination[] {
   return [
     { label: "Browse", href: "/browse" },
-    { label: "Blog", href: blog },
+    { label: "Blog", href: BLOG_HOME },
+    { label: "Docs", href: "/docs" },
   ];
 }
 export type AccountDestination = Destination & {
-  id: "profile" | "settings" | "publication" | "verify" | "sign-in" | "sign-up";
+  id:
+    | "profile"
+    | "work"
+    | "settings"
+    | "posts"
+    | "blog-admin"
+    | "staff"
+    | "verify"
+    | "sign-in"
+    | "sign-up";
 };
 
 export function publishAction(
@@ -34,7 +44,7 @@ export function publishAction(
 
 export function accountDestinations(
   account: SignedInAccount | null | undefined,
-  publicationAuthority: boolean,
+  writer: boolean,
 ): AccountDestination[] {
   if (!account)
     return [
@@ -43,16 +53,23 @@ export function accountDestinations(
     ];
 
   return [
-    { id: "profile", label: "View profile", href: `/@${account.handle}` },
+    { id: "work", label: "Your work", href: "/work" },
+    { id: "profile", label: "Your profile", href: `/@${account.handle}` },
     { id: "settings", label: "Account settings", href: "/settings" },
-    ...(publicationAuthority
+    ...(writer
+      ? [{ id: "posts" as const, label: "Your posts", href: "/posts" }]
+      : []),
+    ...(account.role === "admin"
       ? [
           {
-            id: "publication" as const,
+            id: "blog-admin" as const,
             label: "Blog administration",
-            href: "/publication",
+            href: "/admin/blog",
           },
         ]
+      : []),
+    ...(account.role === "admin" || account.role === "moderator"
+      ? [{ id: "staff" as const, label: "Staff", href: "/staff" }]
       : []),
     ...(account.emailVerified
       ? []

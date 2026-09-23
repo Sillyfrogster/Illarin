@@ -43,16 +43,16 @@ export function Arrive({
     }
 
     setWaiting(true);
-    const watch = new IntersectionObserver(
+    const follow = new IntersectionObserver(
       ([seen]) => {
         if (!seen.isIntersecting) return;
         setWaiting(false);
-        watch.disconnect();
+        follow.disconnect();
       },
       { rootMargin: "0px 0px -60px 0px" },
     );
-    watch.observe(here);
-    return () => watch.disconnect();
+    follow.observe(here);
+    return () => follow.disconnect();
   }, [still]);
 
   return (

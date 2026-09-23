@@ -7,12 +7,24 @@ WORKDIR /src/web
 COPY web/package.json web/bun.lock ./
 RUN bun install --frozen-lockfile
 
+FROM golang:1.26.5-alpine3.23 AS site-types
+
+WORKDIR /src/api
+
+COPY api/go.mod api/go.sum ./
+RUN go mod download
+COPY api/ ./
+RUN mkdir -p ../web/src/lib/api \
+    && go run github.com/gzuidhof/tygo@v0.2.21 generate --config tygo.yaml
+
 FROM node:24-bookworm-slim AS build
 
 WORKDIR /src/web
 
 COPY --from=dependencies /src/web/node_modules ./node_modules
 COPY web/ ./
+COPY --from=site-types /src/web/src/lib/api/shapes.ts ./src/lib/api/shapes.ts
+COPY --from=site-types /src/web/src/lib/api/shapes/ ./src/lib/api/shapes/
 
 ARG ILLARIN_VERSION=development
 ENV API_URL=http://api:8080 \

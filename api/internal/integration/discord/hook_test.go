@@ -1,0 +1,202 @@
+package discord
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+)
+
+const capability = "https://discord.com/api/webhooks/1234567890123456789/a-long-webhook-token"
+
+func TestACapabilityIsReadIntoItsIdAndToken(t *testing.T) {
+	t.Parallel()
+	read, err := ReadCapability(capability)
+
+	if err != nil {
+		t.Fatalf("read capability: %v", err)
+	}
+	if read.ID != "1234567890123456789" {
+		t.Errorf("id = %q", read.ID)
+	}
+	if read.Token != "a-long-webhook-token" {
+		t.Errorf("token = %q", read.Token)
+	}
+}
+
+func TestOnlyADiscordWebhookAddressIsACapability(t *testing.T) {
+	t.Parallel()
+	for _, raw := range []string{
+		"https://example.com/api/webhooks/123/token",
+		"http://discord.com/api/webhooks/123/token",
+		"https://discord.com/api/webhooks/123",
+		"https://discord.com/api/webhooks/notanid/token",
+		"https://discord.com/api/webhooks/1234567890123456789/token/messages/1",
+		"https://discord.com/api/v10/webhooks/1234567890123456789/token",
+		"https://discord.com/api/webhooks/1234567890123456789/",
+	} {
+		if _, err := ReadCapability(raw); err == nil {
+			t.Errorf("%q was accepted", raw)
+		}
+	}
+}
+
+type announcement struct {
+	Content string `json:"content"`
+	Embeds  []struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		URL         string `json:"url"`
+		Timestamp   string `json:"timestamp"`
+		Color       int    `json:"color"`
+		Author      struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"author"`
+		Fields []struct {
+			Name   string `json:"name"`
+			Value  string `json:"value"`
+			Inline bool   `json:"inline"`
+		} `json:"fields"`
+		Image struct {
+			URL string `json:"url"`
+		} `json:"image"`
+		Footer struct {
+			Text string `json:"text"`
+		} `json:"footer"`
+	} `json:"embeds"`
+	Mentions struct {
+		Parse []string `json:"parse"`
+		Roles []string `json:"roles"`
+		Users []string `json:"users"`
+	} `json:"allowed_mentions"`
+	Username  string `json:"username"`
+	AvatarURL string `json:"avatar_url"`
+	ThreadID  string `json:"thread_id"`
+}
+
+func announced(t *testing.T, one Announcement) announcement {
+	t.Helper()
+	body, err := one.Body()
+	if err != nil {
+		t.Fatalf("compose the announcement: %v", err)
+	}
+	var read announcement
+	if err := json.Unmarshal(body, &read); err != nil {
+		t.Fatalf("decode the announcement: %v", err)
+	}
+	return read
+}
+
+func aRelease() Announcement {
+	return Announcement{
+		Title:    "Illarin 2.1 is out",
+		Summary:  "Packs travel with their worldbooks now.",
+		URL:      "https://illarin.test/blog/illarin-2-1",
+		Image:    "https://illarin.test/blog/illarin-2-1/card.png",
+		Category: "Release",
+		Author:   Author{Name: "Aaron", URL: "https://illarin.test/@aaron"},
+		At:       time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC),
+	}
+}
+
+func TestTheAnnouncementCarriesWhatIllarinDecidedToSay(t *testing.T) {
+	t.Parallel()
+	read := announced(t, aRelease())
+
+	if len(read.Embeds) != 1 {
+		t.Fatalf("embeds = %d, want 1", len(read.Embeds))
+	}
+	embed := read.Embeds[0]
+	if embed.Title != "Illarin 2.1 is out" {
+		t.Errorf("title = %q", embed.Title)
+	}
+	if embed.Description != "Packs travel with their worldbooks now." {
+		t.Errorf("description = %q", embed.Description)
+	}
+	if embed.URL != "https://illarin.test/blog/illarin-2-1" {
+		t.Errorf("url = %q", embed.URL)
+	}
+	if embed.Timestamp != "2026-09-06T12:00:00Z" {
+		t.Errorf("timestamp = %q", embed.Timestamp)
+	}
+	if embed.Image.URL != "https://illarin.test/blog/illarin-2-1/card.png" {
+		t.Errorf("image = %q", embed.Image.URL)
+	}
+	if embed.Author.Name != "Aaron" || embed.Author.URL != "https://illarin.test/@aaron" {
+		t.Errorf("author = %+v", embed.Author)
+	}
+	if embed.Footer.Text != Publication {
+		t.Errorf("footer = %q", embed.Footer.Text)
+	}
+	if len(embed.Fields) != 1 || embed.Fields[0].Value != "Release" {
+		t.Errorf("fields = %+v, want the category alone", embed.Fields)
+	}
+}
+
+func TestAnAnnouncementWithoutAPictureLeavesItOut(t *testing.T) {
+	t.Parallel()
+	one := aRelease()
+	one.Image = ""
+
+	read := announced(t, one)
+
+	if read.Embeds[0].Image.URL != "" {
+		t.Errorf("image = %q", read.Embeds[0].Image.URL)
+	}
+}
+
+func TestNoAnnouncementParsesAMentionOutOfItsText(t *testing.T) {
+	t.Parallel()
+	one := aRelease()
+	one.Title = "@everyone <@&999999999999999999> <@111111111111111111>"
+
+	read := announced(t, one)
+
+	if len(read.Mentions.Parse) != 0 {
+		t.Errorf("parse = %v, want nothing parsed", read.Mentions.Parse)
+	}
+	if len(read.Mentions.Roles) != 0 || len(read.Mentions.Users) != 0 {
+		t.Errorf("mentions = %+v, want nobody named", read.Mentions)
+	}
+}
+
+func TestAnAnnouncementNeverCarriesAnIdentityOrThreadOverride(t *testing.T) {
+	t.Parallel()
+	read := announced(t, aRelease())
+
+	if read.Username != "" || read.AvatarURL != "" || read.ThreadID != "" {
+		t.Errorf("the announcement overrode Discord's own identity: %+v", read)
+	}
+}
+
+func TestAnAnnouncementIsCutToWhatDiscordAccepts(t *testing.T) {
+	t.Parallel()
+	one := aRelease()
+	one.Title = strings.Repeat("t", TitleLimit+50)
+	one.Summary = strings.Repeat("s", DescriptionLimit+50)
+	one.Category = strings.Repeat("c", FieldLimit+50)
+	one.Update = strings.Repeat("u", FieldLimit+50)
+	one.Footer = strings.Repeat("f", FooterLimit+50)
+	one.Author.Name = strings.Repeat("🐦", TitleLimit)
+
+	read := announced(t, one)
+
+	if len([]rune(read.Embeds[0].Title)) > TitleLimit {
+		t.Errorf("title is %d runes", len([]rune(read.Embeds[0].Title)))
+	}
+	if len([]rune(read.Embeds[0].Description)) > DescriptionLimit {
+		t.Errorf("description is %d runes", len([]rune(read.Embeds[0].Description)))
+	}
+	shown := read.Embeds[0]
+	total := textLength(shown.Title) + textLength(shown.Description) + textLength(shown.Author.Name) + textLength(shown.Footer.Text)
+	for _, field := range shown.Fields {
+		total += textLength(field.Name) + textLength(field.Value)
+	}
+	if total > EmbedLimit {
+		t.Errorf("embed is %d characters", total)
+	}
+	if textLength(cut(strings.Repeat("🐦", TitleLimit), TitleLimit)) > TitleLimit {
+		t.Fatal("emoji text exceeds Discord's limit")
+	}
+}

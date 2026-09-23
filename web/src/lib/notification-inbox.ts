@@ -1,5 +1,5 @@
 import type { Notification, NotificationList } from "@/lib/api/notifications";
-import { assetHistoryHref, assetHref } from "@/lib/asset-url";
+import { workHistoryHref, workHref } from "@/lib/work-url";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -20,37 +20,42 @@ export type NotificationWords = {
 
 /** Says what an entry is about. A staff decision always reads as Illarin staff and never as the person who made it. */
 export function notificationWords(entry: Notification): NotificationWords {
-  const assetName = entry.asset?.name ?? "One of your assets";
-  const assetPage = entry.asset
-    ? assetHref(entry.asset.id, entry.asset.name)
-    : null;
+  const workName = entry.work?.name ?? "One of your works";
+  const workPage = entry.work ? workHref(entry.work.id, entry.work.name) : null;
   switch (entry.type) {
-    case "asset_withheld":
+    case "work_taken_down":
       return {
-        lead: "Illarin staff withheld",
-        subject: assetName,
+        lead: "Illarin staff took down",
+        subject: workName,
         detail: entry.reason ?? "",
-        href: assetPage,
+        href: workPage,
       };
-    case "asset_restored":
+    case "work_restored":
       return {
         lead: "Illarin staff restored",
-        subject: assetName,
+        subject: workName,
         detail: "Readers can reach it again.",
-        href: assetPage,
+        href: workPage,
       };
-    case "asset_updated":
+    case "work_updated":
       return {
         lead: updateLead(entry),
-        subject: assetName,
+        subject: workName,
         detail: updateDetail(entry),
-        href: entry.asset
-          ? assetHistoryHref(
-              entry.asset.id,
-              entry.asset.name,
+        href: entry.work
+          ? workHistoryHref(
+              entry.work.id,
+              entry.work.name,
               entry.update?.number,
             )
           : null,
+      };
+    case "work_published":
+      return {
+        lead: `${entry.creator?.name || `@${entry.creator?.handle ?? "someone"}`} published`,
+        subject: workName,
+        detail: "",
+        href: workPage,
       };
     case "profile_restricted":
       return {
@@ -66,20 +71,27 @@ export function notificationWords(entry: Notification): NotificationWords {
         detail: "You can edit it again.",
         href: PROFILE_SETTINGS,
       };
+    case "github_release_held":
+      return {
+        lead: "GitHub release waiting for",
+        subject: workName,
+        detail: "Publish or discard your edits, then resume the import.",
+        href: workPage ? `${workPage}#github-releases` : null,
+      };
   }
 }
 
-/** Says how many updates a folded entry stands for. */
+/** Says how many versions a folded entry stands for. */
 function updateLead(entry: Notification): string {
   const arrivals = entry.update?.count ?? 1;
-  return arrivals > 1 ? `${arrivals} new updates to` : "New update to";
+  return arrivals > 1 ? `${arrivals} new versions of` : "New version of";
 }
 
 function updateDetail(entry: Notification): string {
   const update = entry.update;
   if (!update) return "";
   const label = update.versionLabel ? `, ${update.versionLabel}` : "";
-  return `Update ${update.number}${label}: ${update.summary}`;
+  return `Version ${update.number}${label}: ${update.summary}`;
 }
 
 /** Says how long ago an entry arrived, in words for the past week and as a date before that. */

@@ -1,17 +1,16 @@
+import { SiDiscord, SiKofi } from "@icons-pack/react-simple-icons";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { shellClasses } from "@/components/layout/Shell";
 import { LineLink } from "@/components/ui/line-link";
-import { blogAddress } from "@/lib/blog-address";
+import { DISCORD_INVITE, KOFI_PAGE } from "@/lib/contact";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
 import { primaryDestinations } from "./destinations";
 
 export function SiteFooter() {
   const destinations = [
-    ...primaryDestinations(blogAddress("/")),
+    ...primaryDestinations(),
     { label: "Publish", href: "/upload" },
     { label: "Account settings", href: "/settings" },
-    { label: "Publication API", href: "/developers/publication" },
-    { label: "Connect an app", href: "/developers/apps" },
   ];
   return (
     <footer className="mt-chapter bg-field pb-16">
@@ -21,8 +20,8 @@ export function SiteFooter() {
           <div className="min-w-0">
             <BrandLogo className="w-40" tone="accent" />
             <p className="mt-3 max-w-[34ch] font-prose text-meta leading-6 text-mute">
-              A cross-application catalog for AI roleplay assets. Every
-              creator&rsquo;s source file stays intact.
+              A hub for AI roleplay work, across apps. Every creator&rsquo;s
+              source file stays intact.
             </p>
             <a
               className="mt-3 flex min-h-11 w-fit items-center text-meta text-ink hover:text-accent"
@@ -31,6 +30,30 @@ export function SiteFooter() {
             >
               Download the brand kit
             </a>
+            <ul className="mt-2 grid list-none">
+              <li>
+                <a
+                  className="flex min-h-11 w-fit items-center gap-2 text-meta text-ink hover:text-accent"
+                  href={DISCORD_INVITE}
+                  rel="noopener"
+                  target="_blank"
+                >
+                  <SiDiscord aria-hidden="true" className="size-4" title="" />
+                  Join the Discord
+                </a>
+              </li>
+              <li>
+                <a
+                  className="flex min-h-11 w-fit items-center gap-2 text-meta text-ink hover:text-accent"
+                  href={KOFI_PAGE}
+                  rel="noopener"
+                  target="_blank"
+                >
+                  <SiKofi aria-hidden="true" className="size-4" title="" />
+                  Support Illarin on Ko-fi
+                </a>
+              </li>
+            </ul>
             <p className="mt-8 text-meta text-mute">© 2026 Illarin</p>
           </div>
 

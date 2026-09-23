@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, CircleAlert } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -13,9 +13,8 @@ import {
   type RecordedVersion,
   type RecordedVersionDownloads,
 } from "@/lib/api/query";
-import { assetHoldsNothing } from "@/lib/asset-page-content";
-import { versionTitle } from "@/lib/asset-updates";
-import { AssetChooser } from "../AssetChooser";
+import { downloadAddress, orderedFormats } from "@/lib/work-send";
+import { versionDate, versionTitle } from "@/lib/work-versions";
 
 type Reading =
   | { state: "unread" }
@@ -23,23 +22,19 @@ type Reading =
   | { state: "read"; offered: RecordedVersionDownloads }
   | { state: "refused"; refusal: string; retry: boolean };
 
-async function noRefresh(): Promise<void> {}
-
-/** Loads a historical version's download choices when the chooser opens. */
+/** Loads a historical version's formats when the chooser opens. */
 export function VersionDownload({
-  assetId,
-  kind,
+  workId,
   version,
 }: {
-  assetId: string;
-  kind: string;
+  workId: string;
   version: RecordedVersion;
 }) {
   const [reading, setReading] = useState<Reading>({ state: "unread" });
 
   async function read() {
     setReading({ state: "reading" });
-    const answer = await fetchRecordedVersionDownloads(assetId, version.number);
+    const answer = await fetchRecordedVersionDownloads(workId, version.number);
     setReading(
       answer.offered
         ? { state: "read", offered: answer.offered }
@@ -62,10 +57,10 @@ export function VersionDownload({
       <PopoverContent
         align="start"
         aria-label={`Download ${versionTitle(version).toLowerCase()}`}
+        className="p-3"
       >
         <VersionChoices
-          assetId={assetId}
-          kind={kind}
+          workId={workId}
           onRetry={read}
           reading={reading}
           version={version}
@@ -76,22 +71,20 @@ export function VersionDownload({
 }
 
 function VersionChoices({
-  assetId,
-  kind,
+  workId,
   version,
   reading,
   onRetry,
 }: {
-  assetId: string;
-  kind: string;
+  workId: string;
   version: RecordedVersion;
   reading: Reading;
   onRetry: () => void;
 }) {
   if (reading.state === "unread" || reading.state === "reading") {
     return (
-      <p aria-busy="true" className="text-meta text-mute">
-        Loading download options…
+      <p aria-busy="true" className="p-2 text-meta text-mute">
+        Loading the formats…
       </p>
     );
   }
@@ -103,38 +96,43 @@ function VersionChoices({
     );
   }
   const { offered } = reading;
-  if (offered.linkedInstallOnly) {
+  if (offered.hasPrivatePrompts) {
     return (
       <Refusal onRetry={null}>
-        File downloads are unavailable because this version contains protected
-        prompt content.
+        This version has private prompts, so it does not download as a file.
       </Refusal>
     );
   }
   if (offered.downloads.length === 0) {
     return (
       <Refusal onRetry={null}>
-        This version cannot be exported in any currently supported format.
+        This version cannot be written in any format Illarin offers.
       </Refusal>
     );
   }
   return (
-    <AssetChooser
-      appTargets={offered.appTargets}
-      assetId={assetId}
-      blocks={offered.blocks}
-      downloads={offered.downloads}
-      holdsNothing={assetHoldsNothing(offered.blocks)}
-      images={offered.media}
-      instances={[]}
-      isOwner={false}
-      kind={offered.kind}
-      kindLabel={kind}
-      linkedInstallOnly={false}
-      original={null}
-      refresh={noRefresh}
-      version={version}
-    />
+    <>
+      <p className="max-w-[42ch] px-2 pt-1 pb-2 text-meta text-mute">
+        Written now from what this version recorded on {versionDate(version)},
+        not the file uploaded then.
+      </p>
+      <ul className="flex list-none flex-col">
+        {orderedFormats(offered.downloads).map((one) => (
+          <li key={one.format}>
+            <a
+              className="flex min-h-11 items-center rounded-control px-3 text-ui text-ink outline-offset-3 hover:bg-accent-wash"
+              href={downloadAddress({
+                workId,
+                format: one.format,
+                version: version.number,
+              })}
+            >
+              {one.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 
@@ -142,11 +140,11 @@ function Refusal({
   children,
   onRetry,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   onRetry: (() => void) | null;
 }) {
   return (
-    <div className="grid justify-items-start gap-3">
+    <div className="grid justify-items-start gap-3 p-2">
       <p className="flex items-start gap-2 text-meta text-mute">
         <CircleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
         <span>{children}</span>

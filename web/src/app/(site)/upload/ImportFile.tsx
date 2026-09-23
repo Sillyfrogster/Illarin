@@ -9,18 +9,21 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
-import { browserFetch } from "@/lib/api/browser-mutation";
-import type { IngestOperation } from "@/lib/api/query";
+import { api } from "@/lib/api/client";
+import type { UploadOperation } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { fileWeight } from "@/lib/file-weight";
 
+const UNREACHABLE =
+  "Illarin could not be reached. Check your connection and try again.";
+
 const UNCONFIRMED =
-  "Confirm how to import the catalog details below, then upload the file.";
+  "Confirm how to import the details below, then upload the file.";
 
 export function ImportFile({
   onAccepted,
 }: {
-  onAccepted: (operation: IngestOperation) => void;
+  onAccepted: (operation: UploadOperation) => void;
 }) {
   const field = useId();
   const confirmField = useId();
@@ -62,23 +65,21 @@ export function ImportFile({
     setPending(true);
     setMessage("");
     try {
-      const response = await browserFetch("/api/v1/assets", {
+      const { data, error } = await api<UploadOperation>("POST", "/v1/works", {
         body,
-        credentials: "same-origin",
-        method: "POST",
       });
-      const answer = (await response.json()) as IngestOperation & {
-        error?: string;
-      };
-      if (!response.ok) {
-        setMessage(answer.error ?? "Illarin could not accept this file.");
+      if (!data) {
+        setMessage(
+          typeof error === "object" && error !== null
+            ? ((error as { error?: string }).error ??
+                "Illarin could not accept this file.")
+            : UNREACHABLE,
+        );
         return;
       }
-      onAccepted(answer);
+      onAccepted(data);
     } catch {
-      setMessage(
-        "Illarin could not be reached. Check your connection and try again.",
-      );
+      setMessage(UNREACHABLE);
     } finally {
       setPending(false);
     }
@@ -157,8 +158,8 @@ export function ImportFile({
               type="checkbox"
             />
             <span className="min-w-0">
-              Use the catalog details Illarin finds in this file. I can change
-              them afterwards.
+              Use the details Illarin finds in this file. I can change them
+              afterwards.
             </span>
           </label>
 

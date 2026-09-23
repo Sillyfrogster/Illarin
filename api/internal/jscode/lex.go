@@ -2,10 +2,10 @@ package jscode
 
 import "bytes"
 
-type kind uint8
+type tokenType uint8
 
 const (
-	punct kind = iota + 1
+	punct tokenType = iota + 1
 	name
 	number
 	regex
@@ -18,7 +18,7 @@ const (
 )
 
 type token struct {
-	kind       kind
+	tokenType  tokenType
 	start, end int
 }
 
@@ -55,9 +55,9 @@ func (l *lexer) read() token {
 		end, closed := quotedEnd(l.source, start)
 		l.at = end
 		if !closed {
-			return token{kind: unclosed, start: start, end: end}
+			return token{tokenType: unclosed, start: start, end: end}
 		}
-		return token{kind: text, start: start, end: end}
+		return token{tokenType: text, start: start, end: end}
 	case c == '`':
 		return l.template(start, true)
 	case c == '}' && l.closesSubstitution():
@@ -65,21 +65,21 @@ func (l *lexer) read() token {
 		return l.template(start, false)
 	case isNameByte(c):
 		l.at = wordEnd(l.source, start)
-		return token{kind: name, start: start, end: l.at}
+		return token{tokenType: name, start: start, end: l.at}
 	case isDigit(c) || (c == '.' && start+1 < len(l.source) && isDigit(l.source[start+1])):
 		l.at = numberEnd(l.source, start)
-		return token{kind: number, start: start, end: l.at}
+		return token{tokenType: number, start: start, end: l.at}
 	case c == '/' && l.expectsExpression():
 		if end, ok := regexEnd(l.source, start); ok {
 			l.at = end
-			return token{kind: regex, start: start, end: end}
+			return token{tokenType: regex, start: start, end: end}
 		}
 	case l.startsWith("...") || (l.startsWith("?.") && !(start+2 < len(l.source) && isDigit(l.source[start+2]))):
 		l.at = start + 2
 		if c == '.' {
 			l.at++
 		}
-		return token{kind: punct, start: start, end: l.at}
+		return token{tokenType: punct, start: start, end: l.at}
 	}
 	l.at = start + 1
 	switch c {
@@ -88,13 +88,13 @@ func (l *lexer) read() token {
 	case '}':
 		l.braces--
 	}
-	return token{kind: punct, start: start, end: l.at}
+	return token{tokenType: punct, start: start, end: l.at}
 }
 
 // expectsExpression says whether the last token leaves room for a value, where a slash starts a regular expression.
 func (l *lexer) expectsExpression() bool {
 	last := l.last
-	switch last.kind {
+	switch last.tokenType {
 	case 0:
 		return true
 	case name:
@@ -122,19 +122,19 @@ func (l *lexer) template(start int, whole bool) token {
 		case '`':
 			l.at++
 			if whole {
-				return token{kind: text, start: start, end: l.at}
+				return token{tokenType: text, start: start, end: l.at}
 			}
-			return token{kind: template, start: start, end: l.at}
+			return token{tokenType: template, start: start, end: l.at}
 		case '$':
 			if l.at+1 < len(l.source) && l.source[l.at+1] == '{' {
 				l.at += 2
 				l.substitutions = append(l.substitutions, l.braces)
-				return token{kind: template, start: start, end: l.at}
+				return token{tokenType: template, start: start, end: l.at}
 			}
 		}
 	}
 	l.at = len(l.source)
-	return token{kind: unclosed, start: start, end: l.at}
+	return token{tokenType: unclosed, start: start, end: l.at}
 }
 
 // skipSpace passes over white space and comments.
@@ -224,7 +224,7 @@ func wordEnd(source []byte, at int) int {
 }
 
 func (t token) is(source []byte, spelled string) bool {
-	return t.kind == punct && string(source[t.start:t.end]) == spelled
+	return t.tokenType == punct && string(source[t.start:t.end]) == spelled
 }
 
 // isDot says whether the token reaches into a member, optionally or not.

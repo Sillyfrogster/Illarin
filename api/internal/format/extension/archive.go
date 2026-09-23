@@ -11,11 +11,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 )
 
 const (
-	Kind = "extension"
+	Type = "extension"
 
 	// MaxArchiveBytes is the largest extension archive Illarin accepts.
 	MaxArchiveBytes = 32 << 20
@@ -30,7 +29,7 @@ const (
 )
 
 // checkArchive refuses an archive over the size limit or one that holds both apps' manifests.
-func checkArchive(file probe.Inspection) error {
+func checkArchive(file format.Inspection) error {
 	if file.ByteSize() > MaxArchiveBytes {
 		return format.LimitExceeded(fmt.Errorf(
 			"an extension archive may be up to %d MB, and this one is %.1f MB",
@@ -47,7 +46,7 @@ func checkArchive(file probe.Inspection) error {
 }
 
 // archiveManifest picks the manifest an archive is read by, preferring one where the app reads it over one found elsewhere.
-func archiveManifest(file probe.Inspection) (string, bool) {
+func archiveManifest(file format.Inspection) (string, bool) {
 	for _, manifest := range []string{spindleManifest, sillyTavernManifest} {
 		if hasEntry(file, manifest) {
 			return manifest, true
@@ -61,18 +60,18 @@ func archiveManifest(file probe.Inspection) (string, bool) {
 	return "", false
 }
 
-// claimArchive claims an archive for the module whose manifest it holds, even a misplaced one, so the refusal can say where it is.
-func claimArchive(file probe.Inspection, declaration format.Declaration, manifest string) (format.Claim, bool) {
+// matchArchive matches an archive for the module whose manifest it holds, even a misplaced one, so the refusal can say where it is.
+func matchArchive(file format.Inspection, declaration format.Declaration, manifest string) (format.Match, bool) {
 	if chosen, ok := archiveManifest(file); !ok || chosen != manifest {
-		return format.Claim{}, false
+		return format.Match{}, false
 	}
-	if claim, ok := format.ClaimByDeclaration(file, declaration); ok {
-		return claim, true
+	if match, ok := format.MatchByDeclaration(file, declaration); ok {
+		return match, true
 	}
-	return format.WholeFileCompatibilityClaim(file), true
+	return format.WholeFileCompatibilityMatch(file), true
 }
 
-func misplacedManifest(file probe.Inspection, manifest string) (string, bool) {
+func misplacedManifest(file format.Inspection, manifest string) (string, bool) {
 	for _, entry := range file.ZIPEntries {
 		if !entry.Directory && path.Base(entry.Name) == manifest && !strings.HasPrefix(entry.Name, "__MACOSX/") {
 			return entry.Name, true
@@ -81,7 +80,7 @@ func misplacedManifest(file probe.Inspection, manifest string) (string, bool) {
 	return "", false
 }
 
-func refuseMisplaced(file probe.Inspection, manifest string) error {
+func refuseMisplaced(file format.Inspection, manifest string) error {
 	found, _ := misplacedManifest(file, manifest)
 	return refuse(
 		"%s is at %s. Put it at the top of the zip, or in the one folder that holds everything else",
@@ -95,7 +94,7 @@ var readmeNames = []string{"readme.md", "readme.markdown", "readme"}
 var readmeFolders = []string{".github/", "", "docs/"}
 
 // readReadme reads the README beside the manifest, finding none where there is no README it can read as text.
-func readReadme(ctx context.Context, file probe.Inspection) (*format.Readme, error) {
+func readReadme(ctx context.Context, file format.Inspection) (*format.Readme, error) {
 	entry, ok := readmeEntry(file)
 	if !ok || entry.UncompressedSize > maxReadmeBytes {
 		return nil, nil
@@ -106,7 +105,7 @@ func readReadme(ctx context.Context, file probe.Inspection) (*format.Readme, err
 	}
 	defer opened.Close()
 	body, err := io.ReadAll(io.LimitReader(opened, maxReadmeBytes+1))
-	if errors.Is(err, probe.ErrRangeRead) {
+	if errors.Is(err, format.ErrRangeRead) {
 		return nil, format.InternalFailure(fmt.Errorf("read %s: %w", entry.Name, err))
 	}
 	if err != nil {
@@ -122,7 +121,7 @@ func readReadme(ctx context.Context, file probe.Inspection) (*format.Readme, err
 	return &format.Readme{Text: string(body), Root: file.ArchiveBase, Folder: folder}, nil
 }
 
-func readmeEntry(file probe.Inspection) (probe.ZIPEntry, bool) {
+func readmeEntry(file format.Inspection) (format.ZIPEntry, bool) {
 	for _, folder := range readmeFolders {
 		for _, wanted := range readmeNames {
 			for _, entry := range file.ZIPEntries {
@@ -133,11 +132,11 @@ func readmeEntry(file probe.Inspection) (probe.ZIPEntry, bool) {
 			}
 		}
 	}
-	return probe.ZIPEntry{}, false
+	return format.ZIPEntry{}, false
 }
 
-func hasEntry(file probe.Inspection, name string) bool {
-	return slices.ContainsFunc(file.ZIPEntries, func(entry probe.ZIPEntry) bool {
+func hasEntry(file format.Inspection, name string) bool {
+	return slices.ContainsFunc(file.ZIPEntries, func(entry format.ZIPEntry) bool {
 		return !entry.Directory && entry.Name == file.ArchiveBase+name
 	})
 }

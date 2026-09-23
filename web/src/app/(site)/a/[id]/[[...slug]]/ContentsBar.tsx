@@ -2,11 +2,11 @@
 
 import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { AssetBlock } from "@/lib/api/query";
+import type { WorkBlock } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { useWorkspace } from "./workspace/state";
 
-type ContentsBlock = Pick<AssetBlock, "id" | "title">;
+type ContentsBlock = Pick<WorkBlock, "id" | "title">;
 
 const TOOL =
   "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink";
@@ -114,9 +114,9 @@ export function ContentsBar({
 
         {writing && workspace.addableBlocks.length > 0 ? (
           <button
-            aria-expanded={workspace.pane?.kind === "catalog"}
+            aria-expanded={workspace.pane?.kind === "add-block"}
             className={cn(TOOL, "shrink-0")}
-            onClick={() => workspace.openPane({ kind: "catalog" })}
+            onClick={() => workspace.openPane({ kind: "add-block" })}
             type="button"
           >
             <Plus aria-hidden="true" size={17} />

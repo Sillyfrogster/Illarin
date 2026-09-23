@@ -14,9 +14,9 @@ import (
 
 type Renderer interface {
 	Prepare(context.Context, io.Reader) (Prepared, error)
-	Render(context.Context, io.Reader, string) (Derivative, error)
-	ComposeSocialPreview(context.Context, io.Reader, string) (Derivative, error)
-	DerivativeType() string
+	Render(context.Context, io.Reader, string) (Rendered, error)
+	ComposeLinkCard(context.Context, io.Reader, string) (Rendered, error)
+	ImageSizeMediaType() string
 }
 
 type Library struct {
@@ -33,7 +33,7 @@ func NewLibrary(store storage.Store, renderer Renderer, workers int) *Library {
 	return &Library{store: store, renderer: renderer, slots: make(chan struct{}, workers)}
 }
 
-func (l *Library) DerivativeType() string { return l.renderer.DerivativeType() }
+func (l *Library) ImageSizeMediaType() string { return l.renderer.ImageSizeMediaType() }
 
 func (l *Library) Accept(ctx context.Context, r io.Reader) (storage.StoredBlob, Prepared, error) {
 	stored, err := l.store.Put(ctx, r)
@@ -66,17 +66,17 @@ func (l *Library) Prepare(ctx context.Context, stored storage.StoredBlob) (Prepa
 	if closeErr != nil {
 		return Prepared{}, fmt.Errorf("close stored media: %w", closeErr)
 	}
-	for _, derivative := range prepared.Derivatives {
-		id := storage.DerivativeID{
+	for _, rendered := range prepared.Sizes {
+		id := storage.ImageSizeID{
 			SourceDigest: stored.Digest,
-			Variant:      derivative.Variant,
-			Version:      DerivativeVersion,
+			Size:         rendered.Size,
+			Version:      ImageSizeVersion,
 		}
-		if err := l.store.PutDerivative(ctx, id, derivative.Bytes); err != nil {
+		if err := l.store.PutImageSize(ctx, id, rendered.Bytes); err != nil {
 			if errors.Is(err, storage.ErrInsufficientSpace) {
 				break
 			}
-			return Prepared{}, fmt.Errorf("store %s media variant: %w", derivative.Variant, err)
+			return Prepared{}, fmt.Errorf("store %s media size: %w", rendered.Size, err)
 		}
 	}
 	return prepared, nil
@@ -86,13 +86,13 @@ func (l *Library) Serve(
 	ctx context.Context,
 	blobID uuid.UUID,
 	digest [sha256.Size]byte,
-	variant string,
+	size string,
 	version uint32,
 ) (string, error) {
-	id := storage.DerivativeID{SourceDigest: digest, Variant: variant, Version: version}
-	redirect, err := l.store.InternalDerivativeRedirect(ctx, id)
-	if errors.Is(err, storage.ErrDerivativeNotFound) {
-		job := l.flight.DoChan(fmt.Sprintf("%x/%s/%d", digest, variant, version), func() (any, error) {
+	id := storage.ImageSizeID{SourceDigest: digest, Size: size, Version: version}
+	redirect, err := l.store.InternalImageSizeRedirect(ctx, id)
+	if errors.Is(err, storage.ErrImageSizeNotFound) {
+		job := l.flight.DoChan(fmt.Sprintf("%x/%s/%d", digest, size, version), func() (any, error) {
 			return nil, l.render(ctx, blobID, id)
 		})
 		select {
@@ -103,15 +103,15 @@ func (l *Library) Serve(
 				return "", result.Err
 			}
 		}
-		redirect, err = l.store.InternalDerivativeRedirect(ctx, id)
+		redirect, err = l.store.InternalImageSizeRedirect(ctx, id)
 	}
 	if err != nil {
-		return "", fmt.Errorf("resolve media variant: %w", err)
+		return "", fmt.Errorf("resolve media size: %w", err)
 	}
 	return redirect, nil
 }
 
-func (l *Library) render(ctx context.Context, blobID uuid.UUID, id storage.DerivativeID) error {
+func (l *Library) render(ctx context.Context, blobID uuid.UUID, id storage.ImageSizeID) error {
 	release, err := l.acquireSlot(ctx)
 	if err != nil {
 		return err
@@ -121,22 +121,22 @@ func (l *Library) render(ctx context.Context, blobID uuid.UUID, id storage.Deriv
 	if err != nil {
 		return fmt.Errorf("open media for regeneration: %w", err)
 	}
-	var derivative Derivative
+	var rendered Rendered
 	var renderErr error
-	if _, composed := SocialPreviewByName(id.Variant); composed {
-		derivative, renderErr = l.renderer.ComposeSocialPreview(ctx, source, id.Variant)
+	if _, composed := LinkCardByName(id.Size); composed {
+		rendered, renderErr = l.renderer.ComposeLinkCard(ctx, source, id.Size)
 	} else {
-		derivative, renderErr = l.renderer.Render(ctx, source, id.Variant)
+		rendered, renderErr = l.renderer.Render(ctx, source, id.Size)
 	}
 	closeErr := source.Close()
 	if renderErr != nil {
-		return fmt.Errorf("regenerate media variant: %w", renderErr)
+		return fmt.Errorf("regenerate media size: %w", renderErr)
 	}
 	if closeErr != nil {
 		return fmt.Errorf("close media after regeneration: %w", closeErr)
 	}
-	if err := l.store.PutDerivative(ctx, id, derivative.Bytes); err != nil {
-		return fmt.Errorf("store regenerated media variant: %w", err)
+	if err := l.store.PutImageSize(ctx, id, rendered.Bytes); err != nil {
+		return fmt.Errorf("store regenerated media size: %w", err)
 	}
 	return nil
 }

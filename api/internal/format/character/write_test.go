@@ -14,15 +14,14 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
 func TestEveryCharacterFormatWritesFromRolesAlone(t *testing.T) {
 	t.Parallel()
-	asset := format.ExportAsset{
-		Kind:   Kind,
-		Header: format.Header{Name: "Ana", AssetVersion: "1.2", CreditedAuthor: "Wren"},
+	work := format.ExportWork{
+		Type:   Type,
+		Header: format.Header{Name: "Ana", WorkVersion: "1.2", CreditedAuthor: "Wren"},
 		Elements: []block.Element{
 			prose(block.RoleDescription, "Keeps the archive."),
 			greetings("Hello", "You again."),
@@ -30,7 +29,7 @@ func TestEveryCharacterFormatWritesFromRolesAlone(t *testing.T) {
 	}
 	for _, module := range Modules() {
 		t.Run(module.ID(), func(t *testing.T) {
-			artifact := write(t, module, asset)
+			artifact := write(t, module, work)
 			body := writtenBody(t, artifact.Body, module.ID())
 			if got := text(t, body["name"]); got != "Ana" {
 				t.Errorf("name = %q, want Ana", got)
@@ -52,8 +51,8 @@ func TestEveryCharacterFormatWritesFromRolesAlone(t *testing.T) {
 
 func TestACCv2CardCarriesNoV3OnlyKeys(t *testing.T) {
 	t.Parallel()
-	asset := format.ExportAsset{
-		Kind:   Kind,
+	work := format.ExportWork{
+		Type:   Type,
 		Header: format.Header{Name: "Ana", Nickname: "Archivist"},
 		Elements: []block.Element{
 			prose(block.RoleDescription, "Quiet"),
@@ -66,12 +65,12 @@ func TestACCv2CardCarriesNoV3OnlyKeys(t *testing.T) {
 			},
 		},
 		Preserved: []format.Remainder{{
-			Owner: format.OwnerAsset, Namespace: cardNamespace,
+			Owner: format.OwnerWork, Namespace: cardNamespace,
 			Payload: []byte(`{"assets":[{"type":"emotion","uri":"data:image/png;base64,AA"}],"creation_date":1717200000,"tags":["archivist"]}`),
 		}},
 	}
 
-	body := writtenBody(t, write(t, CCv2Module{}, asset).Body, V2)
+	body := writtenBody(t, write(t, CCv2Module{}, work).Body, V2)
 	for _, key := range v3OnlyKeys {
 		if _, present := body[key]; present {
 			t.Errorf("a CCv2 card carried %q", key)
@@ -85,8 +84,8 @@ func TestACCv2CardCarriesNoV3OnlyKeys(t *testing.T) {
 func TestACardIsWrittenIntoThePictureItBelongsTo(t *testing.T) {
 	t.Parallel()
 	picture := testPNG(t)
-	withCover := format.ExportAsset{
-		Kind:     Kind,
+	withCover := format.ExportWork{
+		Type:     Type,
 		Header:   format.Header{Name: "Ana"},
 		Elements: []block.Element{prose(block.RoleDescription, "Quiet"), greetings("Hello")},
 		Cover:    &format.ExportMedia{MediaType: "image/png", Data: picture},
@@ -99,8 +98,8 @@ func TestACardIsWrittenIntoThePictureItBelongsTo(t *testing.T) {
 		t.Fatal("the written file is not a PNG")
 	}
 	body := writtenBody(t, embedded.Body, V3)
-	if !bytes.Contains(body["assets"], []byte(defaultAssetURI)) {
-		t.Errorf("assets = %s, want the icon to point at the container", body["assets"])
+	if !bytes.Contains(body["assets"], []byte(defaultFileURI)) {
+		t.Errorf("works = %s, want the icon to point at the container", body["assets"])
 	}
 
 	withoutCover := withCover
@@ -113,27 +112,27 @@ func TestACardIsWrittenIntoThePictureItBelongsTo(t *testing.T) {
 
 func TestANonPNGCoverWritesADocumentAndKeepsThePicture(t *testing.T) {
 	t.Parallel()
-	asset := format.ExportAsset{
-		Kind:     Kind,
+	work := format.ExportWork{
+		Type:     Type,
 		Header:   format.Header{Name: "Ana"},
 		Elements: []block.Element{prose(block.RoleDescription, "Quiet"), greetings("Hello")},
 		Cover:    &format.ExportMedia{MediaType: "image/jpeg", Data: []byte("\xff\xd8\xff not a png")},
 	}
-	written := write(t, CCv3Module{}, asset)
+	written := write(t, CCv3Module{}, work)
 	if written.MediaType != "application/json" {
 		t.Fatalf("media type = %q, want a JSON document", written.MediaType)
 	}
 	body := writtenBody(t, written.Body, V3)
 	if !bytes.Contains(body["assets"], []byte("data:image/jpeg;base64,")) {
-		t.Errorf("assets = %s, want the cover inlined", body["assets"])
+		t.Errorf("works = %s, want the cover inlined", body["assets"])
 	}
 }
 
 func TestCharXWritesEveryPictureAsAFileTheCardNames(t *testing.T) {
 	t.Parallel()
 	expressionID, galleryID := uuid.New(), uuid.New()
-	asset := format.ExportAsset{
-		Kind:   Kind,
+	work := format.ExportWork{
+		Type:   Type,
 		Header: format.Header{Name: "Ana"},
 		Elements: []block.Element{
 			prose(block.RoleDescription, "Quiet"),
@@ -150,23 +149,23 @@ func TestCharXWritesEveryPictureAsAFileTheCardNames(t *testing.T) {
 		},
 	}
 
-	written := write(t, CharXModule{}, asset)
+	written := write(t, CharXModule{}, work)
 	if written.Extension != ".charx" {
 		t.Fatalf("extension = %q, want .charx", written.Extension)
 	}
 	files := archiveEntries(t, written.Body)
-	var records []cardAssetRecord
+	var records []cardFileRecord
 	body := writtenBody(t, files["card.json"], V3)
 	if err := json.Unmarshal(body["assets"], &records); err != nil {
-		t.Fatalf("read the written asset list: %v", err)
+		t.Fatalf("read the written work list: %v", err)
 	}
 	if len(records) != 3 {
-		t.Fatalf("asset records = %+v, want the cover, the expression and the gallery image", records)
+		t.Fatalf("work records = %+v, want the cover, the expression and the gallery image", records)
 	}
 	for _, record := range records {
 		entry, embedded := strings.CutPrefix(record.URI, embeddedPrefix)
 		if !embedded {
-			t.Fatalf("asset %q points at %q, want a file in the archive", record.Name, record.URI)
+			t.Fatalf("work %q points at %q, want a file in the archive", record.Name, record.URI)
 		}
 		if _, held := files[entry]; !held {
 			t.Errorf("the archive has no %q", entry)
@@ -183,8 +182,8 @@ func TestCharXWritesEveryPictureAsAFileTheCardNames(t *testing.T) {
 func TestCharXPutsEachPictureWhereTheAppsThatReadOneLook(t *testing.T) {
 	t.Parallel()
 	expressionID, galleryID := uuid.New(), uuid.New()
-	asset := format.ExportAsset{
-		Kind:   Kind,
+	work := format.ExportWork{
+		Type:   Type,
 		Header: format.Header{Name: "Ana"},
 		Elements: []block.Element{
 			prose(block.RoleDescription, "Quiet"),
@@ -201,7 +200,7 @@ func TestCharXPutsEachPictureWhereTheAppsThatReadOneLook(t *testing.T) {
 		},
 	}
 
-	files := archiveEntries(t, write(t, CharXModule{}, asset).Body)
+	files := archiveEntries(t, write(t, CharXModule{}, work).Body)
 	for _, wanted := range []string{
 		"assets/icon/image/main.png",
 		"assets/emotion/image/2.png",
@@ -226,7 +225,7 @@ func TestACardWrittenBackReadsAsTheSameContent(t *testing.T) {
 			"character_book":{"entries":[{"keys":["ledger"],"content":"A debt."}]}}
 	}`
 	parsed := resolveAndParse(t, jsonCard(t, source))
-	written := write(t, CCv3Module{}, exportAssetOf(parsed))
+	written := write(t, CCv3Module{}, exportWorkOf(parsed))
 	reread := resolveAndParse(t, inspect(t, written.Body, "ana.json"))
 
 	for _, role := range []block.Role{
@@ -260,22 +259,22 @@ func TestACardWrittenBackReadsAsTheSameContent(t *testing.T) {
 	}
 }
 
-func write(t *testing.T, module format.Module, asset format.ExportAsset) format.Artifact {
+func write(t *testing.T, module format.Module, work format.ExportWork) format.MainFile {
 	t.Helper()
 	writer, ok := module.(format.Writer)
 	if !ok {
 		t.Fatalf("module %q declares no writer", module.ID())
 	}
-	artifact, err := writer.Write(context.Background(), asset)
+	artifact, err := writer.Write(context.Background(), work)
 	if err != nil {
 		t.Fatalf("write %s: %v", module.ID(), err)
 	}
 	return artifact
 }
 
-func exportAssetOf(parsed format.Parsed) format.ExportAsset {
-	return format.ExportAsset{
-		Kind: parsed.Kind, Header: parsed.Header,
+func exportWorkOf(parsed format.Parsed) format.ExportWork {
+	return format.ExportWork{
+		Type: parsed.Type, Header: parsed.Header,
 		Elements: parsed.Elements, Preserved: parsed.Remainder,
 	}
 }
@@ -360,25 +359,25 @@ func images(role block.Role, items ...block.ImageItem) block.Element {
 	}
 }
 
-func TestEveryCharacterOriginWritesEveryCharacterTarget(t *testing.T) {
+func TestEveryCharacterOriginWritesEveryCharacterFormat(t *testing.T) {
 	t.Parallel()
 	body := `"name":"Ana","description":"Keeps the archive.","first_mes":"Hello",
 		"alternate_greetings":["You again."],
 		"character_book":{"entries":[{"keys":["ledger"],"content":"A debt."}]}`
-	origins := map[string]probe.Inspection{
+	originalFormats := map[string]format.Inspection{
 		V2:    jsonCard(t, `{"spec":"chara_card_v2","spec_version":"2.0","data":{`+body+`}}`),
 		V3:    jsonCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":{`+body+`}}`),
 		CharX: charxCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":{`+body+`}}`, nil),
 	}
 	for _, module := range Modules() {
 		declaration := module.Declaration()
-		for origin, file := range origins {
-			if !slices.Contains(declaration.TestedOrigins, origin) {
-				t.Fatalf("%s declares no tested origin for %s", module.ID(), origin)
+		for originalFormat, file := range originalFormats {
+			if !slices.Contains(declaration.TestedOriginalFormats, originalFormat) {
+				t.Fatalf("%s declares no tested original format for %s", module.ID(), originalFormat)
 			}
-			t.Run(origin+"-to-"+module.ID(), func(t *testing.T) {
+			t.Run(originalFormat+"-to-"+module.ID(), func(t *testing.T) {
 				parsed := resolveAndParse(t, file)
-				written := write(t, module, exportAssetOf(parsed))
+				written := write(t, module, exportWorkOf(parsed))
 				fields := writtenBody(t, written.Body, module.ID())
 				if got := text(t, fields["description"]); got != "Keeps the archive." {
 					t.Errorf("description = %q", got)
@@ -396,8 +395,8 @@ func TestEveryCharacterOriginWritesEveryCharacterTarget(t *testing.T) {
 
 func TestAV3CardCarriesAV2CopyOfItself(t *testing.T) {
 	t.Parallel()
-	asset := format.ExportAsset{
-		Kind:     Kind,
+	work := format.ExportWork{
+		Type:     Type,
 		Header:   format.Header{Name: "Ana", Nickname: "Archivist"},
 		Elements: []block.Element{prose(block.RoleDescription, "Quiet"), greetings("Hello")},
 		Cover:    &format.ExportMedia{MediaType: "image/png", Data: testPNG(t)},
@@ -407,7 +406,7 @@ func TestAV3CardCarriesAV2CopyOfItself(t *testing.T) {
 			continue
 		}
 		t.Run(module.ID(), func(t *testing.T) {
-			picture := write(t, module, asset).Body
+			picture := write(t, module, work).Body
 			chunks := cardChunks(t, picture)
 			if len(chunks) != 2 {
 				t.Fatalf("card chunks = %v, want the v3 card and its v2 copy", keysOf(chunks))
@@ -435,12 +434,12 @@ func TestAV3CardCarriesAV2CopyOfItself(t *testing.T) {
 
 func TestAV3DocumentRepeatsTheFieldsAnOlderReaderLooksFor(t *testing.T) {
 	t.Parallel()
-	asset := format.ExportAsset{
-		Kind:     Kind,
+	work := format.ExportWork{
+		Type:     Type,
 		Header:   format.Header{Name: "Ana"},
 		Elements: []block.Element{prose(block.RoleDescription, "Quiet"), greetings("Hello")},
 	}
-	written := write(t, CCv3Module{}, asset)
+	written := write(t, CCv3Module{}, work)
 	document := decodeObject(t, written.Body)
 	if text(t, document["name"]) != "Ana" || text(t, document["description"]) != "Quiet" ||
 		text(t, document["first_mes"]) != "Hello" {
@@ -454,8 +453,8 @@ func TestAV3DocumentRepeatsTheFieldsAnOlderReaderLooksFor(t *testing.T) {
 func cardChunks(t *testing.T, picture []byte) map[string][]byte {
 	t.Helper()
 	found := make(map[string][]byte)
-	err := visitPNGChunks(picture, func(kind string, data, _ []byte) error {
-		if !isCardChunk(kind, data) {
+	err := visitPNGChunks(picture, func(chunkType string, data, _ []byte) error {
+		if !isCardChunk(chunkType, data) {
 			return nil
 		}
 		keyword, encoded, _ := bytes.Cut(data, []byte{0})
@@ -503,13 +502,13 @@ func TestEachCardWritesEveryHeaderFieldItDeclares(t *testing.T) {
 	written := map[format.HeaderField]string{
 		format.HeaderName:           "name",
 		format.HeaderCreditedAuthor: "creator",
-		format.HeaderAssetVersion:   "character_version",
+		format.HeaderWorkVersion:    "character_version",
 		format.HeaderNickname:       "nickname",
 	}
-	subject := format.ExportAsset{
-		Kind: Kind,
+	subject := format.ExportWork{
+		Type: Type,
 		Header: format.Header{
-			Name: "Ana", AssetVersion: "1.2", CreditedAuthor: "Wren", Nickname: "Archivist",
+			Name: "Ana", WorkVersion: "1.2", CreditedAuthor: "Wren", Nickname: "Archivist",
 		},
 		Elements: []block.Element{
 			prose(block.RoleDescription, "Keeps the archive."),
@@ -537,8 +536,8 @@ func TestEachCardWritesEveryHeaderFieldItDeclares(t *testing.T) {
 func TestAWriterMintsNoRecordForAGalleryImageItWasNotGiven(t *testing.T) {
 	t.Parallel()
 	travelling, left := uuid.New(), uuid.New()
-	asset := format.ExportAsset{
-		Kind:   Kind,
+	work := format.ExportWork{
+		Type:   Type,
 		Header: format.Header{Name: "Ana"},
 		Elements: []block.Element{
 			prose(block.RoleDescription, "Quiet"),
@@ -554,10 +553,10 @@ func TestAWriterMintsNoRecordForAGalleryImageItWasNotGiven(t *testing.T) {
 	}
 
 	for _, module := range []format.Writer{CCv3Module{}, CharXModule{}} {
-		card := writtenCard(t, module, write(t, module, asset))
-		var records []cardAssetRecord
+		card := writtenCard(t, module, write(t, module, work))
+		var records []cardFileRecord
 		if err := json.Unmarshal(card["assets"], &records); err != nil {
-			t.Fatalf("read %s's asset list: %v", module.ID(), err)
+			t.Fatalf("read %s's work list: %v", module.ID(), err)
 		}
 		if len(records) != 1 || records[0].Name != "At the door" {
 			t.Fatalf("%s wrote %+v, want the one gallery image it was given",
@@ -569,7 +568,7 @@ func TestAWriterMintsNoRecordForAGalleryImageItWasNotGiven(t *testing.T) {
 func writtenCard(
 	t *testing.T,
 	module format.Writer,
-	written format.Artifact,
+	written format.MainFile,
 ) map[string]json.RawMessage {
 	t.Helper()
 	if module.ID() != CharX {

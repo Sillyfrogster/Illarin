@@ -4,25 +4,24 @@ import { Upload } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
-import { RailBack } from "@/components/workspace/WorkspaceRail";
 import {
-  acceptAssetReplacement,
-  cancelAssetReplacement,
-  type IngestOperation,
+  acceptWorkReplacement,
+  cancelWorkReplacement,
+  PromptsMadePublicError,
   type ReplacementDecision,
-  readIngestOperation,
-  SealedExposureError,
-  uploadAssetReplacement,
+  readUploadOperation,
+  type UploadOperation,
+  uploadWorkReplacement,
   type VersionChangeGroup,
 } from "@/lib/api/query";
+import { useDraftedChanges } from "@/lib/drafted-changes";
+import { replacementSubjectLabel } from "@/lib/replacement-subject";
 import {
   replacementAction,
   replacementReady,
   unsettledReplacement,
-} from "@/lib/asset-publication";
-import { replacementSubjectLabel } from "@/lib/replacement-subject";
-import { useWorkingCopy } from "@/lib/working-copy";
-import { UnsealConfirmation } from "../UnsealConfirmation";
+} from "@/lib/work-publish";
+import { MakePublicConfirmation } from "../MakePublicConfirmation";
 import { Note } from "./fields";
 import { ReplacementWarnings } from "./ReplacementWarnings";
 import { useWorkspace } from "./state";
@@ -31,22 +30,20 @@ const POLL_MS = 600;
 
 export function ReplacementStep({
   onApplied,
-  onBack,
   onDiscarded,
   waiting,
   onWaiting,
 }: {
   onApplied: (groups: VersionChangeGroup[]) => void;
-  onBack: () => void;
   onDiscarded: () => void;
-  waiting: IngestOperation | null;
-  onWaiting: (operation: IngestOperation | null) => void;
+  waiting: UploadOperation | null;
+  onWaiting: (operation: UploadOperation | null) => void;
 }) {
   const workspace = useWorkspace();
-  const candidate = useWorkingCopy();
+  const candidate = useDraftedChanges();
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [operation, setOperation] = useState<IngestOperation | null>(waiting);
+  const [operation, setOperation] = useState<UploadOperation | null>(waiting);
   const [decisions, setDecisions] = useState<ReplacementDecision>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -63,20 +60,20 @@ export function ReplacementStep({
   useEffect(() => {
     if (!operation || !reading) return;
     const current = operation;
-    let watching = true;
+    let polling = true;
     async function poll() {
-      while (watching) {
+      while (polling) {
         await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-        if (!watching) return;
+        if (!polling) return;
         try {
-          const next = await readIngestOperation(current.url);
-          if (!watching) return;
+          const next = await readUploadOperation(current.url);
+          if (!polling) return;
           setOperation(next);
           onWaiting(unsettledReplacement(next));
           if (next.status !== "pending" && next.status !== "processing") return;
         } catch {
           setMessage(
-            "Import status is unavailable. Reopen this panel to check again. Your published asset has not changed.",
+            "Import status is unavailable. Reopen this panel to check again. Your published work has not changed.",
           );
           return;
         }
@@ -84,7 +81,7 @@ export function ReplacementStep({
     }
     void poll();
     return () => {
-      watching = false;
+      polling = false;
     };
   }, [operation, reading, onWaiting]);
 
@@ -109,7 +106,7 @@ export function ReplacementStep({
     try {
       await work();
     } catch (error) {
-      if (error instanceof SealedExposureError) {
+      if (error instanceof PromptsMadePublicError) {
         setExposure(error.prompts);
         return;
       }
@@ -124,7 +121,7 @@ export function ReplacementStep({
     }
   }
 
-  function act(exposeProtected = false) {
+  function act(makePromptsPublic = false) {
     if (operation?.status === "failed") {
       beginAgain();
       return;
@@ -132,12 +129,12 @@ export function ReplacementStep({
     if (staged) {
       const groups = staged.preview.groups;
       void run(async () => {
-        await acceptAssetReplacement(
+        await acceptWorkReplacement(
           candidate,
-          workspace.assetId,
+          workspace.workId,
           staged.id,
           decisions,
-          exposeProtected,
+          makePromptsPublic,
         );
         setExposure(null);
         onApplied(groups);
@@ -147,22 +144,13 @@ export function ReplacementStep({
     if (!file) return;
     void run(async () => {
       setOperation(
-        await uploadAssetReplacement(candidate, workspace.assetId, file),
+        await uploadWorkReplacement(candidate, workspace.workId, file),
       );
     });
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <RailBack onClick={onBack}>Publication</RailBack>
-      <h3 className="font-display text-section font-medium text-ink">
-        Replace the file
-      </h3>
-      <Note>
-        Import a replacement file into your working copy. Review its changes
-        before publishing an update.
-      </Note>
-
       {reading ? (
         <p aria-live="polite" className="text-ui text-ink">
           Illarin is reading your file. Readers keep the published version while
@@ -183,7 +171,7 @@ export function ReplacementStep({
         <div className="flex flex-col gap-5">
           <p className="text-ui text-ink">
             Read as {staged.preview.format}. New content stays private until you
-            publish. Removing prompt protection requires a separate confirmation
+            publish. Making private prompts public needs a separate confirmation
             because it can affect text already published.
           </p>
           <ReplacementWarnings preview={staged.preview} />
@@ -257,12 +245,12 @@ export function ReplacementStep({
           >
             <Upload aria-hidden="true" size={22} strokeWidth={1.35} />
             <span className="text-ui font-medium text-ink wrap-anywhere">
-              {file ? file.name : "Choose the replacement file"}
+              {file ? file.name : "Choose the file"}
             </span>
             <span className="text-meta text-mute">
               {file
                 ? "Choose a different file"
-                : "It must be the same kind of asset as this one"}
+                : "It must be the same type as this one"}
             </span>
           </label>
         </div>
@@ -291,7 +279,7 @@ export function ReplacementStep({
             disabled={busy}
             onClick={() =>
               void run(async () => {
-                await cancelAssetReplacement(workspace.assetId, staged.id);
+                await cancelWorkReplacement(workspace.workId, staged.id);
                 onDiscarded();
               })
             }
@@ -302,13 +290,15 @@ export function ReplacementStep({
         ) : null}
       </div>
       {exposure ? (
-        <UnsealConfirmation
+        <MakePublicConfirmation
           prompts={exposure}
-          keepsASeal={staged !== null && staged.preview.seals > 0}
+          keepsAPrivatePrompt={
+            staged !== null && staged.preview.privatePrompts > 0
+          }
           pending={busy}
           replacement
-          onKeepSealed={() => setExposure(null)}
-          onExpose={() => act(true)}
+          onKeepPrivate={() => setExposure(null)}
+          onMakePublic={() => act(true)}
         />
       ) : null}
     </div>

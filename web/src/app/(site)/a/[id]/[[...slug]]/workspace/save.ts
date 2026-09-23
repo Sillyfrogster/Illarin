@@ -1,26 +1,25 @@
 import type {
-  AssetBlock,
-  AssetElement,
-  SaveAssetBlockRequest,
+  SaveWorkBlockRequest,
+  WorkBlock,
+  WorkElement,
 } from "@/lib/api/query";
 import { writesInPlace as writtenInPlace } from "@/lib/page-arrangement";
-import type { AllowedApp } from "../SealedPolicy";
 
-export function writesInPlace(element: AssetElement): boolean {
+export function writesInPlace(element: WorkElement): boolean {
   return writtenInPlace(element.type);
 }
 
 export function blockSaveRequest(
-  block: AssetBlock,
+  block: WorkBlock,
   changes: {
     title?: string | null;
-    layout?: AssetBlock["layout"];
-    width?: AssetBlock["width"];
-    elements?: AssetElement[];
-    allowedApps?: AllowedApp[];
-    exposeProtected?: boolean;
+    layout?: WorkBlock["layout"];
+    width?: WorkBlock["width"];
+    elements?: WorkElement[];
+    allowedApps?: string[];
+    makePromptsPublic?: boolean;
   } = {},
-): SaveAssetBlockRequest {
+): SaveWorkBlockRequest {
   return {
     title:
       changes.title !== undefined
@@ -31,7 +30,7 @@ export function blockSaveRequest(
     layout: changes.layout ?? block.layout,
     width: changes.width ?? block.width,
     allowedApps: changes.allowedApps,
-    exposeProtected: changes.exposeProtected,
+    makePromptsPublic: changes.makePromptsPublic,
     elements: (changes.elements ?? block.elements).map((element) => ({
       id: element.id,
       type: element.type,
@@ -45,16 +44,35 @@ export function blockSaveRequest(
 }
 
 export function replaceBlock(
-  blocks: AssetBlock[],
-  saved: AssetBlock,
-): AssetBlock[] {
+  blocks: WorkBlock[],
+  saved: WorkBlock,
+): WorkBlock[] {
   return blocks.map((block) => (block.id === saved.id ? saved : block));
 }
 
+export function acknowledgeBlock(
+  current: WorkBlock,
+  sent: WorkBlock,
+  saved: WorkBlock,
+): WorkBlock {
+  return {
+    ...saved,
+    title: current.title === sent.title ? saved.title : current.title,
+    titleIsDefault:
+      current.title === sent.title
+        ? saved.titleIsDefault
+        : current.titleIsDefault,
+    layout: current.layout === sent.layout ? saved.layout : current.layout,
+    width: current.width === sent.width ? saved.width : current.width,
+    elements:
+      current.elements === sent.elements ? saved.elements : current.elements,
+  };
+}
+
 export function replaceElement(
-  block: AssetBlock,
-  element: AssetElement,
-): AssetBlock {
+  block: WorkBlock,
+  element: WorkElement,
+): WorkBlock {
   return {
     ...block,
     elements: block.elements.map((item) =>
@@ -64,8 +82,8 @@ export function replaceElement(
 }
 
 export function changedBlockIds(
-  draft: AssetBlock[],
-  saved: AssetBlock[],
+  draft: WorkBlock[],
+  saved: WorkBlock[],
 ): string[] {
   const before = new Map(saved.map((block) => [block.id, block]));
   return draft
@@ -76,7 +94,7 @@ export function changedBlockIds(
     .map((block) => block.id);
 }
 
-function sameContent(left: AssetBlock, right: AssetBlock): boolean {
+function sameContent(left: WorkBlock, right: WorkBlock): boolean {
   return (
     left.title === right.title &&
     left.layout === right.layout &&
@@ -86,7 +104,7 @@ function sameContent(left: AssetBlock, right: AssetBlock): boolean {
   );
 }
 
-function contentOf(element: AssetElement) {
+function contentOf(element: WorkElement) {
   return {
     id: element.id,
     display: element.display,
@@ -95,39 +113,20 @@ function contentOf(element: AssetElement) {
   };
 }
 
-export function isEmptyContent(element: AssetElement): boolean {
-  const content = element.content as Record<string, unknown>;
+export function isEmptyContent(element: WorkElement): boolean {
+  const content = element.content;
   if ("text" in content) return String(content.text ?? "").trim() === "";
   if ("texts" in content) {
-    return (content.texts as { text: string }[]).every(
-      (item) => item.text.trim() === "",
-    );
+    return content.texts.every((item) => item.text.trim() === "");
   }
   if ("turns" in content) {
-    return (content.turns as { text: string }[]).every(
-      (turn) => turn.text.trim() === "",
-    );
+    return content.turns.every((turn) => turn.text.trim() === "");
   }
   if ("fields" in content) {
-    return (content.fields as { value: string }[]).every(
-      (field) => field.value.trim() === "",
-    );
+    return content.fields.every((field) => field.value.trim() === "");
   }
   if ("links" in content) {
-    return (content.links as { url: string }[]).every(
-      (link) => link.url.trim() === "",
-    );
+    return content.links.every((link) => link.url.trim() === "");
   }
   return element.isEmpty;
-}
-
-export function firstCursor(element: AssetElement): string | null {
-  if (!writesInPlace(element)) return null;
-  const content = element.content as Record<string, unknown>;
-  if ("text" in content) return `${element.id}:text`;
-  if ("texts" in content) return `${element.id}:0:text`;
-  if ("turns" in content) return `${element.id}:0:speaker`;
-  if ("fields" in content) return `${element.id}:0:name`;
-  if ("links" in content) return `${element.id}:0:label`;
-  return null;
 }

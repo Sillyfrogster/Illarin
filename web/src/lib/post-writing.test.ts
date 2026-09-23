@@ -4,15 +4,13 @@ import type {
   PostDeletion,
   PostMedia,
   PostSchedule,
-  PublicationApp,
 } from "@/lib/api/query";
 import {
   draftFromPost,
   mergedMedia,
-  namedRelease,
   postNotices,
-  publicationActions,
-  publicationLabel,
+  publishActions,
+  publishLabel,
   savingWords,
   writerStanding,
 } from "./post-writing";
@@ -25,8 +23,8 @@ function post(shape: Partial<Post>): Post {
     summary: "",
     slug: "a-title",
     category: { id: "cat-1", label: "News", slug: "news" },
-    document: { version: 1, content: [] },
-    documentVersion: 1,
+    body: { version: 1, content: [] },
+    bodyVersion: 1,
     media: [],
     formerAddresses: [],
     version: 3,
@@ -56,7 +54,7 @@ const deletion: PostDeletion = {
   by: "writer",
 };
 
-const withdrawal = {
+const unpublishing = {
   reason: "The numbers were wrong.",
   explanation: "",
   by: "editor",
@@ -68,8 +66,8 @@ describe("savingWords", () => {
     expect(savingWords("clean", post({ status: "published" }))).toBe(
       "Published",
     );
-    expect(savingWords("clean", post({ status: "withdrawn" }))).toBe(
-      "Withdrawn",
+    expect(savingWords("clean", post({ status: "unpublished" }))).toBe(
+      "Unpublished",
     );
     expect(savingWords("clean", post({}))).toBe("Saved privately");
   });
@@ -96,44 +94,27 @@ describe("writerStanding", () => {
   });
 });
 
-describe("publicationActions", () => {
-  test("a draft can be published, scheduled and discarded", () => {
-    expect(publicationActions(post({}), false)).toEqual([
-      "publish",
-      "schedule",
-      "delete",
-    ]);
-  });
-
-  test("a published post publishes changes and comes down, and cannot be deleted", () => {
-    expect(publicationActions(post({ status: "published" }), true)).toEqual([
-      "publish",
-      "schedule",
-      "withdraw",
-    ]);
-  });
-
-  test("a withdrawn post goes back up, and only an admin may delete it", () => {
-    const down = post({ status: "withdrawn", publishedAt: "2026-09-02" });
-    expect(publicationActions(down, false)).toEqual(["republish"]);
-    expect(publicationActions(down, true)).toEqual(["republish", "delete"]);
-  });
-
-  test("a deleted post offers recovery and nothing else", () => {
-    expect(publicationActions(post({ deletion }), true)).toEqual(["recover"]);
-  });
+test("publishing offers depend on the post's current state", () => {
+  expect(publishActions(post({}))).toEqual(["publish", "schedule"]);
+  expect(publishActions(post({ status: "published" }))).toEqual([
+    "publish",
+    "schedule",
+    "unpublish",
+  ]);
+  expect(publishActions(post({ status: "unpublished" }))).toEqual([
+    "republish",
+  ]);
+  expect(publishActions(post({ deletion }))).toEqual(["recover"]);
 });
 
-describe("publicationLabel", () => {
+describe("publishLabel", () => {
   test("names what the control is about to open", () => {
-    expect(publicationLabel(post({}))).toBe("Publish");
-    expect(publicationLabel(post({ status: "published" }))).toBe(
-      "Publish changes",
-    );
-    expect(publicationLabel(post({ status: "withdrawn" }))).toBe(
+    expect(publishLabel(post({}))).toBe("Publish");
+    expect(publishLabel(post({ status: "published" }))).toBe("Publish changes");
+    expect(publishLabel(post({ status: "unpublished" }))).toBe(
       "Republish post",
     );
-    expect(publicationLabel(post({ deletion }))).toBe("Restore post");
+    expect(publishLabel(post({ deletion }))).toBe("Restore post");
   });
 });
 
@@ -144,24 +125,24 @@ describe("postNotices", () => {
 
   test("a deleted post says only that, and what it was deleted from", () => {
     const said = postNotices(
-      post({ status: "withdrawn", deletion, withdrawal }),
+      post({ status: "unpublished", deletion, unpublishing }),
     );
     expect(said).toHaveLength(1);
     expect(said[0].kind).toBe("deleted");
     expect(said[0].tone).toBe("stop");
-    expect(said[0].record).toBe("Deleted while withdrawn.");
+    expect(said[0].record).toBe("Deleted while unpublished.");
   });
 
-  test("a withdrawal carries the record readers never see", () => {
-    const said = postNotices(post({ status: "withdrawn", withdrawal }));
+  test("a unpublishing carries the record readers never see", () => {
+    const said = postNotices(post({ status: "unpublished", unpublishing }));
     expect(said[0].record).toBe("The numbers were wrong.");
   });
 
-  test("a withdrawn post waiting to go live says both", () => {
+  test("a unpublished post waiting to go live says both", () => {
     const said = postNotices(
-      post({ status: "withdrawn", withdrawal, schedule: schedule({}) }),
+      post({ status: "unpublished", unpublishing, schedule: schedule({}) }),
     );
-    expect(said.map((one) => one.kind)).toEqual(["withdrawn", "scheduled"]);
+    expect(said.map((one) => one.kind)).toEqual(["unpublished", "scheduled"]);
   });
 
   test("a stopped schedule is trouble and a waiting one is not", () => {
@@ -189,34 +170,23 @@ describe("draftFromPost", () => {
     const source = post({
       summary: "A summary",
       header: { mediaId: "m1", alt: "A picture" },
-      socialMediaId: "m2",
-      release: {
-        app: {
-          id: "app-1",
-          name: "Illarin",
-          slug: "illarin",
-          home: "https://one",
-        },
-        version: "2.4.0",
-      },
+      linkCardMediaId: "m2",
     } as Partial<Post>);
     expect(draftFromPost(source)).toEqual({
       categoryId: "cat-1",
       title: "A title",
       summary: "A summary",
       slug: "a-title",
-      document: { version: 1, content: [] },
+      body: { version: 1, content: [] },
       header: { mediaId: "m1", alt: "A picture", caption: "" },
-      socialMediaId: "m2",
-      release: { appId: "app-1", version: "2.4.0", address: "" },
+      linkCardMediaId: "m2",
     });
   });
 
-  test("a post with no picture and no release carries neither", () => {
+  test("a post with no picture carries none", () => {
     const made = draftFromPost(post({}));
     expect(made.header).toBeNull();
-    expect(made.release).toBeNull();
-    expect(made.socialMediaId).toBeNull();
+    expect(made.linkCardMediaId).toBeNull();
   });
 });
 
@@ -240,32 +210,5 @@ describe("mergedMedia", () => {
   test("prefers the saved copy of a picture it already knows", () => {
     const saved = { ...media("a"), url: "/moved" };
     expect(mergedMedia([media("a")], [saved])[0].url).toBe("/moved");
-  });
-});
-
-describe("namedRelease", () => {
-  const open = [
-    { id: "app-1", name: "Illarin", slug: "illarin", home: "https://one" },
-  ] as PublicationApp[];
-
-  test("keeps a retired project listed while a post still names it", () => {
-    const retired = {
-      id: "app-9",
-      name: "Retired",
-      slug: "retired",
-      home: "https://nine",
-    } as PublicationApp;
-    const listed = namedRelease(
-      open,
-      post({ release: { app: retired, version: "1" } } as Partial<Post>),
-    );
-    expect(listed.map((one) => one.id)).toEqual(["app-9", "app-1"]);
-  });
-
-  test("does not list a project twice", () => {
-    const naming = post({
-      release: { app: open[0], version: "1" },
-    } as Partial<Post>);
-    expect(namedRelease(open, naming)).toHaveLength(1);
   });
 });

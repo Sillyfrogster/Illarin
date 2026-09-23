@@ -12,26 +12,26 @@ import (
 	"github.com/google/uuid"
 )
 
-func (Module) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	entries := bookEntries(asset)
+func (Module) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
+	entries := bookEntries(work)
 	body := map[string]json.RawMessage{
-		"name":     keys.Must(asset.Header.Name),
+		"name":     keys.Must(work.Header.Name),
 		entriesKey: keys.Must(book.Write(entries)),
 	}
-	if err := restorePreserved(body, entries, asset.Preserved); err != nil {
-		return format.Artifact{}, err
+	if err := restorePreserved(body, entries, work.Preserved); err != nil {
+		return format.MainFile{}, err
 	}
 	document, err := json.Marshal(body)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the lorebook: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the lorebook: %w", err)
 	}
-	return format.Artifact{
+	return format.MainFile{
 		Body: document, MediaType: "application/json", Extension: ".json",
 	}, nil
 }
 
-func bookEntries(asset format.ExportAsset) []block.Entry {
-	content, ok := asset.Content(block.RoleLorebookEntries)
+func bookEntries(work format.ExportWork) []block.Entry {
+	content, ok := work.Content(block.RoleLorebookEntries)
 	if !ok {
 		return nil
 	}
@@ -63,9 +63,9 @@ func restorePreserved(
 			fields = nil
 		}
 		switch {
-		case row.Owner == format.OwnerAsset && row.Namespace == bookNamespace:
+		case row.Owner == format.OwnerWork && row.Namespace == bookNamespace:
 			keys.MergeAbsent(body, fields)
-		case row.Owner == format.OwnerAsset:
+		case row.Owner == format.OwnerWork:
 			if _, held := extensions[row.Namespace]; !held {
 				extensions[row.Namespace] = row.Payload
 			}

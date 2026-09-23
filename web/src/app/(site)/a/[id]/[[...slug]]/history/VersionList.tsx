@@ -8,8 +8,8 @@ import {
   TimelineItem,
 } from "@/components/ui/timeline";
 import type { RecordedVersion } from "@/lib/api/query";
-import { versionDate, versionTitle } from "@/lib/asset-updates";
 import { cn } from "@/lib/cn";
+import { versionDate, versionTitle } from "@/lib/work-versions";
 
 /** VersionList runs every recorded version down one line, newest first. */
 export function VersionList({

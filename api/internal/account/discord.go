@@ -7,19 +7,29 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// BeginDiscord keeps the app and NSFW preferences for the account a first Discord sign-in creates
 func (s *Service) BeginDiscord(
 	ctx context.Context,
 	sessionToken string,
 	intent DiscordIntent,
+	app string,
+	nsfw NSFWPreference,
 ) (DiscordAuthorization, error) {
 	if s.discord == nil {
 		return DiscordAuthorization{}, ErrDiscordUnavailable
+	}
+	if app != "" && !ValidApp(app) {
+		return DiscordAuthorization{}, FieldError{Field: "app", Message: "Choose one of the apps listed, or any."}
+	}
+	if nsfw != "" && !nsfw.valid() {
+		return DiscordAuthorization{}, FieldError{Field: "nsfw", Message: "Choose hidden, blurred or shown."}
 	}
 	userID := pgtype.UUID{}
 	if intent == DiscordAttach {
@@ -38,6 +48,7 @@ func (s *Service) BeginDiscord(
 			return DiscordAuthorization{}, ErrEmailUnverified
 		}
 		userID = current.ID
+		app, nsfw = "", ""
 	} else {
 		intent = DiscordSignIn
 	}
@@ -46,11 +57,14 @@ func (s *Service) BeginDiscord(
 		return DiscordAuthorization{}, err
 	}
 	expires := time.Now().Add(oauthStateLifetime)
+	chosen := newAccountPreferences(pgtype.UUID{}, app, nsfw)
 	if err := db.New(s.pool).InsertOAuthState(ctx, db.InsertOAuthStateParams{
-		TokenHash: hash,
-		Intent:    string(intent),
-		UserID:    userID,
-		ExpiresAt: timestamptz(expires),
+		TokenHash:      hash,
+		Intent:         string(intent),
+		UserID:         userID,
+		ExpiresAt:      timestamptz(expires),
+		AppPreference:  chosen.AppPreference,
+		NsfwPreference: chosen.NsfwPreference,
 	}); err != nil {
 		return DiscordAuthorization{}, fmt.Errorf("store Discord sign-in state: %w", err)
 	}
@@ -92,17 +106,19 @@ func (s *Service) CompleteDiscord(
 		result.Account, err = s.attachDiscord(ctx, flow.UserID, profile)
 		return result, err
 	}
-	result.Account, result.SessionToken, result.SessionExpires, err = s.signInDiscord(ctx, profile)
+	chosen := db.SetNewAccountPreferencesParams{AppPreference: flow.AppPreference, NsfwPreference: flow.NsfwPreference}
+	result.Account, result.SessionToken, result.SessionExpires, err = s.signInDiscord(ctx, profile, chosen)
 	return result, err
 }
 
 func (s *Service) signInDiscord(
 	ctx context.Context,
 	profile DiscordProfile,
-) (Account, string, time.Time, error) {
+	chosen db.SetNewAccountPreferencesParams,
+) (api.Account, string, time.Time, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("begin Discord sign-in: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("begin Discord sign-in: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
@@ -111,14 +127,14 @@ func (s *Service) signInDiscord(
 		Provider: "discord",
 		Subject:  profile.Subject,
 	}); err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("lock Discord identity: %w", err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("lock Discord identity: %w", err)
 	}
 
 	linked, findErr := queries.UserByOAuthIdentity(ctx, db.UserByOAuthIdentityParams{
 		Provider: "discord",
 		Subject:  profile.Subject,
 	})
-	var current Account
+	var current api.Account
 	var userID pgtype.UUID
 	commitAction := "sign-in"
 	switch {
@@ -128,19 +144,25 @@ func (s *Service) signInDiscord(
 	case errors.Is(findErr, pgx.ErrNoRows):
 		current, userID, err = createDiscordAccount(ctx, queries, profile)
 		commitAction = "sign-up"
+		if err == nil {
+			chosen.ID = userID
+			if err = queries.SetNewAccountPreferences(ctx, chosen); err != nil {
+				err = fmt.Errorf("save preferences: %w", err)
+			}
+		}
 	default:
 		err = fmt.Errorf("find Discord identity: %w", findErr)
 	}
 	if err != nil {
-		return Account{}, "", time.Time{}, err
+		return api.Account{}, "", time.Time{}, err
 	}
 
 	token, expires, err := insertSession(ctx, queries, userID)
 	if err != nil {
-		return Account{}, "", time.Time{}, err
+		return api.Account{}, "", time.Time{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Account{}, "", time.Time{}, fmt.Errorf("commit Discord %s: %w", commitAction, err)
+		return api.Account{}, "", time.Time{}, fmt.Errorf("commit Discord %s: %w", commitAction, err)
 	}
 	return current, token, expires, nil
 }
@@ -150,9 +172,9 @@ func syncDiscordAccount(
 	queries *db.Queries,
 	linked db.UserByOAuthIdentityRow,
 	profile DiscordProfile,
-) (Account, error) {
+) (api.Account, error) {
 	if err := syncDiscordEmail(ctx, queries, &linked, profile); err != nil {
-		return Account{}, err
+		return api.Account{}, err
 	}
 	if err := queries.UpdateDiscordProfile(ctx, db.UpdateDiscordProfileParams{
 		ID:          linked.ID,
@@ -160,12 +182,12 @@ func syncDiscordAccount(
 		AvatarUrl:   profile.AvatarURL,
 		BannerUrl:   profile.BannerURL,
 	}); err != nil {
-		return Account{}, fmt.Errorf("refresh the Discord profile: %w", err)
+		return api.Account{}, fmt.Errorf("refresh the Discord profile: %w", err)
 	}
 	return accountFrom(accountRecord{
 		ID: linked.ID, Handle: linked.Username, Email: linked.Email,
 		Verified: linked.EmailVerifiedAt, HasPassword: linked.HasPassword,
-		DiscordLinked: true, Role: Role(linked.Role),
+		DiscordLinked: true, Role: api.Role(linked.Role),
 	}), nil
 }
 
@@ -213,15 +235,15 @@ func createDiscordAccount(
 	ctx context.Context,
 	queries *db.Queries,
 	profile DiscordProfile,
-) (Account, pgtype.UUID, error) {
+) (api.Account, pgtype.UUID, error) {
 	handle, err := availableDiscordHandle(ctx, queries, profile.Username)
 	if err != nil {
-		return Account{}, pgtype.UUID{}, err
+		return api.Account{}, pgtype.UUID{}, err
 	}
 	email := verifiedDiscordEmail(profile)
 	if email.Valid {
 		if err := lockAvailableDiscordEmail(ctx, queries, email); err != nil {
-			return Account{}, pgtype.UUID{}, err
+			return api.Account{}, pgtype.UUID{}, err
 		}
 	}
 
@@ -240,11 +262,11 @@ func createDiscordAccount(
 		BannerUrl:       profile.BannerURL,
 	})
 	if err != nil {
-		return Account{}, pgtype.UUID{}, fmt.Errorf("create Discord account: %w", err)
+		return api.Account{}, pgtype.UUID{}, fmt.Errorf("create Discord account: %w", err)
 	}
 	if email.Valid {
 		if err := clearPendingDiscordEmail(ctx, queries, email, userID); err != nil {
-			return Account{}, pgtype.UUID{}, err
+			return api.Account{}, pgtype.UUID{}, err
 		}
 	}
 	if err := queries.InsertOAuthIdentity(ctx, db.InsertOAuthIdentityParams{
@@ -253,7 +275,7 @@ func createDiscordAccount(
 		Subject:       profile.Subject,
 		ProviderEmail: email,
 	}); err != nil {
-		return Account{}, pgtype.UUID{}, fmt.Errorf("link Discord identity: %w", err)
+		return api.Account{}, pgtype.UUID{}, fmt.Errorf("link Discord identity: %w", err)
 	}
 	return accountFrom(accountRecord{
 		ID: created.ID, Handle: created.Username, Email: created.Email,
@@ -301,25 +323,25 @@ func (s *Service) attachDiscord(
 	ctx context.Context,
 	userID pgtype.UUID,
 	profile DiscordProfile,
-) (Account, error) {
+) (api.Account, error) {
 	if !userID.Valid {
-		return Account{}, ErrDiscordFlow
+		return api.Account{}, ErrDiscordFlow
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Account{}, fmt.Errorf("begin Discord attach: %w", err)
+		return api.Account{}, fmt.Errorf("begin Discord attach: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 	if _, err := queries.LockOAuthUser(ctx, userID); err != nil {
-		return Account{}, fmt.Errorf("lock account Discord identities: %w", err)
+		return api.Account{}, fmt.Errorf("lock account Discord identities: %w", err)
 	}
 
 	if _, err := queries.LockOAuthIdentity(ctx, db.LockOAuthIdentityParams{
 		Provider: "discord",
 		Subject:  profile.Subject,
 	}); err != nil {
-		return Account{}, fmt.Errorf("lock Discord identity: %w", err)
+		return api.Account{}, fmt.Errorf("lock Discord identity: %w", err)
 	}
 	linked, err := queries.UserByOAuthIdentity(ctx, db.UserByOAuthIdentityParams{
 		Provider: "discord",
@@ -327,24 +349,24 @@ func (s *Service) attachDiscord(
 	})
 	if err == nil {
 		if linked.ID.Bytes != userID.Bytes {
-			return Account{}, ErrDiscordClaimed
+			return api.Account{}, ErrDiscordClaimed
 		}
 		return accountFrom(accountRecord{
 			ID: linked.ID, Handle: linked.Username, Email: linked.Email,
 			Verified: linked.EmailVerifiedAt, HasPassword: linked.HasPassword,
-			DiscordLinked: true, Role: Role(linked.Role),
+			DiscordLinked: true, Role: api.Role(linked.Role),
 		}), nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, fmt.Errorf("find Discord identity: %w", err)
+		return api.Account{}, fmt.Errorf("find Discord identity: %w", err)
 	}
 
 	current, err := queries.UserForDiscordAttach(ctx, userID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrUnauthorized
+		return api.Account{}, ErrUnauthorized
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("lock account for Discord attach: %w", err)
+		return api.Account{}, fmt.Errorf("lock account for Discord attach: %w", err)
 	}
 	if err := queries.InsertOAuthIdentity(ctx, db.InsertOAuthIdentityParams{
 		UserID:        userID,
@@ -352,72 +374,72 @@ func (s *Service) attachDiscord(
 		Subject:       profile.Subject,
 		ProviderEmail: verifiedDiscordEmail(profile),
 	}); err != nil {
-		return Account{}, fmt.Errorf("attach Discord identity: %w", err)
+		return api.Account{}, fmt.Errorf("attach Discord identity: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Account{}, fmt.Errorf("commit Discord attach: %w", err)
+		return api.Account{}, fmt.Errorf("commit Discord attach: %w", err)
 	}
 	return accountFrom(accountRecord{
 		ID: current.ID, Handle: current.Username, Email: current.Email,
 		Verified: current.EmailVerifiedAt, HasPassword: current.HasPassword,
-		DiscordLinked: true, Role: Role(current.Role),
+		DiscordLinked: true, Role: api.Role(current.Role),
 	}), nil
 }
 
-func (s *Service) DetachDiscord(ctx context.Context, sessionToken string) (Account, error) {
+func (s *Service) DetachDiscord(ctx context.Context, sessionToken string) (api.Account, error) {
 	hash, ok := credentialHash(sessionToken)
 	if !ok {
-		return Account{}, ErrUnauthorized
+		return api.Account{}, ErrUnauthorized
 	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return Account{}, fmt.Errorf("begin Discord detach: %w", err)
+		return api.Account{}, fmt.Errorf("begin Discord detach: %w", err)
 	}
 	defer tx.Rollback(ctx)
 	queries := db.New(tx)
 
 	session, err := queries.UserBySessionHash(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrUnauthorized
+		return api.Account{}, ErrUnauthorized
 	}
 	if err != nil {
-		return Account{}, fmt.Errorf("read account for Discord detach: %w", err)
+		return api.Account{}, fmt.Errorf("read account for Discord detach: %w", err)
 	}
 	if _, err := queries.LockOAuthUser(ctx, session.ID); err != nil {
-		return Account{}, fmt.Errorf("lock account Discord identities: %w", err)
+		return api.Account{}, fmt.Errorf("lock account Discord identities: %w", err)
 	}
 	subjects, err := queries.DiscordSubjectsForUser(ctx, session.ID)
 	if err != nil {
-		return Account{}, fmt.Errorf("read Discord identities: %w", err)
+		return api.Account{}, fmt.Errorf("read Discord identities: %w", err)
 	}
 	if len(subjects) == 0 {
-		return Account{}, ErrDiscordNotLinked
+		return api.Account{}, ErrDiscordNotLinked
 	}
 	for _, subject := range subjects {
 		if _, err := queries.LockOAuthIdentity(ctx, db.LockOAuthIdentityParams{
 			Provider: "discord",
 			Subject:  subject,
 		}); err != nil {
-			return Account{}, fmt.Errorf("lock Discord identity: %w", err)
+			return api.Account{}, fmt.Errorf("lock Discord identity: %w", err)
 		}
 	}
 	current, err := queries.UserForDiscordAttach(ctx, session.ID)
 	if err != nil {
-		return Account{}, fmt.Errorf("lock account for Discord detach: %w", err)
+		return api.Account{}, fmt.Errorf("lock account for Discord detach: %w", err)
 	}
 	if !current.EmailVerifiedAt.Valid || !current.HasPassword {
-		return Account{}, ErrLastSignInMethod
+		return api.Account{}, ErrLastSignInMethod
 	}
 	if err := queries.DeleteOAuthIdentitiesForUser(ctx, current.ID); err != nil {
-		return Account{}, fmt.Errorf("detach Discord identities: %w", err)
+		return api.Account{}, fmt.Errorf("detach Discord identities: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return Account{}, fmt.Errorf("commit Discord detach: %w", err)
+		return api.Account{}, fmt.Errorf("commit Discord detach: %w", err)
 	}
 	return accountFrom(accountRecord{
 		ID: current.ID, Handle: current.Username, Email: current.Email,
 		Verified: current.EmailVerifiedAt, HasPassword: current.HasPassword,
-		DiscordLinked: false, Role: Role(current.Role),
+		DiscordLinked: false, Role: api.Role(current.Role),
 	}), nil
 }
 

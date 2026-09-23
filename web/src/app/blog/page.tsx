@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PublicationFront } from "@/components/publication/Archive";
+import { BlogFront } from "@/components/blog/Archive";
 import { fetchPostArchive, fetchPublishedPost } from "@/lib/api/query";
 import { blogAddress } from "@/lib/blog-address";
+import { BLOG_DESCRIPTION, BLOG_TITLE, feedTypes } from "@/lib/blog-metadata";
 import { BLOG_HOME } from "@/lib/blog-paths";
 import { postCover } from "@/lib/post-cover";
-import {
-  BLOG_DESCRIPTION,
-  BLOG_TITLE,
-  feedTypes,
-} from "@/lib/publication-metadata";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata: Metadata = {
@@ -26,5 +22,5 @@ export default async function BlogHomePage() {
   if (!archive) notFound();
   const lead = archive.posts[0];
   const led = lead ? await fetchPublishedPost(lead.slug) : null;
-  return <PublicationFront archive={archive} cover={postCover(led)} />;
+  return <BlogFront archive={archive} cover={postCover(led)} />;
 }

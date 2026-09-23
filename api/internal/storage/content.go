@@ -34,7 +34,7 @@ type contentStore struct {
 
 const (
 	internalBlobPrefix       = "/_illarin/blobs/"
-	internalDerivativePrefix = "/_illarin/derivatives/"
+	internalImageCachePrefix = "/_illarin/image-cache/"
 )
 
 func NewStore(pool *pgxpool.Pool, root string) (Store, error) {
@@ -45,7 +45,7 @@ func NewStoreWithCapacity(pool *pgxpool.Pool, root string, capacity Capacity) (S
 	if capacity.FreeSpaceReserveBytes < 0 || capacity.MaximumBlobWriteBytes < 0 {
 		return nil, fmt.Errorf("storage capacity values cannot be negative")
 	}
-	for _, directory := range []string{filepath.Join(root, "blobs"), filepath.Join(root, "derivatives")} {
+	for _, directory := range []string{filepath.Join(root, "blobs"), filepath.Join(root, "image-cache")} {
 		if err := os.MkdirAll(directory, 0o755); err != nil {
 			return nil, fmt.Errorf("create storage directory: %w", err)
 		}
@@ -112,8 +112,8 @@ func (s *contentStore) Put(ctx context.Context, r io.Reader) (StoredBlob, error)
 	}
 	stored := StoredBlob{ID: uuid.UUID(row.ID.Bytes), ByteSize: row.ByteSize}
 	copy(stored.Digest[:], row.Sha256)
-	if _, err := tx.Exec(ctx, `delete from blob_sweep_marks where blob_id = $1`, row.ID); err != nil {
-		return StoredBlob{}, fmt.Errorf("clear blob sweep mark: %w", err)
+	if _, err := tx.Exec(ctx, `delete from blob_cleanup_marks where blob_id = $1`, row.ID); err != nil {
+		return StoredBlob{}, fmt.Errorf("clear blob cleanup mark: %w", err)
 	}
 	if row.StorageKey != key {
 		_ = os.Remove(path)
@@ -129,7 +129,7 @@ func (s *contentStore) makeSpace(ctx context.Context, maximumWriteBytes int64) e
 	if !errors.Is(err, ErrInsufficientSpace) {
 		return err
 	}
-	if err := s.clearDerivatives(ctx); err != nil {
+	if err := s.clearImageCache(ctx); err != nil {
 		return err
 	}
 	return s.ensureSpace(ctx, maximumWriteBytes)
@@ -336,14 +336,14 @@ func (s *contentStore) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (s *contentStore) DeleteDerivatives(ctx context.Context, digest [sha256.Size]byte) error {
+func (s *contentStore) DeleteImageSizes(ctx context.Context, digest [sha256.Size]byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	encoded := hex.EncodeToString(digest[:])
-	path := filepath.Join(s.root, "derivatives", encoded[:2], encoded)
+	path := filepath.Join(s.root, "image-cache", encoded[:2], encoded)
 	if err := os.RemoveAll(path); err != nil {
-		return fmt.Errorf("delete blob derivatives: %w", err)
+		return fmt.Errorf("delete the blob's image sizes: %w", err)
 	}
 	return nil
 }
@@ -363,7 +363,7 @@ func pgUUID(id uuid.UUID) pgtype.UUID {
 	return pgtype.UUID{Bytes: id, Valid: true}
 }
 
-func (s *contentStore) PutDerivative(ctx context.Context, id DerivativeID, body []byte) error {
+func (s *contentStore) PutImageSize(ctx context.Context, id ImageSizeID, body []byte) error {
 	s.writes.Lock()
 	defer s.writes.Unlock()
 	if err := ctx.Err(); err != nil {
@@ -372,97 +372,97 @@ func (s *contentStore) PutDerivative(ctx context.Context, id DerivativeID, body 
 	if err := s.makeSpace(ctx, int64(len(body))); err != nil {
 		return err
 	}
-	path, err := s.derivativePath(id)
+	path, err := s.imageSizePath(id)
 	if err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("create derivative directory: %w", err)
+		return fmt.Errorf("create rendered directory: %w", err)
 	}
 	temporaryName, _, err := stage(filepath.Dir(path), bytes.NewReader(body), nil)
 	if err != nil {
-		return fmt.Errorf("stage derivative: %w", err)
+		return fmt.Errorf("stage rendered: %w", err)
 	}
 	defer os.Remove(temporaryName)
 	if err := os.Rename(temporaryName, path); err != nil {
-		return fmt.Errorf("install derivative: %w", err)
+		return fmt.Errorf("install rendered: %w", err)
 	}
 	if err := os.Chmod(path, 0o644); err != nil {
-		return fmt.Errorf("make derivative readable by the byte server: %w", err)
+		return fmt.Errorf("make rendered readable by the byte server: %w", err)
 	}
 	return nil
 }
 
-func (s *contentStore) OpenDerivative(ctx context.Context, id DerivativeID) (io.ReadCloser, error) {
+func (s *contentStore) OpenImageSize(ctx context.Context, id ImageSizeID) (io.ReadCloser, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	path, err := s.derivativePath(id)
+	path, err := s.imageSizePath(id)
 	if err != nil {
 		return nil, err
 	}
 	file, err := os.Open(path)
 	if os.IsNotExist(err) {
-		return nil, ErrDerivativeNotFound
+		return nil, ErrImageSizeNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("open derivative: %w", err)
+		return nil, fmt.Errorf("open rendered: %w", err)
 	}
 	return file, nil
 }
 
-func (s *contentStore) InternalDerivativeRedirect(ctx context.Context, id DerivativeID) (string, error) {
+func (s *contentStore) InternalImageSizeRedirect(ctx context.Context, id ImageSizeID) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	path, err := s.derivativePath(id)
+	path, err := s.imageSizePath(id)
 	if err != nil {
 		return "", err
 	}
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return "", ErrDerivativeNotFound
+		return "", ErrImageSizeNotFound
 	} else if err != nil {
-		return "", fmt.Errorf("find derivative file: %w", err)
+		return "", fmt.Errorf("find rendered file: %w", err)
 	}
-	relative, err := filepath.Rel(filepath.Join(s.root, "derivatives"), path)
+	relative, err := filepath.Rel(filepath.Join(s.root, "image-cache"), path)
 	if err != nil || !filepath.IsLocal(relative) {
-		return "", fmt.Errorf("derivative path is outside the derivative directory")
+		return "", fmt.Errorf("rendered path is outside the rendered directory")
 	}
-	return internalDerivativePrefix + filepath.ToSlash(relative), nil
+	return internalImageCachePrefix + filepath.ToSlash(relative), nil
 }
 
-func (s *contentStore) ClearDerivatives(ctx context.Context) error {
+func (s *contentStore) ClearImageCache(ctx context.Context) error {
 	s.writes.Lock()
 	defer s.writes.Unlock()
-	return s.clearDerivatives(ctx)
+	return s.clearImageCache(ctx)
 }
 
-func (s *contentStore) clearDerivatives(ctx context.Context) error {
+func (s *contentStore) clearImageCache(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	root := filepath.Join(s.root, "derivatives")
+	root := filepath.Join(s.root, "image-cache")
 	if err := os.RemoveAll(root); err != nil {
-		return fmt.Errorf("clear derivatives: %w", err)
+		return fmt.Errorf("clear the image cache: %w", err)
 	}
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		return fmt.Errorf("recreate derivative directory: %w", err)
+		return fmt.Errorf("recreate rendered directory: %w", err)
 	}
 	return nil
 }
 
-func (s *contentStore) derivativePath(id DerivativeID) (string, error) {
-	if id.Variant == "" {
-		return "", fmt.Errorf("derivative variant is empty")
+func (s *contentStore) imageSizePath(id ImageSizeID) (string, error) {
+	if id.Size == "" {
+		return "", fmt.Errorf("rendered size is empty")
 	}
 	source := hex.EncodeToString(id.SourceDigest[:])
-	variant := sha256.Sum256([]byte(id.Variant))
+	size := sha256.Sum256([]byte(id.Size))
 	return filepath.Join(
 		s.root,
-		"derivatives",
+		"image-cache",
 		source[:2],
 		source,
-		hex.EncodeToString(variant[:]),
+		hex.EncodeToString(size[:]),
 		strconv.FormatUint(uint64(id.Version), 10),
 	), nil
 }

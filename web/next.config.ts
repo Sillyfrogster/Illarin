@@ -5,13 +5,13 @@ const apiUrl = process.env.API_URL ?? "http://localhost:8080";
 /** Leaves oversized-upload refusal to the API. */
 const uploadBodyCeiling = "34mb";
 
-/** Keeps account and linking credentials out of request logs. */
+/** Keeps account and connection credentials out of request logs, under the old paths too until their aliases go. */
 const privateRequestPaths = [
-  /^\/link(?:\?|$)/,
+  /^\/(?:connect|link)(?:\?|$)/,
   /^\/(?:verify-email|reset-password)(?:\/|\?|$)/,
   /^\/(?:api\/)?v1\/auth\/discord\/callback(?:\/|\?|$)/,
-  /^\/api\/v1\/link\/requests\/[^/]+/,
-  /^\/api\/v1\/link\/authorizations\/[^/]+/,
+  /^\/api\/v1\/(?:connect|link)\/requests\/[^/]+/,
+  /^\/api\/v1\/(?:connect|link)\/authorizations\/[^/]+/,
 ];
 
 const nextConfig: NextConfig = {
@@ -37,6 +37,13 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
+    ];
+  },
+  async redirects() {
+    return [
+      { source: "/link", destination: "/connect", permanent: false },
+      { source: "/publication", destination: "/admin/blog", permanent: true },
+      { source: "/admin/blog/:id", destination: "/posts/:id", permanent: true },
     ];
   },
   async rewrites() {

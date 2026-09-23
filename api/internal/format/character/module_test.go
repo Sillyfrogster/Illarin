@@ -16,16 +16,15 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
-func TestEveryModuleDeclaresTheCharacterKind(t *testing.T) {
+func TestEveryModuleDeclaresTheCharacterType(t *testing.T) {
 	t.Parallel()
 	for _, module := range Modules() {
 		declaration := module.Declaration()
-		if declaration.Kind != Kind {
-			t.Errorf("module %q kind = %q, want %q", module.ID(), declaration.Kind, Kind)
+		if declaration.Type != Type {
+			t.Errorf("module %q type = %q, want %q", module.ID(), declaration.Type, Type)
 		}
 		if !declaration.Direction.Read || !declaration.Direction.Write {
 			t.Errorf("module %q direction = %+v, want read and write", module.ID(), declaration.Direction)
@@ -62,7 +61,7 @@ func TestCharacterDeclarationsTellTheTruthAboutVersionedRoles(t *testing.T) {
 		t.Error("declared consumed keys do not match the versioned character readers")
 	}
 	if slices.Contains((CharXModule{}).Declaration().ConsumedKeys, "assets") {
-		t.Error("CharX declared the asset list consumed")
+		t.Error("CharX declared the work list consumed")
 	}
 }
 
@@ -96,7 +95,7 @@ func TestCharacterReaderReturnsHeaderFieldsAndRoleTaggedElements(t *testing.T) {
 
 	parsed := resolveAndParse(t, file)
 	if parsed.Header.Name != "Ana" || parsed.Header.Nickname != "Archivist" ||
-		parsed.Header.AssetVersion != "main" || parsed.Header.CreditedAuthor != "A. Writer" {
+		parsed.Header.WorkVersion != "main" || parsed.Header.CreditedAuthor != "A. Writer" {
 		t.Fatalf("header = %+v", parsed.Header)
 	}
 	want := map[block.Role]block.Content{
@@ -149,11 +148,11 @@ func elementContent(elements []block.Element, role block.Role) (block.Content, b
 	return nil, false
 }
 
-func TestKindComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
+func TestTypeComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
 		name   string
-		file   probe.Inspection
+		file   format.Inspection
 		format string
 	}{
 		{name: "CCv2 json", file: jsonCard(t, `{"spec":"chara_card_v2","spec_version":"2.0","data":{"name":"Ana"}}`), format: V2},
@@ -167,8 +166,8 @@ func TestKindComesFromTheModuleForEveryCharacterFormat(t *testing.T) {
 			if parsed.Format != test.format {
 				t.Errorf("format = %q, want %q", parsed.Format, test.format)
 			}
-			if parsed.Kind != Kind {
-				t.Errorf("kind = %q, want %q", parsed.Kind, Kind)
+			if parsed.Type != Type {
+				t.Errorf("type = %q, want %q", parsed.Type, Type)
 			}
 			if parsed.Header.Name != "Ana" {
 				t.Errorf("name = %q, want Ana", parsed.Header.Name)
@@ -186,8 +185,8 @@ func TestAnEmbeddedLorebookStaysPartOfTheCard(t *testing.T) {
 		]}}
 	}`)
 	parsed := resolveAndParse(t, withBook)
-	if parsed.Kind != Kind {
-		t.Fatalf("kind = %q, want the one character asset", parsed.Kind)
+	if parsed.Type != Type {
+		t.Fatalf("type = %q, want the one character work", parsed.Type)
 	}
 	entries := 0
 	for _, element := range parsed.Elements {
@@ -279,11 +278,11 @@ func TestCharXNamesEachArchivedPictureByWhatTheCardCallsIt(t *testing.T) {
 	if !bytes.Contains(cardRemainder, []byte(`"assets"`)) ||
 		!bytes.Contains(cardRemainder, []byte(`"user_icon"`)) ||
 		!bytes.Contains(cardRemainder, []byte(`"remote"`)) {
-		t.Fatalf("CharX asset remainder = %s, want the complete source structure", cardRemainder)
+		t.Fatalf("CharX work remainder = %s, want the complete source structure", cardRemainder)
 	}
 }
 
-func TestCCv2DoesNotConsumeV3OnlyGroupGreetingsOrAssets(t *testing.T) {
+func TestCCv2DoesNotConsumeV3OnlyGroupGreetingsOrWorks(t *testing.T) {
 	t.Parallel()
 	file := jsonCard(t, `{
 		"spec":"chara_card_v2","spec_version":"2.0",
@@ -305,7 +304,7 @@ func TestCCv2DoesNotConsumeV3OnlyGroupGreetingsOrAssets(t *testing.T) {
 func TestAVersionPastTheOneWeImplementIsRefusedRatherThanGuessedAt(t *testing.T) {
 	t.Parallel()
 	later := jsonCard(t, `{"spec":"chara_card_v3","spec_version":"4.0","data":{"name":"Ana"}}`)
-	_, err := CCv3Module{}.Parse(context.Background(), later, claimFor(t, CCv3Module{}, later))
+	_, err := CCv3Module{}.Parse(context.Background(), later, matchFor(t, CCv3Module{}, later))
 	reason, classified := format.FailureOf(err)
 	if !classified || reason != format.FailureUnsupportedVersion {
 		t.Fatalf("parse error = %v, want an unsupported version", err)
@@ -327,7 +326,7 @@ func TestARequiredRoleWithTheWrongTypeRefusesTheCardAndNamesThePart(t *testing.T
 		"spec":"chara_card_v3","spec_version":"3.0",
 		"data":{"name":"Ana","description":17,"first_mes":"Hello"}
 	}`)
-	_, err := CCv3Module{}.Parse(context.Background(), file, claimFor(t, CCv3Module{}, file))
+	_, err := CCv3Module{}.Parse(context.Background(), file, matchFor(t, CCv3Module{}, file))
 	if err == nil || !strings.Contains(err.Error(), "chara_card_v3") ||
 		!strings.Contains(err.Error(), "description") || !strings.Contains(err.Error(), "string") {
 		t.Fatalf("parse error = %v, want the module, required role and reason", err)
@@ -337,7 +336,7 @@ func TestARequiredRoleWithTheWrongTypeRefusesTheCardAndNamesThePart(t *testing.T
 func TestARecognizedCardWithNoReadableDataNamesTheModuleAndPart(t *testing.T) {
 	t.Parallel()
 	file := jsonCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":17}`)
-	_, err := CCv3Module{}.Parse(context.Background(), file, claimFor(t, CCv3Module{}, file))
+	_, err := CCv3Module{}.Parse(context.Background(), file, matchFor(t, CCv3Module{}, file))
 	if err == nil || !strings.Contains(err.Error(), V3) || !strings.Contains(err.Error(), "data") ||
 		!strings.Contains(err.Error(), "object") {
 		t.Fatalf("parse error = %v, want module, data and reason", err)
@@ -433,8 +432,8 @@ func TestAV3CardCarryingItsV2CopyIsReadAsV3(t *testing.T) {
 		textChunk{name: "ccv3", body: `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana"}}`},
 		textChunk{name: "chara", body: `{"spec":"chara_card_v2","spec_version":"2.0","data":{"name":"Ana"}}`},
 	)
-	if _, ok := (CCv2Module{}).Claim(file); ok {
-		t.Error("CCv2 claimed the copy of itself a v3 card carries")
+	if _, ok := (CCv2Module{}).Match(file); ok {
+		t.Error("CCv2 matched the copy of itself a v3 card carries")
 	}
 	if parsed := resolveAndParse(t, file); parsed.Format != V3 {
 		t.Errorf("format = %q, want %q", parsed.Format, V3)
@@ -454,15 +453,15 @@ func TestAV2CardWithNoV3CopyIsStillReadAsV2(t *testing.T) {
 func TestAV3CardInAnArchiveIsCharXAndNotCCv3(t *testing.T) {
 	t.Parallel()
 	file := charxCard(t, `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana"}}`, nil)
-	if _, ok := (CCv3Module{}).Claim(file); ok {
-		t.Error("CCv3 claimed a card inside an archive")
+	if _, ok := (CCv3Module{}).Match(file); ok {
+		t.Error("CCv3 matched a card inside an archive")
 	}
-	if _, ok := (CharXModule{}).Claim(file); !ok {
-		t.Error("CharX did not claim its own archive")
+	if _, ok := (CharXModule{}).Match(file); !ok {
+		t.Error("CharX did not match its own archive")
 	}
 }
 
-func resolveAndParse(t *testing.T, file probe.Inspection) format.Parsed {
+func resolveAndParse(t *testing.T, file format.Inspection) format.Parsed {
 	t.Helper()
 	registry := format.NewRegistry()
 	for _, module := range Modules() {
@@ -470,42 +469,42 @@ func resolveAndParse(t *testing.T, file probe.Inspection) format.Parsed {
 			t.Fatalf("register %q: %v", module.ID(), err)
 		}
 	}
-	resolution, claimed, err := registry.Resolve(file)
+	resolution, matched, err := registry.Resolve(file)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if !claimed {
-		t.Fatal("no module claimed the card")
+	if !matched {
+		t.Fatal("no module matched the card")
 	}
-	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Claim)
+	parsed, err := resolution.Module.Parse(context.Background(), file, resolution.Match)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	return parsed
 }
 
-func claimFor(t *testing.T, module format.Reader, file probe.Inspection) format.Claim {
+func matchFor(t *testing.T, module format.Reader, file format.Inspection) format.Match {
 	t.Helper()
-	claim, ok := module.Claim(file)
+	match, ok := module.Match(file)
 	if !ok {
-		t.Fatalf("module %q did not claim the card", module.ID())
+		t.Fatalf("module %q did not match the card", module.ID())
 	}
-	return claim
+	return match
 }
 
-func jsonCard(t *testing.T, body string) probe.Inspection {
+func jsonCard(t *testing.T, body string) format.Inspection {
 	t.Helper()
 	return inspect(t, []byte(body), "card.json")
 }
 
-func pngCard(t *testing.T, chunk, body string) probe.Inspection {
+func pngCard(t *testing.T, chunk, body string) format.Inspection {
 	t.Helper()
 	return pngCardChunks(t, textChunk{name: chunk, body: body})
 }
 
 type textChunk struct{ name, body string }
 
-func pngCardChunks(t *testing.T, chunks ...textChunk) probe.Inspection {
+func pngCardChunks(t *testing.T, chunks ...textChunk) format.Inspection {
 	t.Helper()
 	file := testPNG(t)
 	end := len(file) - 12
@@ -517,7 +516,7 @@ func pngCardChunks(t *testing.T, chunks ...textChunk) probe.Inspection {
 	return inspect(t, append(withCards, file[end:]...), "card.png")
 }
 
-func charxCard(t *testing.T, body string, pictures []string) probe.Inspection {
+func charxCard(t *testing.T, body string, pictures []string) format.Inspection {
 	t.Helper()
 	var file bytes.Buffer
 	archive := zip.NewWriter(&file)
@@ -549,9 +548,9 @@ func (s memoryStore) ReadRange(_ context.Context, _ uuid.UUID, offset, length in
 	return io.NopCloser(bytes.NewReader(s.data[offset : offset+length])), nil
 }
 
-func inspect(t *testing.T, data []byte, filename string) probe.Inspection {
+func inspect(t *testing.T, data []byte, filename string) format.Inspection {
 	t.Helper()
-	file, err := probe.Inspect(
+	file, err := format.Inspect(
 		context.Background(), memoryStore{data: data}, uuid.New(), int64(len(data)), filename,
 	)
 	if err != nil {
@@ -620,7 +619,7 @@ func TestCharXLeavesAPersonaIconOutRatherThanCallingItGallery(t *testing.T) {
 	}
 }
 
-func TestACharXThatNamesNoAssetsIsReadFromItsArchiveLayout(t *testing.T) {
+func TestACharXThatNamesNoWorksIsReadFromItsArchiveLayout(t *testing.T) {
 	t.Parallel()
 	file := charxCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -645,6 +644,6 @@ func TestACharXThatNamesNoAssetsIsReadFromItsArchiveLayout(t *testing.T) {
 		}
 	}
 	if parsed.Media[2].ElementRole != block.RoleGallery {
-		t.Errorf("an image under assets/other went to %q", parsed.Media[2].ElementRole)
+		t.Errorf("an image under works/other went to %q", parsed.Media[2].ElementRole)
 	}
 }

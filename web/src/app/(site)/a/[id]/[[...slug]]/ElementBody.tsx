@@ -18,9 +18,9 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
 import { Run, RunItem, RunOpenContext } from "@/components/ui/run";
 import type {
-  AssetElement,
-  AssetImage,
   RecordListContent,
+  WorkElement,
+  WorkImage,
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { browsable, type CollectionItem } from "@/lib/collection";
@@ -63,9 +63,9 @@ export function ElementBody({
   markEmpty = true,
   tools,
 }: {
-  element: AssetElement;
+  element: WorkElement;
   isOwner: boolean;
-  images?: AssetImage[];
+  images?: WorkImage[];
   blockTitle?: string;
   blockElements?: number;
   markEmpty?: boolean;
@@ -125,8 +125,8 @@ function ExcerptedElementContent({
   isOwner,
 }: {
   blockTitle?: string;
-  element: AssetElement;
-  images: AssetImage[];
+  element: WorkElement;
+  images: WorkImage[];
   isOwner: boolean;
 }) {
   const items = useMemo(
@@ -163,8 +163,8 @@ function BrowsedElementContent({
   items,
   title,
 }: {
-  element: AssetElement;
-  images: AssetImage[];
+  element: WorkElement;
+  images: WorkImage[];
   isOwner: boolean;
   items: CollectionItem[];
   title: string;
@@ -218,8 +218,8 @@ function UnfoldedElementContent({
   images,
   isOwner,
 }: {
-  element: AssetElement;
-  images: AssetImage[];
+  element: WorkElement;
+  images: WorkImage[];
   isOwner: boolean;
 }) {
   const definition = excerptDefinition(element.type);
@@ -304,7 +304,7 @@ function UnfoldedElementContent({
   );
 }
 
-function visibleItemCount(element: AssetElement): number {
+function visibleItemCount(element: WorkElement): number {
   if (element.type === "setting_group" && "settings" in element.content) {
     return element.content.settings.filter((setting) => setting.value != null)
       .length;
@@ -312,7 +312,7 @@ function visibleItemCount(element: AssetElement): number {
   return contentItemCount(element);
 }
 
-function excerptControlLabel(element: AssetElement, itemCount: number): string {
+function excerptControlLabel(element: WorkElement, itemCount: number): string {
   if (element.type !== "prose") {
     return `Show all ${itemCount} ${excerptNoun(element)}`;
   }
@@ -320,7 +320,7 @@ function excerptControlLabel(element: AssetElement, itemCount: number): string {
   return named ? `Read the rest of the ${named}` : "Read the rest";
 }
 
-function excerptNoun(element: AssetElement): string {
+function excerptNoun(element: WorkElement): string {
   switch (element.type) {
     case "text_set":
       return element.role === "prompt_nudges" ? "nudges" : "items";
@@ -350,7 +350,7 @@ function excerptNoun(element: AssetElement): string {
     case "script_list":
       return "scripts";
     case "record_list":
-      return "Lumia";
+      return "characters";
     default:
       return "items";
   }
@@ -395,8 +395,8 @@ export function ElementContent({
   isOwner = false,
   itemLimit,
 }: {
-  element: AssetElement;
-  images: AssetImage[];
+  element: WorkElement;
+  images: WorkImage[];
   isOwner?: boolean;
   itemLimit?: number;
 }) {
@@ -564,8 +564,8 @@ function Gallery({
   images,
 }: {
   content: { images: { mediaId: string; name?: string }[] };
-  element: AssetElement;
-  images: AssetImage[];
+  element: WorkElement;
+  images: WorkImage[];
 }) {
   const imagesById = new Map(images.map((image) => [image.id, image]));
   const pictures = content.images
@@ -609,7 +609,7 @@ function PackItems({
   itemLimit,
 }: {
   content: RecordListContent;
-  images: AssetImage[];
+  images: WorkImage[];
   itemLimit?: number;
 }) {
   const imagesById = new Map(images.map((image) => [image.id, image]));
@@ -642,7 +642,7 @@ function PackItems({
             </div>
             <div className="min-w-0">
               <h4 className={ITEM_NAME}>
-                {record.lumiaName || `Lumia ${index + 1}`}
+                {record.lumiaName || `Character ${index + 1}`}
               </h4>
               <p className={cn(ITEM_META, "mt-0.5")}>
                 {PACK_PRONOUNS[record.genderIdentity]}

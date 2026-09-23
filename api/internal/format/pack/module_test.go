@@ -11,7 +11,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
@@ -40,7 +39,7 @@ func TestPackModuleDeclaresTheLumiverseContract(t *testing.T) {
 	t.Parallel()
 	module := Module{}
 	declaration := module.Declaration()
-	if declaration.ID != ID || declaration.Kind != Kind ||
+	if declaration.ID != ID || declaration.Type != Type ||
 		!declaration.Direction.Read || !declaration.Direction.Write {
 		t.Fatalf("declaration = %+v, want the read-and-write Pack module", declaration)
 	}
@@ -72,7 +71,7 @@ func TestPackReadsItemsWithoutFetchingImagesAndWritesPreservedFieldsBack(t *test
 	t.Parallel()
 	parsed := parse(t, []byte(samplePack))
 	if parsed.Header.Name != "Archive companions" ||
-		parsed.Header.CreditedAuthor != "A creator" || parsed.Header.AssetVersion != "2" {
+		parsed.Header.CreditedAuthor != "A creator" || parsed.Header.WorkVersion != "2" {
 		t.Errorf("header = %+v", parsed.Header)
 	}
 	if len(parsed.Media) != 0 {
@@ -84,8 +83,8 @@ func TestPackReadsItemsWithoutFetchingImagesAndWritesPreservedFieldsBack(t *test
 		t.Fatalf("Pack items = %+v", records)
 	}
 
-	written := write(t, format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
+	written := write(t, format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
 	})
 	var document map[string]json.RawMessage
 	if err := json.Unmarshal(written.Body, &document); err != nil {
@@ -114,8 +113,8 @@ func TestPackWritesIllarinCoverAndItemImages(t *testing.T) {
 	records.Records[0].AvatarURL = &mediaID
 	parsed.Elements[0].Content = records
 
-	written := write(t, format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
+	written := write(t, format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
 		Cover: &format.ExportMedia{URL: "https://illarin.test/media/cover"},
 		Images: map[uuid.UUID]format.ExportMedia{
 			mediaID: {URL: "https://illarin.test/media/item"},
@@ -156,7 +155,7 @@ func TestMalformedOptionalFieldsRoundTripUntilTheirModeledValueChanges(t *testin
 		"loomItems":[]
 	}`))
 
-	assertMalformed := func(t *testing.T, written format.Artifact) {
+	assertMalformed := func(t *testing.T, written format.MainFile) {
 		t.Helper()
 		var document map[string]json.RawMessage
 		if err := json.Unmarshal(written.Body, &document); err != nil {
@@ -186,8 +185,8 @@ func TestMalformedOptionalFieldsRoundTripUntilTheirModeledValueChanges(t *testin
 		}
 	}
 
-	assertMalformed(t, write(t, format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
+	assertMalformed(t, write(t, format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
 	}))
 
 	records := packRecords(t, parsed)
@@ -195,8 +194,8 @@ func TestMalformedOptionalFieldsRoundTripUntilTheirModeledValueChanges(t *testin
 	records.Records[0].GenderIdentity = 1
 	records.Records[0].Version = 4
 	parsed.Elements[0].Content = records
-	written := write(t, format.ExportAsset{
-		Kind: Kind, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
+	written := write(t, format.ExportWork{
+		Type: Type, Header: parsed.Header, Elements: parsed.Elements, Preserved: parsed.Remainder,
 	})
 	var document struct {
 		Items []struct {
@@ -230,27 +229,27 @@ func packRecords(t *testing.T, parsed format.Parsed) block.RecordList {
 
 func parse(t *testing.T, data []byte) format.Parsed {
 	t.Helper()
-	file, err := probe.Inspect(
+	file, err := format.Inspect(
 		context.Background(), memoryStore{data: data}, uuid.New(), int64(len(data)), "pack.json",
 	)
 	if err != nil {
 		t.Fatalf("inspect Pack: %v", err)
 	}
 	module := Module{}
-	claim, ok := module.Claim(file)
+	match, ok := module.Match(file)
 	if !ok {
-		t.Fatal("the Pack signature did not claim the file")
+		t.Fatal("the Pack shape did not match the file")
 	}
-	parsed, err := module.Parse(context.Background(), file, claim)
+	parsed, err := module.Parse(context.Background(), file, match)
 	if err != nil {
 		t.Fatalf("parse Pack: %v", err)
 	}
 	return parsed
 }
 
-func write(t *testing.T, asset format.ExportAsset) format.Artifact {
+func write(t *testing.T, work format.ExportWork) format.MainFile {
 	t.Helper()
-	written, err := (Module{}).Write(context.Background(), asset)
+	written, err := (Module{}).Write(context.Background(), work)
 	if err != nil {
 		t.Fatalf("write Pack: %v", err)
 	}

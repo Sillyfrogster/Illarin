@@ -1,0 +1,40 @@
+{
+  "note": "A captioned picture, an uncaptioned one, and a gallery in the author's order",
+  "body": {
+    "version": 2,
+    "content": [
+      {
+        "type": "image",
+        "mediaId": "0f3b1c4e-6a2d-4a19-9c51-2f7d8e5b41a0",
+        "alt": "The publication workspace with one draft in it",
+        "caption": "The workspace after the first draft is started."
+      },
+      {
+        "type": "image",
+        "mediaId": "7c9a2d15-4b83-4f60-8e2a-13d5c6f7b904",
+        "alt": "The formatting bar above an empty post body"
+      },
+      {
+        "type": "gallery",
+        "content": [
+          {
+            "type": "galleryImage",
+            "mediaId": "2b6e8f01-5c74-4d23-a91b-8e07f2c4d635",
+            "alt": "A code block labelled Go",
+            "caption": "Code keeps its label."
+          },
+          {
+            "type": "galleryImage",
+            "mediaId": "9d41a7b2-3e58-4c06-b7f9-6a0c5d81e243",
+            "alt": "A table with a heading row"
+          },
+          {
+            "type": "galleryImage",
+            "mediaId": "4e70c9d8-1f26-4b95-8a3c-d5b21e6f7089",
+            "alt": "A warning callout"
+          }
+        ]
+      }
+    ]
+  }
+}

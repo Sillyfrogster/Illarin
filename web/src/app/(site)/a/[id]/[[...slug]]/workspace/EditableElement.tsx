@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import { Children, Fragment } from "react";
-import type { AssetBlock, AssetElement, AssetImage } from "@/lib/api/query";
+import type { WorkBlock, WorkElement, WorkImage } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { elementLabel } from "@/lib/element-label";
 import { ElementBody } from "../ElementBody";
@@ -40,14 +40,14 @@ export function EditableElementSection({
   images,
   markEmpty,
 }: {
-  block: AssetBlock;
-  element: AssetElement;
-  images: AssetImage[];
+  block: WorkBlock;
+  element: WorkElement;
+  images: WorkImage[];
   markEmpty: boolean;
 }) {
   const tools = <ElementTools block={block} element={element} />;
 
-  if (element.locked || !writesInPlace(element)) {
+  if (element.fromFile || !writesInPlace(element)) {
     const body = (
       <ElementBody
         blockElements={block.elements.length}
@@ -59,12 +59,12 @@ export function EditableElementSection({
         tools={tools}
       />
     );
-    if (!element.locked) return body;
+    if (!element.fromFile) return body;
     return (
       <div className="flex min-w-0 flex-col gap-2">
         {body}
         <p className="text-meta text-mute">
-          Read from the uploaded archive. Upload a new archive to change it.
+          From the file. Upload a new version to change it.
         </p>
       </div>
     );
@@ -97,12 +97,12 @@ export function EditableElement({
   element,
 }: {
   blockId: string;
-  element: AssetElement;
+  element: WorkElement;
 }) {
   const workspace = useWorkspace();
 
-  function write(content: AssetElement["content"]) {
-    const next = { ...element, content } as AssetElement;
+  function write(content: WorkElement["content"]) {
+    const next = { ...element, content } as WorkElement;
     workspace.writeElement(blockId, { ...next, isEmpty: isEmptyContent(next) });
   }
 

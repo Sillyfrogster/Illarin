@@ -1,45 +1,45 @@
--- name: InsertAsset :one
-insert into assets
-  (id, kind, owner_id, name, blurb, tags, is_nsfw, discovery, lifecycle,
-   asset_version, credited_author, nickname, origin_format, created_at)
+-- name: InsertWork :one
+insert into works
+  (id, type, owner_id, name, blurb, tags, is_nsfw, visibility, lifecycle,
+   work_version, credited_author, nickname, original_format, created_at)
 values ($1, $2, $3, $4, $5, $6, sqlc.narg('is_nsfw')::boolean, $7, $8,
-        $9, $10, $11, sqlc.narg('origin_format')::text,
+        $9, $10, $11, sqlc.narg('original_format')::text,
         coalesce(sqlc.narg('created_at')::timestamptz, now()))
 returning created_at;
 
--- name: InsertAssetBlock :exec
-insert into asset_blocks
-  (id, asset_id, definition, title, position, hidden, layout, width, elements)
+-- name: InsertWorkBlock :exec
+insert into work_blocks
+  (id, work_id, definition, title, position, hidden, layout, width, elements)
 values ($1, $2, $3, sqlc.narg('title')::text, $4, $5, $6, $7, $8);
 
--- name: AssetBlocks :many
+-- name: WorkBlocks :many
 select id, definition, title, position, hidden, layout, width, elements
-  from asset_blocks
- where asset_id = $1
+  from work_blocks
+ where work_id = $1
  order by position;
 
--- name: InsertRevision :exec
-insert into asset_revisions
-  (id, asset_id, revision, blob_id, media_type, format, identifier)
+-- name: InsertOriginalFile :exec
+insert into work_original_files
+  (id, work_id, number, blob_id, media_type, format, identifier)
 values ($1, $2, $3, $4, $5, $6, $7);
 
--- name: SetCurrentRevision :exec
-update assets set current_revision_id = $2, updated_at = now() where id = $1;
+-- name: SetOriginalFile :exec
+update works set original_file_id = $2, updated_at = now() where id = $1;
 
--- name: ListAssets :many
-select a.id, a.kind, revision.format, a.origin_format,
-       a.asset_version, a.credited_author, a.nickname, a.lifecycle,
+-- name: ListWorks :many
+select a.id, a.type, original.format, a.original_format,
+       a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
-       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
-       a.current_revision_id, a.created_at
-  from assets a
-  left join asset_revisions revision on revision.id = a.current_revision_id
+       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
+       a.original_file_id, a.created_at
+  from works a
+  left join work_original_files original on original.id = a.original_file_id
  where a.lifecycle = 'published'
-   and a.discovery = 'listed'
-   and a.withheld_at is null
+   and a.visibility = 'listed'
+   and a.taken_down_at is null
    and a.deleted_at is null
-   and ($1 = '' or a.kind = $1)
-   and (not $2::boolean or revision.format is not distinct from $3)
+   and ($1 = '' or a.type = $1)
+   and (not $2::boolean or original.format is not distinct from $3)
    and ($4::text[] is null or a.tags @> $4)
    and (sqlc.narg('before')::timestamptz is null
         or (a.created_at, a.id)
@@ -47,16 +47,18 @@ select a.id, a.kind, revision.format, a.origin_format,
  order by a.created_at desc, a.id desc
  limit $5;
 
--- name: BrowseAssets :many
+-- name: BrowseWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.kind, a.is_nsfw, a.created_at, a.lifecycle,
+       a.type, a.is_nsfw, a.created_at, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
-       a.discovery, a.withheld_at, a.withheld_reason
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+       a.visibility, a.taken_down_at, a.taken_down_reason,
+       array(select offered.format ->> 'format'
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
-  left join asset_media cover
-    on cover.id = a.cover_media_id and cover.asset_id = a.id
+  left join work_media cover
+    on cover.id = a.cover_media_id and cover.work_id = a.id
    and cover.is_current
    and cover.width is not null and cover.height is not null
    and cover.blob_id is not null
@@ -66,19 +68,20 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
    and a.deleted_at is null
    and (
        (sqlc.narg('creator_id')::uuid is null
-        and a.discovery = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.taken_down_at is null)
        or
        (a.owner_id = sqlc.narg('creator_id')::uuid
         and (sqlc.arg('own_profile')::boolean
-             or (a.discovery = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
-   and (sqlc.arg('kind')::text = '' or a.kind = sqlc.arg('kind')::text)
+   and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
+   and a.type <> all(coalesce(sqlc.arg('hidden_types')::text[], '{}'))
    and (sqlc.arg('own_profile')::boolean
-        or sqlc.arg('nsfw_visibility')::text <> 'hidden' or not a.is_nsfw)
-   and (sqlc.arg('platform')::text = '' or exists (
+        or sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
+   and (sqlc.arg('app')::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
-         where offered.target ->> 'format' = any(sqlc.arg('formats')::text[])
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
+         where offered.format ->> 'format' = any(sqlc.arg('formats')::text[])
    ))
    and (cardinality(sqlc.arg('facet_keys')::text[]) = 0 or not exists (
         select 1
@@ -89,9 +92,9 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
    and (sqlc.arg('search_text')::text = ''
         or position(sqlc.arg('search_text')::text in lower(a.name)) > 0
@@ -111,10 +114,33 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
  order by a.created_at desc, a.id desc
  limit sqlc.arg('page_size');
 
--- name: CountBrowseAssets :one
+-- name: FeaturedWorks :many
+select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
+       a.type, a.is_nsfw, a.created_at, a.lifecycle,
+       cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
+       a.visibility, a.taken_down_at, a.taken_down_reason,
+       array(select offered.format ->> 'format'
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+  from profile_featured_works featured
+  join works a on a.id = featured.work_id
+  left join work_summaries summary on summary.work_id = a.id
+  left join users owner on owner.id = a.owner_id
+  left join work_media cover
+    on cover.id = a.cover_media_id and cover.work_id = a.id
+   and cover.is_current
+   and cover.width is not null and cover.height is not null
+   and cover.blob_id is not null
+ where featured.user_id = sqlc.arg('creator_id')::uuid
+   and a.owner_id = featured.user_id
+   and a.lifecycle = 'published' and a.visibility = 'listed'
+   and a.deleted_at is null and a.taken_down_at is null
+   and (sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
+ order by featured.position;
+
+-- name: CountBrowseWorks :one
 select count(*)
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
  where (a.lifecycle = 'published'
         or (sqlc.arg('own_profile')::boolean
@@ -122,19 +148,20 @@ select count(*)
    and a.deleted_at is null
    and (
        (sqlc.narg('creator_id')::uuid is null
-        and a.discovery = 'listed' and a.withheld_at is null)
+        and a.visibility = 'listed' and a.taken_down_at is null)
        or
        (a.owner_id = sqlc.narg('creator_id')::uuid
         and (sqlc.arg('own_profile')::boolean
-             or (a.discovery = 'listed' and a.withheld_at is null)))
+             or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
-   and (sqlc.arg('kind')::text = '' or a.kind = sqlc.arg('kind')::text)
+   and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
+   and a.type <> all(coalesce(sqlc.arg('hidden_types')::text[], '{}'))
    and (sqlc.arg('own_profile')::boolean
-        or sqlc.arg('nsfw_visibility')::text <> 'hidden' or not a.is_nsfw)
-   and (sqlc.arg('platform')::text = '' or exists (
+        or sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
+   and (sqlc.arg('app')::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
-         where offered.target ->> 'format' = any(sqlc.arg('formats')::text[])
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
+         where offered.format ->> 'format' = any(sqlc.arg('formats')::text[])
    ))
    and (cardinality(sqlc.arg('facet_keys')::text[]) = 0 or not exists (
         select 1
@@ -145,9 +172,9 @@ select count(*)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
    and (sqlc.arg('search_text')::text = ''
         or position(sqlc.arg('search_text')::text in lower(a.name)) > 0
@@ -162,21 +189,22 @@ select count(*)
          )
    ));
 
--- name: CountSuppressedBrowseAssets :one
+-- name: CountSuppressedBrowseWorks :one
 select count(*)
-  from assets a
-  left join asset_projections projection on projection.asset_id = a.id
+  from works a
+  left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
  where a.lifecycle = 'published'
-   and a.discovery = 'listed'
-   and a.withheld_at is null
+   and a.visibility = 'listed'
+   and a.taken_down_at is null
    and a.deleted_at is null
    and (sqlc.narg('creator_id')::uuid is null or a.owner_id = sqlc.narg('creator_id')::uuid)
-   and (sqlc.arg('kind')::text = '' or a.kind = sqlc.arg('kind')::text)
-   and (sqlc.arg('platform')::text = '' or exists (
+   and (sqlc.arg('type')::text = '' or a.type = sqlc.arg('type')::text)
+   and a.type <> all(coalesce(sqlc.arg('hidden_types')::text[], '{}'))
+   and (sqlc.arg('app')::text = '' or exists (
         select 1
-          from jsonb_array_elements(coalesce(projection.export, '[]'::jsonb)) as offered(target)
-         where offered.target ->> 'format' = any(sqlc.arg('formats')::text[])
+          from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
+         where offered.format ->> 'format' = any(sqlc.arg('formats')::text[])
    ))
    and (cardinality(sqlc.arg('facet_keys')::text[]) = 0 or not exists (
         select 1
@@ -187,9 +215,9 @@ select count(*)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
-                 coalesce((projection.facets ->> chosen.key)::int, 0) >= lows.low
+                 coalesce((summary.facets ->> chosen.key)::int, 0) >= lows.low
                  and (highs.high < 0
-                      or coalesce((projection.facets ->> chosen.key)::int, 0) <= highs.high))
+                      or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
    and (sqlc.arg('search_text')::text = ''
         or position(sqlc.arg('search_text')::text in lower(a.name)) > 0
@@ -205,28 +233,28 @@ select count(*)
    ))
    and a.is_nsfw;
 
--- name: AssetPage :one
-select a.id, a.kind, a.name, a.blurb, a.tags, a.is_nsfw, a.discovery,
+-- name: WorkPage :one
+select a.id, a.type, a.name, a.blurb, a.tags, a.is_nsfw, a.visibility,
        a.lifecycle, a.created_at,
-       revision.format as original_format, revision.media_type as original_media_type,
-       revision.created_at as original_arrived_at,
-       coalesce(revision.identifier, '')::text as identifier,
+       original.format as original_format, original.media_type as original_media_type,
+       original.created_at as original_arrived_at,
+       coalesce(original.identifier, '')::text as identifier,
        coalesce(owner.username, 'unknown') as creator,
        coalesce(a.owner_id = sqlc.narg('viewer_id')::uuid, false)::boolean as is_owner,
-       a.withheld_reason, a.withheld_at
-  from assets a
+       a.taken_down_reason, a.taken_down_at
+  from works a
   left join users owner on owner.id = a.owner_id
-  left join asset_revisions revision on revision.id = a.current_revision_id
+  left join work_original_files original on original.id = a.original_file_id
  where a.id = $1
    and a.deleted_at is null
    and (a.lifecycle = 'published' or a.owner_id = sqlc.narg('viewer_id')::uuid)
-   and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
+   and (a.taken_down_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
--- name: AssetPageMedia :many
+-- name: WorkPageMedia :many
 select media.id, media.role, media.width, media.height, blob.byte_size,
        coalesce(media.id = a.cover_media_id, false)::boolean as is_cover
-  from assets a
-  join asset_media media on media.asset_id = a.id
+  from works a
+  join work_media media on media.work_id = a.id
   join blobs blob on blob.id = media.blob_id
  where a.id = $1
    and media.is_current
@@ -244,93 +272,93 @@ select media.id, media.role, media.width, media.height, blob.byte_size,
 		  end,
           media.created_at desc, media.id desc;
 
--- name: CurrentRevisionLocation :one
-select a.id as asset_id, r.id as revision_id, r.blob_id, r.media_type, a.owner_id
-  from assets a
-  left join public.asset_snapshots snapshot on snapshot.id = a.published_snapshot_id
-  join asset_revisions r on r.id = case when snapshot.id is null
-      then a.current_revision_id else snapshot.source_revision_id end
+-- name: OriginalFileLocation :one
+select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, a.owner_id
+  from works a
+  left join public.work_versions version on version.id = a.published_version_id
+  join work_original_files r on r.id = case when version.id is null
+      then a.original_file_id else version.original_file_id end
  where a.id = $1
    and r.blob_id is not null
    and a.lifecycle = 'published'
    and a.deleted_at is null
-   and (a.withheld_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
+   and (a.taken_down_at is null or a.owner_id = sqlc.narg('viewer_id')::uuid);
 
--- name: AssetByID :one
-select a.id, a.kind, revision.format, a.origin_format,
-       a.asset_version, a.credited_author, a.nickname, a.lifecycle,
+-- name: WorkByID :one
+select a.id, a.type, original.format, a.original_format,
+       a.work_version, a.credited_author, a.nickname, a.lifecycle,
        a.name, a.blurb, a.tags,
-       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.discovery,
-       a.current_revision_id, a.created_at
-  from assets a
-  join asset_revisions revision on revision.id = a.current_revision_id
+       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
+       a.original_file_id, a.created_at
+  from works a
+  join work_original_files original on original.id = a.original_file_id
  where a.id = $1;
 
--- name: SetAssetDiscovery :execrows
-update assets
-   set discovery = $3, updated_at = now()
+-- name: SetWorkVisibility :execrows
+update works
+   set visibility = $3, updated_at = now()
  where id = $1 and owner_id = $2 and lifecycle = 'published'
-   and withheld_at is null and deleted_at is null;
+   and taken_down_at is null and deleted_at is null;
 
--- name: AssetStateForOwner :one
-select withheld_at, lifecycle
-  from assets
+-- name: WorkStateForOwner :one
+select taken_down_at, lifecycle
+  from works
  where id = $1 and owner_id = $2 and deleted_at is null;
 
--- name: WithholdAsset :one
-with withheld as (
-    update assets as asset
-       set withheld_at = now(), withheld_by = $2, withheld_reason = $3,
+-- name: TakeDownWork :one
+with taken_down as (
+    update works as work
+       set taken_down_at = now(), taken_down_by = $2, taken_down_reason = $3,
            updated_at = now()
-     where asset.id = $1 and asset.lifecycle = 'published'
-       and asset.withheld_at is null and asset.deleted_at is null
-    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
+     where work.id = $1 and work.lifecycle = 'published'
+       and work.taken_down_at is null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_version_id
 ), stopped as (
-    update instance_deliveries as delivery
+    update sends as send
        set state = 'failed', settled_at = now(), settled_reason = 'withdrawn'
-     where delivery.asset_id in (select withheld.id from withheld)
-       and delivery.state = 'queued'
+     where send.work_id in (select taken_down.id from taken_down)
+       and send.state = 'queued'
 )
-select withheld.owner_id, coalesce(snapshot.payload ->> 'name', withheld.name)::text as public_name
-  from withheld
-  left join asset_snapshots snapshot on snapshot.id = withheld.published_snapshot_id;
+select taken_down.owner_id, coalesce(version.payload ->> 'name', taken_down.name)::text as public_name
+  from taken_down
+  left join work_versions version on version.id = taken_down.published_version_id;
 
--- name: ClearAssetWithhold :one
+-- name: LiftTakedown :one
 with cleared as (
-    update assets as asset
-       set withheld_at = null, withheld_by = null, withheld_reason = null,
+    update works as work
+       set taken_down_at = null, taken_down_by = null, taken_down_reason = null,
            updated_at = now()
-     where asset.id = $1 and asset.withheld_at is not null and asset.deleted_at is null
-    returning asset.id, asset.owner_id, asset.name, asset.published_snapshot_id
+     where work.id = $1 and work.taken_down_at is not null and work.deleted_at is null
+    returning work.id, work.owner_id, work.name, work.published_version_id
 )
-select cleared.owner_id, coalesce(snapshot.payload ->> 'name', cleared.name)::text as public_name
+select cleared.owner_id, coalesce(version.payload ->> 'name', cleared.name)::text as public_name
   from cleared
-  left join asset_snapshots snapshot on snapshot.id = cleared.published_snapshot_id;
+  left join work_versions version on version.id = cleared.published_version_id;
 
--- name: AssetDeletionState :one
-select withheld_at, deleted_at
-  from assets
+-- name: WorkDeletionState :one
+select taken_down_at, deleted_at
+  from works
  where id = $1 and owner_id = $2;
 
--- name: SoftDeleteAsset :execrows
-update assets
+-- name: SoftDeleteWork :execrows
+update works
    set deleted_at = $3, recoverable_until = $4, updated_at = $3
  where id = $1 and owner_id = $2
-   and withheld_at is null and deleted_at is null;
+   and taken_down_at is null and deleted_at is null;
 
--- name: RestoreAsset :execrows
-update assets
+-- name: RestoreWork :execrows
+update works
    set deleted_at = null, recoverable_until = null, updated_at = $3
  where id = $1 and owner_id = $2
    and deleted_at is not null and recoverable_until > $3;
 
--- name: ListDeletedAssets :many
-select asset.id, asset.name, asset.kind, asset.deleted_at, asset.recoverable_until
-  from assets asset
-  join users owner on owner.id = asset.owner_id
- where asset.owner_id = $1 and owner.username = $2
-   and asset.deleted_at is not null and asset.recoverable_until > $3
- order by asset.deleted_at desc, asset.id desc;
+-- name: ListDeletedWorks :many
+select work.id, work.name, work.type, work.deleted_at, work.recoverable_until
+  from works work
+  join users owner on owner.id = work.owner_id
+ where work.owner_id = $1 and owner.username = $2
+   and work.deleted_at is not null and work.recoverable_until > $3
+ order by work.deleted_at desc, work.id desc;
 
 -- name: UpsertBlob :one
 insert into blobs (id, sha256, byte_size, storage_key)
@@ -396,18 +424,37 @@ select u.id, u.username, u.email, u.email_verified_at,
   join users u on u.id = s.user_id
  where s.token_hash = $1 and s.expires_at > now();
 
--- name: NSFWVisibilityBySessionHash :one
-select u.nsfw_visibility
+-- name: NSFWPreferenceBySessionHash :one
+select u.nsfw_preference
   from sessions session
   join users u on u.id = session.user_id
  where session.token_hash = $1 and session.expires_at > now();
 
--- name: SetNSFWVisibilityBySessionHash :execrows
+-- name: SetNSFWPreferenceBySessionHash :execrows
 update users u
-   set nsfw_visibility = $1, updated_at = now()
+   set nsfw_preference = $1, updated_at = now()
   from sessions session
  where session.user_id = u.id and session.token_hash = $2
    and session.expires_at > now();
+
+-- name: PreferencesBySessionHash :one
+select u.app_preference, u.nsfw_preference
+  from sessions session
+  join users u on u.id = session.user_id
+ where session.token_hash = $1 and session.expires_at > now();
+
+-- name: SetAppPreferenceBySessionHash :execrows
+update users u
+   set app_preference = $1, updated_at = now()
+  from sessions session
+ where session.user_id = u.id and session.token_hash = $2
+   and session.expires_at > now();
+
+-- name: SetNewAccountPreferences :exec
+update users
+   set app_preference = sqlc.narg('app_preference')::text,
+       nsfw_preference = coalesce(sqlc.narg('nsfw_preference')::text, nsfw_preference)
+ where id = sqlc.arg('id');
 
 -- name: VerificationByHash :one
 select user_id, email
@@ -474,12 +521,6 @@ returning id, username, email, email_verified_at;
 select id, username, show_nsfw_contributions_on_profile
   from users where username = $1;
 
--- name: ProfileByDiscordSubject :one
-select u.id, u.username, u.show_nsfw_contributions_on_profile
-  from oauth_identities identity
-  join users u on u.id = identity.user_id
- where identity.provider = 'discord' and identity.subject = $1;
-
 -- name: UpdateUnverifiedEmail :one
 update users
    set email = $2, email_source = 'creator', updated_at = now()
@@ -487,13 +528,13 @@ update users
 returning id, username, email, email_verified_at;
 
 -- name: InsertOAuthState :exec
-insert into oauth_states (token_hash, intent, user_id, expires_at)
-values ($1, $2, $3, $4);
+insert into oauth_states (token_hash, intent, user_id, expires_at, app_preference, nsfw_preference)
+values ($1, $2, $3, $4, $5, $6);
 
 -- name: TakeOAuthState :one
 delete from oauth_states
  where token_hash = $1 and expires_at > now()
-returning intent, user_id;
+returning intent, user_id, app_preference, nsfw_preference;
 
 -- name: LockOAuthIdentity :one
 select 1 from pg_advisory_xact_lock(
@@ -580,73 +621,73 @@ delete from password_reset_tokens
  where token_hash = $1 and expires_at > now()
 returning user_id;
 
--- name: DeleteExpiredDeviceLinkRequests :execrows
+-- name: DeleteExpiredConnectionRequests :execrows
 with expired as (
     select device_code_hash
-      from link_requests
+      from connection_requests
      where expires_at <= now()
      order by expires_at
      limit sqlc.arg('batch_size')
      for update skip locked
 )
-delete from link_requests as request
+delete from connection_requests as request
  using expired
  where request.device_code_hash = expired.device_code_hash;
 
--- name: DeleteExpiredLinkAuthorizations :execrows
+-- name: DeleteExpiredConnectionAuthorizations :execrows
 with expired as (
     select request_hash
-      from link_authorizations
+      from connection_authorizations
      where expires_at <= now()
      order by expires_at
      limit sqlc.arg('batch_size')
      for update skip locked
 )
-delete from link_authorizations as link_auth
+delete from connection_authorizations as request
  using expired
- where link_auth.request_hash = expired.request_hash;
+ where request.request_hash = expired.request_hash;
 
--- name: DeleteExpiredInstanceAccessTokens :execrows
+-- name: DeleteExpiredAppAccessTokens :execrows
 with expired as (
     select token_hash
-      from instance_access_tokens
+      from app_access_tokens
      where expires_at <= now()
      order by expires_at
      limit sqlc.arg('batch_size')
      for update skip locked
 )
-delete from instance_access_tokens as token
+delete from app_access_tokens as token
  using expired
  where token.token_hash = expired.token_hash;
 
--- name: DeleteExpiredInstanceRefreshHistory :execrows
+-- name: DeleteExpiredAppRefreshHistory :execrows
 with expired as (
     select token_hash
-      from instance_refresh_history
+      from app_refresh_history
      where detectable_until <= now()
      order by detectable_until
      limit sqlc.arg('batch_size')
      for update skip locked
 )
-delete from instance_refresh_history as history
+delete from app_refresh_history as history
  using expired
  where history.token_hash = expired.token_hash;
 
--- name: DeleteExpiredLinkRateLimits :execrows
+-- name: DeleteExpiredConnectionRateLimits :execrows
 with expired as (
     select key_hash, action
-      from link_rate_limits
-     where link_rate_limits.window_start <= sqlc.arg('window_cutoff')
-     order by link_rate_limits.window_start
+      from connection_rate_limits
+     where connection_rate_limits.window_start <= sqlc.arg('window_cutoff')
+     order by connection_rate_limits.window_start
      limit sqlc.arg('batch_size')
      for update skip locked
 )
-delete from link_rate_limits as rate
+delete from connection_rate_limits as rate
  using expired
  where rate.key_hash = expired.key_hash and rate.action = expired.action;
 
--- name: TakeLinkRateLimit :one
-insert into link_rate_limits as rate (key_hash, action, attempts, window_start)
+-- name: TakeConnectionRateLimit :one
+insert into connection_rate_limits as rate (key_hash, action, attempts, window_start)
 values (sqlc.arg('key_hash'), sqlc.arg('action'), 1, now())
 on conflict (key_hash, action) do update
    set attempts = case
@@ -661,24 +702,24 @@ on conflict (key_hash, action) do update
        end
 returning rate.attempts, rate.window_start;
 
--- name: InsertDeviceLinkRequest :exec
-insert into link_requests (
+-- name: InsertConnectionRequest :exec
+insert into connection_requests (
     device_code_hash, user_code_hash,
-    application_name, instance_name, application_version, protocol_version,
-    capabilities, accepted_targets, scopes, expires_at
+    app_name, name, app_version, protocol_version,
+    capabilities, accepted_formats, permissions, expires_at
 )
 values (
     sqlc.arg('device_code_hash'), sqlc.arg('user_code_hash'),
-    sqlc.arg('application_name'), sqlc.arg('instance_name'),
-    sqlc.narg('application_version'), sqlc.arg('protocol_version'),
-    sqlc.arg('capabilities'), sqlc.arg('accepted_targets'),
-    sqlc.arg('scopes'), sqlc.arg('expires_at')
+    sqlc.arg('app_name'), sqlc.arg('name'),
+    sqlc.narg('app_version'), sqlc.arg('protocol_version'),
+    sqlc.arg('capabilities'), sqlc.arg('accepted_formats'),
+    sqlc.arg('permissions'), sqlc.arg('expires_at')
 );
 
--- name: ReviewDeviceLinkRequest :one
-select application_name, instance_name, application_version, protocol_version,
-       capabilities, accepted_targets, scopes, expires_at
-  from link_requests
+-- name: ReviewConnectionRequest :one
+select app_name, name, app_version, protocol_version,
+       capabilities, accepted_formats, permissions, expires_at
+  from connection_requests
  where user_code_hash = sqlc.arg('user_code_hash')
    and expires_at > now()
    and (reviewed_by is null or reviewed_by = sqlc.arg('reviewed_by'))
@@ -686,23 +727,24 @@ select application_name, instance_name, application_version, protocol_version,
    and denied_at is null
    and redeemed_at is null;
 
--- name: ApproveDeviceLinkRequest :one
-update link_requests
+-- name: ApproveConnectionRequest :one
+update connection_requests
    set review_token_hash = sqlc.arg('review_token_hash'),
        reviewed_by = sqlc.arg('reviewed_by'),
        approved_by = sqlc.arg('reviewed_by'),
-       approved_at = now()
+       approved_at = now(),
+       granted_permissions = sqlc.arg('granted_permissions')
  where user_code_hash = sqlc.arg('user_code_hash')
    and (reviewed_by is null or reviewed_by = sqlc.arg('reviewed_by'))
    and expires_at > now()
    and approved_at is null
    and denied_at is null
    and redeemed_at is null
-returning application_name, instance_name, application_version, protocol_version,
-          capabilities, accepted_targets, scopes, expires_at;
+returning app_name, name, app_version, protocol_version,
+          capabilities, accepted_formats, granted_permissions, expires_at;
 
--- name: DenyDeviceLinkRequest :execrows
-update link_requests
+-- name: DenyConnectionRequest :execrows
+update connection_requests
    set review_token_hash = sqlc.arg('review_token_hash'),
        reviewed_by = sqlc.arg('reviewed_by'),
        denied_by = sqlc.arg('reviewed_by'),
@@ -714,16 +756,16 @@ update link_requests
    and denied_at is null
    and redeemed_at is null;
 
--- name: LockDeviceLinkRequest :one
+-- name: LockConnectionRequest :one
 select approved_by, denied_at, redeemed_at, last_polled_at, poll_interval_seconds,
-       application_name, instance_name, application_version, protocol_version,
-       capabilities, accepted_targets, scopes, expires_at
-  from link_requests
+       app_name, name, app_version, protocol_version,
+       capabilities, accepted_formats, granted_permissions, expires_at
+  from connection_requests
  where device_code_hash = sqlc.arg('device_code_hash')
  for update;
 
--- name: RecordDeviceLinkPoll :one
-update link_requests
+-- name: RecordConnectionPoll :one
+update connection_requests
    set last_polled_at = now(),
        poll_interval_seconds = case
            when sqlc.arg('slow_down')::boolean
@@ -735,8 +777,8 @@ update link_requests
    and redeemed_at is null
 returning poll_interval_seconds;
 
--- name: RedeemDeviceLinkRequest :execrows
-update link_requests
+-- name: RedeemConnectionRequest :execrows
+update connection_requests
    set redeemed_at = now()
  where device_code_hash = sqlc.arg('device_code_hash')
    and expires_at > now()
@@ -744,38 +786,40 @@ update link_requests
    and denied_at is null
    and redeemed_at is null;
 
--- name: InsertLinkAuthorization :exec
-insert into link_authorizations (
-    request_hash, redirect_uri, state, code_challenge,
-    application_name, instance_name, application_version, protocol_version,
-    capabilities, accepted_targets, scopes, expires_at
+-- name: InsertConnectionAuthorization :exec
+insert into connection_authorizations (
+    request_hash, user_code_hash, redirect_uri, state, code_challenge,
+    app_name, name, app_version, protocol_version,
+    capabilities, accepted_formats, permissions, expires_at
 )
 values (
-    sqlc.arg('request_hash'), sqlc.arg('redirect_uri'), sqlc.arg('state'),
-    sqlc.arg('code_challenge'), sqlc.arg('application_name'),
-    sqlc.arg('instance_name'), sqlc.narg('application_version'),
+    sqlc.arg('request_hash'), sqlc.arg('user_code_hash'), sqlc.arg('redirect_uri'), sqlc.arg('state'),
+    sqlc.arg('code_challenge'), sqlc.arg('app_name'),
+    sqlc.arg('name'), sqlc.narg('app_version'),
     sqlc.arg('protocol_version'), sqlc.arg('capabilities'),
-    sqlc.arg('accepted_targets'), sqlc.arg('scopes'), sqlc.arg('expires_at')
+    sqlc.arg('accepted_formats'), sqlc.arg('permissions'), sqlc.arg('expires_at')
 );
 
--- name: ReviewLinkAuthorization :one
-select redirect_uri, state, application_name, instance_name,
-       application_version, protocol_version, capabilities,
-       accepted_targets, scopes, expires_at
-  from link_authorizations
+-- name: ReviewConnectionAuthorization :one
+select redirect_uri, state, app_name, name,
+       app_version, protocol_version, capabilities,
+       accepted_formats, permissions, expires_at
+  from connection_authorizations
  where request_hash = sqlc.arg('request_hash')
+   and user_code_hash = sqlc.arg('user_code_hash')
    and expires_at > now()
    and (reviewed_by is null or reviewed_by = sqlc.arg('reviewed_by'))
    and approved_at is null
    and denied_at is null
    and redeemed_at is null;
 
--- name: ApproveLinkAuthorization :one
-update link_authorizations
+-- name: ApproveConnectionAuthorization :one
+update connection_authorizations
    set reviewed_by = sqlc.arg('reviewed_by'),
        authorization_code_hash = sqlc.arg('authorization_code_hash'),
        approved_by = sqlc.arg('reviewed_by'),
-       approved_at = now()
+       approved_at = now(),
+       granted_permissions = sqlc.arg('granted_permissions')
  where request_hash = sqlc.arg('request_hash')
    and (reviewed_by is null or reviewed_by = sqlc.arg('reviewed_by'))
    and expires_at > now()
@@ -784,8 +828,8 @@ update link_authorizations
    and redeemed_at is null
 returning redirect_uri, state, expires_at;
 
--- name: DenyLinkAuthorization :one
-update link_authorizations
+-- name: DenyConnectionAuthorization :one
+update connection_authorizations
    set reviewed_by = sqlc.arg('reviewed_by'),
        denied_by = sqlc.arg('reviewed_by'),
        denied_at = now()
@@ -797,16 +841,16 @@ update link_authorizations
    and redeemed_at is null
 returning redirect_uri, state;
 
--- name: LockLinkAuthorization :one
+-- name: LockConnectionAuthorization :one
 select approved_by, denied_at, redeemed_at, redirect_uri, state, code_challenge,
-       application_name, instance_name, application_version, protocol_version,
-       capabilities, accepted_targets, scopes, expires_at
- from link_authorizations
+       app_name, name, app_version, protocol_version,
+       capabilities, accepted_formats, granted_permissions, expires_at
+ from connection_authorizations
  where authorization_code_hash = sqlc.arg('authorization_code_hash')
  for update;
 
--- name: RedeemLinkAuthorization :execrows
-update link_authorizations
+-- name: RedeemConnectionAuthorization :execrows
+update connection_authorizations
    set redeemed_at = now()
  where authorization_code_hash = sqlc.arg('authorization_code_hash')
    and expires_at > now()
@@ -814,286 +858,233 @@ update link_authorizations
    and denied_at is null
    and redeemed_at is null;
 
--- name: InsertLinkedInstance :one
-insert into linked_instances (
-    id, user_id, application_name, instance_name, application_version,
-    protocol_version, capabilities, accepted_targets,
-    refresh_token_hash, refresh_token_prefix, scopes
+-- name: InsertConnectedApp :one
+insert into connected_apps (
+    id, user_id, app_name, name, app_version,
+    protocol_version, capabilities, accepted_formats,
+    refresh_token_hash, refresh_token_prefix, permissions
 )
 values (
-    sqlc.arg('id'), sqlc.arg('user_id'), sqlc.arg('application_name'),
-    sqlc.arg('instance_name'), sqlc.narg('application_version'),
+    sqlc.arg('id'), sqlc.arg('user_id'), sqlc.arg('app_name'),
+    sqlc.arg('name'), sqlc.narg('app_version'),
     sqlc.arg('protocol_version'), sqlc.arg('capabilities'),
-    sqlc.arg('accepted_targets'), sqlc.arg('refresh_token_hash'),
-    sqlc.arg('refresh_token_prefix'), sqlc.arg('scopes')
+    sqlc.arg('accepted_formats'), sqlc.arg('refresh_token_hash'),
+    sqlc.arg('refresh_token_prefix'), sqlc.arg('permissions')
 )
-returning id, application_name, instance_name, application_version,
-          protocol_version, capabilities, accepted_targets,
-          refresh_token_prefix, scopes, linked_at, last_seen_at, revoked_at;
+returning id, app_name, name, app_version,
+          protocol_version, capabilities, accepted_formats,
+          refresh_token_prefix, permissions, connected_at, last_seen_at, revoked_at;
 
--- name: InsertInstanceAccessToken :one
-with live_instance as (
+-- name: InsertAppAccessToken :one
+with live_app as (
     select id
-      from linked_instances
-     where id = sqlc.arg('instance_id') and revoked_at is null
+      from connected_apps
+     where id = sqlc.arg('connected_app_id') and revoked_at is null
      for update
 )
-insert into instance_access_tokens (token_hash, instance_id, expires_at)
-select sqlc.arg('token_hash'), sqlc.arg('instance_id'), sqlc.arg('expires_at')
-  from live_instance
-returning token_hash, instance_id, expires_at;
+insert into app_access_tokens (token_hash, connected_app_id, expires_at)
+select sqlc.arg('token_hash'), sqlc.arg('connected_app_id'), sqlc.arg('expires_at')
+  from live_app
+returning token_hash, connected_app_id, expires_at;
 
--- name: ListLinkedInstances :many
-select id, application_name, instance_name, application_version,
-       protocol_version, capabilities, accepted_targets,
-       refresh_token_prefix, scopes, linked_at, last_seen_at, revoked_at
-  from linked_instances
+-- name: ListConnectedApps :many
+select id, app_name, name, app_version,
+       protocol_version, capabilities, accepted_formats,
+       refresh_token_prefix, permissions, connected_at, last_seen_at, revoked_at
+  from connected_apps
  where user_id = sqlc.arg('user_id')
- order by (revoked_at is not null), coalesce(last_seen_at, linked_at) desc, linked_at desc;
+ order by (revoked_at is not null), coalesce(last_seen_at, connected_at) desc, connected_at desc;
 
--- name: TouchLinkedInstanceByAccessToken :one
-update linked_instances as instance
+-- name: TouchConnectedAppByAccessToken :one
+update connected_apps as app
    set last_seen_at = now()
-  from instance_access_tokens as token
+  from app_access_tokens as token
  where token.token_hash = sqlc.arg('token_hash')
    and token.expires_at > now()
-   and instance.id = token.instance_id
-   and instance.revoked_at is null
-returning instance.id, instance.user_id,
-          instance.application_name, instance.instance_name,
-          instance.application_version, instance.protocol_version,
-          instance.capabilities, instance.accepted_targets,
-          instance.refresh_token_prefix, instance.scopes,
-          instance.linked_at, instance.last_seen_at;
+   and app.id = token.connected_app_id
+   and app.revoked_at is null
+returning app.id, app.user_id,
+          app.app_name, app.name,
+          app.app_version, app.protocol_version,
+          app.capabilities, app.accepted_formats,
+          app.refresh_token_prefix, app.permissions,
+          app.connected_at, app.last_seen_at;
 
--- name: LockLinkedInstanceByRefreshToken :one
-select id, user_id, application_name, instance_name, application_version,
-       protocol_version, capabilities, accepted_targets,
-       refresh_token_prefix, scopes, linked_at, last_seen_at
-  from linked_instances
+-- name: LockConnectedAppByRefreshToken :one
+select id, user_id, app_name, name, app_version,
+       protocol_version, capabilities, accepted_formats,
+       refresh_token_prefix, permissions, connected_at, last_seen_at
+  from connected_apps
  where refresh_token_hash = sqlc.arg('refresh_token_hash') and revoked_at is null
  for update;
 
--- name: InstanceForUsedRefreshToken :one
-select history.instance_id, instance.user_id
-  from instance_refresh_history as history
-  join linked_instances as instance on instance.id = history.instance_id
+-- name: ConnectedAppForUsedRefreshToken :one
+select history.connected_app_id, app.user_id
+  from app_refresh_history as history
+  join connected_apps as app on app.id = history.connected_app_id
  where history.token_hash = sqlc.arg('refresh_token_hash')
    and history.detectable_until > now();
 
--- name: RotateInstanceRefreshToken :one
+-- name: RotateAppRefreshToken :one
 with rotated as (
-    update linked_instances
+    update connected_apps
        set refresh_token_hash = sqlc.arg('new_refresh_token_hash'),
            refresh_token_prefix = sqlc.arg('new_refresh_token_prefix'),
            last_seen_at = now()
-     where id = sqlc.arg('instance_id')
+     where id = sqlc.arg('connected_app_id')
        and refresh_token_hash = sqlc.arg('old_refresh_token_hash')
        and revoked_at is null
     returning id
 )
-insert into instance_refresh_history (token_hash, instance_id, detectable_until)
+insert into app_refresh_history (token_hash, connected_app_id, detectable_until)
 select sqlc.arg('old_refresh_token_hash'), id, sqlc.arg('detectable_until')
   from rotated
-returning instance_id;
+returning connected_app_id;
 
--- name: UpdateLinkedInstanceDeclaration :one
-update linked_instances
-   set application_version = sqlc.narg('application_version'),
+-- name: UpdateConnectedAppCapabilities :one
+update connected_apps
+   set app_version = sqlc.narg('app_version'),
        protocol_version = sqlc.arg('protocol_version'),
        capabilities = sqlc.arg('capabilities'),
-       accepted_targets = sqlc.arg('accepted_targets')
- where id = sqlc.arg('instance_id') and revoked_at is null
-returning id, application_name, instance_name, application_version,
-          protocol_version, capabilities, accepted_targets,
-          refresh_token_prefix, scopes, linked_at, last_seen_at;
+       accepted_formats = sqlc.arg('accepted_formats')
+ where id = sqlc.arg('connected_app_id') and revoked_at is null
+returning id, app_name, name, app_version,
+          protocol_version, capabilities, accepted_formats,
+          refresh_token_prefix, permissions, connected_at, last_seen_at;
 
--- name: RevokeLinkedInstance :one
+-- name: UpdateConnectedAppPermissions :one
+with changed as (
+    update connected_apps
+       set permissions = sqlc.arg('permissions')
+     where id = sqlc.arg('connected_app_id')
+       and user_id = sqlc.arg('user_id')
+       and revoked_at is null
+    returning id, permissions
+), forgotten_library as (
+    delete from app_library_entries as entry
+     using changed
+     where entry.connected_app_id = changed.id
+       and not changed.permissions @> array['library:sync']
+)
+select permissions from changed;
+
+-- name: RevokeConnectedApp :one
 with revoked as (
-    update linked_instances as instance
+    update connected_apps as app
        set refresh_token_hash = null,
-           application_version = null,
-           library_application_version = null,
+           app_version = null,
+           library_app_version = null,
            protocol_version = null,
            capabilities = '{}',
-           accepted_targets = '{}',
+           accepted_formats = '{}',
            revoked_at = now()
-     where instance.id = sqlc.arg('instance_id')
-       and instance.user_id = sqlc.arg('user_id')
-       and instance.revoked_at is null
-    returning instance.id
+     where app.id = sqlc.arg('connected_app_id')
+       and app.user_id = sqlc.arg('user_id')
+       and app.revoked_at is null
+    returning app.id
 ), deleted_access as (
-    delete from instance_access_tokens as token
-     where token.instance_id in (select revoked.id from revoked)
-), deleted_deliveries as (
-    delete from instance_deliveries as delivery
-     where delivery.instance_id in (select revoked.id from revoked)
+    delete from app_access_tokens as token
+     where token.connected_app_id in (select revoked.id from revoked)
+), deleted_sends as (
+    delete from sends as send
+     where send.connected_app_id in (select revoked.id from revoked)
 ), deleted_library as (
-    delete from instance_library_entries as entry
-     where entry.instance_id in (select revoked.id from revoked)
+    delete from app_library_entries as entry
+     where entry.connected_app_id in (select revoked.id from revoked)
 )
 select exists(select 1 from revoked) as revoked;
 
--- name: RevokeLinkedInstanceByID :one
+-- name: RevokeConnectedAppByID :one
 with revoked as (
-    update linked_instances as instance
+    update connected_apps as app
        set refresh_token_hash = null,
-           application_version = null,
-           library_application_version = null,
+           app_version = null,
+           library_app_version = null,
            protocol_version = null,
            capabilities = '{}',
-           accepted_targets = '{}',
+           accepted_formats = '{}',
            revoked_at = now()
-     where instance.id = sqlc.arg('instance_id') and instance.revoked_at is null
-    returning instance.id
+     where app.id = sqlc.arg('connected_app_id') and app.revoked_at is null
+    returning app.id
 ), deleted_access as (
-    delete from instance_access_tokens as token
-     where token.instance_id in (select revoked.id from revoked)
-), deleted_deliveries as (
-    delete from instance_deliveries as delivery
-     where delivery.instance_id in (select revoked.id from revoked)
+    delete from app_access_tokens as token
+     where token.connected_app_id in (select revoked.id from revoked)
+), deleted_sends as (
+    delete from sends as send
+     where send.connected_app_id in (select revoked.id from revoked)
 ), deleted_library as (
-    delete from instance_library_entries as entry
-     where entry.instance_id in (select revoked.id from revoked)
+    delete from app_library_entries as entry
+     where entry.connected_app_id in (select revoked.id from revoked)
 )
 select exists(select 1 from revoked) as revoked;
-
--- name: InsertMigrationException :exec
-insert into migration_exceptions (id, kind, subject, detail, asset_id)
-values ($1, $2, $3, $4, sqlc.narg('asset_id')::uuid);
-
--- name: MigrationTargetIsEmpty :one
-select (not exists (select 1 from users)
-    and not exists (select 1 from retired_handles)
-    and not exists (select 1 from oauth_identities)
-    and not exists (select 1 from migration_exceptions))::boolean as empty;
-
--- name: InsertMigratedUser :exec
-insert into users
-  (id, username, role, created_at, updated_at, display_name, custom_display_name,
-   avatar_url, banner_url, nsfw_visibility, show_nsfw_contributions_on_profile,
-   default_include_tags, default_exclude_tags)
-values ($1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, $11, $12);
-
--- name: InsertMigratedDiscordIdentity :exec
-insert into oauth_identities (user_id, provider, subject) values ($1, 'discord', $2);
-
--- name: MigratedAccounts :many
-select u.id, u.username, u.role, u.created_at, u.display_name, u.custom_display_name,
-       u.avatar_url, u.banner_url, u.nsfw_visibility,
-       u.show_nsfw_contributions_on_profile,
-       u.default_include_tags, u.default_exclude_tags,
-       u.email, u.email_source, u.email_verified_at, u.password_hash,
-       identity.subject as discord_subject
-  from users u
-  left join oauth_identities identity
-    on identity.user_id = u.id and identity.provider = 'discord';
 
 -- name: UpdateDiscordProfile :exec
 update users
    set display_name = $2, avatar_url = $3, banner_url = $4, updated_at = now()
  where id = $1;
 
--- name: MigrationAssetTargetIsEmpty :one
-select (not exists (select 1 from assets)
-    and not exists (select 1 from asset_legacy_paths)
-    and not exists (select 1 from migration_preserved_records)
-    and not exists (select 1 from migration_legacy_counters)
-    and not exists (select 1 from migration_exceptions where asset_id is not null))::boolean as empty;
-
--- name: InsertLegacyPath :exec
-insert into asset_legacy_paths (path, asset_id) values ($1, $2);
-
--- name: LegacyPathTarget :one
-select asset.id, asset.name
-  from asset_legacy_paths legacy
-  join assets asset on asset.id = legacy.asset_id
- where legacy.path = $1
-   and asset.deleted_at is null
-   and asset.withheld_at is null
-   and asset.lifecycle = 'published';
-
--- name: InsertPreservedRecord :exec
-insert into migration_preserved_records
-  (id, source_table, source_id, asset_id, owner_id, payload)
-values ($1, $2, $3, sqlc.narg('asset_id')::uuid, sqlc.narg('owner_id')::uuid, $4);
-
--- name: InsertLegacyCounters :exec
-insert into migration_legacy_counters (asset_id, v1_downloads, v1_views, v1_updated_at)
-values ($1, $2, $3, $4);
-
--- name: StagedMedia :many
-select source, blob_id, width, height from migration_staged_media;
-
--- name: RecordStagedMedia :exec
-insert into migration_staged_media (source, blob_id, width, height)
-values ($1, $2, $3, $4)
-on conflict (source) do update
-   set blob_id = excluded.blob_id, width = excluded.width,
-       height = excluded.height, staged_at = now();
-
--- name: LiveLinkedInstances :many
-select id, user_id, application_name, instance_name, application_version,
-       protocol_version, capabilities, accepted_targets,
-       refresh_token_prefix, scopes, linked_at, last_seen_at
-  from linked_instances
+-- name: LiveConnectedApps :many
+select id, user_id, app_name, name, app_version,
+       protocol_version, capabilities, accepted_formats,
+       refresh_token_prefix, permissions, connected_at, last_seen_at
+  from connected_apps
  where user_id = sqlc.arg('user_id') and revoked_at is null
- order by coalesce(last_seen_at, linked_at) desc, linked_at desc;
+ order by coalesce(last_seen_at, connected_at) desc, connected_at desc;
 
--- name: LiveLinkedInstance :one
-select id, user_id, application_name, instance_name, application_version,
-       protocol_version, capabilities, accepted_targets,
-       refresh_token_prefix, scopes, linked_at, last_seen_at
-  from linked_instances
- where id = sqlc.arg('instance_id')
+-- name: LiveConnectedApp :one
+select id, user_id, app_name, name, app_version,
+       protocol_version, capabilities, accepted_formats,
+       refresh_token_prefix, permissions, connected_at, last_seen_at
+  from connected_apps
+ where id = sqlc.arg('connected_app_id')
    and user_id = sqlc.arg('user_id')
    and revoked_at is null;
 
--- name: QueueDelivery :one
-insert into instance_deliveries (id, instance_id, asset_id, expires_at, updates_install)
-select sqlc.arg('id'), sqlc.arg('instance_id'), sqlc.arg('asset_id'),
+-- name: QueueSend :one
+insert into sends (id, connected_app_id, work_id, expires_at, updates_install)
+select sqlc.arg('id'), sqlc.arg('connected_app_id'), sqlc.arg('work_id'),
        sqlc.arg('expires_at'),
        exists (
            select 1
-             from instance_library_entries as entry
-            where entry.instance_id = sqlc.arg('instance_id')
-              and entry.asset_id = sqlc.arg('asset_id')
+             from app_library_entries as entry
+            where entry.connected_app_id = sqlc.arg('connected_app_id')
+              and entry.work_id = sqlc.arg('work_id')
        )
-on conflict (instance_id, asset_id) where state in ('queued', 'released') do nothing
-returning id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+on conflict (connected_app_id, work_id) where state in ('queued', 'released') do nothing
+returning id, connected_app_id, work_id, state, settled_reason, queued_at, settled_at,
           expires_at, updates_install;
 
--- name: LiveDeliveryForAsset :one
-select id, instance_id, asset_id, state, settled_reason, queued_at, settled_at,
+-- name: LiveSendForWork :one
+select id, connected_app_id, work_id, state, settled_reason, queued_at, settled_at,
        expires_at, updates_install
-  from instance_deliveries
- where instance_id = sqlc.arg('instance_id')
-   and asset_id = sqlc.arg('asset_id')
+  from sends
+ where connected_app_id = sqlc.arg('connected_app_id')
+   and work_id = sqlc.arg('work_id')
    and state in ('queued', 'released');
 
--- name: CountLiveDeliveries :one
+-- name: CountLiveSends :one
 select count(*)::bigint
-  from instance_deliveries
- where instance_id = sqlc.arg('instance_id') and state in ('queued', 'released');
+  from sends
+ where connected_app_id = sqlc.arg('connected_app_id') and state in ('queued', 'released');
 
--- name: AbandonExhaustedDeliveries :execrows
-update instance_deliveries
+-- name: AbandonExhaustedSends :execrows
+update sends
    set state = 'failed', settled_at = now(), settled_reason = 'abandoned',
        lease_expires_at = null
- where instance_id = sqlc.arg('instance_id')
+ where connected_app_id = sqlc.arg('connected_app_id')
    and state = 'released'
    and lease_expires_at <= now()
    and attempts >= sqlc.arg('max_attempts');
 
--- name: ClaimDeliveries :many
+-- name: ClaimSends :many
 with candidates as (
     select waiting.id
-      from instance_deliveries as waiting
-      join linked_instances as instance
-        on instance.id = waiting.instance_id
-       and instance.revoked_at is null
-       and instance.scopes @> array['asset:receive']
-     where waiting.instance_id = sqlc.arg('instance_id')
+      from sends as waiting
+      join connected_apps as app
+        on app.id = waiting.connected_app_id
+       and app.revoked_at is null
+       and app.permissions @> array['work:receive']
+     where waiting.connected_app_id = sqlc.arg('connected_app_id')
        and waiting.expires_at > now()
        and waiting.attempts < sqlc.arg('max_attempts')
        and (waiting.state = 'queued'
@@ -1102,171 +1093,174 @@ with candidates as (
      limit sqlc.arg('batch_size')
      for update of waiting skip locked
 )
-update instance_deliveries as delivery
+update sends as send
    set state = 'released',
-       attempts = delivery.attempts + 1,
+       attempts = send.attempts + 1,
        lease_expires_at = sqlc.arg('lease_expires_at')
   from candidates
- where delivery.id = candidates.id
-returning delivery.id, delivery.asset_id, delivery.queued_at,
-          delivery.lease_expires_at;
+ where send.id = candidates.id
+returning send.id, send.work_id, send.queued_at,
+          send.lease_expires_at;
 
--- name: SetDeliveryTarget :exec
-update instance_deliveries
-   set chosen_target = sqlc.arg('chosen_target')
+-- name: SetSendFormat :exec
+update sends
+   set chosen_format = sqlc.arg('chosen_format')
  where id = sqlc.arg('id');
 
--- name: FailDelivery :exec
-update instance_deliveries
+-- name: FailSend :exec
+update sends
    set state = 'failed', settled_at = now(),
        settled_reason = sqlc.arg('settled_reason'), lease_expires_at = null
  where id = sqlc.arg('id');
 
--- name: AcknowledgeDeliveries :execrows
-update instance_deliveries
+-- name: AcknowledgeSends :execrows
+update sends
    set state = 'delivered', settled_at = now(), lease_expires_at = null
- where instance_id = sqlc.arg('instance_id')
-   and id = any(sqlc.arg('delivery_ids')::uuid[])
+ where connected_app_id = sqlc.arg('connected_app_id')
+   and id = any(sqlc.arg('send_ids')::uuid[])
    and state = 'released';
 
--- name: DiscardDelivery :execrows
-delete from instance_deliveries as delivery
- using linked_instances as instance
- where delivery.id = sqlc.arg('delivery_id')
-   and delivery.instance_id = instance.id
-   and instance.user_id = sqlc.arg('user_id');
+-- name: DiscardSend :execrows
+delete from sends as send
+ using connected_apps as app
+ where send.id = sqlc.arg('send_id')
+   and send.connected_app_id = app.id
+   and app.user_id = sqlc.arg('user_id');
 
--- name: DeliveryForArtifact :one
-select delivery.asset_id, delivery.chosen_target, instance.id as instance_id
-  from instance_deliveries as delivery
-  join linked_instances as instance on instance.id = delivery.instance_id
- where delivery.id = sqlc.arg('delivery_id')
-   and delivery.state = 'released'
-   and delivery.lease_expires_at > now()
-   and delivery.expires_at > now()
-   and delivery.chosen_target is not null
-   and instance.revoked_at is null
-   and instance.scopes @> array['asset:receive'];
+-- name: SendForMainFile :one
+select send.work_id, send.chosen_format, app.id as connected_app_id
+  from sends as send
+  join connected_apps as app on app.id = send.connected_app_id
+ where send.id = sqlc.arg('send_id')
+   and send.state = 'released'
+   and send.lease_expires_at > now()
+   and send.expires_at > now()
+   and send.chosen_format is not null
+   and app.revoked_at is null
+   and app.permissions @> array['work:receive'];
 
--- name: DeleteExpiredDeliveries :execrows
+-- name: DeleteExpiredSends :execrows
 with expired as (
     select id
-      from instance_deliveries
+      from sends
      where expires_at <= now()
      order by expires_at
      limit sqlc.arg('batch_size')
      for update skip locked
 )
-delete from instance_deliveries as delivery
+delete from sends as send
  using expired
- where delivery.id = expired.id;
+ where send.id = expired.id;
 
--- name: SendableAssetGeneration :one
-select content_generation
-  from assets
- where id = sqlc.arg('asset_id')
+-- name: SendableWorkVersion :one
+select version.number
+  from works work
+  join work_versions version on version.id = work.published_version_id
+ where work.id = sqlc.arg('work_id')
    and deleted_at is null
-   and withheld_at is null
+   and taken_down_at is null
    and lifecycle = 'published';
 
--- name: AssetInstanceStates :many
-select instance.id, instance.application_name, instance.instance_name,
-       instance.last_seen_at, instance.scopes, instance.capabilities,
-       instance.accepted_targets,
-       delivery.id as delivery_id,
-       coalesce(delivery.state, '')::text as delivery_state,
-       delivery.settled_reason, delivery.queued_at, delivery.settled_at,
-       delivery.expires_at,
-       coalesce(delivery.updates_install, false)::boolean as updates_install,
-       entry.content_generation as installed_generation
-  from linked_instances as instance
+-- name: WorkConnectedAppStates :many
+select app.id, app.app_name, app.name,
+       app.last_seen_at, app.permissions, app.capabilities,
+       app.accepted_formats,
+       send.id as send_id,
+       coalesce(send.state, '')::text as send_state,
+       send.settled_reason, send.queued_at, send.settled_at,
+       send.expires_at,
+       coalesce(send.updates_install, false)::boolean as updates_install,
+       entry.version_number as installed_version
+  from connected_apps as app
   left join lateral (
       select waiting.id, waiting.state, waiting.settled_reason,
              waiting.queued_at, waiting.settled_at, waiting.expires_at,
              waiting.updates_install
-        from instance_deliveries as waiting
-       where waiting.instance_id = instance.id
-         and waiting.asset_id = sqlc.arg('asset_id')
+        from sends as waiting
+       where waiting.connected_app_id = app.id
+         and waiting.work_id = sqlc.arg('work_id')
        order by (waiting.state in ('queued', 'released')) desc,
                 waiting.queued_at desc
        limit 1
-  ) as delivery on true
-  left join instance_library_entries as entry
-    on entry.instance_id = instance.id and entry.asset_id = sqlc.arg('asset_id')
- where instance.user_id = sqlc.arg('user_id') and instance.revoked_at is null
- order by coalesce(instance.last_seen_at, instance.linked_at) desc,
-          instance.linked_at desc;
+  ) as send on true
+  left join app_library_entries as entry
+    on entry.connected_app_id = app.id and entry.work_id = sqlc.arg('work_id')
+ where app.user_id = sqlc.arg('user_id') and app.revoked_at is null
+ order by coalesce(app.last_seen_at, app.connected_at) desc,
+          app.connected_at desc;
 
--- name: InstanceLibraryCounts :many
-select entry.instance_id,
+-- name: AppLibraryCounts :many
+select entry.connected_app_id,
        count(*)::bigint as installed,
        count(*) filter (
-           where asset.content_generation > entry.content_generation
+           where version.number > entry.version_number
        )::bigint as updates_available
-  from instance_library_entries as entry
-  join assets as asset on asset.id = entry.asset_id
-  join linked_instances as instance on instance.id = entry.instance_id
- where instance.user_id = sqlc.arg('user_id')
-   and instance.revoked_at is null
-   and asset.deleted_at is null
-   and asset.withheld_at is null
-   and asset.lifecycle = 'published'
- group by entry.instance_id;
+  from app_library_entries as entry
+  join works as work on work.id = entry.work_id
+  join work_versions as version on version.id = work.published_version_id
+  join connected_apps as app on app.id = entry.connected_app_id
+ where app.user_id = sqlc.arg('user_id')
+   and app.revoked_at is null
+   and work.deleted_at is null
+   and work.taken_down_at is null
+   and work.lifecycle = 'published'
+ group by entry.connected_app_id;
 
 -- name: ReportLibraryEntries :execrows
-insert into instance_library_entries
-    (instance_id, asset_id, content_generation, reported_at)
-select sqlc.arg('instance_id'), asset.id,
-       coalesce(nullif(reported.generation, 0), asset.content_generation), now()
+insert into app_library_entries
+    (connected_app_id, work_id, version_number, reported_at)
+select sqlc.arg('connected_app_id'), work.id,
+       coalesce(nullif(reported.version_number, 0), version.number), now()
   from (
-      select unnest(sqlc.arg('asset_ids')::uuid[]) as asset_id,
-             unnest(sqlc.arg('generations')::integer[]) as generation
+      select unnest(sqlc.arg('work_ids')::uuid[]) as work_id,
+             unnest(sqlc.arg('version_numbers')::integer[]) as version_number
   ) as reported
-  join assets as asset
-    on asset.id = reported.asset_id
-   and asset.deleted_at is null
-   and asset.lifecycle = 'published'
-on conflict (instance_id, asset_id) do update
-   set content_generation = excluded.content_generation,
+  join works as work
+    on work.id = reported.work_id
+   and work.deleted_at is null
+   and work.lifecycle = 'published'
+  join work_versions as version on version.id = work.published_version_id
+on conflict (connected_app_id, work_id) do update
+   set version_number = excluded.version_number,
        reported_at = excluded.reported_at;
 
 -- name: RemoveLibraryEntries :execrows
-delete from instance_library_entries
- where instance_id = sqlc.arg('instance_id')
-   and asset_id = any(sqlc.arg('asset_ids')::uuid[]);
+delete from app_library_entries
+ where connected_app_id = sqlc.arg('connected_app_id')
+   and work_id = any(sqlc.arg('work_ids')::uuid[]);
 
--- name: PruneLibraryToSnapshot :execrows
-delete from instance_library_entries
- where instance_id = sqlc.arg('instance_id')
-   and not (asset_id = any(sqlc.arg('asset_ids')::uuid[]));
+-- name: PruneLibraryToWhole :execrows
+delete from app_library_entries
+ where connected_app_id = sqlc.arg('connected_app_id')
+   and not (work_id = any(sqlc.arg('work_ids')::uuid[]));
 
--- name: TakeWithheldNotices :many
-update instance_library_entries as entry
-   set notified_withheld_at = asset.withheld_at
-  from asset_public.assets as asset
- where entry.instance_id = sqlc.arg('instance_id')
-   and asset.id = entry.asset_id
-   and asset.kind = any(sqlc.arg('kinds')::text[])
-   and asset.withheld_at is not null
-   and asset.deleted_at is null
-   and entry.notified_withheld_at is distinct from asset.withheld_at
-returning entry.asset_id, asset.name::text as name, asset.withheld_at;
+-- name: TakeTakedownNotices :many
+update app_library_entries as entry
+   set notified_taken_down_at = work.taken_down_at
+  from work_public.works as work
+ where entry.connected_app_id = sqlc.arg('connected_app_id')
+   and work.id = entry.work_id
+   and work.type = any(sqlc.arg('types')::text[])
+   and work.taken_down_at is not null
+   and work.deleted_at is null
+   and entry.notified_taken_down_at is distinct from work.taken_down_at
+returning entry.work_id, work.name::text as name, work.taken_down_at;
 
--- name: RecordLibraryApplicationVersion :exec
-update linked_instances
-   set library_application_version = nullif(sqlc.arg('application_version')::text, '')
- where id = sqlc.arg('instance_id');
+-- name: RecordLibraryAppVersion :exec
+update connected_apps
+   set library_app_version = nullif(sqlc.arg('app_version')::text, '')
+ where id = sqlc.arg('connected_app_id');
 
--- name: InstalledApplicationVersions :many
-select coalesce(instance.library_application_version,
-                instance.application_version)::text as application_version
-  from instance_library_entries as entry
-  join linked_instances as instance
-    on instance.id = entry.instance_id
-   and instance.revoked_at is null
-   and instance.capabilities && sqlc.arg('capabilities')::text[]
- where entry.asset_id = sqlc.arg('asset_id')
-   and coalesce(instance.library_application_version, instance.application_version) is not null
- group by coalesce(instance.library_application_version, instance.application_version)
+-- name: InstalledAppVersions :many
+select coalesce(app.library_app_version,
+                app.app_version)::text as app_version
+  from app_library_entries as entry
+  join connected_apps as app
+    on app.id = entry.connected_app_id
+   and app.revoked_at is null
+   and app.capabilities && sqlc.arg('capabilities')::text[]
+ where entry.work_id = sqlc.arg('work_id')
+   and coalesce(app.library_app_version, app.app_version) is not null
+ group by coalesce(app.library_app_version, app.app_version)
 having count(*) >= sqlc.arg('minimum_group_size')::bigint
- order by coalesce(instance.library_application_version, instance.application_version);
+ order by coalesce(app.library_app_version, app.app_version);

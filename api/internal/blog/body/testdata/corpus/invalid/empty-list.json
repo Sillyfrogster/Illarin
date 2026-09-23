@@ -1,0 +1,5 @@
+{
+  "note": "A list with nothing in it",
+  "path": "body.content.0.content",
+  "body": {"version": 2, "content": [{"type": "bulletList", "content": []}]}
+}

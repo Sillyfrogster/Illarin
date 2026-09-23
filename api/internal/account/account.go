@@ -3,39 +3,44 @@ package account
 import (
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/google/uuid"
 )
 
-type Account struct {
-	ID            uuid.UUID
-	Handle        string
-	Email         *string
-	EmailVerified bool
-	DiscordLinked bool
-	HasPassword   bool
-	Role          Role
+type NSFWPreference string
+
+const (
+	NSFWHidden  NSFWPreference = "hidden"
+	NSFWBlurred NSFWPreference = "blurred"
+	NSFWShown   NSFWPreference = "shown"
+)
+
+func (p NSFWPreference) valid() bool {
+	return p == NSFWHidden || p == NSFWBlurred || p == NSFWShown
 }
 
-type Role string
+// AppAny is the app preference of a reader who wants every app's work
+const AppAny = "any"
 
-const (
-	RoleUser      Role = "user"
-	RoleModerator Role = "moderator"
-	RoleAdmin     Role = "admin"
-)
+// ValidApp says whether an app preference names an app in the registry or any
+func ValidApp(app string) bool {
+	return app == AppAny || format.KnownApp(app)
+}
 
-type NSFWVisibility string
+// Preferences holds what a reader chose about browse, where a nil App means they have not said
+type Preferences struct {
+	App  *string
+	NSFW NSFWPreference
+}
 
-const (
-	NSFWHidden  NSFWVisibility = "hidden"
-	NSFWBlurred NSFWVisibility = "blurred"
-	NSFWShown   NSFWVisibility = "shown"
-)
-
+// SignUpInput leaves App and NSFW empty when the reader skipped them
 type SignUpInput struct {
 	Email    string
 	Password string
 	Handle   string
+	App      string
+	NSFW     NSFWPreference
 }
 
 type DiscordProfile struct {
@@ -62,7 +67,7 @@ type DiscordAuthorization struct {
 }
 
 type DiscordCompletion struct {
-	Account        Account
+	Account        api.Account
 	SessionToken   string
 	SessionExpires time.Time
 	Intent         DiscordIntent

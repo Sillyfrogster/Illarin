@@ -16,11 +16,10 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
-func readLumiverse(ctx context.Context, file probe.Inspection, payload probe.Payload) (format.Parsed, error) {
+func readLumiverse(ctx context.Context, file format.Inspection, payload format.Payload) (format.Parsed, error) {
 	source := maps.Clone(payload.Root)
 	delete(source, "format")
 	header := format.Header{}
@@ -74,7 +73,7 @@ func readLumiverse(ctx context.Context, file probe.Inspection, payload probe.Pay
 	}
 
 	return format.Parsed{
-		Kind: Kind, Format: LumiverseID, CreatedAt: createdAt,
+		Type: Type, Format: LumiverseID, CreatedAt: createdAt,
 		Header: header, Elements: elements,
 		Remainder: themeRemainder(lumiverseNamespace, source, itemRows...),
 	}, nil
@@ -161,11 +160,11 @@ func readLumiverseControls(theme map[string]json.RawMessage) []block.Setting {
 
 func readLumiverseStyles(
 	ctx context.Context,
-	file probe.Inspection,
+	file format.Inspection,
 	source map[string]json.RawMessage,
 ) (block.StylesheetSet, []itemRemainder) {
 	styles := block.StylesheetSet{
-		Stylesheets: []block.Stylesheet{}, Assets: []block.StylesheetAsset{},
+		Stylesheets: []block.Stylesheet{}, Files: []block.StylesheetFile{},
 	}
 	keys.Take(source, "globalCSS", &styles.Global)
 	rows := make([]itemRemainder, 0)
@@ -202,9 +201,9 @@ func readLumiverseStyles(
 		}
 	}
 
-	if rawAssets, present := source["assets"]; present {
+	if rawFiles, present := source["assets"]; present {
 		var descriptors []json.RawMessage
-		if json.Unmarshal(rawAssets, &descriptors) == nil {
+		if json.Unmarshal(rawFiles, &descriptors) == nil {
 			delete(source, "assets")
 			unread := make([]json.RawMessage, 0)
 			for _, descriptor := range descriptors {
@@ -231,11 +230,11 @@ func readLumiverseStyles(
 					continue
 				}
 				id := block.NewItemID()
-				styles.Assets = append(styles.Assets, block.StylesheetAsset{
+				styles.Files = append(styles.Files, block.StylesheetFile{
 					ID: id, Path: archivePath, MediaType: mediaType, Data: data,
 				})
 				rows = append(rows, itemRemainder{
-					namespace: lumiverseAssetNamespace, id: id, fields: fields,
+					namespace: lumiverseFileNamespace, id: id, fields: fields,
 				})
 			}
 			if len(unread) > 0 {
@@ -246,17 +245,17 @@ func readLumiverseStyles(
 	return styles, rows
 }
 
-func (LumiverseModule) Write(_ context.Context, asset format.ExportAsset) (format.Artifact, error) {
-	held := keepTheme(asset.Preserved)
+func (LumiverseModule) Write(_ context.Context, work format.ExportWork) (format.MainFile, error) {
+	held := keepTheme(work.Preserved)
 	body := held.body(lumiverseNamespace)
 	theme := keys.Object(body["theme"])
 	delete(body, "theme")
 	body["format"] = raw(3)
-	body["name"] = raw(asset.Header.Name)
-	body["author"] = raw(asset.Header.CreditedAuthor)
-	body["description"] = raw(asset.Header.Blurb)
+	body["name"] = raw(work.Header.Name)
+	body["author"] = raw(work.Header.CreditedAuthor)
+	body["description"] = raw(work.Header.Blurb)
 
-	if content, ok := asset.Content(block.RoleThemeTokens); ok {
+	if content, ok := work.Content(block.RoleThemeTokens); ok {
 		if palette, isPalette := content.(block.ColorSet); isPalette {
 			modes := make(map[string]map[string]json.RawMessage)
 			for name, preserved := range keys.Object(theme["baseColorsByMode"]) {
@@ -275,7 +274,7 @@ func (LumiverseModule) Write(_ context.Context, asset format.ExportAsset) (forma
 			theme["baseColorsByMode"] = raw(modes)
 		}
 	}
-	if content, ok := asset.Content(block.RoleThemeControls); ok {
+	if content, ok := work.Content(block.RoleThemeControls); ok {
 		for _, setting := range themeSettings(content) {
 			if setting.Value == nil || !slices.ContainsFunc(lumiverseControls, func(slot namedSlot) bool {
 				return slot.name == setting.Name
@@ -294,7 +293,7 @@ func (LumiverseModule) Write(_ context.Context, asset format.ExportAsset) (forma
 	}
 	body["theme"] = raw(theme)
 
-	if content, ok := asset.Content(block.RoleStylesheets); ok {
+	if content, ok := work.Content(block.RoleStylesheets); ok {
 		if styles, isStyles := content.(block.StylesheetSet); isStyles {
 			body["globalCSS"] = raw(styles.Global)
 			components := keys.Object(body["components"])
@@ -307,14 +306,14 @@ func (LumiverseModule) Write(_ context.Context, asset format.ExportAsset) (forma
 			if len(components) > 0 {
 				body["components"] = raw(components)
 			}
-			descriptors := preservedAssetDescriptors(body["assets"])
-			for _, attached := range styles.Assets {
+			descriptors := preservedWorkDescriptors(body["assets"])
+			for _, attached := range styles.Files {
 				if !safeArchivePath(attached.Path) {
-					return format.Artifact{}, format.SafetyViolation(fmt.Errorf(
+					return format.MainFile{}, format.SafetyViolation(fmt.Errorf(
 						"theme asset path %q is not safe", attached.Path,
 					))
 				}
-				fields := held.item(lumiverseAssetNamespace, attached.ID)
+				fields := held.item(lumiverseFileNamespace, attached.ID)
 				fields["archivePath"] = raw(attached.Path)
 				fields["mimeType"] = raw(attached.MediaType)
 				if _, present := fields["originalFilename"]; !present {
@@ -325,37 +324,37 @@ func (LumiverseModule) Write(_ context.Context, asset format.ExportAsset) (forma
 			if len(descriptors) > 0 {
 				body["assets"] = raw(descriptors)
 			}
-			return writeLumiverseBundle(body, styles.Assets)
+			return writeLumiverseBundle(body, styles.Files)
 		}
 	}
 	return writeLumiverseBundle(body, nil)
 }
 
-func preservedAssetDescriptors(value json.RawMessage) []json.RawMessage {
+func preservedWorkDescriptors(value json.RawMessage) []json.RawMessage {
 	var descriptors []json.RawMessage
 	_ = json.Unmarshal(value, &descriptors)
 	return descriptors
 }
 
-func writeLumiverseBundle(document map[string]json.RawMessage, assets []block.StylesheetAsset) (format.Artifact, error) {
+func writeLumiverseBundle(document map[string]json.RawMessage, files []block.StylesheetFile) (format.MainFile, error) {
 	encoded, err := json.Marshal(document)
 	if err != nil {
-		return format.Artifact{}, fmt.Errorf("write the Lumiverse theme: %w", err)
+		return format.MainFile{}, fmt.Errorf("write the Lumiverse theme: %w", err)
 	}
 	var output bytes.Buffer
 	archive := zip.NewWriter(&output)
 	if err := writeZipEntry(archive, "theme.json", encoded); err != nil {
-		return format.Artifact{}, err
+		return format.MainFile{}, err
 	}
-	for _, attached := range assets {
+	for _, attached := range files {
 		if err := writeZipEntry(archive, attached.Path, attached.Data); err != nil {
-			return format.Artifact{}, err
+			return format.MainFile{}, err
 		}
 	}
 	if err := archive.Close(); err != nil {
-		return format.Artifact{}, fmt.Errorf("finish the Lumiverse theme bundle: %w", err)
+		return format.MainFile{}, fmt.Errorf("finish the Lumiverse theme bundle: %w", err)
 	}
-	return format.Artifact{
+	return format.MainFile{
 		Body: output.Bytes(), MediaType: "application/zip", Extension: ".lumitheme",
 	}, nil
 }

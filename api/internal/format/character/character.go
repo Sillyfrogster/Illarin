@@ -13,11 +13,10 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
-	"github.com/Sillyfrogster/Illarin/api/internal/probe"
 	"github.com/google/uuid"
 )
 
-const Kind = "character"
+const Type = "character"
 
 const (
 	maxTags     = 32
@@ -32,15 +31,15 @@ var labels = map[string]string{
 
 func declaration(id string) format.Declaration {
 	recognition := []format.Recognition{{
-		Kind:       format.RecognitionDiscriminator,
-		Containers: []probe.Container{probe.JSON, probe.PNG, probe.JPEG, probe.WebP, probe.GIF},
+		Type:       format.RecognitionMarker,
+		Containers: []format.Container{format.JSON, format.PNG, format.JPEG, format.WebP, format.GIF},
 		Path:       []string{"spec"}, Values: []string{id},
 	}}
 	if id == V2 {
 		recognition[0].SupersededBy = []string{V3}
 		recognition = append(recognition, format.Recognition{
-			Kind: format.RecognitionSignature, LegacyOnly: true,
-			Containers: []probe.Container{probe.JSON, probe.PNG, probe.JPEG, probe.WebP, probe.GIF},
+			Type: format.RecognitionShape, LegacyOnly: true,
+			Containers: []format.Container{format.JSON, format.PNG, format.JPEG, format.WebP, format.GIF},
 			Required: map[string]format.ValueType{
 				"name": format.ValueString, "description": format.ValueString,
 				"personality": format.ValueString, "scenario": format.ValueString,
@@ -50,7 +49,7 @@ func declaration(id string) format.Declaration {
 	}
 	if id == CharX {
 		recognition = []format.Recognition{{
-			Kind: format.RecognitionDiscriminator, Containers: []probe.Container{probe.ZIP},
+			Type: format.RecognitionMarker, Containers: []format.Container{format.ZIP},
 			Path: []string{"spec"}, Values: []string{V3},
 		}}
 	}
@@ -120,13 +119,13 @@ func declaration(id string) format.Declaration {
 		consumedKeys = append(consumedKeys, "group_only_greetings")
 	}
 	header := []format.HeaderField{
-		format.HeaderName, format.HeaderCreditedAuthor, format.HeaderAssetVersion,
+		format.HeaderName, format.HeaderCreditedAuthor, format.HeaderWorkVersion,
 	}
 	if id != V2 {
 		header = append(header, format.HeaderNickname)
 	}
 	return format.Declaration{
-		ID: id, Label: labels[id], Kind: Kind,
+		ID: id, Label: labels[id], Type: Type,
 		Direction:   format.Direction{Read: true, Write: true},
 		Recognition: recognition, Roles: roles, Header: header,
 		Limits: format.ContentLimits{
@@ -143,7 +142,7 @@ func declaration(id string) format.Declaration {
 		Preservation: format.PreservationDeclaration{
 			Body: cardNamespace, Container: []string{extensionsKey},
 		},
-		TestedOrigins: []string{V2, V3, CharX, format.OriginIllarin, format.OriginV1},
+		TestedOriginalFormats: []string{V2, V3, CharX, format.OriginalFormatIllarin, format.OriginalFormatV1},
 	}
 }
 
@@ -151,22 +150,22 @@ type card struct {
 	fields map[string]json.RawMessage
 }
 
-func readCard(file probe.Inspection, claim format.Claim, implemented int, moduleID string) (card, error) {
-	payload, ok := claim.Payload(file)
+func readCard(file format.Inspection, match format.Match, implemented int, moduleID string) (card, error) {
+	payload, ok := match.Payload(file)
 	if !ok {
-		return card{}, fmt.Errorf("%s payload: the claimed payload is missing", moduleID)
+		return card{}, fmt.Errorf("%s payload: the matched payload is missing", moduleID)
 	}
 	if err := readableVersion(payload, implemented); err != nil {
 		return card{}, fmt.Errorf("%s spec_version: %w", moduleID, err)
 	}
-	fields, ok := Fields(file, claim)
+	fields, ok := Fields(file, match)
 	if !ok {
 		return card{}, fmt.Errorf("%s data: missing or not an object", moduleID)
 	}
 	return card{fields: fields}, nil
 }
 
-func readableVersion(payload probe.Payload, implemented int) error {
+func readableVersion(payload format.Payload, implemented int) error {
 	declared, ok := payload.String("spec_version")
 	if !ok || declared == "" {
 		return nil
@@ -198,14 +197,14 @@ func (c card) parsed(formatID string, pictures []format.Media) (format.Parsed, e
 	book := c.lorebook()
 	elements := c.elements(formatID, book)
 	return format.Parsed{
-		Kind:      Kind,
+		Type:      Type,
 		Format:    formatID,
 		Tags:      c.tags(),
 		Media:     pictures,
 		CreatedAt: c.createdAt(),
 		Header: format.Header{
 			Name: c.name(), Blurb: c.blurb(),
-			AssetVersion:   c.text("character_version"),
+			WorkVersion:    c.text("character_version"),
 			CreditedAuthor: c.text("creator"), Nickname: c.text("nickname"),
 		},
 		Elements:  elements,
@@ -236,7 +235,7 @@ func (c card) remainder(
 	if len(body) > 0 {
 		payload, _ := json.Marshal(body)
 		remainder = append(remainder, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: cardNamespace, Payload: payload,
+			Owner: format.OwnerWork, Namespace: cardNamespace, Payload: payload,
 		})
 	}
 
@@ -246,7 +245,7 @@ func (c card) remainder(
 	}
 	for _, namespace := range slices.Sorted(maps.Keys(extensions)) {
 		remainder = append(remainder, format.Remainder{
-			Owner: format.OwnerAsset, Namespace: namespace, Payload: extensions[namespace],
+			Owner: format.OwnerWork, Namespace: namespace, Payload: extensions[namespace],
 		})
 	}
 	return remainder
@@ -412,9 +411,9 @@ func (c card) extensions() map[string]json.RawMessage {
 	return extensions
 }
 
-func documentImage(file probe.Inspection) []format.Media {
+func documentImage(file format.Inspection) []format.Media {
 	for _, image := range file.Images {
-		if image.Locator.Container != probe.ZIP {
+		if image.Location.Container != format.ZIP {
 			return []format.Media{{Role: media.Avatar, ImageID: image.ID}}
 		}
 	}

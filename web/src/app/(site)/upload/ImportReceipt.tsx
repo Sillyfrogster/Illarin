@@ -3,44 +3,44 @@
 import { Check } from "lucide-react";
 import Link from "next/link";
 import { type RefObject, useEffect, useState } from "react";
-import { KindMark } from "@/components/catalog/KindMark";
+import { TypeMark } from "@/components/browse/TypeMark";
 import { Button } from "@/components/ui/button";
 import {
-  type BrowseKind,
-  fetchPreservedNamespaces,
-  type PreservedNamespace,
+  type BrowseType,
+  fetchPreservedData,
+  type PreservedData,
 } from "@/lib/api/query";
-import { assetHref } from "@/lib/asset-url";
-import type { ImportedAsset } from "@/lib/import-stage";
-import { KIND_LABELS } from "@/lib/kinds";
-import { describePreservedNamespaces } from "@/lib/preserved";
+import type { ImportedWork } from "@/lib/import-stage";
+import { describePreservedLabels } from "@/lib/preserved";
+import { TYPE_LABELS } from "@/lib/work-types";
+import { workHref } from "@/lib/work-url";
 
 export function ImportReceipt({
-  asset,
+  work,
   headingRef,
   onBeginAgain,
 }: {
-  asset: ImportedAsset;
+  work: ImportedWork;
   headingRef: RefObject<HTMLHeadingElement | null>;
   onBeginAgain: () => void;
 }) {
-  const [preserved, setPreserved] = useState<PreservedNamespace[] | null>(null);
-  const kind = asset.kind as BrowseKind;
-  const label = (KIND_LABELS[kind] ?? asset.kind).toLowerCase();
+  const [preserved, setPreserved] = useState<PreservedData[] | null>(null);
+  const type = work.type as BrowseType;
+  const label = (TYPE_LABELS[type] ?? work.type).toLowerCase();
 
   useEffect(() => {
     let active = true;
-    void fetchPreservedNamespaces(asset.id).then((found) => {
+    void fetchPreservedData(work.id).then((found) => {
       if (active) setPreserved(found);
     });
     return () => {
       active = false;
     };
-  }, [asset.id]);
+  }, [work.id]);
 
   const carried =
     preserved && preserved.length > 0
-      ? describePreservedNamespaces(preserved.map(({ name }) => name))
+      ? describePreservedLabels(preserved.map(({ label }) => label))
       : null;
 
   return (
@@ -60,8 +60,8 @@ export function ImportReceipt({
       </h2>
 
       <p className="mt-4 flex items-center gap-2 text-lede text-ink wrap-anywhere">
-        <KindMark className="size-5 shrink-0 text-mute" kind={kind} />
-        {asset.name}
+        <TypeMark className="size-5 shrink-0 text-mute" type={type} />
+        {work.name}
       </p>
       <p className="mt-1 text-meta text-mute">
         A private {label} draft. Nobody else can open it until you publish it.
@@ -86,7 +86,7 @@ export function ImportReceipt({
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <Button asChild variant="primary">
-          <Link href={assetHref(asset.id, asset.name)}>Open the {label}</Link>
+          <Link href={workHref(work.id, work.name)}>Open the {label}</Link>
         </Button>
         <Button onClick={onBeginAgain} variant="ghost">
           Import another file

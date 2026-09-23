@@ -1,0 +1,11 @@
+{
+  "note": "Windows line endings and a trailing blank line settle to one form",
+  "body": {
+    "version": 2,
+    "content": [{"type": "codeBlock", "language": "json", "source": "{\r\n  \"a\": 1\r\n}\r\n\r\n"}]
+  },
+  "canonical": {
+    "version": 2,
+    "content": [{"type": "codeBlock", "language": "json", "source": "{\n  \"a\": 1\n}"}]
+  }
+}
