@@ -85,17 +85,20 @@ func recordVisits(ctx context.Context, tx pgx.Tx, today time.Time) error {
 	return nil
 }
 
-// Report reads the last 30 complete days before now, every day present even when nothing happened
+// Report reads the last 30 days through today, every day present even when nothing happened
 func (s *Service) Report(ctx context.Context, now time.Time) (Report, error) {
-	through := now.UTC().Truncate(24*time.Hour).AddDate(0, 0, -1)
+	through := now.UTC().Truncate(24 * time.Hour)
 	from := through.AddDate(0, 0, -(ReportDays - 1))
 	report := Report{From: day(from), Through: day(through), Days: make([]ReportDay, ReportDays), TopWorks: []ReportWork{}}
 	for i := range report.Days {
 		report.Days[i].Day = day(from.AddDate(0, 0, i))
 	}
 	rows, err := s.pool.Query(ctx, `
-		select day, kind, sum(count)::int from daily_totals
-		 where day between $1::date and $2::date group by day, kind
+		select day, kind, sum(count)::int from (
+			select day, kind, count from daily_totals where day >= $1::date and day < $2::date
+			union all
+			select day, kind, count(*)::int from events where day = $2::date group by day, kind
+		) as counted group by day, kind
 	`, report.From, report.Through)
 	if err != nil {
 		return Report{}, fmt.Errorf("read the daily totals: %w", err)
@@ -125,6 +128,18 @@ func (s *Service) Report(ctx context.Context, now time.Time) (Report, error) {
 	if err := rows.Err(); err != nil {
 		return Report{}, fmt.Errorf("read the daily totals: %w", err)
 	}
+	var umamiPresent bool
+	if err := s.pool.QueryRow(ctx, `select to_regclass('umami.website_event') is not null`).Scan(&umamiPresent); err != nil {
+		return Report{}, fmt.Errorf("look for Umami's tables: %w", err)
+	}
+	if umamiPresent {
+		if err := s.pool.QueryRow(ctx, `
+			select count(distinct visit_id)::int from umami.website_event
+			 where event_type = 1 and created_at >= $1 and created_at < $2
+		`, through, through.AddDate(0, 0, 1)).Scan(&report.Days[ReportDays-1].Visits); err != nil {
+			return Report{}, fmt.Errorf("read today's visits: %w", err)
+		}
+	}
 	report.Previous, err = s.totalsBetween(ctx, day(from.AddDate(0, 0, -ReportDays)), day(from.AddDate(0, 0, -1)))
 	if err != nil {
 		return Report{}, err
@@ -132,8 +147,13 @@ func (s *Service) Report(ctx context.Context, now time.Time) (Report, error) {
 	works, err := s.pool.Query(ctx, `
 		select total.work_id, work.name, work.type, work.cover_media_id, work.is_nsfw,
 		       sum(total.count)::int as downloads
-		  from daily_totals total join works work on work.id = total.work_id
-		 where total.kind = 'download' and total.day between $1::date and $2::date
+		  from (
+			select work_id, count from daily_totals
+			 where kind = 'download' and day >= $1::date and day < $2::date
+			union all
+			select work_id, count(*)::int from events
+			 where kind = 'download' and day = $2::date group by work_id
+		  ) total join works work on work.id = total.work_id
 		 group by total.work_id, work.name, work.type, work.cover_media_id, work.is_nsfw
 		 order by downloads desc, work.name limit $3
 	`, report.From, report.Through, topWorks)

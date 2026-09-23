@@ -123,7 +123,7 @@ func TestTheNightlyRollupKeepsDailyTotalsAndDropsEventsAfterThirtyDays(t *testin
 	}
 }
 
-func TestOnlyStaffReadTheReportAndItCoversThirtyCompleteDays(t *testing.T) {
+func TestOnlyStaffReadTheReportAndItCoversThirtyDaysThroughToday(t *testing.T) {
 	t.Parallel()
 	router, session, pool := harness.NewConnectRouter(t)
 	ctx := context.Background()
@@ -138,8 +138,8 @@ func TestOnlyStaffReadTheReportAndItCoversThirtyCompleteDays(t *testing.T) {
 	if _, err := pool.Exec(ctx, `
 		insert into daily_totals (day, kind, work_id, count) values
 			(current_date - 1, 'visit', null, 40), (current_date - 1, 'download', $2, 3),
-			(current_date - 1, 'download', $1, 5), (current_date - 30, 'sign_up', null, 2),
-			(current_date - 31, 'sign_up', null, 9), (current_date, 'send', $2, 1)
+			(current_date - 1, 'download', $1, 5), (current_date - 29, 'sign_up', null, 2),
+			(current_date - 30, 'sign_up', null, 9), (current_date, 'send', $2, 1)
 	`, other, workID); err != nil {
 		t.Fatalf("insert totals: %v", err)
 	}
@@ -157,11 +157,11 @@ func TestOnlyStaffReadTheReportAndItCoversThirtyCompleteDays(t *testing.T) {
 	}
 	report := apitest.DecodeResponse[staff.Report](t, rec)
 
-	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format(time.DateOnly)
-	if len(report.Days) != 30 || report.Through != yesterday || report.Days[29].Day != yesterday {
-		t.Fatalf("report covers %d days through %s, want 30 through %s", len(report.Days), report.Through, yesterday)
+	today := time.Now().UTC().Format(time.DateOnly)
+	if len(report.Days) != 30 || report.Through != today || report.Days[29].Day != today {
+		t.Fatalf("report covers %d days through %s, want 30 through %s", len(report.Days), report.Through, today)
 	}
-	last, first := report.Days[29], report.Days[0]
+	last, first := report.Days[28], report.Days[0]
 	if last.Visits != 40 || last.Downloads != 8 || last.Sends != 0 || first.SignUps != 2 || first.Day != report.From {
 		t.Fatalf("days = first %+v, last %+v", first, last)
 	}
@@ -174,6 +174,40 @@ func TestOnlyStaffReadTheReportAndItCoversThirtyCompleteDays(t *testing.T) {
 	}
 	if cover := report.TopWorks[1].Cover; cover == nil || !strings.Contains(*cover, "/media/") {
 		t.Fatalf("the published character's cover = %v, want a media address", cover)
+	}
+}
+
+func TestReportShowsEventsRecordedToday(t *testing.T) {
+	t.Parallel()
+	pool := testdb.Connect(t)
+	ctx := t.Context()
+	if _, err := pool.Exec(ctx, `insert into events (kind) values ('sign_up')`); err != nil {
+		t.Fatalf("record sign-up: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `create schema umami; create table umami.website_event (visit_id uuid, event_type integer, created_at timestamptz)`); err != nil {
+		t.Fatalf("set up visits: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `insert into umami.website_event values ($1, 1, now()), ($1, 1, now())`, uuid.New()); err != nil {
+		t.Fatalf("record visits: %v", err)
+	}
+	report, err := staff.NewService(apitest.WorksOver(t, pool, format.NewRegistry())).Report(ctx, time.Now())
+	if err != nil {
+		t.Fatalf("read report: %v", err)
+	}
+	if today := report.Days[len(report.Days)-1]; today.Day != time.Now().UTC().Format(time.DateOnly) || today.SignUps != 1 || today.Visits != 1 {
+		t.Fatalf("today = %+v, want one sign-up and one visit", today)
+	}
+}
+
+func TestWorkPublishedOnInsertRecordsAnEvent(t *testing.T) {
+	t.Parallel()
+	pool := testdb.Connect(t)
+	ctx := t.Context()
+	if _, err := pool.Exec(ctx, `insert into works (id, type, name, lifecycle) values ($1, 'pack', 'Loom set', 'published')`, uuid.New()); err != nil {
+		t.Fatalf("insert published work: %v", err)
+	}
+	if got := eventCounts(t, pool)["publish"]; got != 1 {
+		t.Fatalf("publish events = %d, want 1", got)
 	}
 }
 
