@@ -138,6 +138,9 @@ func TestAPublicSourceDownloadRecordsTheAuthorizedHandoff(t *testing.T) {
 	if recorded != 1 {
 		t.Fatalf("one handoff wrote %d download records", recorded)
 	}
+	if err := pool.QueryRow(context.Background(), `select count(*) from events where kind = 'download' and work_id = $1`, workID).Scan(&recorded); err != nil || recorded != 1 {
+		t.Fatalf("original download events = %d, error = %v; want 1", recorded, err)
+	}
 }
 
 func TestExportFromAnWorkMadeInIllarinRecordsTheHandoff(t *testing.T) {

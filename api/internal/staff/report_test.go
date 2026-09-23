@@ -52,6 +52,38 @@ func TestADownloadASendASignUpAndAPublishEachRecordOneEventWithNoIdentity(t *tes
 	if workEvents != 3 || columns != 3 {
 		t.Fatalf("%d events name the work and the table has %d columns, want 3 and 3 (kind, work_id, day)", workEvents, columns)
 	}
+	apitest.SetRole(t, pool, "connect.creator", "moderator")
+	response := apitest.Send(t, router, apitest.Authorized(httptest.NewRequest(http.MethodGet, "/v1/staff/report", nil), session))
+	if response.Code != http.StatusOK {
+		t.Fatalf("report status = %d: %s", response.Code, response.Body.String())
+	}
+	report := apitest.DecodeResponse[staff.Report](t, response)
+	today := report.Days[len(report.Days)-1]
+	if today.Downloads != 1 || today.Sends != 1 || today.SignUps != 1 || today.Publishes != 1 {
+		t.Fatalf("report today = %+v, want one of each event", today)
+	}
+	if len(report.TopWorks) != 1 || report.TopWorks[0].ID != workID || report.TopWorks[0].Downloads != 1 {
+		t.Fatalf("report most downloaded works = %+v, want the downloaded work", report.TopWorks)
+	}
+}
+
+func TestEveryPublishedVersionRecordsAnEvent(t *testing.T) {
+	t.Parallel()
+	router, session, pool := harness.NewConnectRouter(t)
+	workID := apitest.PublishedCharacter(t, router, session)
+	page := apitest.FetchStartedWork(t, router, session, workID)
+	core := apitest.BlockNamed(t, page.Blocks, "character_core")
+	edited := apitest.EditableBlock(core)
+	edited.Elements[0].Content = []byte(`{"text":"The west shelf moved again."}`)
+	if saved := apitest.SaveBlock(t, router, session, workID, core.ID, edited); saved.Code != http.StatusOK {
+		t.Fatalf("save changes = %d: %s", saved.Code, saved.Body.String())
+	}
+	if published := apitest.PublishWorkVersion(t, router, session, workID, `{"summary":"Revised the description"}`); published.Code != http.StatusOK {
+		t.Fatalf("publish version = %d: %s", published.Code, published.Body.String())
+	}
+	if got := eventCounts(t, pool)["publish"]; got != 2 {
+		t.Fatalf("publish events = %d, want one for each version", got)
+	}
 }
 
 func TestTheNightlyRollupKeepsDailyTotalsAndDropsEventsAfterThirtyDays(t *testing.T) {
@@ -199,12 +231,16 @@ func TestReportShowsEventsRecordedToday(t *testing.T) {
 	}
 }
 
-func TestWorkPublishedOnInsertRecordsAnEvent(t *testing.T) {
+func TestFirstUploadedVersionRecordsAnEvent(t *testing.T) {
 	t.Parallel()
 	pool := testdb.Connect(t)
 	ctx := t.Context()
-	if _, err := pool.Exec(ctx, `insert into works (id, type, name, lifecycle) values ($1, 'pack', 'Loom set', 'published')`, uuid.New()); err != nil {
+	workID := uuid.New()
+	if _, err := pool.Exec(ctx, `insert into works (id, type, name, lifecycle) values ($1, 'pack', 'Loom set', 'published')`, workID); err != nil {
 		t.Fatalf("insert published work: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `select record_initial_work_version($1, false)`, workID); err != nil {
+		t.Fatalf("record first version: %v", err)
 	}
 	if got := eventCounts(t, pool)["publish"]; got != 1 {
 		t.Fatalf("publish events = %d, want 1", got)
