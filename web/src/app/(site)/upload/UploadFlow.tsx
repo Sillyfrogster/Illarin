@@ -10,12 +10,11 @@ import {
   readUploadOperation,
   type UploadOperation,
 } from "@/lib/api/query";
-import type { BuildChoices } from "@/lib/api/shapes";
 import { useAuth } from "@/lib/auth";
 import { workHref } from "@/lib/work-url";
 import { DropStage, FannedSheets } from "./DropStage";
-import { type Reading, ReadingFile } from "./ReadingFile";
-import { StartFromNothing } from "./StartFromNothing";
+import { ScanView, type Upload } from "./ScanView";
+import { revokeScan, type ScanPart, scanFile } from "./scan-file";
 import { sendFile } from "./send-file";
 
 const POLL_MS = 600;
@@ -25,8 +24,13 @@ const FOUND_MS = 1100;
 
 type Phase =
   | { at: "choosing" }
-  | Exclude<Reading, { at: "reading" | "lost" }>
-  | { at: "reading" | "lost"; file: File; operation: UploadOperation };
+  | {
+      at: "busy";
+      file: File;
+      upload: Upload;
+      operation?: UploadOperation;
+      found?: string;
+    };
 
 const SWAP = {
   initial: { opacity: 0, y: 12 },
@@ -35,65 +39,96 @@ const SWAP = {
   transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
 } as const;
 
-/** UploadFlow sends a chosen file straight away, shows it being read, and opens the draft it becomes. */
-export function UploadFlow({ choices }: { choices: BuildChoices | null }) {
+/** UploadFlow sends a chosen file straight away, scans it on screen while it travels, and opens the draft it becomes. */
+export function UploadFlow() {
   const { account } = useAuth();
   const router = useRouter();
   const still = useReducedMotion();
   const [phase, setPhase] = useState<Phase>({ at: "choosing" });
+  const [parts, setParts] = useState<ScanPart[] | null>(null);
+  const [scanned, setScanned] = useState(false);
+  const top = useRef<HTMLDivElement>(null);
   const over = useFileOverWindow(
     phase.at === "choosing" && Boolean(account?.emailVerified),
     send,
   );
 
-  const reading = phase.at === "reading" ? phase : null;
+  useEffect(() => () => revokeScan(parts ?? []), [parts]);
+
+  const busy = phase.at === "busy" ? phase : null;
+  const polling = busy?.upload.at === "reading" && busy.operation ? busy : null;
   useEffect(() => {
-    if (!reading) return;
+    if (!polling?.operation) return;
+    const operation = polling.operation;
     let active = true;
     const timer = setTimeout(async () => {
       try {
-        const next = await readUploadOperation(reading.operation.url);
+        const next = await readUploadOperation(operation.url);
         if (!active) return;
         if (next.status === "failed") {
           setPhase({
-            at: "refused",
-            file: reading.file,
-            message:
-              next.failure?.message ?? "Illarin could not read this file.",
+            ...polling,
+            upload: {
+              at: "refused",
+              message:
+                next.failure?.message ?? "Illarin could not read this file.",
+            },
           });
         } else if (next.status === "success" && next.work) {
-          const work = next.work;
           setPhase({
-            at: "found",
-            file: reading.file,
-            name: work.name,
-            type: work.type as BrowseType,
+            ...polling,
+            upload: {
+              at: "found",
+              name: next.work.name,
+              type: next.work.type as BrowseType,
+            },
+            found: workHref(next.work.id, next.work.name),
           });
-          setTimeout(() => router.push(workHref(work.id, work.name)), FOUND_MS);
         } else {
-          setPhase({ ...reading, operation: next });
+          setPhase({ ...polling, operation: next });
         }
       } catch {
-        if (active) setPhase({ ...reading, at: "lost" });
+        if (active) setPhase({ ...polling, upload: { at: "lost" } });
       }
     }, POLL_MS);
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [reading, router]);
+  }, [polling]);
+
+  const opening = busy?.found && scanned ? busy.found : null;
+  useEffect(() => {
+    if (!opening) return;
+    const timer = setTimeout(() => router.push(opening), FOUND_MS);
+    return () => clearTimeout(timer);
+  }, [opening, router]);
 
   async function send(file: File) {
-    setPhase({ at: "sending", file, sent: 0 });
+    setParts(null);
+    setScanned(false);
+    setPhase({ at: "busy", file, upload: { at: "sending", sent: 0 } });
+    top.current?.scrollIntoView({
+      behavior: still ? "auto" : "smooth",
+      block: "center",
+    });
+    void scanFile(file).then(setParts);
     const sent = await sendFile(file, (fraction) =>
       setPhase((current) =>
-        current.at === "sending" ? { ...current, sent: fraction } : current,
+        current.at === "busy" && current.upload.at === "sending"
+          ? { ...current, upload: { at: "sending", sent: fraction } }
+          : current,
       ),
     );
     setPhase(
       sent.operation
-        ? { at: "reading", file, operation: sent.operation }
-        : { at: "refused", file, message: sent.error },
+        ? {
+            at: "busy",
+            file,
+            upload: { at: "reading" },
+            operation: sent.operation,
+          }
+        : { at: "busy", file, upload: { at: "refused", message: sent.error } },
     );
   }
 
@@ -130,7 +165,7 @@ export function UploadFlow({ choices }: { choices: BuildChoices | null }) {
   }
 
   return (
-    <div className="mt-8">
+    <div className="mt-8 scroll-mt-32" ref={top}>
       <AnimatePresence initial={false} mode="wait">
         <motion.div
           key={phase.at === "choosing" ? "stage" : "file"}
@@ -139,20 +174,19 @@ export function UploadFlow({ choices }: { choices: BuildChoices | null }) {
           {phase.at === "choosing" ? (
             <DropStage onFile={send} over={over} />
           ) : (
-            <ReadingFile
+            <ScanView
+              file={phase.file}
               onBeginAgain={() => setPhase({ at: "choosing" })}
               onCheckAgain={() =>
-                phase.at === "lost" && setPhase({ ...phase, at: "reading" })
+                setPhase({ ...phase, upload: { at: "reading" } })
               }
-              reading={phase}
+              onScanned={() => setScanned(true)}
+              parts={parts}
+              upload={phase.upload}
             />
           )}
         </motion.div>
       </AnimatePresence>
-
-      {phase.at === "choosing" || phase.at === "refused" ? (
-        <StartFromNothing choices={choices} />
-      ) : null}
 
       <AnimatePresence>
         {over ? (
