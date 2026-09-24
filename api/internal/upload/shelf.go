@@ -166,7 +166,7 @@ func (s *Service) AddMarkdown(ctx context.Context, ownerID, workID uuid.UUID, ma
 	if len(markdown) > MaxPastedMarkdown {
 		return nil, ErrShelfPasteTooLarge
 	}
-	page := readReadme(markdown, func(string) (string, bool) { return "", false })
+	page := readPaste(markdown)
 	_, pieces, err := s.readmePieces(ctx, format.Inspection{}, page, nil, make([]*uuid.UUID, 1+len(page.Sections)))
 	if err != nil {
 		return nil, err

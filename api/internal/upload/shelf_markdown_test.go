@@ -84,7 +84,8 @@ func TestPastedMarkdownWaitsOnTheShelfAndLeavesThePageAlone(t *testing.T) {
 	want := []string{
 		`section "" "A lighthouse keeper who talks to gulls." `,
 		`picture "" "" https://example.com/wren.png`,
-		`section "Backstory" "Wren grew up on the rocks.\n\n### Early years\n\nShe learned to swim first." `,
+		`section "Backstory" "Wren grew up on the rocks." `,
+		`section "Early years" "She learned to swim first." `,
 		`section "Relationships" "- The gulls\n- Her brother" `,
 		`picture "Relationships" "" https://example.com/brother.png`,
 	}
@@ -151,7 +152,7 @@ func TestASectionPlacedOnAPublishedWorkWaitsInDraftedChangesUntilUndone(t *testi
 		proseText(t, public.Blocks[0]) != proseText(t, published.Blocks[0]) {
 		t.Errorf("published page = %q, want it unchanged until the next version", arrangement(public))
 	}
-	if left := shelfPieces(t, r, session, workID); len(left) != 3 {
+	if left := shelfPieces(t, r, session, workID); len(left) != 4 {
 		t.Errorf("shelf after placing = %+v, want the two sections gone", left)
 	}
 
@@ -254,7 +255,7 @@ func TestAnotherAccountCannotReachTheShelf(t *testing.T) {
 	if letGo.Code != http.StatusNotFound {
 		t.Errorf("stranger lets a piece go = %d: %s", letGo.Code, letGo.Body.String())
 	}
-	if left := shelfPieces(t, r, session, workID); len(left) != 5 {
-		t.Errorf("shelf after the stranger = %d pieces, want all 5", len(left))
+	if left := shelfPieces(t, r, session, workID); len(left) != 6 {
+		t.Errorf("shelf after the stranger = %d pieces, want all 6", len(left))
 	}
 }

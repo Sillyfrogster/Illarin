@@ -344,3 +344,51 @@ func TestAnAnchorWithNoWordsIsLeftOut(t *testing.T) {
 		t.Errorf("opening = %q, want the bare anchor gone and the worded one kept", page.Opening.Text)
 	}
 }
+
+func TestAPasteStartsAPieceAtEveryHeadingBelowTheTitle(t *testing.T) {
+	t.Parallel()
+	page := readPaste(strings.Join([]string{
+		"[Back](https://rentry.org/harbor-index)",
+		"# **->%teal% Harbor Notes%%->**",
+		"",
+		"!!! info An unofficial guide.",
+		"",
+		"### Lantern Prompt",
+		"",
+		"Opening words.",
+		"",
+		"## V2",
+		"",
+		"#### System Prompt",
+		"```",
+		"Stay in the lighthouse.",
+		"```",
+		"#### Post History",
+		"```",
+		"Avoid repetition.",
+		"```",
+		"",
+		"[Back](https://rentry.org/harbor-index)",
+	}, "\n"))
+
+	if page.Title != "Harbor Notes" {
+		t.Errorf("title = %q, want the heading's words without rentry's marks", page.Title)
+	}
+	if page.Opening.Text != "!!! info An unofficial guide." {
+		t.Errorf("opening = %q, want the text under the title and no navigation link", page.Opening.Text)
+	}
+	if got := titles(page); !reflect.DeepEqual(got, []string{"Lantern Prompt", "V2 · System Prompt", "Post History"}) {
+		t.Fatalf("sections = %v, want one per heading with the empty V2 folded into the next", got)
+	}
+	if want := "```\nAvoid repetition.\n```"; page.Sections[2].Text != want {
+		t.Errorf("last section = %q, want %q without the closing navigation link", page.Sections[2].Text, want)
+	}
+}
+
+func TestAPasteWithoutHeadingsIsAllOpening(t *testing.T) {
+	t.Parallel()
+	page := readPaste("[Back](https://rentry.org/elsewhere)\n\nJust a note.")
+	if page.Title != "" || len(page.Sections) != 0 || page.Opening.Text != "[Back](https://rentry.org/elsewhere)\n\nJust a note." {
+		t.Errorf("page = %+v, want every word in the opening when nothing is a title", page)
+	}
+}

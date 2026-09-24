@@ -47,11 +47,30 @@ var parser = goldmark.New(goldmark.WithExtensions(extension.Table)).Parser()
 
 // readReadme splits a README into sections at its shallowest heading below the title
 func readReadme(source string, find findEntry) readmePage {
+	return readMarkdown(source, find, false)
+}
+
+// readPaste splits pasted Markdown at every heading below its title, leaving out the page's navigation links
+func readPaste(source string) readmePage {
+	return readMarkdown(source, func(string) (string, bool) { return "", false }, true)
+}
+
+func readMarkdown(source string, find findEntry, everyHeading bool) readmePage {
 	source = strings.TrimPrefix(strings.ReplaceAll(source, "\r\n", "\n"), "\uFEFF")
 	raw := []byte(source)
 	parts := divide(parser.Parse(text.NewReader(raw)), raw, find)
-	title := titlePart(parts)
+	skipped := map[int]bool{}
+	if everyHeading {
+		skipped = navigation(parts)
+	}
+	title := titlePart(parts, skipped)
+	if title < 0 {
+		skipped = map[int]bool{}
+	}
 	depth := sectionDepth(parts, title)
+	starts := func(index int) bool {
+		return parts[index].depth > 0 && (everyHeading || parts[index].depth == depth)
+	}
 
 	page := readmePage{}
 	if title >= 0 {
@@ -60,15 +79,15 @@ func readReadme(source string, find findEntry) readmePage {
 	current := &page.Opening
 	for index, part := range parts {
 		switch {
-		case index == title:
-		case part.depth > 0 && part.depth == depth:
+		case index == title || skipped[index]:
+		case starts(index):
 			page.Sections = append(page.Sections, readmeSection{Title: part.words})
 			current = &page.Sections[len(page.Sections)-1]
 		default:
 			current.add(part)
 		}
 	}
-	page.Sections = kept(page.Sections, parts, title, depth)
+	page.Sections = kept(page.Sections, parts, title, starts, skipped, everyHeading)
 	if len(page.Opening.Images) > 0 {
 		cover := page.Opening.Images[0]
 		page.Cover = &cover
@@ -105,6 +124,7 @@ type part struct {
 	remote   []remoteImage
 	pictures bool
 	anchors  bool
+	links    bool
 }
 
 func (s *readmeSection) add(p part) {
@@ -151,11 +171,12 @@ func (p *part) read(source []byte, find findEntry) {
 	switch node := p.node.(type) {
 	case *ast.Heading:
 		p.depth = node.Level
-		p.words = plain(node, source)
+		p.words = withoutRentryMarks(plain(node, source))
 	case *ast.Paragraph:
 		found, only := paragraphPictures(node, source)
 		p.images, p.remote = located(found, find)
 		p.pictures = only
+		p.links = onlyLinks(node, source)
 	case *ast.HTMLBlock:
 		found, words := readHTML(p.text)
 		p.images, p.remote = located(found, find)
@@ -169,9 +190,26 @@ func (p *part) read(source []byte, find findEntry) {
 	}
 }
 
-func titlePart(parts []part) int {
+// navigation finds link-only lines before the first heading, and the same line again at the very end
+func navigation(parts []part) map[int]bool {
+	skipped := map[int]bool{}
+	seen := map[string]bool{}
 	for index, candidate := range parts {
-		if candidate.pictures {
+		if candidate.depth > 0 || !candidate.links {
+			break
+		}
+		skipped[index] = true
+		seen[candidate.text] = true
+	}
+	if last := len(parts) - 1; last > 0 && parts[last].links && seen[parts[last].text] {
+		skipped[last] = true
+	}
+	return skipped
+}
+
+func titlePart(parts []part, skipped map[int]bool) int {
+	for index, candidate := range parts {
+		if candidate.pictures || skipped[index] {
 			continue
 		}
 		if candidate.depth == 0 {
@@ -197,12 +235,15 @@ func sectionDepth(parts []part, title int) int {
 	return depth
 }
 
-func kept(sections []readmeSection, parts []part, title, depth int) []readmeSection {
+// kept leaves out sections holding nothing or only a contents list, and folds an empty heading into the next one's name when asked
+func kept(
+	sections []readmeSection, parts []part, title int, starts func(int) bool, skipped map[int]bool, fold bool,
+) []readmeSection {
 	anchorsOnly := make([]bool, 0, len(sections))
 	for index, candidate := range parts {
 		switch {
-		case index == title:
-		case candidate.depth > 0 && candidate.depth == depth:
+		case index == title || skipped[index]:
+		case starts(index):
 			anchorsOnly = append(anchorsOnly, true)
 		case len(anchorsOnly) > 0 && !candidate.pictures:
 			last := len(anchorsOnly) - 1
@@ -210,10 +251,17 @@ func kept(sections []readmeSection, parts []part, title, depth int) []readmeSect
 		}
 	}
 	result := make([]readmeSection, 0, len(sections))
+	carried := ""
 	for index, section := range sections {
 		pictured := len(section.Images) > 0 || len(section.Remote) > 0
+		if carried != "" {
+			section.Title = carried + " · " + section.Title
+			carried = ""
+		}
 		if (section.Text != "" || pictured) && !(anchorsOnly[index] && !pictured) {
 			result = append(result, section)
+		} else if fold && section.Text == "" && !pictured {
+			carried = section.Title
 		}
 	}
 	return result
@@ -348,6 +396,30 @@ func imageTag(tokens *markup.Tokenizer, more bool) picture {
 }
 
 func blank(words string) bool { return strings.TrimSpace(words) == "" }
+
+// rentryMarks are rentry's centring arrows and colour spans, which carry no words
+var rentryMarks = regexp.MustCompile(`->|<-|%[#\w]*%`)
+
+func withoutRentryMarks(words string) string {
+	return strings.Join(strings.Fields(rentryMarks.ReplaceAllString(words, " ")), " ")
+}
+
+func onlyLinks(paragraph ast.Node, source []byte) bool {
+	links := 0
+	for child := paragraph.FirstChild(); child != nil; child = child.NextSibling() {
+		switch node := child.(type) {
+		case *ast.Link:
+			links++
+		case *ast.Text:
+			if !blank(string(node.Segment.Value(source))) {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return links > 0
+}
 
 func onlyAnchors(list ast.Node, source []byte) bool {
 	anchors, others := 0, 0
