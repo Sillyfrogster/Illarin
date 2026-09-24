@@ -37,23 +37,44 @@ func (s *Service) BuildChoices() BuildChoices {
 	for _, workType := range slices.Sorted(slices.Values(block.Types())) {
 		if s.buildable(workType) {
 			choices.Types = append(choices.Types, BuildChoice{
-				Type: workType, Apps: page.AppNames(appsAsked(workType)), Blocks: startingBlocks(workType),
+				Type: workType, Apps: page.AppNames(appsAsked(workType)), Drafts: drafts(workType),
 			})
 		}
 	}
 	return choices
 }
 
-// startingBlocks names the blocks an empty draft of the type opens with
-func startingBlocks(workType string) []string {
-	definitions, _ := block.Definitions(workType)
-	titles := []string{}
-	for _, definition := range definitions {
-		if definition.Required {
-			titles = append(titles, definition.Title)
-		}
+// drafts lays out the page each app's empty draft of the type opens with
+func drafts(workType string) []Draft {
+	apps := appsAsked(workType)
+	if len(apps) == 0 {
+		apps = []string{""}
 	}
-	return titles
+	out := make([]Draft, 0, len(apps))
+	for _, app := range apps {
+		placed, err := draftBlocks(workType, app)
+		if err != nil {
+			continue
+		}
+		served, err := block.ToBlocks(workType, placed)
+		if err != nil {
+			continue
+		}
+		out = append(out, Draft{App: app, Blocks: served})
+	}
+	return out
+}
+
+func draftBlocks(workType, app string) ([]block.Block, error) {
+	seeded, err := seedElements(workType, app)
+	if err != nil {
+		return nil, err
+	}
+	placed, err := block.Place(workType, seeded)
+	if err != nil {
+		return nil, ErrTypeNotBuildable
+	}
+	return placed, nil
 }
 
 func (s *Service) buildable(workType string) bool {
@@ -91,13 +112,9 @@ func (s *Service) StartFromNothing(
 	if !s.buildable(workType) {
 		return uuid.Nil, ErrTypeNotBuildable
 	}
-	seeded, err := seedElements(workType, app)
+	blocks, err := draftBlocks(workType, app)
 	if err != nil {
 		return uuid.Nil, err
-	}
-	blocks, err := block.Place(workType, seeded)
-	if err != nil {
-		return uuid.Nil, ErrTypeNotBuildable
 	}
 
 	a := work.Work{

@@ -172,9 +172,14 @@ func TestBuildChoicesNameEachBuildableTypeAndTheAppsItAsksFor(t *testing.T) {
 	}
 	choices := apitest.DecodeResponse[struct {
 		Types []struct {
-			Type   string   `json:"type"`
-			Blocks []string `json:"blocks"`
-			Apps   []struct {
+			Type   string `json:"type"`
+			Drafts []struct {
+				App    string `json:"app"`
+				Blocks []struct {
+					Title string `json:"title"`
+				} `json:"blocks"`
+			} `json:"drafts"`
+			Apps []struct {
 				ID    string `json:"id"`
 				Label string `json:"label"`
 			} `json:"apps"`
@@ -183,8 +188,13 @@ func TestBuildChoicesNameEachBuildableTypeAndTheAppsItAsksFor(t *testing.T) {
 	asked := map[string]int{}
 	for _, choice := range choices.Types {
 		asked[choice.Type] = len(choice.Apps)
-		if len(choice.Blocks) == 0 {
-			t.Errorf("%s names no block its empty draft opens with", choice.Type)
+		if len(choice.Drafts) != max(1, len(choice.Apps)) {
+			t.Errorf("%s shows %d drafts for %d apps", choice.Type, len(choice.Drafts), len(choice.Apps))
+		}
+		for _, draft := range choice.Drafts {
+			if len(draft.Blocks) == 0 {
+				t.Errorf("%s draft for %q opens with no blocks", choice.Type, draft.App)
+			}
 		}
 		for _, app := range choice.Apps {
 			if app.ID == "" || app.Label == "" {

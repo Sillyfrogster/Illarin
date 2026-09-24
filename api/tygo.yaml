@@ -109,6 +109,7 @@ packages:
     enum_style: "union"
     preserve_comments: "none"
     frontmatter: |
+      import type { WorkBlock } from "./block";
       import type { VersionChangeGroup } from "./version";
       import type { AppName } from "./work";
     type_mappings:
@@ -116,6 +117,7 @@ packages:
       uuid.UUID: "string"
       version.VersionChangeGroup: "VersionChangeGroup"
       page.AppName: "AppName"
+      block.WorkBlock: "WorkBlock"
     include_files:
       - "shapes.go"
       - "start_shapes.go"

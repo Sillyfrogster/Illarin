@@ -1,6 +1,9 @@
 package upload
 
-import "github.com/Sillyfrogster/Illarin/api/internal/page"
+import (
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
+)
 
 type StartWorkRequest struct {
 	App  *string `json:"app,omitempty"`
@@ -14,5 +17,11 @@ type BuildChoices struct {
 type BuildChoice struct {
 	Type   string         `json:"type"`
 	Apps   []page.AppName `json:"apps"`
-	Blocks []string       `json:"blocks"`
+	Drafts []Draft        `json:"drafts"`
+}
+
+// Draft is the page an empty draft opens with, for one app or for none
+type Draft struct {
+	App    string            `json:"app"`
+	Blocks []block.WorkBlock `json:"blocks"`
 }
