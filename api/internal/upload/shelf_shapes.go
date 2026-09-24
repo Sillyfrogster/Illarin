@@ -3,6 +3,8 @@ package upload
 import (
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
+
 	"github.com/google/uuid"
 )
 
@@ -28,6 +30,15 @@ type PlaceShelfPieceRequest struct {
 	MediaId   *uuid.UUID `json:"mediaId,omitempty"`
 	Position  *int       `json:"position,omitempty"`
 	ElementId *uuid.UUID `json:"elementId,omitempty"`
+}
+
+type UndoShelfPlacementsRequest struct {
+	PieceIds []uuid.UUID `json:"pieceIds"`
+}
+
+type PlacedImport struct {
+	Blocks   []block.WorkBlock `json:"blocks"`
+	PieceIds []uuid.UUID       `json:"pieceIds"`
 }
 
 type ShelfPiece struct {

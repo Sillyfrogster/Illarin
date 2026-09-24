@@ -259,3 +259,51 @@ func TestAnotherAccountCannotReachTheShelf(t *testing.T) {
 		t.Errorf("shelf after the stranger = %d pieces, want all 6", len(left))
 	}
 }
+
+func TestPlacingAllOfAnImportMakesABlockPerSectionAndOneUndoTakesThemBack(t *testing.T) {
+	t.Parallel()
+	r, session, _, _ := harness.NewExtensionRouter(t)
+	workID := apitest.PublishedCharacter(t, r, session)
+	if added := addMarkdown(t, r, session, workID, pastedMarkdown); added.Code != http.StatusCreated {
+		t.Fatalf("paste = %d: %s", added.Code, added.Body.String())
+	}
+	held := readShelf(t, r, session, workID)[0]
+	before := readSeededPage(t, r, session, workID+"?draftedChanges=true")
+	published := readSeededPage(t, r, nil, workID)
+
+	request := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/shelf/imports/"+held.ID+"/place", nil)
+	placed := apitest.Send(t, r, apitest.Authorized(request, session))
+	if placed.Code != http.StatusOK {
+		t.Fatalf("place all = %d: %s", placed.Code, placed.Body.String())
+	}
+	var answer struct {
+		PieceIds []string `json:"pieceIds"`
+	}
+	if err := json.Unmarshal(placed.Body.Bytes(), &answer); err != nil || len(answer.PieceIds) != 4 {
+		t.Fatalf("placed = %s, want the four sections named", placed.Body.String())
+	}
+	drafted := arrangement(readSeededPage(t, r, session, workID+"?draftedChanges=true"))
+	want := append(arrangement(before), "custom_block Wren", "custom_block Backstory", "custom_block Early years", "custom_block Relationships")
+	if strings.Join(drafted, "|") != strings.Join(want, "|") {
+		t.Fatalf("drafted blocks = %q, want a block per section at the end: %q", drafted, want)
+	}
+	if left := shelfPieces(t, r, session, workID); len(left) != 2 || left[0].Kind != "picture" || left[1].Kind != "picture" {
+		t.Errorf("shelf after placing all = %+v, want only the pictures held by address", left)
+	}
+	if strings.Join(arrangement(readSeededPage(t, r, nil, workID)), "|") != strings.Join(arrangement(published), "|") {
+		t.Error("placing all changed the published page")
+	}
+
+	body, _ := json.Marshal(map[string][]string{"pieceIds": answer.PieceIds})
+	undo := httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/shelf/undo", strings.NewReader(string(body)))
+	undo.Header.Set("Content-Type", "application/json")
+	if undone := apitest.Send(t, r, apitest.Authorized(undo, session)); undone.Code != http.StatusOK {
+		t.Fatalf("undo all = %d: %s", undone.Code, undone.Body.String())
+	}
+	if got := arrangement(readSeededPage(t, r, session, workID+"?draftedChanges=true")); strings.Join(got, "|") != strings.Join(arrangement(before), "|") {
+		t.Errorf("drafted blocks after undo = %q, want %q", got, arrangement(before))
+	}
+	if left := shelfPieces(t, r, session, workID); len(left) != 6 {
+		t.Errorf("shelf after undo = %d pieces, want all 6 back", len(left))
+	}
+}

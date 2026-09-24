@@ -31,6 +31,8 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodDelete, "/v1/works/:id/shelf/pieces/:pieceId", d.JSON, h.LetGoOfShelfPiece)
 	routes.Handle(http.MethodPost, "/v1/works/:id/shelf/pieces/:pieceId/place", d.JSON, h.PlaceShelfPiece)
 	routes.Handle(http.MethodPost, "/v1/works/:id/shelf/pieces/:pieceId/undo", d.JSON, h.UndoShelfPlacement)
+	routes.Handle(http.MethodPost, "/v1/works/:id/shelf/imports/:importId/place", d.JSON, h.PlaceShelfImport)
+	routes.Handle(http.MethodPost, "/v1/works/:id/shelf/undo", d.JSON, h.UndoShelfPlacements)
 	routes.Handle(http.MethodGet, "/v1/uploads/:id", d.JSON, h.GetUpload)
 	registerAliases(routes, h)
 }

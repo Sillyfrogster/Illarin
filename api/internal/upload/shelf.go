@@ -32,6 +32,8 @@ type WaitingPiece struct {
 	Width    int
 	Height   int
 	ThumbURL string
+	// Heading names a placed section's block: its own heading, or the import's title for the opening
+	Heading string
 }
 
 // WaitingImport is one paste or README and the pieces of it still on the shelf
@@ -282,9 +284,9 @@ func pointSectionPictures(ctx context.Context, tx pgx.Tx, workID uuid.UUID, piec
 	return nil
 }
 
-// UndoShelfPlacement puts a placed piece back on the shelf when its block is exactly as the placement left it
-func (s *Service) UndoShelfPlacement(
-	ctx context.Context, ownerID, workID, pieceID uuid.UUID, candidate *work.Candidate,
+// UndoShelfPlacements puts placed pieces back on the shelf, newest first, when every block is exactly as its placement left it
+func (s *Service) UndoShelfPlacements(
+	ctx context.Context, ownerID, workID uuid.UUID, pieceIDs []uuid.UUID, candidate *work.Candidate,
 ) (work.SavedBlocks, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -299,38 +301,117 @@ func (s *Service) UndoShelfPlacement(
 	if err := sweepShelf(ctx, tx, workID); err != nil {
 		return work.SavedBlocks{}, err
 	}
-	if _, err := lockShelfPiece(ctx, tx, workID, pieceID, true); err != nil {
+	page, err := block.Read(ctx, tx, workID)
+	if err != nil {
 		return work.SavedBlocks{}, err
+	}
+	for index := len(pieceIDs) - 1; index >= 0; index-- {
+		if page, err = undoPlacement(ctx, tx, workID, pieceIDs[index], page); err != nil {
+			return work.SavedBlocks{}, err
+		}
+	}
+	if err := s.writePage(ctx, tx, workType, workID, page); err != nil {
+		return work.SavedBlocks{}, err
+	}
+	if err := candidate.Commit(ctx, tx, workID); err != nil {
+		return work.SavedBlocks{}, err
+	}
+	return work.SavedBlocks{Type: workType, Blocks: page}, nil
+}
+
+func undoPlacement(ctx context.Context, tx pgx.Tx, workID, pieceID uuid.UUID, page []block.Block) ([]block.Block, error) {
+	if _, err := lockShelfPiece(ctx, tx, workID, pieceID, true); err != nil {
+		return nil, err
 	}
 	var blockID uuid.UUID
 	var before, placed []byte
 	if err := tx.QueryRow(ctx, `
 		select placed_block_id, placed_before, placed_after from work_shelf_pieces where id = $1
 	`, pieceID).Scan(&blockID, &before, &placed); err != nil {
-		return work.SavedBlocks{}, fmt.Errorf("read the placement: %w", err)
-	}
-	page, err := block.Read(ctx, tx, workID)
-	if err != nil {
-		return work.SavedBlocks{}, err
+		return nil, fmt.Errorf("read the placement: %w", err)
 	}
 	after, err := revertPlacement(page, blockID, before, placed)
 	if err != nil {
-		return work.SavedBlocks{}, err
-	}
-	if err := s.writePage(ctx, tx, workType, workID, after); err != nil {
-		return work.SavedBlocks{}, err
+		return nil, err
 	}
 	if _, err := tx.Exec(ctx, `
 		update work_shelf_pieces
 		   set placed_at = null, placed_block_id = null, placed_before = null, placed_after = null
 		 where id = $1
 	`, pieceID); err != nil {
-		return work.SavedBlocks{}, fmt.Errorf("put the piece back on the shelf: %w", err)
+		return nil, fmt.Errorf("put the piece back on the shelf: %w", err)
+	}
+	return after, nil
+}
+
+// PlaceShelfImport makes every waiting section of an import its own block at the end of the page, in order,
+// and puts each uploaded picture into its section's block
+func (s *Service) PlaceShelfImport(
+	ctx context.Context, ownerID, workID, importID uuid.UUID, candidate *work.Candidate,
+) (work.SavedBlocks, []uuid.UUID, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return work.SavedBlocks{}, nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	workType, err := candidate.Lock(ctx, tx, ownerID, workID)
+	if err != nil {
+		return work.SavedBlocks{}, nil, err
+	}
+	if err := sweepShelf(ctx, tx, workID); err != nil {
+		return work.SavedBlocks{}, nil, err
+	}
+	rows, err := tx.Query(ctx, `
+		select id from work_shelf_pieces
+		 where work_id = $1 and import_id = $2 and placed_at is null
+		   and (kind = 'section' or media_id is not null)
+		 order by position, created_at
+	`, workID, importID)
+	if err != nil {
+		return work.SavedBlocks{}, nil, fmt.Errorf("list the import's pieces: %w", err)
+	}
+	waiting, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		return work.SavedBlocks{}, nil, fmt.Errorf("read the import's pieces: %w", err)
+	}
+	if len(waiting) == 0 {
+		return work.SavedBlocks{}, nil, ErrShelfImportNotFound
+	}
+	page, err := block.Read(ctx, tx, workID)
+	if err != nil {
+		return work.SavedBlocks{}, nil, err
+	}
+	for _, pieceID := range waiting {
+		piece, err := lockShelfPiece(ctx, tx, workID, pieceID, false)
+		if err != nil {
+			return work.SavedBlocks{}, nil, err
+		}
+		end := len(page)
+		after, changed, err := s.placePiece(ctx, tx, workID, page, piece, sectionAt(piece, &end))
+		if err != nil {
+			return work.SavedBlocks{}, nil, err
+		}
+		if err := rememberPlacement(ctx, tx, piece, page, after, changed); err != nil {
+			return work.SavedBlocks{}, nil, err
+		}
+		page = after
+	}
+	if err := s.writePage(ctx, tx, workType, workID, page); err != nil {
+		return work.SavedBlocks{}, nil, err
 	}
 	if err := candidate.Commit(ctx, tx, workID); err != nil {
-		return work.SavedBlocks{}, err
+		return work.SavedBlocks{}, nil, err
 	}
-	return work.SavedBlocks{Type: workType, Blocks: after}, nil
+	return work.SavedBlocks{Type: workType, Blocks: page}, waiting, nil
+}
+
+// sectionAt sends a section to the end of the page and leaves a picture to find its own block
+func sectionAt(piece WaitingPiece, end *int) Placement {
+	if piece.Kind == ShelfPieceKindSection {
+		return Placement{Position: end}
+	}
+	return Placement{}
 }
 
 // LetGoOfShelfPiece deletes a waiting piece and the stored copy of its picture
@@ -419,13 +500,15 @@ func sweepShelf(ctx context.Context, tx pgx.Tx, workID uuid.UUID) error {
 func lockShelfPiece(ctx context.Context, tx pgx.Tx, workID, pieceID uuid.UUID, placed bool) (WaitingPiece, error) {
 	piece := WaitingPiece{ID: pieceID}
 	err := tx.QueryRow(ctx, `
-		select import_id, kind, section, text, media_id, address, name, block_id
-		  from work_shelf_pieces
-		 where id = $1 and work_id = $2 and (placed_at is not null) = $3
-		 for update
+		select piece.import_id, piece.kind, piece.section, piece.text, piece.media_id, piece.address, piece.name,
+		       piece.block_id, coalesce(nullif(piece.section, ''), shelf_import.title)
+		  from work_shelf_pieces piece
+		  join work_shelf_imports shelf_import on shelf_import.id = piece.import_id
+		 where piece.id = $1 and piece.work_id = $2 and (piece.placed_at is not null) = $3
+		 for update of piece
 	`, pieceID, workID, placed).Scan(
 		&piece.ImportID, &piece.Kind, &piece.Section, &piece.Text, &piece.MediaID, &piece.Address, &piece.Name,
-		&piece.BlockID)
+		&piece.BlockID, &piece.Heading)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return WaitingPiece{}, ErrShelfPieceNotFound
 	}
@@ -498,7 +581,7 @@ func placeSection(page []block.Block, piece WaitingPiece, placement Placement) (
 		if at < 0 || at > len(page) {
 			return nil, uuid.Nil, PlacementRefusal("That place isn't on the page anymore. Reload and try again.")
 		}
-		made, _ := readmeBlock(piece.Section, prose(piece.Text))
+		made, _ := readmeBlock(piece.Heading, prose(piece.Text))
 		after := slices.Insert(slices.Clone(page), at, made)
 		for index := range after {
 			after[index].Position = index
@@ -588,7 +671,7 @@ func placePicture(page []block.Block, piece WaitingPiece) ([]block.Block, uuid.U
 	}
 	made := at < 0
 	if made {
-		title := piece.Section
+		title := piece.Heading
 		if title == "" {
 			title = "Pictures"
 		}

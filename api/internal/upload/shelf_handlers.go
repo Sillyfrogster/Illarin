@@ -19,6 +19,11 @@ const maxMarkdownBody = 4 * MaxPastedMarkdown
 
 const tooMuchMarkdown = "Paste at most 1 MB of Markdown at a time."
 
+const (
+	maxUndoPieces = 500
+	maxUndoBody   = 64 << 10
+)
+
 func (h *Handlers) ListShelf(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {
@@ -108,7 +113,38 @@ func (h *Handlers) UndoShelfPlacement(c *gin.Context) {
 	if !ok {
 		return
 	}
-	saved, err := h.uploads.UndoShelfPlacement(c.Request.Context(), owner, id, pieceID, candidate)
+	saved, err := h.uploads.UndoShelfPlacements(c.Request.Context(), owner, id, []uuid.UUID{pieceID}, candidate)
+	h.answerUndo(c, candidate, saved, err)
+}
+
+// UndoShelfPlacements takes back a batch of placements, such as a whole import placed at once
+func (h *Handlers) UndoShelfPlacements(c *gin.Context) {
+	id, ok := api.PathID(c, "id")
+	if !ok {
+		return
+	}
+	version, ok := api.DraftedChangesVersion(c)
+	if !ok {
+		return
+	}
+	owner, ok := api.Verified(c, "undoing placements")
+	if !ok {
+		return
+	}
+	var request UndoShelfPlacementsRequest
+	if !api.ReadBoundedJSON(c, &request, maxUndoBody, "Send at most 500 pieces to undo.") {
+		return
+	}
+	if len(request.PieceIds) == 0 || len(request.PieceIds) > maxUndoPieces {
+		api.Refuse(c, http.StatusBadRequest, "Send between 1 and 500 pieces to undo.")
+		return
+	}
+	candidate := &work.Candidate{Version: version}
+	saved, err := h.uploads.UndoShelfPlacements(c.Request.Context(), owner.ID, id, request.PieceIds, candidate)
+	h.answerUndo(c, candidate, saved, err)
+}
+
+func (h *Handlers) answerUndo(c *gin.Context, candidate *work.Candidate, saved work.SavedBlocks, err error) {
 	if page.CandidateResult(c, candidate, err) {
 		return
 	}
@@ -123,6 +159,33 @@ func (h *Handlers) UndoShelfPlacement(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Illarin could not undo that. Try again.")
 	default:
 		answerBlocks(c, saved)
+	}
+}
+
+// PlaceShelfImport makes every waiting section of an import its own block, in order
+func (h *Handlers) PlaceShelfImport(c *gin.Context) {
+	id, importID, candidate, owner, ok := shelfWrite(c, "placing an import", "importId")
+	if !ok {
+		return
+	}
+	saved, placed, err := h.uploads.PlaceShelfImport(c.Request.Context(), owner, id, importID, candidate)
+	if page.CandidateResult(c, candidate, err) {
+		return
+	}
+	switch {
+	case errors.Is(err, work.ErrNotFound), errors.Is(err, ErrShelfImportNotFound):
+		api.Refuse(c, http.StatusNotFound, "Nothing from that import can be placed.")
+	case errors.Is(err, work.ErrInvalidBlock):
+		api.Refuse(c, http.StatusBadRequest, err.Error())
+	case err != nil:
+		api.Refuse(c, http.StatusInternalServerError, "Illarin could not place the import. Try again.")
+	default:
+		blocks, err := block.ToBlocks(saved.Type, saved.Blocks)
+		if err != nil {
+			api.Refuse(c, http.StatusInternalServerError, "Illarin could not read the page back. Reload it.")
+			return
+		}
+		c.JSON(http.StatusOK, PlacedImport{Blocks: blocks, PieceIds: placed})
 	}
 }
 
