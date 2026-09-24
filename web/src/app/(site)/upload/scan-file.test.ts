@@ -6,7 +6,7 @@ const card = JSON.stringify({
   data: { name: "Ana", alternate_greetings: ["a", "b"] },
 });
 
-function storedZip(files: Record<string, Uint8Array>): Uint8Array {
+function storedZip(files: Record<string, Uint8Array>): Uint8Array<ArrayBuffer> {
   const locals: number[] = [];
   const central: number[] = [];
   const u16 = (value: number) => [value & 255, value >> 8];
