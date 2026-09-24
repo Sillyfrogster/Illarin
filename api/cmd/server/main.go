@@ -66,7 +66,7 @@ func run() error {
 
 	blob, err := storage.NewStoreWithCapacity(pool, cfg.UploadsDir, storage.Capacity{
 		FreeSpaceReserveBytes: cfg.StorageFreeSpaceReserveBytes,
-		MaximumBlobWriteBytes: max(cfg.MaxUploadBytes, int64(cfg.ProbeLimits.MaxEntryBytes)),
+		MaximumBlobWriteBytes: max(cfg.MaxUploadBytes, int64(cfg.ProbeLimits.MaxEntryBytes), upload.CharXMaxBytes),
 	})
 	if err != nil {
 		return fmt.Errorf("storage: %w", err)

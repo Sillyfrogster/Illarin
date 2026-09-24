@@ -3,6 +3,8 @@ package upload
 import (
 	"errors"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/block/edit"
@@ -51,7 +53,8 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner api.Account) {
 		RefuseFile(c, api.FormRefusal{Reason: "confirm the details before uploading"}, h.maxUploadBytes)
 		return
 	}
-	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
+	limit := fileUploadLimit(file.FileName(), h.maxUploadBytes)
+	limitedFile := http.MaxBytesReader(c.Writer, file, limit)
 	defer limitedFile.Close()
 
 	operation, err := h.uploads.AcceptUpload(
@@ -62,7 +65,7 @@ func (h *Handlers) acceptUpload(c *gin.Context, owner api.Account) {
 		return
 	}
 	if err != nil {
-		RefuseFile(c, err, h.maxUploadBytes)
+		RefuseFile(c, err, limit)
 		return
 	}
 
@@ -98,7 +101,8 @@ func (h *Handlers) AddWorkOriginalFile(c *gin.Context) {
 		RefuseFile(c, err, h.maxUploadBytes)
 		return
 	}
-	limitedFile := http.MaxBytesReader(c.Writer, file, h.maxUploadBytes)
+	limit := fileUploadLimit(file.FileName(), h.maxUploadBytes)
+	limitedFile := http.MaxBytesReader(c.Writer, file, limit)
 	defer limitedFile.Close()
 
 	candidate := &work.Candidate{Version: version}
@@ -119,13 +123,22 @@ func (h *Handlers) AddWorkOriginalFile(c *gin.Context) {
 		api.Refuse(c, http.StatusUnprocessableEntity, "This file cannot be accepted.")
 		return
 	case err != nil:
-		RefuseFile(c, err, h.maxUploadBytes)
+		RefuseFile(c, err, limit)
 		return
 	}
 
 	location := "/v1/uploads/" + operation.ID.String()
 	c.Header("Location", location)
 	c.JSON(http.StatusAccepted, toAPIUpload(operation))
+}
+
+const CharXMaxBytes int64 = 50 << 20
+
+func fileUploadLimit(filename string, defaultLimit int64) int64 {
+	if strings.EqualFold(filepath.Ext(filename), ".charx") {
+		return CharXMaxBytes
+	}
+	return defaultLimit
 }
 
 func (h *Handlers) GetWorkReplacement(c *gin.Context) {

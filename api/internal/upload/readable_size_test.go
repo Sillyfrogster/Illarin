@@ -20,3 +20,19 @@ func TestAnOverSizedUploadIsRefusedInASizeAPersonReads(t *testing.T) {
 		}
 	}
 }
+
+func TestCharXHasAFixed50MBUploadLimit(t *testing.T) {
+	for _, test := range []struct {
+		filename     string
+		defaultLimit int64
+		want         int64
+	}{
+		{"card.charx", 32 << 20, 50 << 20},
+		{"card.CHARX", 100 << 20, 50 << 20},
+		{"card.png", 32 << 20, 32 << 20},
+	} {
+		if got := fileUploadLimit(test.filename, test.defaultLimit); got != test.want {
+			t.Errorf("limit for %s = %d, want %d", test.filename, got, test.want)
+		}
+	}
+}
