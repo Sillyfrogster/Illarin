@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
@@ -444,6 +445,84 @@ func TestConcurrentCacheMissesShareOneBoundedRender(t *testing.T) {
 	if calls := processor.renderCalls.Load(); calls != 1 {
 		t.Fatalf("render calls = %d, want one shared cache job", calls)
 	}
+}
+
+func TestExtractedImagesPrepareTogetherAndKeepArchiveOrder(t *testing.T) {
+	t.Parallel()
+	pool := testdb.Connect(t)
+	store, err := storage.NewStore(pool, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor := &parallelPrepareProcessor{started: make(chan struct{}), release: make(chan struct{})}
+	svc := work.NewServiceWithMediaProcessor(
+		pool, format.NewRegistry(), store, work.DefaultUploadSettings(), processor,
+	)
+	var body bytes.Buffer
+	archive := zip.NewWriter(&body)
+	for _, name := range []string{"first.png", "second.png"} {
+		entry, err := archive.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatal(err)
+	}
+	stored, err := store.Put(context.Background(), bytes.NewReader(body.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inspected, err := format.Inspect(context.Background(), store, stored.ID, stored.ByteSize, "images.zip")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	type result struct {
+		media []work.PreparedMedia
+		err   error
+	}
+	done := make(chan result, 1)
+	go func() {
+		prepared, err := svc.PrepareExtractedMedia(ctx, inspected, []format.Media{
+			{Role: work.MediaGallery, ImageID: inspected.Images[0].ID, Name: "first"},
+			{Role: work.MediaGallery, ImageID: inspected.Images[1].ID, Name: "second"},
+		})
+		done <- result{prepared, err}
+	}()
+	select {
+	case <-processor.started:
+	case <-ctx.Done():
+		close(processor.release)
+		t.Fatal("image preparation ran one at a time")
+	}
+	close(processor.release)
+	prepared := <-done
+	if prepared.err != nil {
+		t.Fatal(prepared.err)
+	}
+	if len(prepared.media) != 2 || prepared.media[0].Name != "first" || prepared.media[1].Name != "second" {
+		t.Fatalf("prepared image order = %+v", prepared.media)
+	}
+}
+
+type parallelPrepareProcessor struct {
+	blockingMediaProcessor
+	started chan struct{}
+	release chan struct{}
+	calls   atomic.Int32
+}
+
+func (p *parallelPrepareProcessor) Prepare(context.Context, io.Reader) (mediaproc.Prepared, error) {
+	if p.calls.Add(1) == 2 {
+		close(p.started)
+	}
+	<-p.release
+	return mediaproc.Prepared{Width: 20, Height: 10}, nil
 }
 
 type blockingMediaProcessor struct {

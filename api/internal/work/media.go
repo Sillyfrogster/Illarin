@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -207,46 +208,60 @@ func (s *Service) PrepareExtractedMedia(
 	file format.Inspection,
 	extracted []format.Media,
 ) ([]PreparedMedia, error) {
-	prepared := make([]PreparedMedia, 0, len(extracted))
-	for _, item := range extracted {
-		role := item.Role
-		if !role.Valid() {
-			return nil, fmt.Errorf("format returned media role %q: %w", item.Role, ErrInvalidMediaRole)
-		}
-		source, err := file.OpenImage(ctx, item.ImageID)
-		if err != nil {
-			if errors.Is(err, format.ErrImageUnavailable) {
-				continue
+	results := make([]*PreparedMedia, len(extracted))
+	group, ctx := errgroup.WithContext(ctx)
+	group.SetLimit(max(1, s.upload.MediaWorkers))
+	for index, item := range extracted {
+		group.Go(func() error {
+			role := item.Role
+			if !role.Valid() {
+				return fmt.Errorf("format returned media role %q: %w", item.Role, ErrInvalidMediaRole)
 			}
-			return nil, fmt.Errorf("open extracted media: %w", err)
-		}
-		tracked := &sourceErrorReader{reader: source}
-		stored, err := s.store.Put(ctx, tracked)
-		closeErr := source.Close()
-		if localImageReadFailure(tracked.err) || localImageReadFailure(closeErr) {
-			continue
-		}
-		if tracked.err != nil {
-			return nil, fmt.Errorf("read extracted media: %w", tracked.err)
-		}
-		if closeErr != nil {
-			return nil, fmt.Errorf("close extracted media: %w", closeErr)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("store extracted media: %w", err)
-		}
-		image, err := s.media.Prepare(ctx, stored)
-		if err != nil {
-			if errors.Is(err, mediaproc.ErrUnsupportedImage) {
-				continue
+			source, err := file.OpenImage(ctx, item.ImageID)
+			if err != nil {
+				if errors.Is(err, format.ErrImageUnavailable) {
+					return nil
+				}
+				return fmt.Errorf("open extracted media: %w", err)
 			}
-			return nil, err
-		}
-		prepared = append(prepared, PreparedMedia{
-			ID: uuid.New(), BlobID: stored.ID, Role: role,
-			ElementRole: item.ElementRole, Name: item.Name,
-			Width: image.Width, Height: image.Height,
+			tracked := &sourceErrorReader{reader: source}
+			stored, err := s.store.Put(ctx, tracked)
+			closeErr := source.Close()
+			if localImageReadFailure(tracked.err) || localImageReadFailure(closeErr) {
+				return nil
+			}
+			if tracked.err != nil {
+				return fmt.Errorf("read extracted media: %w", tracked.err)
+			}
+			if closeErr != nil {
+				return fmt.Errorf("close extracted media: %w", closeErr)
+			}
+			if err != nil {
+				return fmt.Errorf("store extracted media: %w", err)
+			}
+			image, err := s.media.Prepare(ctx, stored)
+			if err != nil {
+				if errors.Is(err, mediaproc.ErrUnsupportedImage) {
+					return nil
+				}
+				return err
+			}
+			results[index] = &PreparedMedia{
+				ID: uuid.New(), BlobID: stored.ID, Role: role,
+				ElementRole: item.ElementRole, Name: item.Name,
+				Width: image.Width, Height: image.Height,
+			}
+			return nil
 		})
+	}
+	if err := group.Wait(); err != nil {
+		return nil, err
+	}
+	prepared := make([]PreparedMedia, 0, len(results))
+	for _, result := range results {
+		if result != nil {
+			prepared = append(prepared, *result)
+		}
 	}
 	return prepared, nil
 }

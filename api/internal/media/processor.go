@@ -117,7 +117,7 @@ type PNGEncoder struct{}
 func (PNGEncoder) MediaType() string { return ImageSizeMediaType }
 
 func (PNGEncoder) Encode(w io.Writer, source image.Image) error {
-	return png.Encode(w, source)
+	return (&png.Encoder{CompressionLevel: png.BestSpeed}).Encode(w, source)
 }
 
 func NewProcessorWithEncoder(limits Limits, encoder Encoder) *Processor {
