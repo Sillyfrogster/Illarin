@@ -12,6 +12,7 @@ type BuildChoices struct {
 }
 
 type BuildChoice struct {
-	Type string         `json:"type"`
-	Apps []page.AppName `json:"apps"`
+	Type   string         `json:"type"`
+	Apps   []page.AppName `json:"apps"`
+	Blocks []string       `json:"blocks"`
 }

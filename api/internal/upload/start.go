@@ -36,10 +36,24 @@ func (s *Service) BuildChoices() BuildChoices {
 	choices := BuildChoices{Types: []BuildChoice{}}
 	for _, workType := range slices.Sorted(slices.Values(block.Types())) {
 		if s.buildable(workType) {
-			choices.Types = append(choices.Types, BuildChoice{Type: workType, Apps: page.AppNames(appsAsked(workType))})
+			choices.Types = append(choices.Types, BuildChoice{
+				Type: workType, Apps: page.AppNames(appsAsked(workType)), Blocks: startingBlocks(workType),
+			})
 		}
 	}
 	return choices
+}
+
+// startingBlocks names the blocks an empty draft of the type opens with
+func startingBlocks(workType string) []string {
+	definitions, _ := block.Definitions(workType)
+	titles := []string{}
+	for _, definition := range definitions {
+		if definition.Required {
+			titles = append(titles, definition.Title)
+		}
+	}
+	return titles
 }
 
 func (s *Service) buildable(workType string) bool {
