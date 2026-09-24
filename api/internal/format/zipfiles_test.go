@@ -57,3 +57,34 @@ func TestOpenZIPFilesReadsManyEntriesWithoutRereadingTheArchive(t *testing.T) {
 		t.Errorf("opening a missing entry = %v, want ErrZIPEntryUnavailable", err)
 	}
 }
+
+func TestOpeningArchivedImagesReadsTheStoreInLargePieces(t *testing.T) {
+	t.Parallel()
+	body := strings.Repeat("x", 4*maxRangeRead)
+	entries := make([]zipEntry, 0, 8)
+	for index := range 8 {
+		entries = append(entries, zipEntry{name: fmt.Sprintf("assets/%d.png", index), body: body, method: zip.Store})
+	}
+	file := zipEntries(t, entries...)
+	store := &recordingStore{data: file}
+	inspected, err := Inspect(context.Background(), store, uuid.New(), int64(len(file)), "card.charx")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+	store.reads = nil
+
+	for _, image := range inspected.Images {
+		opened, err := inspected.OpenImage(context.Background(), image.ID)
+		if err != nil {
+			t.Fatalf("open image %d: %v", image.ID, err)
+		}
+		held, err := io.ReadAll(opened)
+		_ = opened.Close()
+		if err != nil || len(held) != len(body) {
+			t.Fatalf("image %d read %d bytes and %v", image.ID, len(held), err)
+		}
+	}
+	if pieces := len(file) / maxRangeRead; len(store.reads) > 3*pieces {
+		t.Errorf("reading %d bytes of images took %d reads of the store, want at most %d", len(file), len(store.reads), 3*pieces)
+	}
+}

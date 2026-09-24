@@ -119,57 +119,27 @@ func (i Inspection) OpenImage(ctx context.Context, id uint32) (io.ReadCloser, er
 	if !ok {
 		return nil, fmt.Errorf("image %d: %w", id, ErrImageUnavailable)
 	}
-	reader := &rangeReaderAt{ctx: ctx, store: i.source.store, id: i.source.id, size: i.source.size}
 	if found.Location.Container != ZIP {
+		reader := &rangeReaderAt{ctx: ctx, store: i.source.store, id: i.source.id, size: i.source.size}
 		return io.NopCloser(io.NewSectionReader(reader, 0, i.source.size)), nil
 	}
-	archive, err := zip.NewReader(reader, i.source.size)
+	files, err := i.OpenZIPFiles(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("reopen archive for image %d: %w", id, err)
 	}
-	for _, entry := range archive.File {
-		if entry.Name != found.Location.Name {
-			continue
-		}
-		opened, err := entry.Open()
-		if err != nil {
-			return nil, fmt.Errorf("open archive entry %q: %w", entry.Name, err)
-		}
-		return opened, nil
+	opened, err := files.Open(found.Location.Name)
+	if errors.Is(err, ErrZIPEntryUnavailable) {
+		return nil, fmt.Errorf("archive entry %q: %w", found.Location.Name, ErrImageUnavailable)
 	}
-	return nil, fmt.Errorf("archive entry %q: %w", found.Location.Name, ErrImageUnavailable)
+	return opened, err
 }
 
 func (i Inspection) OpenZIPEntry(ctx context.Context, name string) (io.ReadCloser, error) {
-	if i.Container != ZIP {
-		return nil, fmt.Errorf("archive entry %q: %w", name, ErrZIPEntryUnavailable)
-	}
-	found := false
-	for _, entry := range i.ZIPEntries {
-		if entry.Name == name && !entry.Directory {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("archive entry %q: %w", name, ErrZIPEntryUnavailable)
-	}
-	reader := &rangeReaderAt{ctx: ctx, store: i.source.store, id: i.source.id, size: i.source.size}
-	archive, err := zip.NewReader(reader, i.source.size)
+	files, err := i.OpenZIPFiles(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("reopen archive entry %q: %w", name, err)
+		return nil, err
 	}
-	for _, entry := range archive.File {
-		if entry.Name != name {
-			continue
-		}
-		opened, err := entry.Open()
-		if err != nil {
-			return nil, fmt.Errorf("open archive entry %q: %w", name, err)
-		}
-		return opened, nil
-	}
-	return nil, fmt.Errorf("archive entry %q: %w", name, ErrZIPEntryUnavailable)
+	return files.Open(name)
 }
 
 var imageExtensions = map[string]bool{
