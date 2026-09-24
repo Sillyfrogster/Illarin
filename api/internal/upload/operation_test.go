@@ -140,7 +140,7 @@ func (m *leasedModule) Parse(context.Context, format.Inspection, format.Match) (
 	return format.Parsed{Type: "character", Format: "leased"}, nil
 }
 
-func TestExpiredLeaseIsTakenAgainAndFinalizationIsIdempotent(t *testing.T) {
+func TestSlowUploadKeepsItsLeaseAndExpiredLeaseRetries(t *testing.T) {
 	t.Parallel()
 	pool := testdb.Connect(t)
 	ownerID := uuid.New()
@@ -158,7 +158,6 @@ func TestExpiredLeaseIsTakenAgainAndFinalizationIsIdempotent(t *testing.T) {
 		t.Fatalf("register module: %v", err)
 	}
 	settings := work.DefaultUploadSettings()
-	settings.LeaseDuration = time.Minute
 	service := NewService(pool, work.NewServiceWithUploadSettings(pool, registry, blobs, settings))
 	name := "Leased card"
 	_, err = service.AcceptUpload(context.Background(), UploadInput{
@@ -179,7 +178,11 @@ func TestExpiredLeaseIsTakenAgainAndFinalizationIsIdempotent(t *testing.T) {
 	}()
 	<-module.started
 
-	clock.Store(clock.Load().(time.Time).Add(2 * time.Minute))
+	clock.Store(clock.Load().(time.Time).Add(time.Minute))
+	if processed, err := service.ProcessNextUpload(context.Background()); err != nil || processed {
+		t.Fatalf("slow upload was leased again = %v, %v", processed, err)
+	}
+	clock.Store(clock.Load().(time.Time).Add(settings.LeaseDuration))
 	if processed, err := service.ProcessNextUpload(context.Background()); err != nil || !processed {
 		t.Fatalf("second process = %v, %v; want true, nil", processed, err)
 	}

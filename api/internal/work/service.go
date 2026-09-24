@@ -68,7 +68,7 @@ type MediaProcessor = mediaproc.Renderer
 func DefaultUploadSettings() UploadSettings {
 	return UploadSettings{
 		ProbeLimits:   format.DefaultLimits(),
-		LeaseDuration: 30 * time.Second,
+		LeaseDuration: 15 * time.Minute, // ponytail: fixed lease; renew it if imports run longer.
 		RetryBase:     time.Second,
 		MaxAttempts:   3,
 		MediaWorkers:  2,
