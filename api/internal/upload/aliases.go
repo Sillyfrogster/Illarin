@@ -19,12 +19,11 @@ func registerAliases(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPost, "/v1/works/:id/revisions", d.Upload, h.AddWorkOriginalFile)
 	routes.Handle(http.MethodPost, "/v1/works/:id/revisions/:operationId/accept", d.JSON, h.AcceptWorkOriginalFile)
 	routes.Handle(http.MethodDelete, "/v1/works/:id/revisions/:operationId", d.JSON, h.CancelWorkOriginalFile)
-	routes.Handle(http.MethodGet, "/v1/assets/:id/vault", d.JSON, h.ListFoundImages)
-	routes.Handle(http.MethodDelete, "/v1/assets/:id/vault/:pictureId", d.JSON, h.DiscardFoundImage)
-	routes.Handle(http.MethodPost, "/v1/assets/:id/vault/:pictureId/place", d.JSON, h.PlaceFoundImage)
-	routes.Handle(http.MethodGet, "/v1/works/:id/vault", d.JSON, h.ListFoundImages)
-	routes.Handle(http.MethodDelete, "/v1/works/:id/vault/:pictureId", d.JSON, h.DiscardFoundImage)
-	routes.Handle(http.MethodPost, "/v1/works/:id/vault/:pictureId/place", d.JSON, h.PlaceFoundImage)
+	for _, was := range []string{"/v1/assets/:id/vault", "/v1/works/:id/vault", "/v1/works/:id/found-images"} {
+		routes.Handle(http.MethodGet, was, d.JSON, h.ListShelf)
+		routes.Handle(http.MethodDelete, was+"/:pieceId", d.JSON, h.LetGoOfShelfPiece)
+		routes.Handle(http.MethodPost, was+"/:pieceId/place", d.JSON, h.PlaceShelfPiece)
+	}
 	routes.Handle(http.MethodGet, "/v1/ingests/:id", d.JSON, h.GetUpload)
 }
 

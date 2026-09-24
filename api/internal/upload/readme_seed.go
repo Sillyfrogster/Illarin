@@ -3,7 +3,6 @@ package upload
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
@@ -15,11 +14,10 @@ import (
 
 const (
 	openingTitle  = "About"
-	restTitle     = "More from the README"
 	shownSections = 3
 )
 
-// seedFromReadme turns a README into blocks and holds its pictures in found images when a work is first made
+// seedFromReadme turns a README into blocks and puts its later sections and its pictures on the shelf when a work is first made
 func (s *Service) seedFromReadme(ctx context.Context, file format.Inspection, read preparedImport) (preparedImport, error) {
 	source := read.Parsed.Readme
 	if source == nil {
@@ -35,13 +33,13 @@ func (s *Service) seedFromReadme(ctx context.Context, file format.Inspection, re
 	for index := range blocks {
 		blocks[index].Position = index
 	}
-	prepared, foundImages, err := s.readmePictures(ctx, file, page, held, targets)
+	prepared, pieces, err := s.readmePieces(ctx, file, page, held, targets)
 	if err != nil {
 		return preparedImport{}, err
 	}
 	read.Blocks = blocks
 	read.Media = append(read.Media, prepared...)
-	read.FoundImages = foundImages
+	read.Shelf = pieces
 	return read, nil
 }
 
@@ -55,11 +53,12 @@ func archivedImages(file format.Inspection) map[string]uint32 {
 	return held
 }
 
-func (s *Service) readmePictures(
+// readmePieces shelves each section that has no block and each picture, remembering the block its section became
+func (s *Service) readmePieces(
 	ctx context.Context, file format.Inspection, page readmePage, held map[string]uint32, targets []*uuid.UUID,
-) ([]work.PreparedMedia, []WaitingPicture, error) {
+) ([]work.PreparedMedia, []WaitingPiece, error) {
 	var prepared []work.PreparedMedia
-	var foundImages []WaitingPicture
+	var pieces []WaitingPiece
 	if page.Cover != nil {
 		cover, ok, err := s.seededPicture(ctx, file, held[page.Cover.Entry], work.MediaAvatar)
 		if err != nil {
@@ -72,6 +71,11 @@ func (s *Service) readmePictures(
 	stored := make(map[string]uuid.UUID)
 	for index, section := range slices.Concat([]readmeSection{page.Opening}, page.Sections) {
 		target := targets[index]
+		if target == nil && section.Text != "" {
+			pieces = append(pieces, WaitingPiece{
+				ID: uuid.New(), Kind: ShelfPieceKindSection, Section: section.Title, Text: section.Text,
+			})
+		}
 		for _, image := range section.Images {
 			id, done := stored[image.Entry]
 			if !done {
@@ -86,18 +90,19 @@ func (s *Service) readmePictures(
 				id, stored[image.Entry] = picture.ID, picture.ID
 			}
 			media := id
-			foundImages = append(foundImages, WaitingPicture{
-				ID: uuid.New(), MediaID: &media, Address: image.Entry, Name: image.Name,
+			pieces = append(pieces, WaitingPiece{
+				ID: uuid.New(), Kind: ShelfPieceKindPicture, MediaID: &media, Address: image.Entry, Name: image.Name,
 				BlockID: target, Section: section.Title,
 			})
 		}
 		for _, picture := range section.Remote {
-			foundImages = append(foundImages, WaitingPicture{
-				ID: uuid.New(), Address: picture.Address, Name: picture.Name, BlockID: target, Section: section.Title,
+			pieces = append(pieces, WaitingPiece{
+				ID: uuid.New(), Kind: ShelfPieceKindPicture, Address: picture.Address, Name: picture.Name,
+				BlockID: target, Section: section.Title,
 			})
 		}
 	}
-	return prepared, foundImages, nil
+	return prepared, pieces, nil
 }
 
 func (s *Service) seededPicture(
@@ -121,20 +126,10 @@ func readmeBlocks(page readmePage) ([]block.Block, []block.Block, []*uuid.UUID) 
 		opening = append(opening, seeded)
 		targets[0] = &seeded.ID
 	}
-	placed, rest := page.Sections, []readmeSection(nil)
-	if len(placed) > shownSections+1 {
-		placed, rest = placed[:shownSections], placed[shownSections:]
-	}
-	for index, section := range placed {
+	for index, section := range page.Sections[:min(shownSections, len(page.Sections))] {
 		if seeded, ok := readmeBlock(section.Title, prose(section.Text)); ok {
 			sections = append(sections, seeded)
 			targets[1+index] = &seeded.ID
-		}
-	}
-	if seeded, ok := readmeBlock(restTitle, passages(rest)); ok {
-		sections = append(sections, seeded)
-		for index := range rest {
-			targets[1+len(placed)+index] = &seeded.ID
 		}
 	}
 	return opening, sections, targets
@@ -147,27 +142,6 @@ func prose(text string) *block.Element {
 	return &block.Element{
 		ID: uuid.New(), Type: block.TypeProse, Options: block.Options{Display: block.DisplayRich},
 		Content: block.Prose{Text: text},
-	}
-}
-
-func passages(sections []readmeSection) *block.Element {
-	texts := []block.TextItem{}
-	for index, section := range sections {
-		if section.Text == "" {
-			continue
-		}
-		name := section.Title
-		if name == "" {
-			name = fmt.Sprintf("Section %d", shownSections+index+1)
-		}
-		texts = append(texts, block.TextItem{ID: block.NewItemID(), Name: name, Text: section.Text})
-	}
-	if len(texts) == 0 {
-		return nil
-	}
-	return &block.Element{
-		ID: uuid.New(), Type: block.TypeTextSet, Options: block.Options{Display: block.DisplayRich},
-		Content: block.TextSet{Texts: texts},
 	}
 }
 

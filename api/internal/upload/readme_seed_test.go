@@ -30,36 +30,16 @@ func titlesOf(blocks []block.Block) []string {
 	return titles
 }
 
-func TestAReadmeOfFourSectionsKeepsEachAsABlock(t *testing.T) {
+func TestALongReadmeKeepsThreeSectionsAsBlocksAndLeavesTheRestWithoutOne(t *testing.T) {
 	t.Parallel()
-	_, sections, _ := readmeBlocks(readmePage{Sections: sectionsNamed(4)})
-	if got := fmt.Sprint(titlesOf(sections)); got != "[Part 1 Part 2 Part 3 Part 4]" {
-		t.Fatalf("blocks = %s, want one block for each of the four sections", got)
-	}
-}
-
-func TestALongReadmeGathersEverySectionAfterTheThirdIntoOneList(t *testing.T) {
-	t.Parallel()
-	page := readmePage{Opening: readmeSection{Text: "Intro"}, Sections: sectionsNamed(6)}
+	page := readmePage{Opening: readmeSection{Text: "Intro"}, Sections: sectionsNamed(5)}
 	opening, sections, targets := readmeBlocks(page)
 
-	if got := fmt.Sprint(titlesOf(opening), titlesOf(sections)); got != "[About] [Part 1 Part 2 Part 3 More from the README]" {
-		t.Fatalf("blocks = %s, want the first three sections and one list of the rest", got)
+	if got := fmt.Sprint(titlesOf(opening), titlesOf(sections)); got != "[About] [Part 1 Part 2 Part 3]" {
+		t.Fatalf("blocks = %s, want the opening and the first three sections", got)
 	}
-	rest := sections[3]
-	list, ok := rest.Elements[0].Content.(block.TextSet)
-	if !ok || rest.Elements[0].Options.Display != block.DisplayRich {
-		t.Fatalf("the rest opens with %+v, want a list of rich passages", rest.Elements[0])
-	}
-	var got []string
-	for _, item := range list.Texts {
-		got = append(got, item.Name+": "+item.Text)
-	}
-	if fmt.Sprint(got) != "[Part 4: Text 4 Part 5: Text 5 Part 6: Text 6]" {
-		t.Errorf("the rest lists %q, want each later section by its title", got)
-	}
-	if *targets[0] != opening[0].ID || *targets[2] != sections[1].ID || *targets[5] != rest.ID || *targets[6] != rest.ID {
-		t.Errorf("targets = %v, want the opening, its own block for the first three sections, and the list for the rest", targets)
+	if *targets[0] != opening[0].ID || *targets[3] != sections[2].ID || targets[4] != nil || targets[5] != nil {
+		t.Errorf("targets = %v, want a block for the opening and the first three sections only", targets)
 	}
 }
 
@@ -74,7 +54,7 @@ func TestAWaitingPictureJoinsItsBlockBesideTheWriting(t *testing.T) {
 		}},
 	}}
 	media := uuid.New()
-	after, _, err := placePicture(page, WaitingPicture{MediaID: &media, Name: "Settings", BlockID: &page[0].ID})
+	after, _, _, err := placePicture(page, WaitingPiece{MediaID: &media, Name: "Settings", BlockID: &page[0].ID})
 	if err != nil {
 		t.Fatalf("place: %v", err)
 	}
@@ -91,7 +71,7 @@ func TestAWaitingPictureJoinsItsBlockBesideTheWriting(t *testing.T) {
 	}
 
 	second := uuid.New()
-	again, _, err := placePicture(after, WaitingPicture{MediaID: &second, Name: "More", BlockID: &page[0].ID})
+	again, _, _, err := placePicture(after, WaitingPiece{MediaID: &second, Name: "More", BlockID: &page[0].ID})
 	if err != nil {
 		t.Fatalf("place again: %v", err)
 	}
@@ -103,14 +83,14 @@ func TestAWaitingPictureJoinsItsBlockBesideTheWriting(t *testing.T) {
 func TestAWaitingPictureWhoseBlockIsGoneGetsABlockOfItsOwn(t *testing.T) {
 	t.Parallel()
 	media, gone := uuid.New(), uuid.New()
-	after, made, err := placePicture(nil, WaitingPicture{MediaID: &media, Name: "Shot", BlockID: &gone, Section: "Screenshots"})
+	after, changed, made, err := placePicture(nil, WaitingPiece{MediaID: &media, Name: "Shot", BlockID: &gone, Section: "Screenshots"})
 	if err != nil {
 		t.Fatalf("place: %v", err)
 	}
 	if len(after) != 1 || *after[0].Title != "Screenshots" || after[0].Elements[0].Type != block.TypeImageSet {
 		t.Fatalf("page = %+v, want one new block named after the section", after)
 	}
-	if made == nil || *made != after[0].ID {
-		t.Errorf("made = %v, want the new block's id %s", made, after[0].ID)
+	if !made || changed != after[0].ID {
+		t.Errorf("made = %t, changed = %s, want the new block %s", made, changed, after[0].ID)
 	}
 }

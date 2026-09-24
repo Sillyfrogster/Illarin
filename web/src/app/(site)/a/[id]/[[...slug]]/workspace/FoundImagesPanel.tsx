@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
   addWorkImage,
-  discardFoundImage,
-  type FoundImage,
-  placeFoundImage,
+  letGoOfShelfPiece,
+  placeShelfPiece,
+  type ShelfPiece,
 } from "@/lib/api/query";
 import { useDraftedChanges } from "@/lib/drafted-changes";
 import { Note, RemoveAction } from "./fields";
@@ -22,7 +22,7 @@ export function FoundImagesPanel({
   onRelease,
   onReload,
 }: {
-  pictures: FoundImage[];
+  pictures: ShelfPiece[];
   onRelease: (pictureId: string) => void;
   onReload: () => void;
 }) {
@@ -53,7 +53,7 @@ export function FoundImagesPanel({
     }
   }
 
-  function place(picture: FoundImage, file?: File) {
+  function place(picture: ShelfPiece, file?: File) {
     run(picture.id, async () => {
       let mediaId: string | undefined;
       if (file) {
@@ -64,11 +64,11 @@ export function FoundImagesPanel({
           "gallery",
         );
       }
-      const saved = await placeFoundImage(
+      const saved = await placeShelfPiece(
         candidate,
         workspace.workId,
         picture.id,
-        mediaId,
+        { mediaId },
       );
       workspace.applyServerBlocks(saved);
       workspace.say(`${picture.name || "Picture"} placed.`);
@@ -77,9 +77,9 @@ export function FoundImagesPanel({
     });
   }
 
-  function discard(picture: FoundImage) {
+  function discard(picture: ShelfPiece) {
     run(picture.id, () =>
-      discardFoundImage(candidate, workspace.workId, picture.id),
+      letGoOfShelfPiece(candidate, workspace.workId, picture.id),
     );
   }
 
@@ -122,11 +122,11 @@ function WaitingPicture({
   busy: boolean;
   onDiscard: () => void;
   onPlace: (file?: File) => void;
-  picture: FoundImage;
+  picture: ShelfPiece;
   target?: string;
 }) {
   const file = useRef<HTMLInputElement>(null);
-  const name = picture.name.trim() || "Untitled picture";
+  const name = picture.name?.trim() || "Untitled picture";
   const destination = target
     ? `Goes into “${target}”`
     : `Starts a block called “${picture.section.trim() || "Pictures"}”`;

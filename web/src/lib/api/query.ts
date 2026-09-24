@@ -26,8 +26,6 @@ import type {
   EntryTableContent,
   ExtensionDependency,
   FormatComparison,
-  FoundImage,
-  FoundImageList,
   ListWorksParams,
   NsfwPreferenceRequest,
   OriginalUpload,
@@ -65,6 +63,9 @@ import type {
   SaveWorkBlockRequest,
   ScriptListContent,
   SettingGroupContent,
+  Shelf,
+  ShelfImport,
+  ShelfPiece,
   StylesheetSetContent,
   TypedValue,
   UploadOperation,
@@ -151,7 +152,8 @@ export type {
   StylesheetSetContent,
   TypedValue,
   VariableSchemaContent,
-  FoundImage,
+  ShelfImport,
+  ShelfPiece,
   VersionChange,
   VersionChangeGroup,
   VersionComparison,
@@ -449,50 +451,98 @@ export async function arrangeWorkBlocks(
   return data;
 }
 
-/** The pictures a README showed, waiting for the creator to place or let go. */
-export async function fetchFoundImages(workId: string): Promise<FoundImage[]> {
-  const { data, error } = await api<FoundImageList>(
-    "GET",
-    `/v1/works/${workId}/found-images`,
-  );
+/** The sections and pictures waiting on a work's shelf, grouped by import. */
+export async function fetchShelf(workId: string): Promise<ShelfImport[]> {
+  const { data, error } = await api<Shelf>("GET", `/v1/works/${workId}/shelf`);
   if (error || !data) {
-    throw new Error("The waiting pictures could not be read. Try again.");
+    throw new Error("Illarin could not read the shelf. Try again.");
   }
-  return data.pictures;
+  return data.imports;
 }
 
-export async function placeFoundImage(
+/** Splits Markdown at its headings and puts every piece on the shelf, leaving the page alone. */
+export async function addMarkdownToShelf(
+  workId: string,
+  markdown: string,
+): Promise<ShelfImport[]> {
+  const { data, error } = await api<Shelf>(
+    "POST",
+    `/v1/works/${workId}/shelf`,
+    { body: { markdown } },
+  );
+  if (error || !data) {
+    throw writeRefusal(error, "Illarin could not add the Markdown. Try again.");
+  }
+  return data.imports;
+}
+
+/** Where a piece goes. A section takes a position or an element, and a picture takes an uploaded copy or nothing. */
+export type ShelfPlacement = {
+  mediaId?: string;
+  position?: number;
+  elementId?: string;
+};
+
+export async function placeShelfPiece(
   candidate: Candidate,
   workId: string,
-  pictureId: string,
-  mediaId?: string,
+  pieceId: string,
+  placement: ShelfPlacement = {},
 ): Promise<WorkBlock[]> {
   const { data, error } = await api<WorkBlock[]>(
     "POST",
-    `/v1/works/${workId}/found-images/${pictureId}/place`,
-    {
-      candidate,
-      body: mediaId ? { mediaId } : undefined,
-    },
+    `/v1/works/${workId}/shelf/pieces/${pieceId}/place`,
+    { candidate, body: placement },
   );
   if (error || !data) {
-    throw writeRefusal(error, "The picture could not be placed. Try again.");
+    throw writeRefusal(error, "Illarin could not place the piece. Try again.");
   }
   return data;
 }
 
-export async function discardFoundImage(
+export async function undoShelfPlacement(
   candidate: Candidate,
   workId: string,
-  pictureId: string,
+  pieceId: string,
+): Promise<WorkBlock[]> {
+  const { data, error } = await api<WorkBlock[]>(
+    "POST",
+    `/v1/works/${workId}/shelf/pieces/${pieceId}/undo`,
+    { candidate },
+  );
+  if (error || !data) {
+    throw writeRefusal(error, "Illarin could not undo that. Try again.");
+  }
+  return data;
+}
+
+export async function letGoOfShelfPiece(
+  candidate: Candidate,
+  workId: string,
+  pieceId: string,
 ) {
   const { error } = await api<void>(
     "DELETE",
-    `/v1/works/${workId}/found-images/${pictureId}`,
+    `/v1/works/${workId}/shelf/pieces/${pieceId}`,
     { candidate },
   );
   if (error) {
-    throw writeRefusal(error, "The picture could not be discarded. Try again.");
+    throw writeRefusal(error, "Illarin could not let that go. Try again.");
+  }
+}
+
+export async function letGoOfShelfImport(
+  candidate: Candidate,
+  workId: string,
+  importId: string,
+) {
+  const { error } = await api<void>(
+    "DELETE",
+    `/v1/works/${workId}/shelf/imports/${importId}`,
+    { candidate },
+  );
+  if (error) {
+    throw writeRefusal(error, "Illarin could not let that go. Try again.");
   }
 }
 

@@ -100,18 +100,18 @@ type preparedUpload struct {
 	Remainder      []format.Remainder
 	PrivatePrompts []format.PrivatePrompt
 	Media          []work.PreparedMedia
-	FoundImages    []WaitingPicture
+	Shelf          []WaitingPiece
 	CreatedAt      *time.Time
 	MediaType      string
 }
 
 type preparedImport struct {
-	Parsed      format.Parsed
-	Blocks      []block.Block
-	Elements    []block.Element
-	Media       []work.PreparedMedia
-	FoundImages []WaitingPicture
-	MediaType   string
+	Parsed    format.Parsed
+	Blocks    []block.Block
+	Elements  []block.Element
+	Media     []work.PreparedMedia
+	Shelf     []WaitingPiece
+	MediaType string
 }
 
 func (s *Service) readImport(
@@ -297,7 +297,7 @@ func (s *Service) ProcessNextUpload(ctx context.Context) (bool, error) {
 	prepared.Blocks = read.Blocks
 	prepared.SuppliedRoles = suppliedRoles(read.Elements)
 	prepared.Media = read.Media
-	prepared.FoundImages = read.FoundImages
+	prepared.Shelf = read.Shelf
 	prepared.MediaType = read.MediaType
 	finish := s.finalizeUpload
 	if job.Target != nil {
@@ -657,7 +657,7 @@ func (s *Service) writeUploadResultWithDecisions(
 	if err := writeOriginalFile(ctx, tx, workID, 1, job, prepared); err != nil {
 		return uuid.Nil, err
 	}
-	if err := insertFoundImages(ctx, tx, workID, prepared.FoundImages); err != nil {
+	if err := insertShelf(ctx, tx, workID, ShelfSourceReadme, "", prepared.Shelf); err != nil {
 		return uuid.Nil, err
 	}
 	return workID, s.writeSummary(ctx, tx, workID)

@@ -121,7 +121,7 @@ packages:
     include_files:
       - "shapes.go"
       - "start_shapes.go"
-      - "found_images_shapes.go"
+      - "shelf_shapes.go"
   - path: "github.com/Sillyfrogster/Illarin/api/internal/download"
     output_path: "../web/src/lib/api/shapes/download.ts"
     enum_style: "union"

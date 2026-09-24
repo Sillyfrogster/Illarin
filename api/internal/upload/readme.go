@@ -35,6 +35,7 @@ type readmeSection struct {
 }
 
 type readmePage struct {
+	Title    string
 	Cover    *readmeImage
 	Opening  readmeSection
 	Sections []readmeSection
@@ -53,6 +54,9 @@ func readReadme(source string, find findEntry) readmePage {
 	depth := sectionDepth(parts, title)
 
 	page := readmePage{}
+	if title >= 0 {
+		page.Title = parts[title].words
+	}
 	current := &page.Opening
 	for index, part := range parts {
 		switch {

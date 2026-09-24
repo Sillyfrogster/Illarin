@@ -27,10 +27,10 @@ import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
 import { TakedownControl } from "../TakedownControl";
 import { AddBlock } from "./AddBlock";
 import { FoundImagesPanel } from "./FoundImagesPanel";
-import { useFoundImages } from "./found-images";
 import { PublishDialog } from "./PublishDialog";
 import { RemoveBlock } from "./RemoveBlock";
 import { ReplacementStep } from "./ReplacementStep";
+import { useShelf } from "./shelf";
 import { useWorkspace } from "./state";
 import { EditToggle, WorkspaceDock } from "./WorkspaceDock";
 
@@ -50,7 +50,8 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const workspace = useWorkspace();
   const { account } = useAuth();
   const reduced = useReducedMotion();
-  const foundImages = useFoundImages(workspace.workId, workspace.isOwner);
+  const shelf = useShelf(workspace.workId, workspace.isOwner);
+  const pictures = shelf.pieces.filter((piece) => piece.kind === "picture");
   const canTakeDown = Boolean(
     account?.role === "admin" && !workspace.isDraft && !props.takenDown,
   );
@@ -102,7 +103,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           takenDown={props.takenDown}
           typeName={props.typeName}
           visibility={props.visibility}
-          waiting={foundImages.pictures.length}
+          waiting={pictures.length}
         />
       ) : workspace.isOwner && !props.takenDown ? (
         <EditToggle typeName={props.typeName} />
@@ -183,9 +184,9 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
             title="Found images"
           >
             <FoundImagesPanel
-              onRelease={foundImages.release}
-              onReload={foundImages.reload}
-              pictures={foundImages.pictures}
+              onRelease={shelf.release}
+              onReload={shelf.reload}
+              pictures={pictures}
             />
           </WorkspaceRail>
         ) : null}

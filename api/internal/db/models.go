@@ -627,18 +627,6 @@ type WorkFollow struct {
 	SetAt     pgtype.Timestamptz
 }
 
-type WorkFoundImage struct {
-	ID        pgtype.UUID
-	WorkID    pgtype.UUID
-	MediaID   pgtype.UUID
-	Address   string
-	Name      string
-	BlockID   pgtype.UUID
-	Section   string
-	Position  int32
-	CreatedAt pgtype.Timestamptz
-}
-
 type WorkLegacyPath struct {
 	Path      string
 	WorkID    pgtype.UUID
@@ -757,6 +745,33 @@ type WorkPublicWorkSummary struct {
 	Facets           []byte
 	FacetStamp       string
 	FacetComputedAt  pgtype.Timestamptz
+}
+
+type WorkShelfImport struct {
+	ID        pgtype.UUID
+	WorkID    pgtype.UUID
+	Source    string
+	Title     string
+	CreatedAt pgtype.Timestamptz
+}
+
+type WorkShelfPiece struct {
+	ID            pgtype.UUID
+	WorkID        pgtype.UUID
+	MediaID       pgtype.UUID
+	Address       string
+	Name          string
+	BlockID       pgtype.UUID
+	Section       string
+	Position      int32
+	CreatedAt     pgtype.Timestamptz
+	ImportID      pgtype.UUID
+	Kind          string
+	Text          string
+	PlacedAt      pgtype.Timestamptz
+	PlacedBlockID pgtype.UUID
+	PlacedBefore  []byte
+	PlacedAfter   []byte
 }
 
 type WorkSummary struct {
