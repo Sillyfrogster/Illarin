@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -671,10 +672,7 @@ func placePicture(page []block.Block, piece WaitingPiece) ([]block.Block, uuid.U
 	}
 	made := at < 0
 	if made {
-		title := piece.Heading
-		if title == "" {
-			title = "Pictures"
-		}
+		title := cmp.Or(piece.Heading, piece.Section, "Pictures")
 		after = append(after, block.Block{
 			ID: uuid.New(), Definition: block.CustomBlock, Title: &title,
 			Layout: block.Single, Width: block.Full, Position: len(after),
