@@ -6,6 +6,8 @@ import { pageMetadata } from "@/lib/site-metadata";
 import { StartFromNothing } from "./StartFromNothing";
 import { UploadFlow } from "./UploadFlow";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = pageMetadata(
   "Upload",
   "Import a file you already have, or start a new character, lorebook, preset, theme or pack.",
