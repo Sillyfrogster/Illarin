@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
@@ -37,8 +38,11 @@ func (m CharXModule) Parse(
 	if err != nil {
 		return format.Parsed{}, err
 	}
-	images := archivedImages(read, file)
-	parsed, err := read.parsed(m.ID(), images)
+	expressions, err := lumiverseExpressions(ctx, file)
+	if err != nil {
+		return format.Parsed{}, err
+	}
+	parsed, err := read.parsed(m.ID(), archivedImages(read, file, expressions))
 	if err != nil {
 		return format.Parsed{}, err
 	}
@@ -154,8 +158,49 @@ type cardFile struct {
 	Ext  string `json:"ext"`
 }
 
-// archivedImages routes every bundled image, naming the ones the card names.
-func archivedImages(read card, file format.Inspection) []format.Media {
+const lumiverseModulesEntry = "lumiverse_modules.json"
+
+// lumiverseExpressions names the expressions Lumiverse lists outside card.json, by archive path.
+func lumiverseExpressions(ctx context.Context, file format.Inspection) (map[string]string, error) {
+	named := make(map[string]string)
+	if !slices.ContainsFunc(file.ZIPEntries, func(entry format.ZIPEntry) bool {
+		return entry.Name == lumiverseModulesEntry
+	}) {
+		return named, nil
+	}
+	opened, err := file.OpenZIPEntry(ctx, lumiverseModulesEntry)
+	if err != nil {
+		return nil, fmt.Errorf("open the archived %s: %w", lumiverseModulesEntry, err)
+	}
+	defer opened.Close()
+	var modules struct {
+		Expressions struct {
+			Mappings map[string]string `json:"mappings"`
+		} `json:"expressions"`
+		ExpressionGroups struct {
+			Groups map[string]map[string]string `json:"groups"`
+		} `json:"expression_groups"`
+	}
+	if json.NewDecoder(io.LimitReader(opened, maxArchiveMemberBytes)).Decode(&modules) != nil {
+		return named, nil
+	}
+	for label, entry := range modules.Expressions.Mappings {
+		named[archivePath(entry)] = label
+	}
+	for group, labels := range modules.ExpressionGroups.Groups {
+		for label, entry := range labels {
+			named[archivePath(entry)] = group + "/" + label
+		}
+	}
+	return named, nil
+}
+
+func archivePath(name string) string {
+	return strings.TrimPrefix(strings.ReplaceAll(name, "\\", "/"), "./")
+}
+
+// archivedImages routes every bundled image, naming the ones the card or Lumiverse names.
+func archivedImages(read card, file format.Inspection, expressions map[string]string) []format.Media {
 	var files []cardFile
 	if raw, ok := read.fields["assets"]; ok {
 		_ = json.Unmarshal(raw, &files)
@@ -189,11 +234,15 @@ func archivedImages(read card, file format.Inspection) []format.Media {
 			continue
 		}
 		role := archivedRole(image.Location.Name, hasAvatar)
+		name, listed := expressions[archivePath(image.Location.Name)]
+		if listed {
+			role = media.Expression
+		}
 		if role == media.Avatar {
 			hasAvatar = true
 		}
 		found = append(found, format.Media{
-			Role: role, ImageID: image.ID, ElementRole: elementRole(role),
+			Role: role, ImageID: image.ID, ElementRole: elementRole(role), Name: name,
 		})
 	}
 	return found
@@ -201,7 +250,7 @@ func archivedImages(read card, file format.Inspection) []format.Media {
 
 // archivedRole reads the layout the spec recommends, and guesses nothing beyond it.
 func archivedRole(name string, hasAvatar bool) media.Role {
-	folder := strings.TrimPrefix(strings.ReplaceAll(name, "\\", "/"), "./")
+	folder := archivePath(name)
 	switch {
 	case strings.HasPrefix(folder, "assets/icon/"):
 		if hasAvatar {
@@ -243,7 +292,7 @@ func cardFileRole(file cardFile, hasAvatar bool) (media.Role, bool) {
 }
 
 func archivedImage(file format.Inspection, path string) (uint32, bool) {
-	wanted := strings.TrimPrefix(strings.ReplaceAll(path, "\\", "/"), "./")
+	wanted := archivePath(path)
 	for _, image := range file.Images {
 		if image.Location.Container != format.ZIP {
 			continue

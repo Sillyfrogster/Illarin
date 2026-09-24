@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -645,5 +646,29 @@ func TestACharXThatNamesNoWorksIsReadFromItsArchiveLayout(t *testing.T) {
 	}
 	if parsed.Media[2].ElementRole != block.RoleGallery {
 		t.Errorf("an image under works/other went to %q", parsed.Media[2].ElementRole)
+	}
+}
+
+func TestCharXReadsTheExpressionsLumiverseListsBesideTheCard(t *testing.T) {
+	t.Parallel()
+	file := charxWithMembers(t, plainCard, map[string][]byte{
+		"assets/other/image/expr_happy.png":     testPNG(t),
+		"assets/other/image/exprg_Ana--sad.png": testPNG(t),
+		"assets/other/image/gallery_one.png":    testPNG(t),
+		"lumiverse_modules.json": []byte(`{"version":1,
+			"expressions":{"mappings":{"happy":"assets/other/image/expr_happy.png"}},
+			"expression_groups":{"groups":{"Ana":{"sad":"assets/other/image/exprg_Ana--sad.png"}}}}`),
+	})
+
+	parsed := resolveAndParse(t, file)
+	got := make(map[string]string)
+	for _, picture := range parsed.Media {
+		got[string(picture.ElementRole)+":"+picture.Name] = string(picture.Role)
+	}
+	want := map[string]string{
+		"expressions:happy": "expression", "expressions:Ana/sad": "expression", "gallery:": "gallery",
+	}
+	if !maps.Equal(got, want) {
+		t.Fatalf("media = %v, want %v", got, want)
 	}
 }
