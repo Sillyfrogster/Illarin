@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const apiUrl = process.env.API_URL ?? "http://localhost:8080";
 
 /** Leaves oversized-upload refusal to the API. */
-const uploadBodyCeiling = "34mb";
+const uploadBodyCeiling = "52mb";
 
 /** Keeps account and connection credentials out of request logs, under the old paths too until their aliases go. */
 const privateRequestPaths = [
