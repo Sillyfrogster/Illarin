@@ -33,7 +33,7 @@ const SPRING = { type: "spring", stiffness: 420, damping: 36 } as const;
 const PREVIEW_CHARACTERS = 1400;
 
 export function sectionName(piece: ShelfPiece): string {
-  return piece.section.trim() || "Opening";
+  return piece.heading.trim() || "Opening";
 }
 
 function wordCount(text = ""): string {
@@ -183,7 +183,7 @@ function Spine({
   return (
     <span aria-hidden="true" className="relative flex justify-center">
       {last ? null : (
-        <span className="absolute top-7 bottom-[-0.25rem] w-0.5 rounded-full bg-rule/70" />
+        <span className="absolute top-[2.25rem] -bottom-[1.125rem] w-0.5 rounded-full bg-rule/70" />
       )}
       <motion.span
         animate={{ scale: done ? [1.35, 1] : 1 }}

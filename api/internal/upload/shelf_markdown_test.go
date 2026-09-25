@@ -92,6 +92,9 @@ func TestPastedMarkdownWaitsOnTheShelfAndLeavesThePageAlone(t *testing.T) {
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("pieces =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
+	if opening := shelf[0].Pieces[0]; opening.Heading != "Wren" {
+		t.Errorf("opening heading = %q, want the Markdown's title, as its placed block is named", opening.Heading)
+	}
 	after := readSeededPage(t, r, session, workID+"?draftedChanges=true")
 	if strings.Join(arrangement(after), "|") != strings.Join(arrangement(before), "|") || draftedVersion(t, r, session, workID) != version {
 		t.Errorf("page after the paste = %q, want it unchanged: %q", arrangement(after), arrangement(before))

@@ -24,7 +24,7 @@ function block(id: string, title: string, elements: unknown[]): WorkBlock {
 }
 
 function piece(kind: "section" | "picture"): ShelfPiece {
-  return { id: kind, kind, section: "" };
+  return { id: kind, kind, section: "", heading: "" };
 }
 
 describe("placeChoices", () => {

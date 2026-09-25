@@ -190,6 +190,7 @@ type shelfPiece struct {
 	ID      string `json:"id"`
 	Kind    string `json:"kind"`
 	Section string `json:"section"`
+	Heading string `json:"heading"`
 	Text    string `json:"text"`
 	Address string `json:"address"`
 	Name    string `json:"name"`

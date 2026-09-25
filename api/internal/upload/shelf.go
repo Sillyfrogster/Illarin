@@ -134,6 +134,7 @@ func (s *Service) ListShelf(ctx context.Context, ownerID, workID uuid.UUID) ([]W
 		}
 		at := slices.IndexFunc(imports, func(held WaitingImport) bool { return held.ID == piece.ImportID })
 		if at >= 0 {
+			piece.Heading = cmp.Or(piece.Section, imports[at].Title)
 			imports[at].Pieces = append(imports[at].Pieces, piece)
 		}
 	}

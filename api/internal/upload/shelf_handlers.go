@@ -268,7 +268,7 @@ func toAPIShelf(imports []WaitingImport) Shelf {
 
 func toAPIShelfPiece(piece WaitingPiece) ShelfPiece {
 	listed := ShelfPiece{
-		Id: piece.ID, Kind: piece.Kind, Section: piece.Section, Text: piece.Text,
+		Id: piece.ID, Kind: piece.Kind, Section: piece.Section, Heading: piece.Heading, Text: piece.Text,
 		Address: piece.Address, Name: piece.Name, BlockId: piece.BlockID,
 	}
 	if piece.MediaID != nil {

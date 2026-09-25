@@ -45,6 +45,7 @@ type ShelfPiece struct {
 	Id      uuid.UUID      `json:"id"`
 	Kind    ShelfPieceKind `json:"kind"`
 	Section string         `json:"section"`
+	Heading string         `json:"heading"`
 	Text    string         `json:"text,omitempty"`
 	Address string         `json:"address,omitempty"`
 	Name    string         `json:"name,omitempty"`

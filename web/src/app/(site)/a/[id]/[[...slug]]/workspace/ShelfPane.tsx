@@ -302,12 +302,18 @@ function ImportHead({ held }: { held: ShownImport }) {
   );
 }
 
-/** Progress draws one mark per piece, filling in as each one reaches the page. */
+/** Progress draws one mark per piece shown this session, filling in as each one reaches the page. */
 function Progress({ held }: { held: ShownImport }) {
   const shelf = useShelf();
+  const still = useReducedMotion();
   const done = Object.keys(held.placed).length;
+  if (done === 0) return null;
   return (
-    <div className="flex flex-col gap-2">
+    <motion.div
+      animate={{ opacity: 1, height: "auto" }}
+      className="flex flex-col gap-2"
+      initial={still ? false : { opacity: 0, height: 0 }}
+    >
       <div aria-hidden="true" className="flex h-1.5 gap-[3px]">
         {held.pieces.map((piece) => (
           <span
@@ -330,9 +336,9 @@ function Progress({ held }: { held: ShownImport }) {
         <span className="font-medium text-ink">
           <RollingNumber value={done} />
         </span>{" "}
-        of {held.pieces.length} on the page
+        of {held.pieces.length} placed
       </p>
-    </div>
+    </motion.div>
   );
 }
 

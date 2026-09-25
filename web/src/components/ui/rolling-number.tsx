@@ -14,7 +14,7 @@ export function RollingNumber({ value }: { value: number }) {
       {digits.map((digit, index) => (
         <span
           aria-hidden="true"
-          className="relative inline-block h-[1lh] overflow-hidden"
+          className="relative inline-block h-[1lh] overflow-hidden text-center"
           // biome-ignore lint/suspicious/noArrayIndexKey: A digit's place is its identity, so the wheel in that place turns.
           key={digits.length - index}
         >
