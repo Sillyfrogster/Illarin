@@ -11,6 +11,15 @@ site-types: ## Write the site's API types from the Go request and response struc
 copy-inventory: ## Print the site and API copy checklist as Markdown
 	@cd web && bun scripts/copy-inventory.ts
 
+.PHONY: email-preview
+email-preview: ## Render sample account emails in .ai/issues/email-templates
+	mkdir -p .ai/issues/email-templates
+	cd api && EMAIL_PREVIEW_DIR="$(CURDIR)/.ai/issues/email-templates" go test ./internal/account -run '^TestEmailPreview$$' -count=1
+
+.PHONY: email-preview-serve
+email-preview-serve: email-preview ## View sample emails at http://127.0.0.1:8899
+	cd .ai/issues/email-templates && python3 -m http.server 8899 --bind 127.0.0.1
+
 .PHONY: refractive-assets
 refractive-assets: ## Generate the refractive art assets
 	cd web && bun scripts/generate-refractive-assets.mjs

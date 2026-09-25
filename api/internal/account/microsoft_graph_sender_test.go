@@ -2,7 +2,7 @@ package account
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/base64"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -39,26 +39,22 @@ func TestMicrosoftGraphSendsIllarinMailAndReusesItsToken(t *testing.T) {
 			if r.Header.Get("Authorization") != "Bearer token" {
 				t.Errorf("authorization = %q", r.Header.Get("Authorization"))
 			}
-			var body struct {
-				Message struct {
-					Subject string `json:"subject"`
-					Body    struct {
-						Content string `json:"content"`
-					} `json:"body"`
-					Recipients []struct {
-						EmailAddress struct {
-							Address string `json:"address"`
-						} `json:"emailAddress"`
-					} `json:"toRecipients"`
-				} `json:"message"`
+			if r.Header.Get("Content-Type") != "text/plain" {
+				t.Errorf("content type = %q", r.Header.Get("Content-Type"))
 			}
-			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read message: %v", err)
+			}
+			mime, err := base64.StdEncoding.DecodeString(string(body))
+			if err != nil {
 				t.Fatalf("decode message: %v", err)
 			}
-			if !strings.Contains(body.Message.Subject, "Illarin") ||
-				!strings.Contains(body.Message.Body.Content, "https://illarin.test/") ||
-				body.Message.Recipients[0].EmailAddress.Address != "creator@example.com" {
-				t.Errorf("message = %+v", body.Message)
+			if !strings.Contains(string(mime), "Subject: ") ||
+				!strings.Contains(string(mime), "Illarin") ||
+				!strings.Contains(string(mime), "creator@example.com") ||
+				!strings.Contains(string(mime), "text/html; charset=UTF-8") {
+				t.Errorf("MIME message missing account email content")
 			}
 			w.WriteHeader(http.StatusAccepted)
 		default:

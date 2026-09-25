@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -72,64 +73,37 @@ func newMicrosoftGraphSender(
 }
 
 func (s *MicrosoftGraphSender) SendVerification(ctx context.Context, address, link string) error {
-	return s.send(
-		ctx,
-		address,
-		"Verify your Illarin email",
-		"Verify your Illarin email address by opening this link:\r\n\r\n"+link+"\r\n",
-	)
+	message, err := verificationEmail(link)
+	if err != nil {
+		return err
+	}
+	return s.send(ctx, address, message)
 }
 
 func (s *MicrosoftGraphSender) SendPasswordReset(ctx context.Context, address, link string) error {
-	return s.send(
-		ctx,
-		address,
-		"Reset your Illarin password",
-		"Set a new Illarin password by opening this link:\r\n\r\n"+link+"\r\n",
-	)
+	message, err := passwordResetEmail(link)
+	if err != nil {
+		return err
+	}
+	return s.send(ctx, address, message)
 }
 
-func (s *MicrosoftGraphSender) send(ctx context.Context, address, subject, body string) error {
+func (s *MicrosoftGraphSender) send(ctx context.Context, address string, message accountEmail) error {
 	token, err := s.token(ctx)
 	if err != nil {
 		return err
 	}
-	payload := struct {
-		Message struct {
-			Subject string `json:"subject"`
-			Body    struct {
-				ContentType string `json:"contentType"`
-				Content     string `json:"content"`
-			} `json:"body"`
-			Recipients []struct {
-				EmailAddress struct {
-					Address string `json:"address"`
-				} `json:"emailAddress"`
-			} `json:"toRecipients"`
-		} `json:"message"`
-		SaveToSentItems bool `json:"saveToSentItems"`
-	}{SaveToSentItems: true}
-	payload.Message.Subject = subject
-	payload.Message.Body.ContentType = "Text"
-	payload.Message.Body.Content = body
-	payload.Message.Recipients = make([]struct {
-		EmailAddress struct {
-			Address string `json:"address"`
-		} `json:"emailAddress"`
-	}, 1)
-	payload.Message.Recipients[0].EmailAddress.Address = address
-
-	encoded, err := json.Marshal(payload)
+	mime, err := accountEmailMIME(s.settings.Mailbox, address, message)
 	if err != nil {
-		return fmt.Errorf("encode Microsoft 365 message: %w", err)
+		return err
 	}
 	endpoint := s.graphURL + "/users/" + url.PathEscape(s.settings.Mailbox) + "/sendMail"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(string(encoded)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(base64.StdEncoding.EncodeToString(mime)))
 	if err != nil {
 		return fmt.Errorf("build Microsoft 365 message request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "text/plain")
 
 	response, err := s.client.Do(req)
 	if err != nil {

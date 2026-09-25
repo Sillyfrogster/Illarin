@@ -34,40 +34,37 @@ func NewSMTPSender(settings SMTPSettings) (*SMTPSender, error) {
 }
 
 func (s *SMTPSender) SendVerification(_ context.Context, address, link string) error {
-	return s.send(
-		address,
-		"Verify your Illarin email",
-		"Verify your Illarin email address by opening this link:\r\n\r\n"+link+"\r\n",
-	)
+	message, err := verificationEmail(link)
+	if err != nil {
+		return err
+	}
+	return s.send(address, message)
 }
 
 func (s *SMTPSender) SendPasswordReset(_ context.Context, address, link string) error {
-	return s.send(
-		address,
-		"Reset your Illarin password",
-		"Set a new Illarin password by opening this link:\r\n\r\n"+link+"\r\n",
-	)
+	message, err := passwordResetEmail(link)
+	if err != nil {
+		return err
+	}
+	return s.send(address, message)
 }
 
-func (s *SMTPSender) send(address, subject, body string) error {
+func (s *SMTPSender) send(address string, message accountEmail) error {
 	var auth smtp.Auth
 	if s.settings.Username != "" {
 		auth = smtp.PlainAuth("", s.settings.Username, s.settings.Password, s.host)
 	}
-	recipient := (&mail.Address{Address: address}).String()
-	message := "From: " + s.from.String() + "\r\n" +
-		"To: " + recipient + "\r\n" +
-		"Subject: " + subject + "\r\n" +
-		"MIME-Version: 1.0\r\n" +
-		"Content-Type: text/plain; charset=UTF-8\r\n" +
-		"\r\n" + body
+	mime, err := accountEmailMIME(s.from.String(), address, message)
+	if err != nil {
+		return err
+	}
 
 	if err := smtp.SendMail(
 		s.settings.Address,
 		auth,
 		s.from.Address,
 		[]string{address},
-		[]byte(message),
+		mime,
 	); err != nil {
 		return fmt.Errorf("send account email: %w", err)
 	}
