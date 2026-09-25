@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  DndContext,
-  type DragMoveEvent,
-  DragOverlay,
-  MouseSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { useRouter } from "next/navigation";
 import {
   createContext,
@@ -35,13 +28,9 @@ import { useMediaQuery } from "@/lib/use-media-query";
 import { type Flight, ShelfFlight } from "./ShelfFlight";
 import { LiftedSection, sectionName } from "./ShelfPiece";
 import { ShelfToast, type Toast } from "./ShelfToast";
-import { importCounts, positionAt } from "./shelf-places";
+import { type ShelfTarget, useShelfDrag } from "./shelf-drag";
+import { importCounts } from "./shelf-places";
 import { useWorkspace } from "./state";
-
-/** Where a dragged section lands: a new block at a position, or the end of a text element. */
-export type ShelfTarget =
-  | { position: number }
-  | { elementId: string; blockId: string };
 
 /** A section takes a position or a text element; a picture held by address takes an uploaded copy. */
 type Placement = {
@@ -75,13 +64,11 @@ type Shelf = {
   arrivesQuietly: () => boolean;
 };
 
-export const DRAG_QUERY = "(min-width: 1024px) and (pointer: fine)";
+const DRAG_QUERY = "(min-width: 1024px) and (pointer: fine)";
 
 const SAVING_FIRST = "Your last edit is still saving. Try again in a moment.";
 const GLOW_MS = 1800;
 const SETTLE_WAIT_MS = 6000;
-const EDGE_PX = 110;
-const EDGE_SPEED = 24;
 
 const ShelfContext = createContext<Shelf | null>(null);
 
@@ -89,35 +76,6 @@ export function useShelf(): Shelf {
   const shelf = useContext(ShelfContext);
   if (!shelf) throw new Error("This page has no shelf.");
   return shelf;
-}
-
-/** aimAt reads what sits under the pointer: a text element, the ghost, a block, or the page between blocks. */
-function aimAt(
-  x: number,
-  y: number,
-  last: ShelfTarget | null,
-): ShelfTarget | null {
-  for (const node of document.elementsFromPoint(x, y)) {
-    if (!(node instanceof HTMLElement)) continue;
-    const { shelfBlock, shelfGhost, shelfIndex, shelfPage, shelfText } =
-      node.dataset;
-    if (shelfText) return { elementId: shelfText, blockId: shelfBlock ?? "" };
-    if (shelfGhost !== undefined) return last;
-    if (shelfIndex !== undefined) {
-      const rect = node.getBoundingClientRect();
-      return { position: positionAt(Number(shelfIndex), y, rect) };
-    }
-    if (shelfPage !== undefined) return last ?? { position: Number(shelfPage) };
-  }
-  return null;
-}
-
-function sameTarget(one: ShelfTarget | null, other: ShelfTarget | null) {
-  if (one === null || other === null) return one === other;
-  if ("position" in one) {
-    return "position" in other && one.position === other.position;
-  }
-  return "elementId" in other && one.elementId === other.elementId;
 }
 
 function without(imports: ShelfImport[], leaving: (id: string) => boolean) {
@@ -136,15 +94,11 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
   const [seen, setSeen] = useState<ShelfImport[]>([]);
   const [placed, setPlaced] = useState<Record<string, string | null>>({});
   const [busy, setBusy] = useState<string | null>(null);
-  const [dragging, setDragging] = useState<ShelfPiece | null>(null);
-  const [target, setTarget] = useState<ShelfTarget | null>(null);
   const [pending, setPending] = useState<Shelf["pending"]>(null);
   const [glowing, setGlowing] = useState<string | null>(null);
   const [flight, setFlight] = useState<Flight | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const quiet = useRef(false);
-  const pointer = useRef<{ x: number; y: number } | null>(null);
-  const aimed = useRef<ShelfTarget | null>(null);
   const latest = useRef(workspace);
   useEffect(() => {
     latest.current = workspace;
@@ -194,39 +148,6 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
     const timer = window.setTimeout(() => setGlowing(null), GLOW_MS);
     return () => window.clearTimeout(timer);
   }, [glowing]);
-
-  const aim = useCallback(() => {
-    const at = pointer.current;
-    if (!at) return;
-    const next = aimAt(at.x, at.y, aimed.current);
-    if (sameTarget(next, aimed.current)) return;
-    aimed.current = next;
-    setTarget(next);
-  }, []);
-
-  // Near the top or bottom of the window a drag scrolls the page, since the rail it starts in is fixed
-  useEffect(() => {
-    if (!dragging) return;
-    let frame = 0;
-    const tick = () => {
-      const at = pointer.current;
-      const low = window.innerHeight - EDGE_PX;
-      const edge = !at
-        ? 0
-        : at.y < EDGE_PX
-          ? at.y - EDGE_PX
-          : at.y > low
-            ? at.y - low
-            : 0;
-      if (edge !== 0) {
-        window.scrollBy(0, (edge / EDGE_PX) * EDGE_SPEED);
-        aim();
-      }
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [dragging, aim]);
 
   // A placement reads the saved page, so it waits for the workspace's own save to land first
   const settled = useCallback(async () => {
@@ -399,44 +320,16 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
     return made ? `Added ${importCounts(made.pieces, " and ")}.` : "Added.";
   }
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-  );
-
-  function follow(event: DragMoveEvent) {
-    const start = event.activatorEvent as MouseEvent;
-    pointer.current = {
-      x: start.clientX + event.delta.x,
-      y: start.clientY + event.delta.y,
-    };
-    aim();
-  }
-
-  function stop() {
-    setDragging(null);
-    setTarget(null);
-    aimed.current = null;
-    pointer.current = null;
-  }
-
-  function drop(event: DragMoveEvent) {
-    const piece = dragging;
-    const landing = aimed.current;
-    const from = event.active.rect.current.translated;
-    const spot =
-      landing && "position" in landing
-        ? document.querySelector("[data-shelf-ghost]")
-        : landing
-          ? document.querySelector(`[data-shelf-text="${landing.elementId}"]`)
-          : null;
-    const to = spot?.getBoundingClientRect();
-    stop();
-    if (!piece || !landing) return;
-    if (from && to) setFlight({ from, to, title: sectionName(piece) });
-    setPending({ piece, target: landing });
-    quiet.current = "position" in landing;
-    void place(piece, landing);
-  }
+  const drag = useShelfDrag({
+    onStart: () => workspace.setCursor(null),
+    onDrop: (piece, landing, path) => {
+      if (path) setFlight({ ...path, title: sectionName(piece) });
+      setPending({ piece, target: landing });
+      quiet.current = "position" in landing;
+      void place(piece, landing);
+    },
+  });
+  const { dragging, target } = drag;
 
   const waiting = new Set(
     server.flatMap((held) => held.pieces.map((piece) => piece.id)),
@@ -480,20 +373,7 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
 
   return (
     <ShelfContext.Provider value={shelf}>
-      <DndContext
-        autoScroll={false}
-        onDragCancel={stop}
-        onDragEnd={drop}
-        onDragMove={follow}
-        onDragStart={(event) => {
-          const piece = event.active.data.current?.piece as
-            | ShelfPiece
-            | undefined;
-          setDragging(piece ?? null);
-          workspace.setCursor(null);
-        }}
-        sensors={sensors}
-      >
+      <DndContext {...drag.context}>
         {children}
         <DragOverlay dropAnimation={null} zIndex={60}>
           {dragging ? <LiftedSection piece={dragging} /> : null}

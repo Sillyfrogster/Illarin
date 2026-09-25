@@ -366,7 +366,7 @@ export function PictureTile({
                 unoptimized
                 width={piece.media.width}
               />
-            ) : (
+            ) : placed || busy ? null : (
               <span className="flex flex-col items-center gap-1.5 px-2 text-center">
                 <Globe aria-hidden="true" className="size-5" />
                 <span className="w-full truncate text-label">
