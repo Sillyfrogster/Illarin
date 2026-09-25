@@ -74,7 +74,7 @@ export function ContentsBar({
 
   return (
     <div
-      className="sticky top-[var(--header-height)] z-20 bg-field shadow-contents"
+      className="sticky top-[var(--site-header-offset)] z-20 bg-field shadow-contents"
       ref={bar}
     >
       <div

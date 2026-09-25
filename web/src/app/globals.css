@@ -253,6 +253,7 @@ html {
 }
 
 body {
+  --site-header-offset: var(--header-height);
   min-width: 0;
   background: var(--v-field);
   color: var(--v-ink);
@@ -264,6 +265,10 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   text-wrap: pretty;
+}
+
+body:has([data-site-header-hidden="true"]) {
+  --site-header-offset: 0px;
 }
 
 main {

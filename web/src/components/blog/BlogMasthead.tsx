@@ -22,7 +22,7 @@ export function BlogMasthead({ categories }: { categories: BlogCategory[] }) {
 
   return (
     <motion.div
-      className="sticky top-[var(--header-height)] z-70 bg-plane"
+      className="sticky top-[var(--site-header-offset)] z-70 bg-plane"
       style={{ filter: lift }}
     >
       <div className="mx-auto flex w-full max-w-[var(--shell)] flex-wrap items-center justify-between gap-x-6 px-[var(--gutter)] py-2 sm:min-h-14 sm:flex-nowrap sm:py-0">

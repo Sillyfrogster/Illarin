@@ -66,7 +66,7 @@ export function WritingToolbar({
   }
 
   return (
-    <div className="sticky top-[var(--header-height)] z-2 -mx-2 border-b border-rule/60 bg-field">
+    <div className="sticky top-[var(--site-header-offset)] z-2 -mx-2 border-b border-rule/60 bg-field">
       <div
         aria-label="Post formatting"
         className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5"
