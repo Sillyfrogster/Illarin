@@ -5,7 +5,7 @@ import {
   ChevronDown,
   EyeOff,
   Globe,
-  Images,
+  LibraryBig,
   Link2,
   LockKeyhole,
   PencilLine,
@@ -105,15 +105,19 @@ export function WorkspaceDock({
               worded
             />
           ) : null}
-          {waiting > 0 ? (
-            <DockTool
-              active={workspace.pane?.kind === "found-images"}
-              count={waiting}
-              icon={Images}
-              label={`${waiting} found ${waiting === 1 ? "image" : "images"} waiting`}
-              onClick={() => workspace.openPane({ kind: "found-images" })}
-            />
-          ) : null}
+          <DockTool
+            active={workspace.pane?.kind === "shelf"}
+            count={waiting}
+            icon={LibraryBig}
+            worded
+            words="Shelf"
+            label={
+              waiting > 0
+                ? `Shelf, ${waiting} ${waiting === 1 ? "piece" : "pieces"} waiting`
+                : "Shelf, empty"
+            }
+            onClick={() => workspace.openPane({ kind: "shelf" })}
+          />
           {holdsPrompts ? (
             <DockTool
               active={workspace.pane?.kind === "private-prompts"}

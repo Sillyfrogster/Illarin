@@ -48,6 +48,7 @@ export function StatusLight({ state }: { state: DockState }) {
 
 export const WORDED_TOOL = "w-auto gap-2 px-3 text-meta font-medium";
 
+/** DockTool is an icon, or an icon and words; the words fold away when the dock is narrow and stay as its accessible name. */
 export function DockTool({
   active,
   count,
@@ -55,6 +56,7 @@ export function DockTool({
   label,
   onClick,
   worded,
+  words,
 }: {
   active?: boolean;
   count?: number;
@@ -62,22 +64,37 @@ export function DockTool({
   label: string;
   onClick: () => void;
   worded?: boolean;
+  words?: string;
 }) {
+  const shown = words ?? label;
   return (
     <button
-      aria-label={worded ? undefined : label}
+      aria-label={label}
       aria-pressed={active}
-      className={cn(TOOL, worded && WORDED_TOOL)}
+      className={cn(
+        TOOL,
+        worded && WORDED_TOOL,
+        worded && "max-@3xl/dock:w-11 max-@3xl/dock:px-0",
+      )}
       onClick={onClick}
-      title={worded ? undefined : label}
+      title={label}
       type="button"
     >
       <Icon aria-hidden="true" size={18} />
-      {worded ? label : null}
+      {worded ? (
+        <span className="max-@3xl/dock:sr-only" aria-hidden="true">
+          {shown}
+        </span>
+      ) : null}
       {count ? (
         <span
           aria-hidden="true"
-          className="absolute -top-0.5 -right-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 font-ui text-[0.62rem] leading-4 font-semibold text-on-accent tabular-nums"
+          className={cn(
+            "inline-flex min-w-5 items-center justify-center rounded-full bg-action px-1.5 font-ui text-label leading-5 font-semibold text-on-accent tabular-nums",
+            worded
+              ? "max-@3xl/dock:absolute max-@3xl/dock:-top-1 max-@3xl/dock:-right-1"
+              : "absolute -top-1 -right-1",
+          )}
         >
           {count}
         </span>
@@ -137,7 +154,7 @@ export function Dock({
     >
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="pointer-events-auto flex w-full max-w-[50rem] flex-wrap items-center gap-1 rounded-plate bg-ink p-2 shadow-popover sm:flex-nowrap md:gap-2"
+        className="@container/dock pointer-events-auto flex w-full max-w-[50rem] flex-wrap items-center gap-1 rounded-plate bg-ink p-2 shadow-popover sm:flex-nowrap md:gap-2"
         initial={
           layoutId && !reduced
             ? false
@@ -163,7 +180,7 @@ export function Dock({
           </span>
         </div>
 
-        <div className="flex flex-1 basis-auto flex-wrap items-center gap-0.5 sm:justify-center">
+        <div className="flex min-w-0 flex-1 basis-auto items-center gap-0.5 sm:justify-center">
           {tools}
         </div>
 

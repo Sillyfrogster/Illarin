@@ -13,6 +13,8 @@ import { isWorkId, workRedirect } from "@/lib/work-url";
 import { GitHubReleases } from "./GitHubReleases";
 import { WorkBlocks } from "./WorkBlocks";
 import { WorkHeader } from "./WorkHeader";
+import { ShelfRoom } from "./workspace/ShelfTargets";
+import { ShelfProvider } from "./workspace/shelf";
 import { WorkspaceProvider } from "./workspace/state";
 import { WorkspaceSurfaces } from "./workspace/WorkspaceSurfaces";
 
@@ -69,40 +71,44 @@ export default async function WorkPage({
         isOwner={work.isOwner}
         unpublishedChanges={Boolean(work.unpublishedChanges)}
       >
-        <ExtensionDependenciesProvider
-          dependencies={work.extensionDependencies}
-        >
-          <div className="relative isolate overflow-x-clip pb-chapter">
-            <article>
-              <WorkHeader
-                work={work}
-                typeLabel={typeLabel}
-                sharedDate={sharedDate}
-                shellClassName={shellClasses}
-              />
-              <WorkBlocks
-                images={work.media}
-                isOwner={work.isOwner}
-                type={work.type}
-                shellClassName={shellClasses}
-              />
-              {work.isOwner && !isDraft && work.type === "extension" ? (
-                <GitHubReleases workId={work.id} />
-              ) : null}
-            </article>
-          </div>
-        </ExtensionDependenciesProvider>
-        <WorkspaceSurfaces
-          creator={work.creator}
-          visibility={work.visibility}
-          hasOriginal={Boolean(work.original)}
-          images={work.media}
-          typeName={typeLabel.toLowerCase()}
-          readiness={work.readiness}
-          preservedPrompts={work.preservedPrompts}
-          hasPrivatePrompts={work.hasPrivatePrompts}
-          takenDown={Boolean(work.takedown)}
-        />
+        <ShelfProvider>
+          <ExtensionDependenciesProvider
+            dependencies={work.extensionDependencies}
+          >
+            <ShelfRoom>
+              <div className="relative isolate overflow-x-clip pb-chapter">
+                <article>
+                  <WorkHeader
+                    work={work}
+                    typeLabel={typeLabel}
+                    sharedDate={sharedDate}
+                    shellClassName={shellClasses}
+                  />
+                  <WorkBlocks
+                    images={work.media}
+                    isOwner={work.isOwner}
+                    type={work.type}
+                    shellClassName={shellClasses}
+                  />
+                  {work.isOwner && !isDraft && work.type === "extension" ? (
+                    <GitHubReleases workId={work.id} />
+                  ) : null}
+                </article>
+              </div>
+            </ShelfRoom>
+          </ExtensionDependenciesProvider>
+          <WorkspaceSurfaces
+            creator={work.creator}
+            visibility={work.visibility}
+            hasOriginal={Boolean(work.original)}
+            images={work.media}
+            typeName={typeLabel.toLowerCase()}
+            readiness={work.readiness}
+            preservedPrompts={work.preservedPrompts}
+            hasPrivatePrompts={work.hasPrivatePrompts}
+            takenDown={Boolean(work.takedown)}
+          />
+        </ShelfProvider>
       </WorkspaceProvider>
     </DraftedChangesProvider>
   );

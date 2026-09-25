@@ -51,7 +51,7 @@ export type SaveState =
 export type Pane =
   | { kind: "private-prompts" }
   | { kind: "staff" }
-  | { kind: "found-images" }
+  | { kind: "shelf" }
   | { kind: "publication" }
   | { kind: "replacement" }
   | { kind: "conflict" }

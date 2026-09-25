@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   type CSSProperties,
   type ReactNode,
@@ -19,12 +19,16 @@ const BELOW_THE_FOLD = 0.92;
 export function Arrive({
   children,
   className,
+  layout = false,
   place = 0,
+  quiet = false,
   style,
 }: {
   children: ReactNode;
   className?: string;
+  layout?: boolean;
   place?: number;
+  quiet?: boolean;
   style?: CSSProperties;
 }) {
   const node = useRef<HTMLDivElement>(null);
@@ -33,7 +37,7 @@ export function Arrive({
 
   useLayoutEffect(() => {
     const here = node.current;
-    if (!here || still) return;
+    if (!here || still || quiet) return;
     if (
       here.getBoundingClientRect().top <
       window.innerHeight * BELOW_THE_FOLD
@@ -53,19 +57,21 @@ export function Arrive({
     );
     follow.observe(here);
     return () => follow.disconnect();
-  }, [still]);
+  }, [still, quiet]);
 
   return (
-    <div
+    <motion.div
       className={cn(
         "motion-safe:transition-[opacity,translate] motion-safe:duration-700 motion-safe:ease-[var(--ease-wipe)]",
-        waiting && "translate-y-[18px] opacity-0",
+        waiting && !quiet && "translate-y-[18px] opacity-0",
         className,
       )}
+      layout={layout && !still ? "position" : false}
       ref={node}
       style={{ transitionDelay: `${place * STAGGER_MS}ms`, ...style }}
+      transition={{ type: "spring", stiffness: 380, damping: 36 }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }

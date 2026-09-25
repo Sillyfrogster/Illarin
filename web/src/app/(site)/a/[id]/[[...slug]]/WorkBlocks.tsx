@@ -37,6 +37,9 @@ import { BlockAudience } from "./workspace/BlockAudience";
 import { BlockTools } from "./workspace/BlockTools";
 import { EditableElementSection } from "./workspace/EditableElement";
 import { EditableText } from "./workspace/EditableText";
+import { GhostBlock, TextTarget } from "./workspace/ShelfTargets";
+import { useShelf } from "./workspace/shelf";
+import { withGhost } from "./workspace/shelf-places";
 import { useWorkspace } from "./workspace/state";
 import { useBlockDrag } from "./workspace/use-block-drag";
 
@@ -64,13 +67,20 @@ export function WorkBlocks({
   const blocks = workspace.blocks;
   const writing = isOwner && workspace.editing;
   const drag = useBlockDrag(workspace.arrangement.move);
+  const shelf = useShelf();
+  const moving = shelf.dragging ?? shelf.pending?.piece ?? null;
+  const landing = shelf.pending?.target ?? shelf.target;
+  const ghostAt =
+    writing && moving && landing && "position" in landing
+      ? landing.position
+      : null;
 
   useEffect(() => {
     const seen = known.current;
     const fresh = seen ? blocks.find((block) => !seen.has(block.id)) : null;
     known.current = new Set(blocks.map((block) => block.id));
-    if (fresh) returnToBlock(fresh.id);
-  }, [blocks]);
+    if (fresh && !shelf.arrivesQuietly()) returnToBlock(fresh.id);
+  }, [blocks, shelf]);
 
   const { publicBlocks, modelContent: disclosedModelContent } = useMemo(
     () => splitWorkPageContent(blocks),
@@ -88,7 +98,14 @@ export function WorkBlocks({
   const packable: Array<WorkBlock & { empty?: boolean }> = writing
     ? blocks
     : publicBlocks.filter(rendersOnThePage);
-  const placed = placeBlocks(packable, { availableWidth });
+  const placed = placeBlocks(
+    withGhost<(typeof packable)[number] | typeof GHOST>(
+      packable,
+      ghostAt,
+      GHOST,
+    ),
+    { availableWidth },
+  );
   const invited = writing && workHoldsNothing(blocks);
   const contentsBlocks = useMemo(
     () => (writing ? blocks : publicBlocks.filter(rendersOnThePage)),
@@ -109,7 +126,10 @@ export function WorkBlocks({
         writing={writing}
       />
 
-      <div className={cn(shellClassName, "pt-10")}>
+      <div
+        className={cn(shellClassName, "pt-10")}
+        data-shelf-page={writing ? blocks.length : undefined}
+      >
         {writing ? (
           <p className="mb-8 rounded-control bg-deep p-3 text-meta text-mute md:hidden">
             Block widths arrange the desktop page. On this screen every block
@@ -139,6 +159,8 @@ export function WorkBlocks({
               <Arrive
                 className="col-span-full min-w-0 md:[grid-column:var(--block-start)_/_span_var(--block-columns)] md:[grid-row:var(--block-row)]"
                 key={block.id}
+                layout={shelf.shifting}
+                quiet={writing}
                 place={writing ? 0 : place}
                 style={
                   {
@@ -148,89 +170,122 @@ export function WorkBlocks({
                   } as CSSProperties
                 }
               >
-                <article
-                  className={cn(
-                    "group/block relative min-w-0 scroll-mt-[calc(var(--header-height)+5rem)] [container-name:block] [container-type:inline-size]",
-                    writing &&
-                      "after:pointer-events-none after:absolute after:-inset-x-5 after:-inset-y-4 after:rounded-plate after:opacity-0 after:ring-1 after:ring-accent/45 after:transition-opacity after:duration-200 after:content-[''] hover:after:opacity-100 focus-within:after:opacity-100 motion-reduce:after:transition-none",
-                    drag.dragging === block.id && "opacity-45",
-                    drag.over === block.id &&
-                      "after:!opacity-100 after:!ring-2 after:!ring-accent",
-                    writing && block.hidden && "bg-deep/60 px-5 pt-6 pb-7",
-                  )}
-                  data-block-id={block.id}
-                  data-dragging={drag.dragging === block.id ? true : undefined}
-                  data-hidden={writing && block.hidden ? true : undefined}
-                  id={`block-${block.id}`}
-                  {...(writing ? drag.target(block.id, block.position) : {})}
-                >
-                  <header
-                    className={cn(
-                      "mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3.5",
-                      writing && block.hidden ? "opacity-50" : null,
-                    )}
-                  >
-                    <div className="flex min-w-0 flex-1 basis-45 flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                      <BlockTitle block={block} />
-                      {writing && block.required ? (
-                        <span className="shrink-0 rounded-control bg-deep px-2 py-1 text-label text-mute">
-                          {block.hideable ? "Required" : "Always shown"}
-                        </span>
-                      ) : null}
-                      <BlockCounts elements={block.elements} />
-                    </div>
-                    {writing ? (
-                      <BlockTools
-                        block={block}
-                        grip={drag.grip(block.id)}
-                        position={block.position}
-                        suggestedWidth={suggestedWidths[block.id]}
-                        total={blocks.length}
-                      />
-                    ) : null}
-                  </header>
-                  {writing ? <BlockAudience block={block} /> : null}
+                {"ghost" in block ? (
+                  moving ? (
+                    <GhostBlock piece={moving} />
+                  ) : null
+                ) : (
                   <div
-                    className={cn(
-                      "grid gap-x-8 gap-y-7 [grid-template-columns:var(--element-tracks,minmax(0,1fr))] max-md:![grid-template-columns:minmax(0,1fr)]",
-                      writing && block.hidden ? "opacity-50" : null,
+                    data-shelf-index={blocks.findIndex(
+                      (one) => one.id === block.id,
                     )}
-                    data-block-content
-                    style={
-                      {
-                        "--element-tracks": elementTracks(
-                          block.layout,
-                          block.elements.length,
-                        ),
-                      } as CSSProperties
-                    }
                   >
-                    {block.elements.map((element) => (
-                      <div
-                        data-empty={element.isEmpty ? true : undefined}
-                        key={element.id}
-                      >
-                        {writing ? (
-                          <EditableElementSection
-                            block={block}
-                            element={element}
-                            images={images}
-                            markEmpty={!invited}
-                          />
-                        ) : (
-                          <ElementBody
-                            blockElements={block.elements.length}
-                            blockTitle={block.title}
-                            element={element}
-                            images={images}
-                            isOwner={false}
-                            markEmpty={!invited}
-                          />
+                    <article
+                      className={cn(
+                        "group/block relative min-w-0 scroll-mt-[calc(var(--header-height)+5rem)] [container-name:block] [container-type:inline-size]",
+                        writing &&
+                          "after:pointer-events-none after:absolute after:-inset-x-5 after:-inset-y-4 after:rounded-plate after:opacity-0 after:ring-1 after:ring-accent/45 after:transition-opacity after:duration-200 after:content-[''] hover:after:opacity-100 focus-within:after:opacity-100 motion-reduce:after:transition-none",
+                        drag.dragging === block.id && "opacity-45",
+                        drag.over === block.id &&
+                          "after:!opacity-100 after:!ring-2 after:!ring-accent",
+                        shelf.glowing === block.id &&
+                          "after:!opacity-100 after:!ring-2 after:!ring-accent",
+                        writing && "after:duration-700",
+                        writing && block.hidden && "bg-deep/60 px-5 pt-6 pb-7",
+                      )}
+                      data-block-id={block.id}
+                      data-dragging={
+                        drag.dragging === block.id ? true : undefined
+                      }
+                      data-hidden={writing && block.hidden ? true : undefined}
+                      id={`block-${block.id}`}
+                      {...(writing
+                        ? drag.target(block.id, block.position)
+                        : {})}
+                    >
+                      <header
+                        className={cn(
+                          "mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3.5",
+                          writing && block.hidden ? "opacity-50" : null,
                         )}
+                      >
+                        <div className="flex min-w-0 flex-1 basis-45 flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                          <BlockTitle block={block} />
+                          {writing && block.required ? (
+                            <span className="shrink-0 rounded-control bg-deep px-2 py-1 text-label text-mute">
+                              {block.hideable ? "Required" : "Always shown"}
+                            </span>
+                          ) : null}
+                          <BlockCounts elements={block.elements} />
+                        </div>
+                        {writing ? (
+                          <BlockTools
+                            block={block}
+                            grip={drag.grip(block.id)}
+                            position={block.position}
+                            suggestedWidth={suggestedWidths[block.id]}
+                            total={blocks.length}
+                          />
+                        ) : null}
+                      </header>
+                      {writing ? <BlockAudience block={block} /> : null}
+                      <div
+                        className={cn(
+                          "grid gap-x-8 gap-y-7 [grid-template-columns:var(--element-tracks,minmax(0,1fr))] max-md:![grid-template-columns:minmax(0,1fr)]",
+                          writing && block.hidden ? "opacity-50" : null,
+                        )}
+                        data-block-content
+                        style={
+                          {
+                            "--element-tracks": elementTracks(
+                              block.layout,
+                              block.elements.length,
+                            ),
+                          } as CSSProperties
+                        }
+                      >
+                        {block.elements.map((element) => (
+                          <div
+                            data-empty={element.isEmpty ? true : undefined}
+                            key={element.id}
+                          >
+                            {writing &&
+                            element.type === "prose" &&
+                            !element.fromFile ? (
+                              <TextTarget
+                                blockId={block.id}
+                                elementId={element.id}
+                              >
+                                <EditableElementSection
+                                  block={block}
+                                  element={element}
+                                  images={images}
+                                  markEmpty={!invited}
+                                />
+                              </TextTarget>
+                            ) : writing ? (
+                              <EditableElementSection
+                                block={block}
+                                element={element}
+                                images={images}
+                                markEmpty={!invited}
+                              />
+                            ) : (
+                              <ElementBody
+                                blockElements={block.elements.length}
+                                blockTitle={block.title}
+                                element={element}
+                                images={images}
+                                isOwner={false}
+                                markEmpty={!invited}
+                              />
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </article>
                   </div>
-                </article>
+                )}
               </Arrive>
             ))}
           </div>
@@ -261,6 +316,8 @@ export function WorkBlocks({
     </>
   );
 }
+
+const GHOST = { id: "ghost", ghost: true, width: "full" } as const;
 
 function BlockTitle({ block }: { block: WorkBlock }) {
   const workspace = useWorkspace();

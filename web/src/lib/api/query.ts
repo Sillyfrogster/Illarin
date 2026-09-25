@@ -29,6 +29,7 @@ import type {
   ListWorksParams,
   NsfwPreferenceRequest,
   OriginalUpload,
+  PlacedImport,
   Post,
   PostAction,
   PostArchive,
@@ -152,6 +153,7 @@ export type {
   StylesheetSetContent,
   TypedValue,
   VariableSchemaContent,
+  PlacedImport,
   ShelfImport,
   ShelfPiece,
   VersionChange,
@@ -500,15 +502,33 @@ export async function placeShelfPiece(
   return data;
 }
 
-export async function undoShelfPlacement(
+/** Makes every waiting section of an import its own block at the end of the page, in order. */
+export async function placeShelfImport(
   candidate: Candidate,
   workId: string,
-  pieceId: string,
+  importId: string,
+): Promise<PlacedImport> {
+  const { data, error } = await api<PlacedImport>(
+    "POST",
+    `/v1/works/${workId}/shelf/imports/${importId}/place`,
+    { candidate },
+  );
+  if (error || !data) {
+    throw writeRefusal(error, "Illarin could not place the import. Try again.");
+  }
+  return data;
+}
+
+/** Takes back placements newest first, refusing all of them when any block changed since. */
+export async function undoShelfPlacements(
+  candidate: Candidate,
+  workId: string,
+  pieceIds: string[],
 ): Promise<WorkBlock[]> {
   const { data, error } = await api<WorkBlock[]>(
     "POST",
-    `/v1/works/${workId}/shelf/pieces/${pieceId}/undo`,
-    { candidate },
+    `/v1/works/${workId}/shelf/undo`,
+    { candidate, body: { pieceIds } },
   );
   if (error || !data) {
     throw writeRefusal(error, "Illarin could not undo that. Try again.");

@@ -26,10 +26,10 @@ import {
 import { RecordedPromptsPanel } from "../RecordedPromptsPanel";
 import { TakedownControl } from "../TakedownControl";
 import { AddBlock } from "./AddBlock";
-import { FoundImagesPanel } from "./FoundImagesPanel";
 import { PublishDialog } from "./PublishDialog";
 import { RemoveBlock } from "./RemoveBlock";
 import { ReplacementStep } from "./ReplacementStep";
+import { ShelfPane } from "./ShelfPane";
 import { useShelf } from "./shelf";
 import { useWorkspace } from "./state";
 import { EditToggle, WorkspaceDock } from "./WorkspaceDock";
@@ -50,8 +50,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   const workspace = useWorkspace();
   const { account } = useAuth();
   const reduced = useReducedMotion();
-  const shelf = useShelf(workspace.workId, workspace.isOwner);
-  const pictures = shelf.pieces.filter((piece) => piece.kind === "picture");
+  const shelf = useShelf();
   const canTakeDown = Boolean(
     account?.role === "admin" && !workspace.isDraft && !props.takenDown,
   );
@@ -103,7 +102,7 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           takenDown={props.takenDown}
           typeName={props.typeName}
           visibility={props.visibility}
-          waiting={pictures.length}
+          waiting={shelf.count}
         />
       ) : workspace.isOwner && !props.takenDown ? (
         <EditToggle typeName={props.typeName} />
@@ -176,18 +175,18 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
           </WorkspaceRail>
         ) : null}
 
-        {pane?.kind === "found-images" ? (
+        {pane?.kind === "shelf" ? (
           <WorkspaceRail
-            description="These came with your upload. Place each one in a block, or remove it."
-            key="found-images"
+            description={
+              shelf.canDrag
+                ? "Drag a section onto the page, or place it from its menu."
+                : "Place each piece from its menu."
+            }
+            key="shelf"
             onClose={workspace.closePane}
-            title="Found images"
+            title="Shelf"
           >
-            <FoundImagesPanel
-              onRelease={shelf.release}
-              onReload={shelf.reload}
-              pictures={pictures}
-            />
+            <ShelfPane />
           </WorkspaceRail>
         ) : null}
 
