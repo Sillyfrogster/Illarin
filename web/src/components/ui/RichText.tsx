@@ -1,5 +1,11 @@
+import { Check, Info, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { type RichBlock, type RichInline, readRichText } from "@/lib/rich-text";
+import {
+  type RichAlign,
+  type RichBlock,
+  type RichInline,
+  readRichText,
+} from "@/lib/rich-text";
 
 export function RichText({
   text,
@@ -45,12 +51,47 @@ function Blocks({ blocks }: { blocks: RichBlock[] }) {
 const LIST =
   "list-disc pl-[1.35em] [&_li+li]:mt-[0.35em] [&_ul]:mt-[0.35em] [&_ul]:list-[circle] [&_ol]:mt-[0.35em]";
 
+const ALIGN: Record<RichAlign, string> = {
+  center: "text-center",
+  right: "text-right",
+};
+
 function Block({ block }: { block: RichBlock }) {
   if (block.kind === "paragraph") {
     return (
-      <p>
+      <p className={block.align ? ALIGN[block.align] : undefined}>
         <Inline nodes={block.children} />
       </p>
+    );
+  }
+
+  if (block.kind === "rule") {
+    return <hr className="my-[1.4em] border-0 border-t border-rule" />;
+  }
+
+  if (block.kind === "callout") {
+    const Icon = block.tone === "stop" ? TriangleAlert : Info;
+    return (
+      <aside
+        className={cn(
+          "flex gap-3 rounded-control px-4 py-3",
+          block.tone === "stop" ? "bg-stop-wash" : "bg-accent-wash",
+        )}
+      >
+        <Icon
+          aria-hidden="true"
+          className={cn(
+            "mt-[0.3em] size-[1em] shrink-0",
+            block.tone === "stop" ? "text-stop" : "text-accent",
+          )}
+        />
+        <div className="min-w-0 flex-1 [&>*+*]:mt-[0.6em]">
+          {block.title ? (
+            <p className="font-display font-medium text-ink">{block.title}</p>
+          ) : null}
+          <Blocks blocks={block.children} />
+        </div>
+      </aside>
     );
   }
 
@@ -61,6 +102,7 @@ function Block({ block }: { block: RichBlock }) {
         className={cn(
           "font-display font-semibold text-ink leading-tight",
           Tag === "h4" ? "text-[1.1em]" : "text-[1em]",
+          block.align && ALIGN[block.align],
         )}
       >
         <Inline nodes={block.children} />
@@ -98,6 +140,41 @@ function Block({ block }: { block: RichBlock }) {
           </li>
         ))}
       </ol>
+    );
+  }
+
+  if (block.checked) {
+    const checked = block.checked;
+    return (
+      <ul className="[&>li+li]:mt-[0.35em]">
+        {block.items.map((item, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: Items follow the writing and hold no local state.
+          <li className="flex gap-2.5" key={index}>
+            <span
+              className={cn(
+                "mt-[0.3em] inline-flex size-[1em] shrink-0 items-center justify-center rounded-[4px]",
+                checked[index]
+                  ? "bg-action text-on-accent"
+                  : "inset-ring-[1.5px] inset-ring-edge",
+              )}
+            >
+              {checked[index] ? (
+                <Check
+                  aria-hidden="true"
+                  className="size-[0.75em]"
+                  strokeWidth={3}
+                />
+              ) : null}
+              <span className="sr-only">
+                {checked[index] ? "Done: " : "Not done: "}
+              </span>
+            </span>
+            <div className="min-w-0 flex-1">
+              <Blocks blocks={item} />
+            </div>
+          </li>
+        ))}
+      </ul>
     );
   }
 
@@ -190,6 +267,12 @@ function InlineNode({ node }: { node: RichInline }) {
         <strong>
           <Inline nodes={node.children} />
         </strong>
+      );
+    case "delete":
+      return (
+        <del className="decoration-mute/70">
+          <Inline nodes={node.children} />
+        </del>
       );
     default: {
       const away = !node.href.startsWith("/");

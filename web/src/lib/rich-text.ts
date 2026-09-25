@@ -1,7 +1,7 @@
 import type { PhrasingContent, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { gfmTableFromMarkdown } from "mdast-util-gfm-table";
-import { gfmTable } from "micromark-extension-gfm-table";
+import { gfmFromMarkdown } from "mdast-util-gfm";
+import { gfm } from "micromark-extension-gfm";
 
 export type RichInline =
   | { kind: "text"; text: string }
@@ -9,14 +9,35 @@ export type RichInline =
   | { kind: "code"; text: string }
   | { kind: "emphasis"; children: RichInline[] }
   | { kind: "strong"; children: RichInline[] }
+  | { kind: "delete"; children: RichInline[] }
   | { kind: "link"; href: string; children: RichInline[] };
 
+export type RichAlign = "center" | "right";
+
 export type RichBlock =
-  | { kind: "paragraph"; children: RichInline[] }
-  | { kind: "heading"; depth: number; children: RichInline[] }
+  | { kind: "paragraph"; children: RichInline[]; align?: RichAlign }
+  | {
+      kind: "heading";
+      depth: number;
+      children: RichInline[];
+      align?: RichAlign;
+    }
   | { kind: "quote"; children: RichBlock[] }
-  | { kind: "list"; ordered: boolean; start: number; items: RichBlock[][] }
+  | {
+      kind: "callout";
+      tone: "accent" | "stop";
+      title: string;
+      children: RichBlock[];
+    }
+  | {
+      kind: "list";
+      ordered: boolean;
+      start: number;
+      items: RichBlock[][];
+      checked?: (boolean | null)[];
+    }
   | { kind: "code"; text: string }
+  | { kind: "rule" }
   | {
       kind: "table";
       head: RichInline[][] | null;
@@ -31,11 +52,7 @@ export type RichText = {
 export function readRichText(source: string): RichText {
   const stripped = stripHtml(source);
   const removed = { formatting: stripped.removed };
-  const tree = fromMarkdown(stripped.text, {
-    extensions: [DISABLED, gfmTable()],
-    mdastExtensions: [gfmTableFromMarkdown()],
-  });
-  const blocks = readBlocks(tree.children, removed);
+  const blocks = readRentry(stripped.text, removed);
   const shallowest = shallowestHeading(blocks) ?? 1;
   return {
     blocks: shallowest > 1 ? raiseHeadings(blocks, shallowest - 1) : blocks,
@@ -47,7 +64,7 @@ function shallowestHeading(blocks: RichBlock[]): number | null {
   const depths: number[] = [];
   for (const block of blocks) {
     if (block.kind === "heading") depths.push(block.depth);
-    if (block.kind === "quote") {
+    if (block.kind === "quote" || block.kind === "callout") {
       const inner = shallowestHeading(block.children);
       if (inner !== null) depths.push(inner);
     }
@@ -64,7 +81,7 @@ function shallowestHeading(blocks: RichBlock[]): number | null {
 function raiseHeadings(blocks: RichBlock[], by: number): RichBlock[] {
   return blocks.map((block) => {
     if (block.kind === "heading") return { ...block, depth: block.depth - by };
-    if (block.kind === "quote") {
+    if (block.kind === "quote" || block.kind === "callout") {
       return { ...block, children: raiseHeadings(block.children, by) };
     }
     if (block.kind === "list") {
@@ -127,10 +144,102 @@ function texts(entries: Record<string, unknown>[], key: string): string[] {
 }
 
 const DISABLED = {
-  disable: { null: ["codeIndented", "htmlFlow", "htmlText", "thematicBreak"] },
+  disable: { null: ["codeIndented", "htmlFlow", "htmlText"] },
 };
 
 type Removed = { formatting: boolean };
+
+function readMarkdown(source: string, removed: Removed): RichBlock[] {
+  const tree = fromMarkdown(source, {
+    extensions: [DISABLED, gfm()],
+    mdastExtensions: [gfmFromMarkdown()],
+  });
+  return readBlocks(tree.children, removed);
+}
+
+const CALLOUT = /^!!!\s*(\w+)?(?:[ \t]+(.*))?$/;
+const CALLOUT_BODY = /^(?: {4}|\t)/;
+const CONTENTS = /^\s*\[TOC\d?\]\s*$/i;
+const COLOUR = /%[#\w]+%([\s\S]*?)%%/g;
+const STOP_TONES = new Set(["warning", "danger", "caution", "error"]);
+
+/** Reads rentry's callouts, contents markers and colour marks around the Markdown, outside fenced code. */
+function readRentry(source: string, removed: Removed): RichBlock[] {
+  const blocks: RichBlock[] = [];
+  let pending: string[] = [];
+  const flush = () => {
+    if (pending.length > 0)
+      blocks.push(...readMarkdown(pending.join("\n"), removed));
+    pending = [];
+  };
+  for (const run of fencedRuns(source)) {
+    if (run.fenced) {
+      pending.push(run.text);
+      continue;
+    }
+    const lines = run.text.split("\n");
+    for (let at = 0; at < lines.length; at++) {
+      const line = lines[at];
+      const callout = CALLOUT.exec(line);
+      if (!callout) {
+        if (!CONTENTS.test(line)) pending.push(line.replace(COLOUR, "$1"));
+        continue;
+      }
+      flush();
+      const body: string[] = [];
+      while (at + 1 < lines.length && CALLOUT_BODY.test(lines[at + 1])) {
+        body.push(lines[++at].replace(CALLOUT_BODY, ""));
+      }
+      const rest = (callout[2] ?? "").trim();
+      const words = body.length > 0 ? body.join("\n") : rest;
+      blocks.push({
+        kind: "callout",
+        tone: STOP_TONES.has((callout[1] ?? "").toLowerCase())
+          ? "stop"
+          : "accent",
+        title: body.length > 0 ? rest.replace(COLOUR, "$1") : "",
+        children: readRentry(words, removed),
+      });
+    }
+  }
+  flush();
+  return blocks.map(aligned);
+}
+
+/** Rentry centres a block between -> and <-, and right-aligns it between -> and ->. */
+function aligned(block: RichBlock): RichBlock {
+  if (block.kind !== "paragraph" && block.kind !== "heading") return block;
+  const first = edgeText(block.children, "first");
+  const last = edgeText(block.children, "last");
+  if (!first || !last || !first.text.trimStart().startsWith("->")) return block;
+  const ending = last.text.trimEnd();
+  const align = ending.endsWith("<-")
+    ? "center"
+    : ending.endsWith("->")
+      ? "right"
+      : null;
+  if (!align || (first === last && ending.length < 4)) return block;
+  first.text = first.text.trimStart().slice(2).trimStart();
+  last.text = last.text.trimEnd().slice(0, -2).trimEnd();
+  return { ...block, align };
+}
+
+function edgeText(
+  nodes: RichInline[],
+  edge: "first" | "last",
+): { kind: "text"; text: string } | null {
+  const node = edge === "first" ? nodes[0] : nodes.at(-1);
+  if (!node) return null;
+  if (node.kind === "text") return node;
+  if (
+    node.kind === "emphasis" ||
+    node.kind === "strong" ||
+    node.kind === "delete"
+  ) {
+    return edgeText(node.children, edge);
+  }
+  return null;
+}
 
 function readBlocks(nodes: RootContent[], removed: Removed): RichBlock[] {
   const blocks: RichBlock[] = [];
@@ -154,19 +263,27 @@ function readBlocks(nodes: RootContent[], removed: Removed): RichBlock[] {
         break;
       }
       case "list": {
-        const listItems = node.children
-          .map((item) => readBlocks(item.children, removed))
-          .filter((item) => item.length > 0);
-        if (listItems.length > 0) {
+        const held = node.children
+          .map((item) => ({
+            blocks: readBlocks(item.children, removed),
+            checked: item.checked ?? null,
+          }))
+          .filter((item) => item.blocks.length > 0);
+        if (held.length > 0) {
+          const checked = held.map((item) => item.checked);
           blocks.push({
             kind: "list",
             ordered: node.ordered ?? false,
             start: node.start ?? 1,
-            items: listItems,
+            items: held.map((item) => item.blocks),
+            ...(checked.some((one) => one !== null) ? { checked } : {}),
           });
         }
         break;
       }
+      case "thematicBreak":
+        blocks.push({ kind: "rule" });
+        break;
       case "code": {
         if (node.value.trim() !== "") {
           blocks.push({ kind: "code", text: node.value });
@@ -185,6 +302,7 @@ function readBlocks(nodes: RootContent[], removed: Removed): RichBlock[] {
         break;
       }
       case "definition":
+      case "footnoteDefinition":
         break;
       default: {
         removed.formatting = true;
@@ -214,6 +332,12 @@ function readInline(nodes: PhrasingContent[], removed: Removed): RichInline[] {
       case "strong":
         children.push({
           kind: "strong",
+          children: readInline(node.children, removed),
+        });
+        break;
+      case "delete":
+        children.push({
+          kind: "delete",
           children: readInline(node.children, removed),
         });
         break;

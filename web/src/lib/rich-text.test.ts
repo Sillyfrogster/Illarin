@@ -8,7 +8,10 @@ import {
 
 function lines(blocks: RichBlock[]): string[] {
   return blocks.flatMap((block) => {
-    if (block.kind === "quote") return lines(block.children);
+    if (block.kind === "quote" || block.kind === "callout") {
+      return lines(block.children);
+    }
+    if (block.kind === "rule") return ["---"];
     if (block.kind === "list") return block.items.flatMap(lines);
     if (block.kind === "code") return [block.text];
     if (block.kind === "table") {
@@ -123,10 +126,33 @@ describe("page markdown", () => {
     const image = readRichText("![a portrait of her](https://elsewhere/x.png)");
     expect(lines(image.blocks)).toEqual(["a portrait of her"]);
     expect(image.formattingRemoved).toBe(true);
+  });
 
-    const struck = readRichText("~~gone~~");
-    expect(lines(struck.blocks)).toEqual(["~~gone~~"]);
-    expect(struck.formattingRemoved).toBe(false);
+  test("reads the rest of GitHub's Markdown: struck text, task lists and rules", () => {
+    const rich = readRichText(
+      "~~gone~~\n\n- [x] packed\n- [ ] left\n\n---\n\nnext",
+    );
+    expect(rich.blocks).toEqual([
+      {
+        kind: "paragraph",
+        children: [
+          { kind: "delete", children: [{ kind: "text", text: "gone" }] },
+        ],
+      },
+      {
+        kind: "list",
+        ordered: false,
+        start: 1,
+        checked: [true, false],
+        items: [
+          [{ kind: "paragraph", children: [{ kind: "text", text: "packed" }] }],
+          [{ kind: "paragraph", children: [{ kind: "text", text: "left" }] }],
+        ],
+      },
+      { kind: "rule" },
+      { kind: "paragraph", children: [{ kind: "text", text: "next" }] },
+    ]);
+    expect(rich.formattingRemoved).toBe(false);
   });
 
   test("a fenced block is code, with markup inside it kept as written", () => {
@@ -183,16 +209,68 @@ describe("page markdown", () => {
     expect(lines(rich.blocks)).toEqual(["Timeline | Tracks edits"]);
   });
 
-  test("a rule between scenes stays the characters the creator typed", () => {
-    const rich = readRichText("scene one\n\n---\n\nscene two");
-    expect(lines(rich.blocks)).toEqual(["scene one", "---", "scene two"]);
-    expect(rich.formattingRemoved).toBe(false);
-  });
-
   test("four spaces in front of a line is prose, not a code block", () => {
     const rich = readRichText("She waits.\n\n    And waits.");
     expect(lines(rich.blocks)).toEqual(["She waits.", "And waits."]);
     expect(rich.formattingRemoved).toBe(false);
+  });
+});
+
+describe("rentry's Markdown", () => {
+  test("a callout keeps its kind, its title and its indented body", () => {
+    const rich = readRichText(
+      "!!! warning Keep it short\n    Replies stay under **500** tokens.\n\nAfter.",
+    );
+    expect(rich.blocks).toEqual([
+      {
+        kind: "callout",
+        tone: "stop",
+        title: "Keep it short",
+        children: [
+          {
+            kind: "paragraph",
+            children: [
+              { kind: "text", text: "Replies stay under " },
+              { kind: "strong", children: [{ kind: "text", text: "500" }] },
+              { kind: "text", text: " tokens." },
+            ],
+          },
+        ],
+      },
+      { kind: "paragraph", children: [{ kind: "text", text: "After." }] },
+    ]);
+  });
+
+  test("a one-line callout is all body", () => {
+    const [callout] = readRichText("!!! info An unofficial guide.").blocks;
+    expect(callout).toMatchObject({
+      kind: "callout",
+      tone: "accent",
+      title: "",
+    });
+    expect(lines([callout])).toEqual(["An unofficial guide."]);
+  });
+
+  test("arrows centre or right-align a paragraph and a heading", () => {
+    const [heading, centred] = readRichText(
+      "# **->Harbor Notes<-**\n\n-> A keeper of lights ->",
+    ).blocks;
+    expect(heading).toMatchObject({ kind: "heading", align: "center" });
+    expect(lines([heading])).toEqual(["Harbor Notes"]);
+    expect(centred).toMatchObject({ kind: "paragraph", align: "right" });
+    expect(lines([centred])).toEqual(["A keeper of lights"]);
+  });
+
+  test("colour marks keep their words and a contents marker leaves nothing", () => {
+    const rich = readRichText("[TOC]\n\n%teal% Evening%% light");
+    expect(lines(rich.blocks)).toEqual(["Evening light"]);
+    expect(rich.formattingRemoved).toBe(false);
+  });
+
+  test("rentry's marks inside a fenced block stay as written", () => {
+    const text = "!!! note\n-> kept <-\n%red% kept %%";
+    const rich = readRichText(`\`\`\`\n${text}\n\`\`\``);
+    expect(lines(rich.blocks)).toEqual([text]);
   });
 });
 
