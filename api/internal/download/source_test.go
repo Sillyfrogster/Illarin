@@ -23,6 +23,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/character"
 	"github.com/Sillyfrogster/Illarin/api/internal/storage"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
@@ -235,6 +236,75 @@ func TestDownloadSnapshotsVisibilityAtHandoff(t *testing.T) {
 	}
 	if visibility != "unlisted" {
 		t.Fatalf("visibility at handoff = %q, want unlisted", visibility)
+	}
+}
+
+func TestADownloadRecordsTheVersionItHandedOver(t *testing.T) {
+	t.Parallel()
+	var blocker *blockingRedirectStore
+	registry := format.NewRegistry()
+	for _, module := range character.Modules() {
+		if err := registry.Register(module); err != nil {
+			t.Fatalf("register %s: %v", module.ID(), err)
+		}
+	}
+	router, session, works, pool := harness.NewVerifiedUploadRouterWithStore(
+		t, registry, work.DefaultUploadSettings(),
+		func(store storage.Store) storage.Store {
+			blocker = &blockingRedirectStore{
+				Store: store, reached: make(chan struct{}, 1), release: make(chan struct{}),
+			}
+			return blocker
+		},
+	)
+	workID := apitest.UploadedCharacterID(t, router, session, works, apitest.PlainCard)
+	apitest.PublishCharacter(t, router, session, workID)
+
+	response := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		response <- apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+workID, nil))
+	}()
+	select {
+	case <-blocker.reached:
+	case <-time.After(time.Second):
+		t.Fatal("download did not reach the handoff boundary")
+	}
+	if got := apitest.SaveDetails(t, router, session, workID,
+		`{"name":"Ana Again","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
+		t.Fatalf("save details: %d %s", got.Code, got.Body.String())
+	}
+	if got := apitest.PublishWorkVersion(t, router, session, workID, `{"summary":"Renamed"}`); got.Code != http.StatusOK {
+		t.Fatalf("publish version 2: %d %s", got.Code, got.Body.String())
+	}
+	close(blocker.release)
+	if download := <-response; download.Code != http.StatusOK {
+		t.Fatalf("download status = %d, want 200", download.Code)
+	}
+	for _, query := range []string{"?version=1", ""} {
+		if got := apitest.Send(t, router, httptest.NewRequest(
+			http.MethodGet, "/download/"+workID+"/charx"+query, nil,
+		)); got.Code != http.StatusOK {
+			t.Fatalf("download charx%s: %d %s", query, got.Code, got.Body.String())
+		}
+	}
+
+	var recorded []int
+	rows, err := pool.Query(context.Background(), `
+		select version_number from download_records where work_id = $1 order by id
+	`, workID)
+	if err != nil {
+		t.Fatalf("read download records: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var number int
+		if err := rows.Scan(&number); err != nil {
+			t.Fatalf("read a download record: %v", err)
+		}
+		recorded = append(recorded, number)
+	}
+	if want := []int{1, 1, 2}; !slices.Equal(recorded, want) {
+		t.Fatalf("versions recorded = %v, want %v (mid-publish, historical, current)", recorded, want)
 	}
 }
 

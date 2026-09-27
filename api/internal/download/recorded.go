@@ -205,6 +205,7 @@ func (s *Service) recordedExportSubject(
 	subject.cover = recorded.Metadata.Cover
 	subject.ownerID = ownerID
 	subject.originalFileID = recorded.OriginalFileID
+	subject.versionNumber = &recorded.Number
 	subject.recorded = &recorded
 	return subject, hasPrivatePrompts, nil
 }

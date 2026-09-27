@@ -57,6 +57,7 @@ type OriginalFileLocation struct {
 	Filename       string
 	Format         string
 	OwnerID        *uuid.UUID
+	VersionNumber  *int
 }
 
 // LocateOriginalFile finds the original file a download of the work hands over
@@ -78,11 +79,16 @@ func LocateOriginalFile(
 		owner := uuidFromPgtype(row.OwnerID)
 		ownerID = &owner
 	}
+	var versionNumber *int
+	if row.VersionNumber.Valid {
+		number := int(row.VersionNumber.Int32)
+		versionNumber = &number
+	}
 	return OriginalFileLocation{
 		WorkID: uuidFromPgtype(row.WorkID), OriginalFileID: uuidFromPgtype(row.OriginalFileID),
 		BlobID: uuidFromPgtype(row.BlobID), MediaType: row.MediaType,
 		Filename: row.Filename.String, Format: row.Format,
-		OwnerID: ownerID,
+		OwnerID: ownerID, VersionNumber: versionNumber,
 	}, nil
 }
 

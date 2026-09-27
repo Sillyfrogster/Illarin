@@ -57,6 +57,7 @@ type exportSubject struct {
 	ownerID        *uuid.UUID
 	lifecycle      work.Lifecycle
 	originalFileID *uuid.UUID
+	versionNumber  *int
 	gallery        *GallerySelection
 	recorded       *work.FullVersion
 }
@@ -122,7 +123,7 @@ func (subject exportSubject) export(
 		Filename: format.Filename(subject.name, subject.versionName(), label, written.Extension),
 	}
 	if subject.lifecycle == work.LifecyclePublished {
-		record := newRecord(subject.workID, subject.originalFileID, formatID, subject.ownerID, viewerID)
+		record := newRecord(subject.workID, subject.originalFileID, subject.versionNumber, formatID, subject.ownerID, viewerID)
 		export.Record = &record
 	}
 	return export
@@ -311,7 +312,8 @@ func (s *Service) exportSubject(
 	err := q.QueryRow(ctx, `
 		select work.type, work.name, work.blurb, work.original_format, work.lifecycle,
 		       work.work_version, work.credited_author, work.nickname,
-		       work.owner_id, work.original_file_id, work.cover_media_id
+		       work.owner_id, work.original_file_id, work.cover_media_id,
+		       (select number from work_versions where id = work.published_version_id)
 		  from works work
 		 where work.id = $1 and work.deleted_at is null
 		   and (work.lifecycle = 'published' or work.owner_id = $2)
@@ -319,7 +321,7 @@ func (s *Service) exportSubject(
 	`, workID, viewerID).Scan(
 		&subject.workType, &subject.name, &subject.header.Blurb, &originalFormat, &subject.lifecycle,
 		&subject.header.WorkVersion, &subject.header.CreditedAuthor,
-		&subject.header.Nickname, &ownerID, &originalFileID, &cover,
+		&subject.header.Nickname, &ownerID, &originalFileID, &cover, &subject.versionNumber,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return exportSubject{}, work.ErrNotFound

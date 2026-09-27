@@ -205,6 +205,7 @@ type DownloadRecord struct {
 	HandedOffAt    pgtype.Timestamptz
 	Access         string
 	Visibility     string
+	VersionNumber  pgtype.Int4
 }
 
 type EmailVerificationToken struct {

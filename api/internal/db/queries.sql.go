@@ -2196,7 +2196,8 @@ func (q *Queries) NSFWPreferenceBySessionHash(ctx context.Context, tokenHash []b
 }
 
 const originalFileLocation = `-- name: OriginalFileLocation :one
-select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, r.filename, r.format, a.owner_id
+select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, r.filename, r.format, a.owner_id,
+       version.number as version_number
   from works a
   left join public.work_versions version on version.id = a.published_version_id
   join work_original_files r on r.id = case when version.id is null
@@ -2221,6 +2222,7 @@ type OriginalFileLocationRow struct {
 	Filename       pgtype.Text
 	Format         string
 	OwnerID        pgtype.UUID
+	VersionNumber  pgtype.Int4
 }
 
 func (q *Queries) OriginalFileLocation(ctx context.Context, arg OriginalFileLocationParams) (OriginalFileLocationRow, error) {
@@ -2234,6 +2236,7 @@ func (q *Queries) OriginalFileLocation(ctx context.Context, arg OriginalFileLoca
 		&i.Filename,
 		&i.Format,
 		&i.OwnerID,
+		&i.VersionNumber,
 	)
 	return i, err
 }

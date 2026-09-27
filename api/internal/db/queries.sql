@@ -273,7 +273,8 @@ select media.id, media.role, media.width, media.height, blob.byte_size,
           media.created_at desc, media.id desc;
 
 -- name: OriginalFileLocation :one
-select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, r.filename, r.format, a.owner_id
+select a.id as work_id, r.id as original_file_id, r.blob_id, r.media_type, r.filename, r.format, a.owner_id,
+       version.number as version_number
   from works a
   left join public.work_versions version on version.id = a.published_version_id
   join work_original_files r on r.id = case when version.id is null

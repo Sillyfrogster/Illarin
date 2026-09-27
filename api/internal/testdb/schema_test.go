@@ -427,6 +427,7 @@ func TestADownloadRecordCarriesOnlyAuthorizedHandoffFacts(t *testing.T) {
 		"handed_off_at",
 		"access",
 		"visibility",
+		"version_number",
 	}
 	if !slices.Equal(columns, want) {
 		t.Fatalf("download record columns = %v, want %v", columns, want)

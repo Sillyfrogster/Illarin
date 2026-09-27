@@ -64,7 +64,7 @@ func (s *Service) Source(
 		Filename: location.Filename, Format: location.Format,
 		Inline: format.IsInlineMediaType(location.MediaType),
 		Record: newRecord(
-			location.WorkID, &originalFileID, format.Raw,
+			location.WorkID, &originalFileID, location.VersionNumber, format.Raw,
 			location.OwnerID, viewerID,
 		),
 	}, nil
