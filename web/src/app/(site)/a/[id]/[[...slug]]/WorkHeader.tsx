@@ -41,6 +41,14 @@ function ratingLabel(isNsfw: boolean | null): string {
   return isNsfw ? "Adult content" : "No adult content";
 }
 
+/** Long names step down the type scale so they wrap in a few lines, not a column of single words */
+function nameSize(name: string): string {
+  const length = Array.from(name).length;
+  if (length > 60) return "max-w-[26ch] text-title leading-tight";
+  if (length > 24) return "max-w-[20ch] text-display leading-[1.05]";
+  return "max-w-[15ch] text-hero";
+}
+
 function browseTagHref(value: string): string {
   const quoted = value.includes(" ") ? `"${value}"` : value;
   return `/browse?q=${encodeURIComponent(`tag:${quoted}`)}`;
@@ -119,7 +127,8 @@ export function WorkHeader({
               activate={() => workspace.setCursor("identity:name")}
               as="h1"
               className={cn(
-                "max-w-[15ch] font-display text-hero font-medium tracking-[-0.035em] break-words",
+                "font-display font-medium tracking-[-0.035em] text-balance break-words",
+                nameSize(workspace.details.name),
                 work.name ? "text-ink" : "text-mute italic",
               )}
               done={() => workspace.setCursor(null)}
