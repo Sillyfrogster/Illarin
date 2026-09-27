@@ -29,8 +29,8 @@ func (s *Service) RecordView(ctx context.Context, id uuid.UUID, viewerID *uuid.U
 	return nil
 }
 
-// lifetimeCounts adds a work's rolled-up daily views and sends to the events not yet rolled up, and counts its public download records
-func lifetimeCounts(ctx context.Context, tx pgx.Tx, id uuid.UUID) (views, downloads, sends int, err error) {
+// lifetimeCounts reads a work's views, public downloads, sends and current followers
+func lifetimeCounts(ctx context.Context, tx pgx.Tx, id uuid.UUID) (views, downloads, sends, followers int, err error) {
 	err = tx.QueryRow(ctx, `
 		with counted as (
 			select kind, count from public.daily_totals where work_id = $1 and kind in ('view', 'send')
@@ -42,13 +42,14 @@ func lifetimeCounts(ctx context.Context, tx pgx.Tx, id uuid.UUID) (views, downlo
 		)
 		select coalesce(sum(count) filter (where kind = 'view'), 0),
 		       (select count(*) from public.download_records where work_id = $1 and access = 'public'),
-		       coalesce(sum(count) filter (where kind = 'send'), 0)
+		       coalesce(sum(count) filter (where kind = 'send'), 0),
+		       (select count(*) from public.work_followers where work_id = $1)
 		  from counted
-	`, id).Scan(&views, &downloads, &sends)
+	`, id).Scan(&views, &downloads, &sends, &followers)
 	if err != nil {
-		return 0, 0, 0, fmt.Errorf("read the work's counts: %w", err)
+		return 0, 0, 0, 0, fmt.Errorf("read the work's counts: %w", err)
 	}
-	return views, downloads, sends, nil
+	return views, downloads, sends, followers, nil
 }
 
 // RecordView answers 204 whether or not the display counted, so it tells a caller nothing about the work

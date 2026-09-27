@@ -37,6 +37,7 @@ type WorkPageResponse struct {
 	ViewCount      int     `json:"viewCount"`
 	DownloadCount  int     `json:"downloadCount"`
 	SendCount      *int    `json:"sendCount"`
+	FollowerCount  *int    `json:"followerCount"`
 	Takedown       *struct {
 		Reason string    `json:"reason"`
 		At     time.Time `json:"at"`

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/staff"
@@ -147,5 +148,75 @@ func TestOnlyTheCreatorSeesSendsTheirAppAcknowledged(t *testing.T) {
 	}
 	if page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID); page.SendCount != nil {
 		t.Fatalf("reader sees send count %d, want none", *page.SendCount)
+	}
+}
+
+func TestTheCreatorSeesEachFollowerOnceAndRealChangesAreCountedWithoutWhoMadeThem(t *testing.T) {
+	t.Parallel()
+	outbox := &apitest.VerificationOutbox{}
+	router, pool, _ := harness.NewRouterWithSenderPoolAndServices(t, 1<<20, api.DefaultDeadlines(), outbox)
+	creator := apitest.VerifiedSignUp(t, router, outbox, "creator@example.com", apitest.CreatorHandle)
+	reader := apitest.VerifiedSignUp(t, router, outbox, "reader@example.com", "quiet.reader")
+	other := apitest.VerifiedSignUp(t, router, outbox, "other@example.com", "other.reader")
+	workID := apitest.PublishedCharacter(t, router, creator)
+	follow := func(session *http.Cookie, method string) {
+		t.Helper()
+		if got := apitest.Send(t, router, apitest.Authorized(
+			httptest.NewRequest(method, "/v1/works/"+workID+"/follow", nil), session)); got.Code != http.StatusOK {
+			t.Fatalf("%s follow status = %d, want 200: %s", method, got.Code, got.Body.String())
+		}
+	}
+	followers := func() *int {
+		t.Helper()
+		return apitest.DecodeResponse[apitest.WorkPageResponse](t, apitest.Send(t, router, apitest.Authorized(
+			httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil), creator))).FollowerCount
+	}
+	library := []string{apitest.ReceivePermission, apitest.LibrarySyncPermission}
+
+	follow(reader, http.MethodPut)
+	follow(reader, http.MethodPut)
+	desk := apitest.ConnectApp(t, router, reader, "Lumiverse", "Reading desk", library)
+	apitest.ReportLibrary(t, router, desk.AccessToken, "", workID)
+	studio := apitest.ConnectApp(t, router, creator, "Lumiverse", "Studio", library)
+	apitest.ReportLibrary(t, router, studio.AccessToken, "", workID)
+	if count := followers(); count == nil || *count != 1 {
+		t.Fatalf("followers = %v, want the reader once", count)
+	}
+
+	follow(reader, http.MethodDelete)
+	follow(reader, http.MethodPut)
+	shelf := apitest.ConnectApp(t, router, other, "Lumiverse", "Shelf", library)
+	apitest.ReportLibrary(t, router, shelf.AccessToken, "", workID)
+	apitest.ReportLibrary(t, router, shelf.AccessToken, "", workID)
+	if count := followers(); count == nil || *count != 2 {
+		t.Fatalf("followers = %v, want the reader and the app-library follower", count)
+	}
+	removed := apitest.Send(t, router, apitest.AsApp(t, http.MethodPost, "/v1/library/sync", shelf.AccessToken,
+		map[string]any{"snapshot": false, "entries": []any{}, "removed": []string{workID}}))
+	if removed.Code != http.StatusOK {
+		t.Fatalf("library removal status = %d, want 200: %s", removed.Code, removed.Body.String())
+	}
+	if count := followers(); count == nil || *count != 1 {
+		t.Fatalf("followers after the library removal = %v, want 1", count)
+	}
+	if page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID); page.FollowerCount != nil {
+		t.Fatalf("reader sees follower count %d, want none", *page.FollowerCount)
+	}
+
+	works := apitest.WorksOver(t, pool, format.NewRegistry())
+	if err := staff.NewService(works).Rollup(t.Context(), time.Now().UTC().AddDate(0, 0, staff.EventRetentionDays+1)); err != nil {
+		t.Fatalf("roll up: %v", err)
+	}
+	var follows, unfollows, left int
+	if err := pool.QueryRow(t.Context(), `
+		select coalesce(sum(count) filter (where kind = 'follow'), 0),
+		       coalesce(sum(count) filter (where kind = 'unfollow'), 0),
+		       (select count(*) from events where kind in ('follow', 'unfollow'))
+		  from daily_totals where work_id = $1
+	`, workID).Scan(&follows, &unfollows, &left); err != nil {
+		t.Fatalf("read the follow totals: %v", err)
+	}
+	if follows != 3 || unfollows != 2 || left != 0 {
+		t.Fatalf("totals = %d follows and %d unfollows with %d events left, want 3, 2 and 0", follows, unfollows, left)
 	}
 }

@@ -243,6 +243,7 @@ export function WorkHeader({
                 views={work.viewCount}
                 downloads={work.downloadCount}
                 sends={work.sendCount}
+                followers={work.followerCount}
               />
             )}
           </div>

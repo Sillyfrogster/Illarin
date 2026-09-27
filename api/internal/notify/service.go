@@ -128,21 +128,8 @@ func writeEntries(ctx context.Context, tx pgx.Tx, event recorded) error {
 			 where $5::uuid is null and $1 = 'work_published'
 			   and creator_id = (select owner_id from works where id = $2)
 			union all
-			select account_id from (
-				select account_id from work_follows
-				 where work_id = $2 and state = 'following'
-				union
-				select app.user_id
-				  from app_library_entries entry
-				  join connected_apps app on app.id = entry.connected_app_id
-				 where entry.work_id = $2 and app.revoked_at is null
-				except
-				select account_id from work_follows
-				 where work_id = $2 and state = 'stopped'
-				except
-				select owner_id from works where id = $2
-			) following
-			 where $5::uuid is null and $1 <> 'work_published'
+			select account_id from work_followers
+			 where work_id = $2 and $5::uuid is null and $1 <> 'work_published'
 		  ) hearer (account_id)
 		on conflict (account_id, work_id) where type = 'work_updated' and read_at is null
 		do update set words = excluded.words,

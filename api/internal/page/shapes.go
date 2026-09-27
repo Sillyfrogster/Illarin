@@ -91,6 +91,7 @@ type WorkDetail struct {
 	ViewCount             int                      `json:"viewCount"`
 	DownloadCount         int                      `json:"downloadCount"`
 	SendCount             *int                     `json:"sendCount,omitempty"`
+	FollowerCount         *int                     `json:"followerCount,omitempty"`
 }
 
 type WorkDetailVisibility string
