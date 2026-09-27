@@ -12,6 +12,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // ListFilter holds App as a registry app id, or empty for every app
@@ -32,11 +33,12 @@ type ProfileListingScope struct {
 	ViewerID  *uuid.UUID
 }
 
-// Cursor marks the last work shown by its activity count, first publication time and id
+// Cursor marks the last work shown by its activity count, first publication time and id, and the ranking day it was counted on
 type Cursor struct {
 	Count       int
 	PublishedAt time.Time
 	ID          uuid.UUID
+	RankedOn    time.Time
 }
 
 type Cover struct {
@@ -136,6 +138,7 @@ func (s *Service) Browse(
 		params.BeforeCount = int32(f.Before.Count)
 		params.Before = timeToNullable(&f.Before.PublishedAt)
 		params.BeforeID = uuidToPgtype(f.Before.ID)
+		params.RankedOn = pgtype.Date{Time: f.Before.RankedOn, Valid: !f.Before.RankedOn.IsZero()}
 	}
 	rows, err := queries.BrowseWorks(ctx, params)
 	if err != nil {
@@ -148,7 +151,10 @@ func (s *Service) Browse(
 	}
 	if len(rows) > f.Limit && len(page.Items) > 0 {
 		last := rows[f.Limit-1]
-		page.Next = &Cursor{Count: int(last.Activity), PublishedAt: timeFromPgtype(last.PublishedAt), ID: uuidFromPgtype(last.ID)}
+		page.Next = &Cursor{
+			Count: int(last.Activity), PublishedAt: timeFromPgtype(last.PublishedAt),
+			ID: uuidFromPgtype(last.ID), RankedOn: last.RankedOn.Time,
+		}
 	}
 
 	countParams := db.CountBrowseWorksParams{

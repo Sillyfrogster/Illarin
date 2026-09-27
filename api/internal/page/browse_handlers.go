@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
@@ -27,6 +28,7 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 		Before:      api.QueryTime(q, "before"),
 		BeforeId:    api.QueryID(q, "beforeId"),
 		BeforeCount: api.QueryNumber(q, "beforeCount"),
+		RankedOn:    api.QueryTime(q, "rankedOn"),
 	}
 	if q.Refused(c) {
 		return
@@ -107,6 +109,10 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	var next *BrowseCursor
 	if found.Next != nil {
 		next = &BrowseCursor{Before: found.Next.PublishedAt, BeforeId: found.Next.ID, BeforeCount: found.Next.Count}
+		if !found.Next.RankedOn.IsZero() {
+			rankedOn := found.Next.RankedOn.Format(time.DateOnly)
+			next.RankedOn = &rankedOn
+		}
 	}
 	var empty *WorkListEmptyState
 	if found.EmptyState != "" {
@@ -152,6 +158,9 @@ func cursorFrom(params ListWorksParams) (*Cursor, bool) {
 	cursor := &Cursor{PublishedAt: *params.Before, ID: uuid.UUID(*params.BeforeId)}
 	if params.BeforeCount != nil {
 		cursor.Count = *params.BeforeCount
+	}
+	if params.RankedOn != nil {
+		cursor.RankedOn = *params.RankedOn
 	}
 	return cursor, true
 }

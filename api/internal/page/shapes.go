@@ -249,6 +249,7 @@ type BrowseCursor struct {
 	Before      time.Time `json:"before"`
 	BeforeId    uuid.UUID `json:"beforeId"`
 	BeforeCount int       `json:"beforeCount"`
+	RankedOn    *string   `json:"rankedOn,omitempty"`
 }
 
 type BrowseFacet struct {
@@ -351,6 +352,7 @@ type ListWorksParams struct {
 	Before      *time.Time           `json:"before,omitempty"`
 	BeforeId    *uuid.UUID           `json:"beforeId,omitempty"`
 	BeforeCount *int                 `json:"beforeCount,omitempty"`
+	RankedOn    *time.Time           `json:"rankedOn,omitempty"`
 }
 
 type GetWorkParams struct {

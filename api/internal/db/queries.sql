@@ -26,39 +26,24 @@ values ($1, $2, $3, $4, $5, $6, $7, $8);
 -- name: SetOriginalFile :exec
 update works set original_file_id = $2, updated_at = now() where id = $1;
 
--- name: ListWorks :many
-select a.id, a.type, original.format, a.original_format,
-       a.work_version, a.credited_author, a.nickname, a.lifecycle,
-       a.name, a.blurb, a.tags,
-       coalesce(a.is_nsfw, true)::boolean as is_nsfw, a.visibility,
-       a.original_file_id, a.created_at
-  from works a
-  left join work_original_files original on original.id = a.original_file_id
- where a.lifecycle = 'published'
-   and a.visibility = 'listed'
-   and a.taken_down_at is null
-   and a.deleted_at is null
-   and ($1 = '' or a.type = $1)
-   and (not $2::boolean or original.format is not distinct from $3)
-   and ($4::text[] is null or a.tags @> $4)
-   and (sqlc.narg('before')::timestamptz is null
-        or (a.created_at, a.id)
-           < (sqlc.narg('before')::timestamptz, sqlc.narg('before_id')::uuid))
- order by a.created_at desc, a.id desc
- limit $5;
-
 -- name: BrowseWorks :many
+with ranking as (
+    select coalesce((select day from work_rankings where day = sqlc.narg('ranked_on')::date limit 1),
+                    (select max(day) from work_rankings)) as day
+)
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, ranked.published_at, ranked.activity, a.lifecycle,
+       a.type, a.is_nsfw, ranked.published_at, ranked.activity, ranking.day::date as ranked_on, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
                from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats,
        (select coalesce(sum(counted.count), 0) from work_day_counts counted
          where counted.work_id = a.id and counted.kind = 'view')::int as view_count,
-       (select count(*) from download_records handoff
-         where handoff.work_id = a.id and handoff.access = 'public')::int as download_count
+       (select coalesce(sum(counted.count), 0) from work_day_counts counted
+         where counted.work_id = a.id and counted.kind = 'download')::int as download_count
   from works a
+ cross join ranking
+  left join work_rankings ranked_work on ranked_work.day = ranking.day and ranked_work.work_id = a.id
   left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
   left join work_media cover
@@ -71,12 +56,8 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        select (case when first.initial_recorded is false then first.recorded_at else a.created_at end)::timestamptz
                   as published_at,
               (case sqlc.arg('sort')::text
-                   when 'views' then (select coalesce(sum(counted.count), 0) from work_day_counts counted
-                                       where counted.work_id = a.id and counted.kind = 'view'
-                                         and counted.day > (now() at time zone 'utc')::date - 30)
-                   when 'downloads' then (select count(*) from download_records handoff
-                                           where handoff.work_id = a.id and handoff.access = 'public'
-                                             and handoff.handed_off_at > now() - interval '30 days')
+                   when 'views' then coalesce(ranked_work.views, 0)
+                   when 'downloads' then coalesce(ranked_work.downloads, 0)
                    else 0 end)::int as activity
  ) ranked
  where (a.lifecycle = 'published'
@@ -133,15 +114,15 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
 
 -- name: FeaturedWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, a.created_at::timestamptz as published_at, 0::int as activity, a.lifecycle,
+       a.type, a.is_nsfw, a.created_at::timestamptz as published_at, 0::int as activity, null::date as ranked_on, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
                from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats,
        (select coalesce(sum(counted.count), 0) from work_day_counts counted
          where counted.work_id = a.id and counted.kind = 'view')::int as view_count,
-       (select count(*) from download_records handoff
-         where handoff.work_id = a.id and handoff.access = 'public')::int as download_count
+       (select coalesce(sum(counted.count), 0) from work_day_counts counted
+         where counted.work_id = a.id and counted.kind = 'download')::int as download_count
   from profile_featured_works featured
   join works a on a.id = featured.work_id
   left join work_summaries summary on summary.work_id = a.id

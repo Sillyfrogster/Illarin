@@ -186,7 +186,13 @@ export type BrowseSort = NonNullable<ListWorksParams["sort"]>;
 export type WorkListParams = BrowseFilters &
   Pick<
     ListWorksParams,
-    "creator" | "limit" | "before" | "beforeId" | "beforeCount" | "nsfw"
+    | "creator"
+    | "limit"
+    | "before"
+    | "beforeId"
+    | "beforeCount"
+    | "rankedOn"
+    | "nsfw"
   >;
 
 /** Creates an isolated cache for each server render. */

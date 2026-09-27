@@ -33,7 +33,7 @@ func (s *Service) RunRollup(ctx context.Context, onError func(error)) {
 	}
 }
 
-// Rollup writes the totals for every complete day, adds Umami's visits, and deletes events past their retention
+// Rollup writes the totals for every complete day, ranks works by their last 30 days, adds Umami's visits, and deletes events past their retention
 func (s *Service) Rollup(ctx context.Context, now time.Time) error {
 	today := now.UTC().Truncate(24 * time.Hour)
 	tx, err := s.pool.Begin(ctx)
@@ -52,6 +52,9 @@ func (s *Service) Rollup(ctx context.Context, now time.Time) error {
 	if _, err := tx.Exec(ctx, `delete from events where day < $1::date`,
 		day(today.AddDate(0, 0, -EventRetentionDays))); err != nil {
 		return fmt.Errorf("delete events past their retention: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `select rank_works($1::date)`, day(today)); err != nil {
+		return fmt.Errorf("rank works by their last 30 days: %w", err)
 	}
 	if err := recordVisits(ctx, tx, today); err != nil {
 		return err

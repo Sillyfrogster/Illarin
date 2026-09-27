@@ -765,6 +765,13 @@ type WorkPublicWorkSummary struct {
 	FacetComputedAt  pgtype.Timestamptz
 }
 
+type WorkRanking struct {
+	Day       pgtype.Date
+	WorkID    pgtype.UUID
+	Views     int32
+	Downloads int32
+}
+
 type WorkShelfImport struct {
 	ID        pgtype.UUID
 	WorkID    pgtype.UUID

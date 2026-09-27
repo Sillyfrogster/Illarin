@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/staff"
 )
 
 func TestRecentOrdersWorksByFirstPublication(t *testing.T) {
@@ -36,7 +38,7 @@ func TestRecentOrdersWorksByFirstPublication(t *testing.T) {
 	assertOrder(t, apitest.ListItems(t, router, "/v1/works?sort=recent"), drafted.ID, older)
 }
 
-func TestActivitySortsCountTheLast30DaysOfPublicWorksAndPageThroughTies(t *testing.T) {
+func TestActivitySortsRankTheLast30DaysOfPublicWorksAndPageFromOneRanking(t *testing.T) {
 	t.Parallel()
 	router, session, pool := harness.NewConnectRouter(t)
 	first := apitest.PublishedCharacter(t, router, session)
@@ -69,34 +71,45 @@ func TestActivitySortsCountTheLast30DaysOfPublicWorksAndPageThroughTies(t *testi
 	download(unlisted, nil)
 	download(unlisted, nil)
 	download(unlisted, nil)
-	for _, backdated := range []string{
-		`insert into daily_totals (day, kind, work_id, count)
-		 values ((now() at time zone 'utc')::date - 40, 'view', $1, 5)`,
-		`insert into download_records (work_id, original_file_id, format, handed_off_at, access, visibility)
-		 select work_id, original_file_id, format, now() - interval '40 days', access, visibility
-		   from download_records, generate_series(1, 3) where work_id = $1`,
-	} {
-		if _, err := pool.Exec(t.Context(), backdated, second); err != nil {
-			t.Fatalf("insert activity from 40 days ago: %v", err)
+	if _, err := pool.Exec(t.Context(), `
+		insert into daily_totals (day, kind, work_id, count)
+		values ((now() at time zone 'utc')::date - 40, 'view', $1, 5),
+		       ((now() at time zone 'utc')::date - 40, 'download', $1, 3)
+	`, second); err != nil {
+		t.Fatalf("insert activity from 40 days ago: %v", err)
+	}
+	rollUp := func(daysAhead int) {
+		t.Helper()
+		works := apitest.WorksOver(t, pool, format.NewRegistry())
+		if err := staff.NewService(works).Rollup(t.Context(), time.Now().UTC().AddDate(0, 0, daysAhead)); err != nil {
+			t.Fatalf("roll up: %v", err)
 		}
 	}
+	rollUp(1)
 
 	viewed := apitest.ListPage(t, router, "/v1/works?sort=views&limit=2")
 	assertOrder(t, viewed.Items, first, third)
-	if viewed.NextCursor == nil {
-		t.Fatal("first page by views has no next cursor")
+	if viewed.NextCursor == nil || viewed.NextCursor.RankedOn == "" {
+		t.Fatalf("first page by views cursor = %+v, want one naming its ranking day", viewed.NextCursor)
 	}
+	for range 5 {
+		viewWork(t, router, fourth, browserAgent, nil)
+	}
+	rollUp(2)
+
 	rest := apitest.ListItems(t, router, "/v1/works?sort=views&limit=2&before="+
 		url.QueryEscape(viewed.NextCursor.Before.Format(time.RFC3339Nano))+
-		"&beforeId="+viewed.NextCursor.BeforeID+"&beforeCount="+strconv.Itoa(viewed.NextCursor.BeforeCount))
+		"&beforeId="+viewed.NextCursor.BeforeID+"&beforeCount="+strconv.Itoa(viewed.NextCursor.BeforeCount)+
+		"&rankedOn="+viewed.NextCursor.RankedOn)
 	assertOrder(t, rest, second, fourth)
 	if card := rest[0]; card.ViewCount != 6 || card.DownloadCount != 4 {
 		t.Errorf("card counts = %d views and %d downloads, want the lifetime 6 and 4", card.ViewCount, card.DownloadCount)
 	}
-	if card := rest[1]; card.ViewCount != 0 || card.DownloadCount != 2 {
-		t.Errorf("card counts = %d views and %d downloads, want 0 and 2", card.ViewCount, card.DownloadCount)
+	if card := rest[1]; card.ViewCount != 5 || card.DownloadCount != 2 {
+		t.Errorf("card counts = %d views and %d downloads, want the current 5 and 2", card.ViewCount, card.DownloadCount)
 	}
 
+	assertOrder(t, apitest.ListItems(t, router, "/v1/works?sort=views"), fourth, first, third, second)
 	assertOrder(t, apitest.ListItems(t, router, "/v1/works?sort=downloads"), fourth, second, third, first)
 }
 

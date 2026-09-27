@@ -33,7 +33,7 @@ func (s *Service) RecordView(ctx context.Context, id uuid.UUID, viewerID *uuid.U
 func lifetimeCounts(ctx context.Context, tx pgx.Tx, id uuid.UUID) (views, downloads, sends, followers int, err error) {
 	err = tx.QueryRow(ctx, `
 		select coalesce(sum(count) filter (where kind = 'view'), 0),
-		       (select count(*) from public.download_records where work_id = $1 and access = 'public'),
+		       coalesce(sum(count) filter (where kind = 'download'), 0),
 		       coalesce(sum(count) filter (where kind = 'send'), 0),
 		       (select count(*) from public.work_followers where work_id = $1)
 		  from public.work_day_counts where work_id = $1

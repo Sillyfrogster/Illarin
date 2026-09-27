@@ -70,6 +70,7 @@ type ListedPage struct {
 		Before      time.Time `json:"before"`
 		BeforeID    string    `json:"beforeId"`
 		BeforeCount int       `json:"beforeCount"`
+		RankedOn    string    `json:"rankedOn"`
 	} `json:"nextCursor"`
 }
 
