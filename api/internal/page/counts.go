@@ -32,19 +32,11 @@ func (s *Service) RecordView(ctx context.Context, id uuid.UUID, viewerID *uuid.U
 // lifetimeCounts reads a work's views, public downloads, sends and current followers
 func lifetimeCounts(ctx context.Context, tx pgx.Tx, id uuid.UUID) (views, downloads, sends, followers int, err error) {
 	err = tx.QueryRow(ctx, `
-		with counted as (
-			select kind, count from public.daily_totals where work_id = $1 and kind in ('view', 'send')
-			union all
-			select event.kind, 1 from public.events event
-			 where event.work_id = $1 and event.kind in ('view', 'send')
-			   and not exists (select from public.daily_totals total
-			                    where total.day = event.day and total.kind = event.kind and total.work_id = $1)
-		)
 		select coalesce(sum(count) filter (where kind = 'view'), 0),
 		       (select count(*) from public.download_records where work_id = $1 and access = 'public'),
 		       coalesce(sum(count) filter (where kind = 'send'), 0),
 		       (select count(*) from public.work_followers where work_id = $1)
-		  from counted
+		  from public.work_day_counts where work_id = $1
 	`, id).Scan(&views, &downloads, &sends, &followers)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("read the work's counts: %w", err)

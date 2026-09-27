@@ -58,15 +58,18 @@ func FetchWorkPage(t *testing.T, r http.Handler, path string) WorkPageResponse {
 }
 
 type ListedWork struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	ViewCount     int    `json:"viewCount"`
+	DownloadCount int    `json:"downloadCount"`
 }
 
 type ListedPage struct {
 	Items      []ListedWork `json:"items"`
 	NextCursor *struct {
-		Before   time.Time `json:"before"`
-		BeforeID string    `json:"beforeId"`
+		Before      time.Time `json:"before"`
+		BeforeID    string    `json:"beforeId"`
+		BeforeCount int       `json:"beforeCount"`
 	} `json:"nextCursor"`
 }
 

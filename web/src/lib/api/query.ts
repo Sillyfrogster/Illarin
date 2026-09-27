@@ -177,10 +177,17 @@ export type BrowsePage = WorkList;
 export type BrowseType = BrowseWork["type"];
 export type NsfwPreference = NsfwPreferenceRequest["preference"];
 
-export type BrowseFilters = Pick<ListWorksParams, "type" | "q" | "facet">;
+export type BrowseFilters = Pick<
+  ListWorksParams,
+  "type" | "q" | "facet" | "sort"
+>;
+export type BrowseSort = NonNullable<ListWorksParams["sort"]>;
 
 export type WorkListParams = BrowseFilters &
-  Pick<ListWorksParams, "creator" | "limit" | "before" | "beforeId" | "nsfw">;
+  Pick<
+    ListWorksParams,
+    "creator" | "limit" | "before" | "beforeId" | "beforeCount" | "nsfw"
+  >;
 
 /** Creates an isolated cache for each server render. */
 export function makeQueryClient() {

@@ -166,6 +166,11 @@ type ConnectionRequest struct {
 	GrantedPermissions  []string
 }
 
+type CountedFollow struct {
+	AccountID pgtype.UUID
+	WorkID    pgtype.UUID
+}
+
 type CreatorFollow struct {
 	AccountID pgtype.UUID
 	CreatorID pgtype.UUID
@@ -621,11 +626,23 @@ type WorkBlock struct {
 	Elements   []byte
 }
 
+type WorkDayCount struct {
+	Day    pgtype.Date
+	Kind   string
+	WorkID pgtype.UUID
+	Count  int32
+}
+
 type WorkFollow struct {
 	AccountID pgtype.UUID
 	WorkID    pgtype.UUID
 	State     string
 	SetAt     pgtype.Timestamptz
+}
+
+type WorkFollower struct {
+	AccountID pgtype.UUID
+	WorkID    pgtype.UUID
 }
 
 type WorkLegacyPath struct {

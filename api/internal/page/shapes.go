@@ -207,15 +207,17 @@ type WorkTakedown struct {
 }
 
 type BrowseWork struct {
-	Apps       []string              `json:"apps"`
-	Cover      *BrowseCover          `json:"cover" tstype:"BrowseCover | null,required"`
-	Creator    string                `json:"creator"`
-	Id         uuid.UUID             `json:"id"`
-	IsNsfw     *bool                 `json:"isNsfw" tstype:"boolean | null,required"`
-	Type       BrowseWorkType        `json:"type"`
-	Name       string                `json:"name"`
-	OwnerState *BrowseWorkOwnerState `json:"ownerState,omitempty"`
-	Takedown   *WorkTakedown         `json:"takedown,omitempty"`
+	Apps          []string              `json:"apps"`
+	Cover         *BrowseCover          `json:"cover" tstype:"BrowseCover | null,required"`
+	Creator       string                `json:"creator"`
+	Id            uuid.UUID             `json:"id"`
+	IsNsfw        *bool                 `json:"isNsfw" tstype:"boolean | null,required"`
+	Type          BrowseWorkType        `json:"type"`
+	Name          string                `json:"name"`
+	OwnerState    *BrowseWorkOwnerState `json:"ownerState,omitempty"`
+	Takedown      *WorkTakedown         `json:"takedown,omitempty"`
+	ViewCount     int                   `json:"viewCount"`
+	DownloadCount int                   `json:"downloadCount"`
 }
 
 type BrowseWorkType string
@@ -244,8 +246,9 @@ type BrowseCover struct {
 }
 
 type BrowseCursor struct {
-	Before   time.Time `json:"before"`
-	BeforeId uuid.UUID `json:"beforeId"`
+	Before      time.Time `json:"before"`
+	BeforeId    uuid.UUID `json:"beforeId"`
+	BeforeCount int       `json:"beforeCount"`
 }
 
 type BrowseFacet struct {
@@ -337,15 +340,17 @@ type OriginalUpload struct {
 }
 
 type ListWorksParams struct {
-	Type     *ListWorksParamsType `json:"type,omitempty"`
-	App      *string              `json:"app,omitempty"`
-	Creator  *string              `json:"creator,omitempty"`
-	Q        *string              `json:"q,omitempty"`
-	Facet    *[]string            `json:"facet,omitempty"`
-	Nsfw     *ListWorksParamsNsfw `json:"nsfw,omitempty"`
-	Limit    *int                 `json:"limit,omitempty"`
-	Before   *time.Time           `json:"before,omitempty"`
-	BeforeId *uuid.UUID           `json:"beforeId,omitempty"`
+	Type        *ListWorksParamsType `json:"type,omitempty"`
+	App         *string              `json:"app,omitempty"`
+	Creator     *string              `json:"creator,omitempty"`
+	Q           *string              `json:"q,omitempty"`
+	Facet       *[]string            `json:"facet,omitempty"`
+	Nsfw        *ListWorksParamsNsfw `json:"nsfw,omitempty"`
+	Sort        *ListWorksParamsSort `json:"sort,omitempty"`
+	Limit       *int                 `json:"limit,omitempty"`
+	Before      *time.Time           `json:"before,omitempty"`
+	BeforeId    *uuid.UUID           `json:"beforeId,omitempty"`
+	BeforeCount *int                 `json:"beforeCount,omitempty"`
 }
 
 type GetWorkParams struct {
@@ -362,6 +367,14 @@ const (
 	ListWorksParamsTypePack      ListWorksParamsType = "pack"
 	ListWorksParamsTypePreset    ListWorksParamsType = "preset"
 	ListWorksParamsTypeTheme     ListWorksParamsType = "theme"
+)
+
+type ListWorksParamsSort string
+
+const (
+	ListWorksParamsSortRecent    ListWorksParamsSort = "recent"
+	ListWorksParamsSortDownloads ListWorksParamsSort = "downloads"
+	ListWorksParamsSortViews     ListWorksParamsSort = "views"
 )
 
 type ListWorksParamsNsfw string

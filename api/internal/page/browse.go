@@ -22,6 +22,7 @@ type ListFilter struct {
 	Tags    []string
 	Facets  []FacetSelection
 	Query   string
+	Sort    string
 	Limit   int
 	Before  *Cursor
 }
@@ -31,9 +32,11 @@ type ProfileListingScope struct {
 	ViewerID  *uuid.UUID
 }
 
+// Cursor marks the last work shown by its activity count, first publication time and id
 type Cursor struct {
-	MadeAt time.Time
-	ID     uuid.UUID
+	Count       int
+	PublishedAt time.Time
+	ID          uuid.UUID
 }
 
 type Cover struct {
@@ -58,6 +61,8 @@ type BrowseItem struct {
 	OwnerState string
 	Cover      *Cover
 	Takedown   *Takedown
+	Views      int
+	Downloads  int
 }
 
 type BrowsePage struct {
@@ -125,10 +130,11 @@ func (s *Service) Browse(
 		SearchText: search.Text, Author: search.Author, Tags: search.Tags,
 		App: app, Formats: formats, HiddenTypes: hidden,
 		FacetKeys: facetKeys, FacetLows: facetLows, FacetHighs: facetHighs,
-		PageSize: int32(f.Limit + 1),
+		Sort: f.Sort, PageSize: int32(f.Limit + 1),
 	}
 	if f.Before != nil {
-		params.Before = timeToNullable(&f.Before.MadeAt)
+		params.BeforeCount = int32(f.Before.Count)
+		params.Before = timeToNullable(&f.Before.PublishedAt)
 		params.BeforeID = uuidToPgtype(f.Before.ID)
 	}
 	rows, err := queries.BrowseWorks(ctx, params)
@@ -142,7 +148,7 @@ func (s *Service) Browse(
 	}
 	if len(rows) > f.Limit && len(page.Items) > 0 {
 		last := rows[f.Limit-1]
-		page.Next = &Cursor{MadeAt: timeFromPgtype(last.CreatedAt), ID: uuidFromPgtype(last.ID)}
+		page.Next = &Cursor{Count: int(last.Activity), PublishedAt: timeFromPgtype(last.PublishedAt), ID: uuidFromPgtype(last.ID)}
 	}
 
 	countParams := db.CountBrowseWorksParams{
@@ -217,7 +223,8 @@ func (s *Service) browseItem(row db.BrowseWorksRow, ownProfile bool, preference 
 	item := BrowseItem{
 		ID: uuidFromPgtype(row.ID), Name: row.Name, Creator: row.Creator,
 		Type: row.Type, IsNSFW: boolFromPgtype(row.IsNsfw),
-		Apps: format.AppsReading(row.Formats),
+		Apps:  format.AppsReading(row.Formats),
+		Views: int(row.ViewCount), Downloads: int(row.DownloadCount),
 	}
 	if ownProfile {
 		switch {

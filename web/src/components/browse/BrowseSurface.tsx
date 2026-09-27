@@ -28,6 +28,7 @@ import { BrowseSearch } from "./BrowseSearch";
 import { BrowseLoading, GRID, Message } from "./BrowseStates";
 import { ActiveFilters, FilterMenu } from "./FilterMenu";
 import { ReaderLine } from "./ReaderLine";
+import { SortMenu } from "./SortMenu";
 import { TypeIndex } from "./TypeIndex";
 import { useBrowseNavigation } from "./use-browse-navigation";
 
@@ -81,6 +82,7 @@ export function BrowseSurface({
         nsfw: preferenceOverride,
         before: pageParam?.before,
         beforeId: pageParam?.beforeId,
+        beforeCount: pageParam?.beforeCount,
       }),
     initialPageParam: null as BrowseCursor | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -198,14 +200,20 @@ export function BrowseSurface({
             setPreference={(next) => void setPreference(next)}
             signedIn={Boolean(account)}
           />
-          {overview ? (
-            <FilterMenu
-              className="ml-auto"
-              facets={overview.facets}
+          <div className="flex w-full min-w-0 gap-2 sm:ml-auto sm:w-auto">
+            <SortMenu
+              className="flex-1 sm:flex-none"
               filters={filters}
               navigate={navigate}
             />
-          ) : null}
+            {overview ? (
+              <FilterMenu
+                facets={overview.facets}
+                filters={filters}
+                navigate={navigate}
+              />
+            ) : null}
+          </div>
         </div>
         {trouble ? (
           <p className="font-ui text-meta text-stop" role="alert">

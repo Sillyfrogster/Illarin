@@ -14,6 +14,8 @@ function work(id: string, name: string): BrowseWork {
     type: "theme",
     isNsfw: false,
     cover: null,
+    viewCount: 0,
+    downloadCount: 0,
   };
 }
 
@@ -25,6 +27,7 @@ test("sitemap follows the whole browse listing", async () => {
       nextCursor: {
         before: "2026-08-13T12:00:00Z",
         beforeId: FIRST_ID,
+        beforeCount: 0,
       },
     },
     {

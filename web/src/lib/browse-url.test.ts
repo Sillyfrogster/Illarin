@@ -8,6 +8,7 @@ describe("browse URL state", () => {
       type: "character",
       q: expression,
       facet: ["tone=gentle"],
+      sort: "views",
     });
     const url = new URL(href, "https://illarin.test");
 
@@ -16,6 +17,7 @@ describe("browse URL state", () => {
       type: "character",
       q: expression,
       facet: ["tone=gentle"],
+      sort: "views",
     });
   });
 

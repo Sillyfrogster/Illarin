@@ -111,7 +111,6 @@ export function ReaderLine({
           {overview.total === 1
             ? "1 work"
             : `${overview.total.toLocaleString("en-US")} works`}
-          , newest first
         </output>
       ) : null}
     </div>

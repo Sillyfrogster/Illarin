@@ -91,6 +91,7 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	wantKeys := map[string]bool{
 		"id": true, "name": true, "creator": true, "type": true,
 		"isNsfw": true, "cover": true, "kind": true, "apps": true,
+		"viewCount": true, "downloadCount": true,
 	}
 	for key := range body.Items[0] {
 		if !wantKeys[key] {

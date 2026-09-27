@@ -214,11 +214,15 @@ func (q *Queries) BlobLocation(ctx context.Context, id pgtype.UUID) (BlobLocatio
 
 const browseWorks = `-- name: BrowseWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, a.created_at, a.lifecycle,
+       a.type, a.is_nsfw, ranked.published_at, ranked.activity, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
-               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats,
+       (select coalesce(sum(counted.count), 0) from work_day_counts counted
+         where counted.work_id = a.id and counted.kind = 'view')::int as view_count,
+       (select count(*) from download_records handoff
+         where handoff.work_id = a.id and handoff.access = 'public')::int as download_count
   from works a
   left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
@@ -227,33 +231,46 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
    and cover.is_current
    and cover.width is not null and cover.height is not null
    and cover.blob_id is not null
+  left join work_versions first on first.work_id = a.id and first.number = 1
+ cross join lateral (
+       select (case when first.initial_recorded is false then first.recorded_at else a.created_at end)::timestamptz
+                  as published_at,
+              (case $1::text
+                   when 'views' then (select coalesce(sum(counted.count), 0) from work_day_counts counted
+                                       where counted.work_id = a.id and counted.kind = 'view'
+                                         and counted.day > (now() at time zone 'utc')::date - 30)
+                   when 'downloads' then (select count(*) from download_records handoff
+                                           where handoff.work_id = a.id and handoff.access = 'public'
+                                             and handoff.handed_off_at > now() - interval '30 days')
+                   else 0 end)::int as activity
+ ) ranked
  where (a.lifecycle = 'published'
-        or ($1::boolean
-            and a.owner_id = $2::uuid))
+        or ($2::boolean
+            and a.owner_id = $3::uuid))
    and a.deleted_at is null
    and (
-       ($2::uuid is null
+       ($3::uuid is null
         and a.visibility = 'listed' and a.taken_down_at is null)
        or
-       (a.owner_id = $2::uuid
-        and ($1::boolean
+       (a.owner_id = $3::uuid
+        and ($2::boolean
              or (a.visibility = 'listed' and a.taken_down_at is null)))
    )
-   and ($3::text = '' or a.type = $3::text)
-   and a.type <> all(coalesce($4::text[], '{}'))
-   and ($1::boolean
-        or $5::text <> 'hidden' or not a.is_nsfw)
-   and ($6::text = '' or exists (
+   and ($4::text = '' or a.type = $4::text)
+   and a.type <> all(coalesce($5::text[], '{}'))
+   and ($2::boolean
+        or $6::text <> 'hidden' or not a.is_nsfw)
+   and ($7::text = '' or exists (
         select 1
           from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format)
-         where offered.format ->> 'format' = any($7::text[])
+         where offered.format ->> 'format' = any($8::text[])
    ))
-   and (cardinality($8::text[]) = 0 or not exists (
+   and (cardinality($9::text[]) = 0 or not exists (
         select 1
-          from unnest($8::text[]) with ordinality as chosen(key, at)
-          join unnest($9::int[]) with ordinality as lows(low, at)
+          from unnest($9::text[]) with ordinality as chosen(key, at)
+          join unnest($10::int[]) with ordinality as lows(low, at)
             on lows.at = chosen.at
-          join unnest($10::int[]) with ordinality as highs(high, at)
+          join unnest($11::int[]) with ordinality as highs(high, at)
             on highs.at = chosen.at
          group by chosen.key
         having not bool_or(
@@ -261,26 +278,27 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
                  and (highs.high < 0
                       or coalesce((summary.facets ->> chosen.key)::int, 0) <= highs.high))
    ))
-   and ($11::text = ''
-        or position($11::text in lower(a.name)) > 0
-        or position($11::text in lower(a.blurb)) > 0
-        or position($11::text in lower(coalesce(owner.username, ''))) > 0)
-   and ($12::text = '' or lower(coalesce(owner.username, '')) = $12::text)
-   and (cardinality($13::text[]) = 0 or not exists (
-        select 1 from unnest($13::text[]) wanted(tag)
+   and ($12::text = ''
+        or position($12::text in lower(a.name)) > 0
+        or position($12::text in lower(a.blurb)) > 0
+        or position($12::text in lower(coalesce(owner.username, ''))) > 0)
+   and ($13::text = '' or lower(coalesce(owner.username, '')) = $13::text)
+   and (cardinality($14::text[]) = 0 or not exists (
+        select 1 from unnest($14::text[]) wanted(tag)
          where not exists (
              select 1 from unnest(a.tags) stored(tag)
               where lower(btrim(stored.tag)) = wanted.tag
          )
    ))
-   and ($14::timestamptz is null
-        or (a.created_at, a.id)
-           < ($14::timestamptz, $15::uuid))
- order by a.created_at desc, a.id desc
- limit $16
+   and ($15::timestamptz is null
+        or (ranked.activity, ranked.published_at, a.id)
+           < ($16::int, $15::timestamptz, $17::uuid))
+ order by ranked.activity desc, ranked.published_at desc, a.id desc
+ limit $18
 `
 
 type BrowseWorksParams struct {
+	Sort           string
 	OwnProfile     bool
 	CreatorID      pgtype.UUID
 	Type           string
@@ -295,6 +313,7 @@ type BrowseWorksParams struct {
 	Author         string
 	Tags           []string
 	Before         pgtype.Timestamptz
+	BeforeCount    int32
 	BeforeID       pgtype.UUID
 	PageSize       int32
 }
@@ -305,7 +324,8 @@ type BrowseWorksRow struct {
 	Creator         string
 	Type            string
 	IsNsfw          pgtype.Bool
-	CreatedAt       pgtype.Timestamptz
+	PublishedAt     pgtype.Timestamptz
+	Activity        int32
 	Lifecycle       string
 	CoverID         pgtype.UUID
 	CoverWidth      pgtype.Int4
@@ -314,10 +334,13 @@ type BrowseWorksRow struct {
 	TakenDownAt     pgtype.Timestamptz
 	TakenDownReason pgtype.Text
 	Formats         []string
+	ViewCount       int32
+	DownloadCount   int32
 }
 
 func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]BrowseWorksRow, error) {
 	rows, err := q.db.Query(ctx, browseWorks,
+		arg.Sort,
 		arg.OwnProfile,
 		arg.CreatorID,
 		arg.Type,
@@ -332,6 +355,7 @@ func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]Bro
 		arg.Author,
 		arg.Tags,
 		arg.Before,
+		arg.BeforeCount,
 		arg.BeforeID,
 		arg.PageSize,
 	)
@@ -348,7 +372,8 @@ func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]Bro
 			&i.Creator,
 			&i.Type,
 			&i.IsNsfw,
-			&i.CreatedAt,
+			&i.PublishedAt,
+			&i.Activity,
 			&i.Lifecycle,
 			&i.CoverID,
 			&i.CoverWidth,
@@ -357,6 +382,8 @@ func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]Bro
 			&i.TakenDownAt,
 			&i.TakenDownReason,
 			&i.Formats,
+			&i.ViewCount,
+			&i.DownloadCount,
 		); err != nil {
 			return nil, err
 		}
@@ -965,11 +992,15 @@ func (q *Queries) FailSend(ctx context.Context, arg FailSendParams) error {
 
 const featuredWorks = `-- name: FeaturedWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, a.created_at, a.lifecycle,
+       a.type, a.is_nsfw, a.created_at::timestamptz as published_at, 0::int as activity, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
-               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats,
+       (select coalesce(sum(counted.count), 0) from work_day_counts counted
+         where counted.work_id = a.id and counted.kind = 'view')::int as view_count,
+       (select count(*) from download_records handoff
+         where handoff.work_id = a.id and handoff.access = 'public')::int as download_count
   from profile_featured_works featured
   join works a on a.id = featured.work_id
   left join work_summaries summary on summary.work_id = a.id
@@ -998,7 +1029,8 @@ type FeaturedWorksRow struct {
 	Creator         string
 	Type            string
 	IsNsfw          pgtype.Bool
-	CreatedAt       pgtype.Timestamptz
+	PublishedAt     pgtype.Timestamptz
+	Activity        int32
 	Lifecycle       string
 	CoverID         pgtype.UUID
 	CoverWidth      pgtype.Int4
@@ -1007,6 +1039,8 @@ type FeaturedWorksRow struct {
 	TakenDownAt     pgtype.Timestamptz
 	TakenDownReason pgtype.Text
 	Formats         []string
+	ViewCount       int32
+	DownloadCount   int32
 }
 
 func (q *Queries) FeaturedWorks(ctx context.Context, arg FeaturedWorksParams) ([]FeaturedWorksRow, error) {
@@ -1024,7 +1058,8 @@ func (q *Queries) FeaturedWorks(ctx context.Context, arg FeaturedWorksParams) ([
 			&i.Creator,
 			&i.Type,
 			&i.IsNsfw,
-			&i.CreatedAt,
+			&i.PublishedAt,
+			&i.Activity,
 			&i.Lifecycle,
 			&i.CoverID,
 			&i.CoverWidth,
@@ -1033,6 +1068,8 @@ func (q *Queries) FeaturedWorks(ctx context.Context, arg FeaturedWorksParams) ([
 			&i.TakenDownAt,
 			&i.TakenDownReason,
 			&i.Formats,
+			&i.ViewCount,
+			&i.DownloadCount,
 		); err != nil {
 			return nil, err
 		}

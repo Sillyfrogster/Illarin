@@ -32,6 +32,15 @@ const GROUNDS = [
   { plate: "bg-deep", title: "text-ink group-hover:text-accent" },
 ];
 
+const COMPACT = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+function counted(value: number, one: string) {
+  return `${COMPACT.format(value)} ${value === 1 ? one : `${one}s`}`;
+}
+
 function groundFor(id: string) {
   let hash = 0;
   for (const character of id) {
@@ -161,6 +170,11 @@ export function BrowsePoster({
               </Link>
             </>
           ) : null}
+        </p>
+
+        <p className="mt-1 font-ui text-label text-mute tabular-nums">
+          {counted(work.viewCount, "view")} ·{" "}
+          {counted(work.downloadCount, "download")}
         </p>
 
         {apps?.length ? (

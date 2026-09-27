@@ -49,11 +49,15 @@ select a.id, a.type, original.format, a.original_format,
 
 -- name: BrowseWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, a.created_at, a.lifecycle,
+       a.type, a.is_nsfw, ranked.published_at, ranked.activity, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
-               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats,
+       (select coalesce(sum(counted.count), 0) from work_day_counts counted
+         where counted.work_id = a.id and counted.kind = 'view')::int as view_count,
+       (select count(*) from download_records handoff
+         where handoff.work_id = a.id and handoff.access = 'public')::int as download_count
   from works a
   left join work_summaries summary on summary.work_id = a.id
   left join users owner on owner.id = a.owner_id
@@ -62,6 +66,19 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
    and cover.is_current
    and cover.width is not null and cover.height is not null
    and cover.blob_id is not null
+  left join work_versions first on first.work_id = a.id and first.number = 1
+ cross join lateral (
+       select (case when first.initial_recorded is false then first.recorded_at else a.created_at end)::timestamptz
+                  as published_at,
+              (case sqlc.arg('sort')::text
+                   when 'views' then (select coalesce(sum(counted.count), 0) from work_day_counts counted
+                                       where counted.work_id = a.id and counted.kind = 'view'
+                                         and counted.day > (now() at time zone 'utc')::date - 30)
+                   when 'downloads' then (select count(*) from download_records handoff
+                                           where handoff.work_id = a.id and handoff.access = 'public'
+                                             and handoff.handed_off_at > now() - interval '30 days')
+                   else 0 end)::int as activity
+ ) ranked
  where (a.lifecycle = 'published'
         or (sqlc.arg('own_profile')::boolean
             and a.owner_id = sqlc.narg('creator_id')::uuid))
@@ -109,18 +126,22 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
          )
    ))
    and (sqlc.narg('before')::timestamptz is null
-        or (a.created_at, a.id)
-           < (sqlc.narg('before')::timestamptz, sqlc.narg('before_id')::uuid))
- order by a.created_at desc, a.id desc
+        or (ranked.activity, ranked.published_at, a.id)
+           < (sqlc.arg('before_count')::int, sqlc.narg('before')::timestamptz, sqlc.narg('before_id')::uuid))
+ order by ranked.activity desc, ranked.published_at desc, a.id desc
  limit sqlc.arg('page_size');
 
 -- name: FeaturedWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, a.created_at, a.lifecycle,
+       a.type, a.is_nsfw, a.created_at::timestamptz as published_at, 0::int as activity, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
-               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats,
+       (select coalesce(sum(counted.count), 0) from work_day_counts counted
+         where counted.work_id = a.id and counted.kind = 'view')::int as view_count,
+       (select count(*) from download_records handoff
+         where handoff.work_id = a.id and handoff.access = 'public')::int as download_count
   from profile_featured_works featured
   join works a on a.id = featured.work_id
   left join work_summaries summary on summary.work_id = a.id

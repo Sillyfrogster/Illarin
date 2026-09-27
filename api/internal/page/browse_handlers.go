@@ -16,15 +16,17 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	q := api.ReadQuery(c)
 	aliasBrowseQuery(q)
 	params := ListWorksParams{
-		Type:     api.QueryText[ListWorksParamsType](q, "type"),
-		App:      api.QueryText[string](q, "app"),
-		Creator:  api.QueryText[string](q, "creator"),
-		Q:        api.QueryText[string](q, "q"),
-		Facet:    api.QueryList(q, "facet"),
-		Nsfw:     api.QueryText[ListWorksParamsNsfw](q, "nsfw"),
-		Limit:    api.QueryNumber(q, "limit"),
-		Before:   api.QueryTime(q, "before"),
-		BeforeId: api.QueryID(q, "beforeId"),
+		Type:        api.QueryText[ListWorksParamsType](q, "type"),
+		App:         api.QueryText[string](q, "app"),
+		Creator:     api.QueryText[string](q, "creator"),
+		Q:           api.QueryText[string](q, "q"),
+		Facet:       api.QueryList(q, "facet"),
+		Nsfw:        api.QueryText[ListWorksParamsNsfw](q, "nsfw"),
+		Sort:        api.QueryText[ListWorksParamsSort](q, "sort"),
+		Limit:       api.QueryNumber(q, "limit"),
+		Before:      api.QueryTime(q, "before"),
+		BeforeId:    api.QueryID(q, "beforeId"),
+		BeforeCount: api.QueryNumber(q, "beforeCount"),
 	}
 	if q.Refused(c) {
 		return
@@ -60,6 +62,9 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	}
 	if params.Facet != nil {
 		f.Facets = parseFacets(*params.Facet)
+	}
+	if params.Sort != nil {
+		f.Sort = string(*params.Sort)
 	}
 	if params.Limit != nil {
 		f.Limit = *params.Limit
@@ -101,7 +106,7 @@ func (h *Handlers) ListWorks(c *gin.Context) {
 	items := ToAPIBrowseWorks(found.Items)
 	var next *BrowseCursor
 	if found.Next != nil {
-		next = &BrowseCursor{Before: found.Next.MadeAt, BeforeId: found.Next.ID}
+		next = &BrowseCursor{Before: found.Next.PublishedAt, BeforeId: found.Next.ID, BeforeCount: found.Next.Count}
 	}
 	var empty *WorkListEmptyState
 	if found.EmptyState != "" {
@@ -144,7 +149,11 @@ func cursorFrom(params ListWorksParams) (*Cursor, bool) {
 	case params.Before == nil || params.BeforeId == nil:
 		return nil, false
 	}
-	return &Cursor{MadeAt: *params.Before, ID: uuid.UUID(*params.BeforeId)}, true
+	cursor := &Cursor{PublishedAt: *params.Before, ID: uuid.UUID(*params.BeforeId)}
+	if params.BeforeCount != nil {
+		cursor.Count = *params.BeforeCount
+	}
+	return cursor, true
 }
 
 func parseFacets(raw []string) []FacetSelection {
@@ -189,6 +198,7 @@ func ToAPIBrowseWorks(found []BrowseItem) []BrowseWork {
 			Type: BrowseWorkType(item.Type), IsNsfw: item.IsNSFW, Cover: cover,
 			OwnerState: ownerState,
 			Takedown:   toAPITakedown(item.Takedown),
+			ViewCount:  item.Views, DownloadCount: item.Downloads,
 		})
 	}
 	return items

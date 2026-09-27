@@ -1,4 +1,4 @@
-import type { BrowseFilters } from "./api/query";
+import type { BrowseFilters, BrowseSort } from "./api/query";
 import { isWorkType } from "./work-types";
 
 function first(value: string | string[] | undefined) {
@@ -17,7 +17,18 @@ export function readBrowseFilters(
       ? [values.facet]
       : undefined;
 
-  return { type, q, facet: facets };
+  const sort = first(values.sort);
+
+  return {
+    type,
+    q,
+    facet: facets,
+    sort: isActivitySort(sort) ? sort : undefined,
+  };
+}
+
+function isActivitySort(value: string | undefined): value is BrowseSort {
+  return value === "downloads" || value === "views";
 }
 
 export function buildBrowseHref(filters: BrowseFilters, basePath = "/browse") {
@@ -25,6 +36,8 @@ export function buildBrowseHref(filters: BrowseFilters, basePath = "/browse") {
   if (filters.type) params.set("type", filters.type);
   if (filters.q) params.set("q", filters.q);
   for (const facet of filters.facet ?? []) params.append("facet", facet);
+  if (filters.sort && filters.sort !== "recent")
+    params.set("sort", filters.sort);
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
 }
