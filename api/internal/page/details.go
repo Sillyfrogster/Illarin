@@ -25,6 +25,7 @@ type Details struct {
 	WorkID  uuid.UUID
 	Name    string
 	Blurb   string
+	Tags    []string
 	IsNSFW  *bool
 }
 
@@ -37,6 +38,14 @@ func (s *Service) SetDetails(ctx context.Context, in Details, candidate *work.Ca
 	if utf8.RuneCountInString(in.Blurb) > format.MaxBlurbRunes {
 		return fmt.Errorf("%w: %d characters is past %d", ErrBlurbTooLong,
 			utf8.RuneCountInString(in.Blurb), format.MaxBlurbRunes)
+	}
+	tags := in.Tags
+	if tags != nil {
+		var err error
+		tags, err = format.CheckTags(tags)
+		if err != nil {
+			return err
+		}
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -57,9 +66,10 @@ func (s *Service) SetDetails(ctx context.Context, in Details, candidate *work.Ca
 		return ErrRatingUnanswerable
 	}
 	if _, err := tx.Exec(ctx, `
-		update works set name = $2, blurb = $3, is_nsfw = $4, updated_at = now()
+		update works set name = $2, blurb = $3, is_nsfw = $4,
+		       tags = coalesce($5::text[], tags), updated_at = now()
 		 where id = $1
-	`, in.WorkID, name, in.Blurb, in.IsNSFW); err != nil {
+	`, in.WorkID, name, in.Blurb, in.IsNSFW, tags); err != nil {
 		return fmt.Errorf("save work header: %w", err)
 	}
 	return candidate.Commit(ctx, tx, in.WorkID)

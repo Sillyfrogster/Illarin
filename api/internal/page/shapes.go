@@ -377,9 +377,10 @@ const (
 )
 
 type WorkDetailsRequest struct {
-	Blurb  string `json:"blurb"`
-	IsNsfw *bool  `json:"isNsfw" tstype:"boolean | null,required"`
-	Name   string `json:"name"`
+	Blurb  string   `json:"blurb"`
+	IsNsfw *bool    `json:"isNsfw" tstype:"boolean | null,required"`
+	Name   string   `json:"name"`
+	Tags   []string `json:"tags,omitempty"`
 }
 
 // PublishWorkRequest says whether a draft's first publication goes to the creator's Discord channel; it does unless turned off

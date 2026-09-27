@@ -4,6 +4,7 @@ type DetailsFields = {
   blurb: string;
   isNsfw: boolean | null;
   name: string;
+  tags: string[];
 };
 
 export function detailsHasChanged(
@@ -13,7 +14,9 @@ export function detailsHasChanged(
   return (
     draft.name !== saved.name ||
     draft.blurb !== saved.blurb ||
-    draft.isNsfw !== saved.isNsfw
+    draft.isNsfw !== saved.isNsfw ||
+    draft.tags.length !== saved.tags.length ||
+    draft.tags.some((tag, index) => tag !== saved.tags[index])
   );
 }
 

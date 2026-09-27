@@ -18,11 +18,6 @@ import (
 
 const Type = "character"
 
-const (
-	maxTags     = 32
-	maxTagRunes = 64
-)
-
 var labels = map[string]string{
 	V2:    "Character Card V2",
 	V3:    "Character Card V3",
@@ -377,13 +372,13 @@ func (c card) tags() []string {
 	tags := make([]string, 0, len(values))
 	for _, value := range values {
 		trimmed := strings.TrimSpace(value)
-		if trimmed == "" || len([]rune(trimmed)) > maxTagRunes {
+		if trimmed == "" || len([]rune(trimmed)) > format.MaxTagRunes {
 			continue
 		}
 		if !slices.Contains(tags, trimmed) {
 			tags = append(tags, trimmed)
 		}
-		if len(tags) == maxTags {
+		if len(tags) == format.MaxTags {
 			break
 		}
 	}

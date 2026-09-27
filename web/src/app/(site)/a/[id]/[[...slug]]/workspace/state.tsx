@@ -39,7 +39,7 @@ import {
   replaceElement,
 } from "./save";
 
-export type Details = WorkDetailsRequest;
+export type Details = WorkDetailsRequest & { tags: string[] };
 
 export type SaveState =
   | "saving"
@@ -373,6 +373,7 @@ export function WorkspaceProvider({
       blurb: details.blurb,
       isNsfw: details.isNsfw,
       name: details.name,
+      tags: details.tags,
     };
     setDraftDetails((current) =>
       detailsHasChanged(current, savedDetailsRef.current)
@@ -380,7 +381,7 @@ export function WorkspaceProvider({
         : incomingDetails,
     );
     setSavedDetails(incomingDetails);
-  }, [details.blurb, details.isNsfw, details.name]);
+  }, [details.blurb, details.isNsfw, details.name, details.tags]);
 
   const editBlockList = useCallback(
     (change: (blocks: WorkBlock[]) => WorkBlock[]) => {

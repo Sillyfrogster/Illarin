@@ -26,7 +26,7 @@ describe("workspace blurb limit", () => {
 });
 
 describe("workspace identity changes", () => {
-  const saved = { blurb: "", isNsfw: false, name: "Fixture work" };
+  const saved = { blurb: "", isNsfw: false, name: "Fixture work", tags: [] };
 
   test.each([
     ["adds", "A new pitch."],
@@ -40,5 +40,10 @@ describe("workspace identity changes", () => {
 
   test("leaves the workspace saved when the blurb matches", () => {
     expect(detailsHasChanged(saved, { ...saved })).toBe(false);
+  });
+
+  test("marks added and removed tags unsaved", () => {
+    expect(detailsHasChanged({ ...saved, tags: ["New"] }, saved)).toBe(true);
+    expect(detailsHasChanged(saved, { ...saved, tags: ["Old"] })).toBe(true);
   });
 });

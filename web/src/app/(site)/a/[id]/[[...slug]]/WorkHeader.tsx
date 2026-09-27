@@ -1,10 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, PencilLine } from "lucide-react";
+import { ArrowLeft, PencilLine, X } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { ChipSet } from "@/components/ui/Chip";
-import { Field, TextArea } from "@/components/ui/field";
+import { Field, TextArea, TextInput } from "@/components/ui/field";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
 import { WorkOwnerMenu } from "@/components/work/WorkOwnerMenu";
 import type { WorkDetail } from "@/lib/api/query";
@@ -56,6 +57,8 @@ export function WorkHeader({
   shellClassName: string;
 }) {
   const workspace = useWorkspace();
+  const [tagInput, setTagInput] = useState("");
+  const [tagTrouble, setTagTrouble] = useState("");
   const reduced = useReducedMotion();
   const isDraft = work.lifecycle === "draft";
   const writing = workspace.editing;
@@ -295,13 +298,98 @@ export function WorkHeader({
               </p>
             )}
 
-            {work.tags.length > 0 ? (
+            {writing ? (
+              <div className="mt-5 max-w-[42ch]">
+                <Field
+                  htmlFor="work-tag"
+                  label="Tags"
+                  hint="Tags help readers find this work in search. Up to 32, with 64 characters each."
+                  trouble={tagTrouble || undefined}
+                >
+                  <form
+                    className="flex gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const tag = tagInput.trim();
+                      if (!tag || Array.from(tag).length > 64) {
+                        setTagTrouble("Use 1 to 64 characters for each tag.");
+                        return;
+                      }
+                      if (workspace.details.tags.includes(tag)) {
+                        setTagTrouble("That tag is already here.");
+                        return;
+                      }
+                      if (workspace.details.tags.length >= 32) {
+                        setTagTrouble("Use up to 32 tags.");
+                        return;
+                      }
+                      workspace.writeDetails({
+                        ...workspace.details,
+                        tags: [...workspace.details.tags, tag],
+                      });
+                      setTagInput("");
+                      setTagTrouble("");
+                    }}
+                  >
+                    <TextInput
+                      aria-describedby={
+                        tagTrouble
+                          ? "work-tag-trouble work-tag-hint"
+                          : "work-tag-hint"
+                      }
+                      aria-invalid={Boolean(tagTrouble) || undefined}
+                      id="work-tag"
+                      onChange={(event) => {
+                        setTagInput(event.target.value);
+                        setTagTrouble("");
+                      }}
+                      value={tagInput}
+                    />
+                    <button
+                      className="min-h-11 shrink-0 rounded-control bg-deep px-4 text-ui text-ink outline-offset-3 hover:bg-rule/40"
+                      type="submit"
+                    >
+                      Add
+                    </button>
+                  </form>
+                </Field>
+                {workspace.details.tags.length > 0 ? (
+                  <ul className="mt-3 flex list-none flex-wrap gap-2">
+                    {workspace.details.tags.map((tag, index) => (
+                      <li key={tag}>
+                        <button
+                          aria-label={`Remove ${tag}`}
+                          className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-control bg-deep px-3 text-label text-ink outline-offset-3 [overflow-wrap:anywhere] hover:bg-rule/40"
+                          onClick={() =>
+                            workspace.writeDetails({
+                              ...workspace.details,
+                              tags: workspace.details.tags.filter(
+                                (_, at) => at !== index,
+                              ),
+                            })
+                          }
+                          type="button"
+                        >
+                          {tag}
+                          <X aria-hidden="true" size={14} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : workspace.details.tags.length > 0 ? (
               <ChipSet
                 className="mt-5 max-w-[42ch]"
-                items={work.tags.map((tag) => ({
-                  href: browseTagHref(tag.value),
-                  id: tag.value,
-                  label: tag.label,
+                items={workspace.details.tags.map((tag) => ({
+                  href:
+                    isDraft ||
+                    (work.isOwner &&
+                      (workspace.unpublishedChanges || workspace.dirty))
+                      ? undefined
+                      : browseTagHref(tag.trim().toLowerCase()),
+                  id: tag,
+                  label: tag,
                 }))}
                 limit={TAG_PREVIEW_LIMIT}
               />

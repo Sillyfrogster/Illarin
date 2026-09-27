@@ -52,7 +52,7 @@ func TestWorkPageCarriesItsCoverGalleryExpressionTagsAndBlurb(t *testing.T) {
 	if page.Creator != "verified.creator" {
 		t.Errorf("creator = %q, want the owner's handle", page.Creator)
 	}
-	want := []struct{ label, value string }{{"Slow Burn", "slow burn"}, {" Modern ", "modern"}}
+	want := []struct{ label, value string }{{"Slow Burn", "slow burn"}, {"Modern", "modern"}}
 	if len(page.Tags) != len(want) {
 		t.Fatalf("tags = %+v, want %d", page.Tags, len(want))
 	}

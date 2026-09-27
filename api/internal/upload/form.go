@@ -64,6 +64,10 @@ func uploadInput(
 
 // RefuseFile answers a refused upload with the reason a person can act on
 func RefuseFile(c *gin.Context, err error, maxUploadBytes int64) {
+	if errors.Is(err, format.ErrInvalidTags) {
+		api.RefuseField(c, http.StatusBadRequest, "tags", "Use up to 32 different tags, each 1 to 64 characters long.")
+		return
+	}
 	if errors.Is(err, work.ErrStorageCap) {
 		api.Refuse(c, http.StatusRequestEntityTooLarge, "Your account does not have enough storage left for this file.")
 		return

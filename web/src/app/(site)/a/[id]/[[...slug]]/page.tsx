@@ -66,6 +66,7 @@ export default async function WorkPage({
           blurb: work.blurb,
           isNsfw: work.isNsfw,
           name: work.name,
+          tags: work.tags.map((tag) => tag.label),
         }}
         isDraft={isDraft}
         isOwner={work.isOwner}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -14,6 +15,13 @@ import (
 )
 
 func (s *Service) AcceptUpload(ctx context.Context, in UploadInput) (Operation, error) {
+	if in.Tags != nil {
+		checked, err := format.CheckTags(*in.Tags)
+		if err != nil {
+			return Operation{}, err
+		}
+		in.Tags = &checked
+	}
 	stored, err := s.store.Put(ctx, in.File)
 	if err != nil {
 		return Operation{}, fmt.Errorf("store upload: %w", err)

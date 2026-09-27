@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/page"
 )
 
@@ -65,6 +67,109 @@ func TestCreatorCanAddReplaceAndClearABlurbForEveryWorkType(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCreatorEditsImportedTagsOnDraftAndPublishedWork(t *testing.T) {
+	t.Parallel()
+	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
+	metadata := apitest.ExampleMetadata("Tagged character")
+	metadata["_keepDraft"] = true
+	metadata["filename"] = "tagged.json"
+	id := apitest.WorkIDFromUpload(t, apitest.UploadAndFinish(t, r, session, works, metadata, []byte(apitest.CardWithThirdPartyNamespaces)))
+
+	save := func(tags string) {
+		t.Helper()
+		body := `{"name":"Tagged character","blurb":"","isNsfw":false,"tags":` + tags + `}`
+		if response := apitest.SaveDetails(t, r, session, id, body); response.Code != http.StatusNoContent {
+			t.Fatalf("save tags: %d %s", response.Code, response.Body.String())
+		}
+	}
+	checkTags := func(path string, want ...string) {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodGet, path, nil)
+		if strings.Contains(path, "draftedChanges=true") {
+			request = apitest.Authorized(request, session)
+		}
+		response := apitest.Send(t, r, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("read tags: %d %s", response.Code, response.Body.String())
+		}
+		var page apitest.WorkPageResponse
+		if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil {
+			t.Fatal(err)
+		}
+		if len(page.Tags) != len(want) {
+			t.Fatalf("tags = %+v, want %v", page.Tags, want)
+		}
+		for i, tag := range page.Tags {
+			if tag.Label != want[i] {
+				t.Fatalf("tag %d = %q, want %q", i, tag.Label, want[i])
+			}
+		}
+	}
+
+	save(`["archivist","New tag"]`)
+	checkTags("/v1/works/"+id+"?draftedChanges=true", "archivist", "New tag")
+	if published := apitest.PublishWork(t, r, session, id); published.Code != http.StatusOK {
+		t.Fatalf("publish: %d %s", published.Code, published.Body.String())
+	}
+	save(`["New tag"]`)
+	checkTags("/v1/works/"+id+"?draftedChanges=true", "New tag")
+	if published := apitest.PublishWorkVersion(t, r, session, id, `{"summary":"Updated tags"}`); published.Code != http.StatusOK {
+		t.Fatalf("publish edited tags: %d %s", published.Code, published.Body.String())
+	}
+	checkTags("/v1/works/"+id, "New tag")
+	for query, found := range map[string]bool{"New tag": true, "archivist": false} {
+		response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,
+			"/v1/works?q="+url.QueryEscape(`tag:"`+query+`"`), nil))
+		if response.Code != http.StatusOK {
+			t.Fatalf("search %q: %d %s", query, response.Code, response.Body.String())
+		}
+		var result struct {
+			Items []struct {
+				ID string `json:"id"`
+			} `json:"items"`
+		}
+		if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		if (len(result.Items) == 1 && result.Items[0].ID == id) != found {
+			t.Errorf("search %q returned %+v, expected work found %t", query, result.Items, found)
+		}
+	}
+}
+
+func TestTagEditsKeepTheUploadLimitsAndLeaveRejectedEditsUnsaved(t *testing.T) {
+	t.Parallel()
+	r, session := harness.NewVerifiedRouter(t)
+	started := apitest.StartCharacter(t, r, session)
+	for _, tags := range [][]string{
+		{strings.Repeat("界", 65)},
+		{""},
+		{"same", "same"},
+		make([]string, 33),
+	} {
+		body, err := json.Marshal(map[string]any{
+			"name": "Tagged", "blurb": "", "isNsfw": false, "tags": tags,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		response := apitest.SaveDetails(t, r, session, started.ID, string(body))
+		if response.Code != http.StatusBadRequest {
+			t.Fatalf("tags %v: %d %s, want 400", tags, response.Code, response.Body.String())
+		}
+	}
+	if saved := apitest.FetchStartedWork(t, r, session, started.ID); len(saved.Tags) != 0 {
+		t.Fatalf("rejected tags changed the work: %+v", saved.Tags)
+	}
+	if response := apitest.SaveDetails(t, r, session, started.ID,
+		`{"name":"Tagged","blurb":"","isNsfw":false,"tags":["  Moon  "]}`); response.Code != http.StatusNoContent {
+		t.Fatalf("save trimmed tag: %d %s", response.Code, response.Body.String())
+	}
+	if saved := apitest.FetchStartedWork(t, r, session, started.ID); len(saved.Tags) != 1 || saved.Tags[0].Label != "Moon" {
+		t.Fatalf("saved tags = %+v, want Moon", saved.Tags)
 	}
 }
 

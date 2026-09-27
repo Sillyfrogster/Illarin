@@ -12,6 +12,13 @@ import (
 )
 
 func (s *Service) Create(ctx context.Context, in CreateInput) (work.Work, error) {
+	if in.Tags != nil {
+		checked, err := format.CheckTags(in.Tags)
+		if err != nil {
+			return work.Work{}, err
+		}
+		in.Tags = checked
+	}
 	workID := uuid.New()
 
 	stored, err := s.store.Put(ctx, in.File)

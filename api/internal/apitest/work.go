@@ -15,10 +15,13 @@ import (
 )
 
 type StartedWork struct {
-	ID        string `json:"id"`
-	Type      string `json:"type"`
-	Name      string `json:"name"`
-	Blurb     string `json:"blurb"`
+	ID    string `json:"id"`
+	Type  string `json:"type"`
+	Name  string `json:"name"`
+	Blurb string `json:"blurb"`
+	Tags  []struct {
+		Label string `json:"label"`
+	} `json:"tags"`
 	Lifecycle string `json:"lifecycle"`
 	IsOwner   bool   `json:"isOwner"`
 	IsNSFW    *bool  `json:"isNsfw"`

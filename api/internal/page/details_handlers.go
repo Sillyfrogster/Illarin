@@ -5,14 +5,16 @@ import (
 	"net/http"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 )
 
 type workDetailsInput struct {
-	Name   string  `json:"name"`
-	Blurb  *string `json:"blurb"`
-	IsNsfw *bool   `json:"isNsfw"`
+	Name   string   `json:"name"`
+	Blurb  *string  `json:"blurb"`
+	Tags   []string `json:"tags"`
+	IsNsfw *bool    `json:"isNsfw"`
 }
 
 func (h *Handlers) SetWorkDetails(c *gin.Context) {
@@ -30,7 +32,7 @@ func (h *Handlers) SetWorkDetails(c *gin.Context) {
 	}
 	var request workDetailsInput
 	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
-		api.Refuse(c, http.StatusBadRequest, "Send a name, a blurb, and an adult content answer of true, false or null.")
+		api.Refuse(c, http.StatusBadRequest, "Send a name, a blurb, tags as a list, and an adult content answer of true, false or null.")
 		return
 	}
 	if request.Blurb == nil {
@@ -40,7 +42,7 @@ func (h *Handlers) SetWorkDetails(c *gin.Context) {
 	candidate := &work.Candidate{Version: version}
 	err := h.works.SetDetails(c.Request.Context(), Details{
 		OwnerID: owner.ID, WorkID: id,
-		Name: request.Name, Blurb: *request.Blurb, IsNSFW: request.IsNsfw,
+		Name: request.Name, Blurb: *request.Blurb, Tags: request.Tags, IsNSFW: request.IsNsfw,
 	}, candidate)
 	if CandidateResult(c, candidate, err) {
 		return
@@ -52,6 +54,8 @@ func (h *Handlers) SetWorkDetails(c *gin.Context) {
 		api.Refuse(c, http.StatusBadRequest, "The name is too long.")
 	case errors.Is(err, ErrBlurbTooLong):
 		api.RefuseField(c, http.StatusBadRequest, "blurb", "The blurb must be 400 characters or fewer.")
+	case errors.Is(err, format.ErrInvalidTags):
+		api.RefuseField(c, http.StatusBadRequest, "tags", "Use up to 32 different tags, each 1 to 64 characters long.")
 	case errors.Is(err, ErrRatingUnanswerable):
 		api.Refuse(c, http.StatusBadRequest, "A published work needs an adult content answer.")
 	case err != nil:
