@@ -70,6 +70,22 @@ test("a work card reads public blurred media even with an owner's cookie and sho
   expect(paths).toEqual([`/v1/works/${id}`, "/media/cover/detail_blurred/2"]);
 });
 
+test("a work card draws its public counts, zero included", async () => {
+  const cards: Buffer[] = [];
+  for (const counts of [
+    { viewCount: 0, downloadCount: 0 },
+    { viewCount: 1500, downloadCount: 1 },
+  ]) {
+    publicData({ ...work, ...counts });
+    cards.push(
+      await expectCard(
+        await workCard(request, { params: Promise.resolve({ id }) }),
+      ),
+    );
+  }
+  expect(cards[0].equals(cards[1])).toBe(false);
+});
+
 test("drafts and taken-down works refuse a card before reading artwork", async () => {
   for (const refused of [
     { ...work, lifecycle: "draft" },

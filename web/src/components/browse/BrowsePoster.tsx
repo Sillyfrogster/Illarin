@@ -8,6 +8,7 @@ import { type ReactNode, useState } from "react";
 import type { BrowseWork, NsfwPreference } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { posterFace, type TypeSetting, typeSetting } from "@/lib/poster-face";
+import { workCounts } from "@/lib/work-counts";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
@@ -31,15 +32,6 @@ const GROUNDS = [
   { plate: "bg-accent-wash", title: "text-ink group-hover:text-accent" },
   { plate: "bg-deep", title: "text-ink group-hover:text-accent" },
 ];
-
-const COMPACT = new Intl.NumberFormat("en-US", {
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
-function counted(value: number, one: string) {
-  return `${COMPACT.format(value)} ${value === 1 ? one : `${one}s`}`;
-}
 
 function groundFor(id: string) {
   let hash = 0;
@@ -173,8 +165,7 @@ export function BrowsePoster({
         </p>
 
         <p className="mt-1 font-ui text-label text-mute tabular-nums">
-          {counted(work.viewCount, "view")} ·{" "}
-          {counted(work.downloadCount, "download")}
+          {workCounts(work.viewCount, work.downloadCount)}
         </p>
 
         {apps?.length ? (

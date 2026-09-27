@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { fetchWork } from "@/lib/api/query";
 import { renderLinkCard } from "@/lib/link-card";
+import { workCounts } from "@/lib/work-counts";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { isWorkId } from "@/lib/work-url";
@@ -25,5 +26,6 @@ export async function GET(
       : null,
     byline: `By @${work.creator}`,
     description: work.blurb,
+    footer: workCounts(work.viewCount, work.downloadCount),
   });
 }
