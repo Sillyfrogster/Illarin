@@ -29,20 +29,26 @@ func (s *Service) RecordView(ctx context.Context, id uuid.UUID, viewerID *uuid.U
 	return nil
 }
 
-// lifetimeCounts adds a work's rolled-up daily views to the events not yet rolled up, and counts its public download records
-func lifetimeCounts(ctx context.Context, tx pgx.Tx, id uuid.UUID) (views, downloads int, err error) {
+// lifetimeCounts adds a work's rolled-up daily views and sends to the events not yet rolled up, and counts its public download records
+func lifetimeCounts(ctx context.Context, tx pgx.Tx, id uuid.UUID) (views, downloads, sends int, err error) {
 	err = tx.QueryRow(ctx, `
-		select (select coalesce(sum(count), 0) from public.daily_totals where kind = 'view' and work_id = $1)
-		     + (select count(*) from public.events event
-		         where event.kind = 'view' and event.work_id = $1
-		           and not exists (select from public.daily_totals total
-		                            where total.day = event.day and total.kind = 'view' and total.work_id = $1)),
-		       (select count(*) from public.download_records where work_id = $1 and access = 'public')
-	`, id).Scan(&views, &downloads)
+		with counted as (
+			select kind, count from public.daily_totals where work_id = $1 and kind in ('view', 'send')
+			union all
+			select event.kind, 1 from public.events event
+			 where event.work_id = $1 and event.kind in ('view', 'send')
+			   and not exists (select from public.daily_totals total
+			                    where total.day = event.day and total.kind = event.kind and total.work_id = $1)
+		)
+		select coalesce(sum(count) filter (where kind = 'view'), 0),
+		       (select count(*) from public.download_records where work_id = $1 and access = 'public'),
+		       coalesce(sum(count) filter (where kind = 'send'), 0)
+		  from counted
+	`, id).Scan(&views, &downloads, &sends)
 	if err != nil {
-		return 0, 0, fmt.Errorf("read the work's counts: %w", err)
+		return 0, 0, 0, fmt.Errorf("read the work's counts: %w", err)
 	}
-	return views, downloads, nil
+	return views, downloads, sends, nil
 }
 
 // RecordView answers 204 whether or not the display counted, so it tells a caller nothing about the work

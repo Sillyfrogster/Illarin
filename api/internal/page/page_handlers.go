@@ -139,6 +139,7 @@ func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
 		UnpublishedChanges:    found.UnpublishedChanges,
 		ViewCount:             found.ViewCount,
 		DownloadCount:         found.DownloadCount,
+		SendCount:             found.SendCount,
 		Id:                    found.ID,
 		Type:                  WorkDetailType(found.Type),
 		Name:                  found.Name,

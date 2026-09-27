@@ -3,17 +3,19 @@
 import { useEffect } from "react";
 import { api } from "@/lib/api/client";
 
-/** Records this display as a work view and shows the lifetime view and download counts */
+/** Records this display as a work view and shows the lifetime counts, with sends only for the creator */
 export function WorkCounts({
   workId,
   isOwner,
   views,
   downloads,
+  sends,
 }: {
   workId: string;
   isOwner: boolean;
   views: number;
   downloads: number;
+  sends?: number;
 }) {
   useEffect(() => {
     if (!isOwner) api("POST", `/v1/works/${workId}/views`).catch(() => {});
@@ -23,6 +25,9 @@ export function WorkCounts({
     <dl className="mt-8 flex gap-10">
       <Count value={views} one="View" many="Views" />
       <Count value={downloads} one="Download" many="Downloads" />
+      {sends === undefined ? null : (
+        <Count value={sends} one="Send" many="Sends" />
+      )}
     </dl>
   );
 }

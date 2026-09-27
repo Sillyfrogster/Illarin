@@ -53,6 +53,7 @@ type Detail struct {
 	Takedown              *Takedown
 	ViewCount             int
 	DownloadCount         int
+	SendCount             *int
 }
 
 func (s *Service) Detail(
@@ -122,9 +123,13 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 		}
 		found.DraftedChangesVersion = &version
 	}
-	found.ViewCount, found.DownloadCount, err = lifetimeCounts(ctx, tx, id)
+	var sends int
+	found.ViewCount, found.DownloadCount, sends, err = lifetimeCounts(ctx, tx, id)
 	if err != nil {
 		return Detail{}, err
+	}
+	if found.IsOwner {
+		found.SendCount = &sends
 	}
 	found.Downloads, err = summary.Offered(ctx, tx, id)
 	if err != nil {

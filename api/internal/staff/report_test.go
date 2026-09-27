@@ -34,6 +34,7 @@ func TestADownloadASendASignUpAndAPublishEachRecordOneEventWithNoIdentity(t *tes
 	if fetched := apitest.FetchSigned(t, router, collected.Sends[0].Files[0].URL); fetched.Code != http.StatusOK {
 		t.Fatalf("fetch status = %d, want 200: %s", fetched.Code, fetched.Body.String())
 	}
+	apitest.Collect(t, router, credentials.AccessToken, []string{collected.Sends[0].ID})
 
 	counts := eventCounts(t, pool)
 	want := map[string]int{"sign_up": 1, "publish": 1, "download": 1, "send": 1}

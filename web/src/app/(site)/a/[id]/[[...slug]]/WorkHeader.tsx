@@ -242,6 +242,7 @@ export function WorkHeader({
                 isOwner={work.isOwner}
                 views={work.viewCount}
                 downloads={work.downloadCount}
+                sends={work.sendCount}
               />
             )}
           </div>

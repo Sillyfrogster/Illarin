@@ -94,3 +94,58 @@ func viewWork(t *testing.T, router http.Handler, workID, agent string, session *
 		t.Fatalf("view status = %d, want 204: %s", viewed.Code, viewed.Body.String())
 	}
 }
+
+func TestOnlyTheCreatorSeesSendsTheirAppAcknowledged(t *testing.T) {
+	t.Parallel()
+	router, session, pool := harness.NewConnectRouter(t)
+	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
+	workID := apitest.PublishedCharacter(t, router, session)
+	sends := func() *int {
+		t.Helper()
+		return apitest.DecodeResponse[apitest.WorkPageResponse](t, apitest.Send(t, router, apitest.Authorized(
+			httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil), session))).SendCount
+	}
+	expireLeases := func(attempts int) {
+		t.Helper()
+		if _, err := pool.Exec(t.Context(), `
+			update sends set lease_expires_at = now() - interval '1 second', attempts = greatest(attempts, $1)
+			 where state = 'released'
+		`, attempts); err != nil {
+			t.Fatalf("expire the send leases: %v", err)
+		}
+	}
+	collect := func() apitest.CollectedSends {
+		t.Helper()
+		return apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil))
+	}
+	acknowledge := func(id string) {
+		t.Helper()
+		apitest.Collect(t, router, credentials.AccessToken, []string{id})
+	}
+
+	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
+	first := collect().Sends[0].ID
+	expireLeases(0)
+	if retried := collect(); len(retried.Sends) != 1 || retried.Sends[0].ID != first {
+		t.Fatalf("retried collection = %+v, want the same send again", retried.Sends)
+	}
+	if count := sends(); count == nil || *count != 0 {
+		t.Fatalf("send count before acknowledgement = %v, want 0", count)
+	}
+	acknowledge(first)
+	acknowledge(first)
+
+	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
+	second := collect().Sends[0].ID
+	expireLeases(apitest.SendSettings().MaxAttempts)
+	apitest.Collect(t, router, credentials.AccessToken, nil)
+	acknowledge(second)
+
+	if count := sends(); count == nil || *count != 1 {
+		t.Fatalf("send count = %v, want 1 acknowledged send", count)
+	}
+	if page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID); page.SendCount != nil {
+		t.Fatalf("reader sees send count %d, want none", *page.SendCount)
+	}
+}
