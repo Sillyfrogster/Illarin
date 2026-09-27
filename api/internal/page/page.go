@@ -51,6 +51,8 @@ type Detail struct {
 	EligibleApps          []string
 	InstallCapabilities   []string
 	Takedown              *Takedown
+	ViewCount             int
+	DownloadCount         int
 }
 
 func (s *Service) Detail(
@@ -119,6 +121,10 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 			return Detail{}, err
 		}
 		found.DraftedChangesVersion = &version
+	}
+	found.ViewCount, found.DownloadCount, err = lifetimeCounts(ctx, tx, id)
+	if err != nil {
+		return Detail{}, err
 	}
 	found.Downloads, err = summary.Offered(ctx, tx, id)
 	if err != nil {

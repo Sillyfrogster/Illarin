@@ -30,6 +30,8 @@ function work(over: Partial<WorkDetail> = {}): WorkDetail {
     media: [],
     preview: "/media/aaaa/og/1",
     nsfwPreference: "blurred",
+    viewCount: 0,
+    downloadCount: 0,
     ...over,
   };
 }

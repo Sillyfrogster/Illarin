@@ -18,6 +18,7 @@ import { WorkFollowProvider } from "./follow/state";
 import { GetWork } from "./GetWork";
 import { VersionHistory } from "./history/VersionHistory";
 import { TakedownNotice } from "./TakedownNotice";
+import { WorkCounts } from "./WorkCounts";
 import { coverMedia, WorkMedia } from "./WorkMedia";
 import {
   BLURB_LIMIT,
@@ -226,6 +227,14 @@ export function WorkHeader({
                 {isDraft ? `Created ${sharedDate}` : `Published ${sharedDate}`}
               </span>
             </p>
+            {isDraft ? null : (
+              <WorkCounts
+                workId={work.id}
+                isOwner={work.isOwner}
+                views={work.viewCount}
+                downloads={work.downloadCount}
+              />
+            )}
           </div>
 
           {showsMedia ? (

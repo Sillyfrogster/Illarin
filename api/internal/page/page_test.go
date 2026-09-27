@@ -110,7 +110,7 @@ func TestWorkPageDoesNotPromoteGalleryMediaToCover(t *testing.T) {
 	}
 }
 
-func TestWorkPageShowsNoTotals(t *testing.T) {
+func TestWorkPageCarriesOnlyItsOwnFields(t *testing.T) {
 	t.Parallel()
 	r, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
 	metadata := apitest.ExampleMetadata("Countless")
@@ -132,6 +132,7 @@ func TestWorkPageShowsNoTotals(t *testing.T) {
 		"hasPrivatePrompts": true, "linkedInstallOnly": true, "allowedApps": true, "eligibleApps": true,
 		"latestVersion": true, "extensionDependencies": true, "installedAppVersions": true,
 		"kind": true, "discovery": true, "latestUpdate": true,
+		"viewCount": true, "downloadCount": true,
 	}
 	for key := range body {
 		if !wantKeys[key] {

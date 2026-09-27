@@ -71,12 +71,15 @@ const CLAUSES: LegalClause[] = [
 
         <h3>1.7 Counts of what happens</h3>
         <p>
-          When an account is created, a work is downloaded or sent to an app, or
-          a work is published, Illarin records which of those happened, the work
-          where there is one, and the day. The record holds no account, no IP
-          address, no time of day, and nothing about the browser. Each night
-          Illarin adds these records up into totals for each day and deletes the
-          records older than 30 days. The daily totals are kept.
+          When an account is created, a work&rsquo;s page is viewed, a work is
+          downloaded or sent to an app, or a work is published, Illarin records
+          which of those happened, the work where there is one, and the day. The
+          record holds no account, no IP address, no time of day, and nothing
+          about the browser. Illarin reads the browser&rsquo;s name only to skip
+          known bots, and never stores it. Views by a work&rsquo;s creator are
+          not recorded. Each night Illarin adds these records up into totals for
+          each day and deletes the records older than 30 days. The daily totals
+          are kept, and a work&rsquo;s page shows its total views and downloads.
         </p>
 
         <h3>1.8 Monitoring</h3>
@@ -186,7 +189,7 @@ const CLAUSES: LegalClause[] = [
           </li>
           <li>
             To see which pages people read, which sites send them here, and how
-            many works are downloaded, sent, and published each day.
+            many works are viewed, downloaded, sent, and published each day.
           </li>
           <li>
             To take and pass on payments, once Illarin offers them, and to keep

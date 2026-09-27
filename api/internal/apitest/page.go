@@ -34,6 +34,8 @@ type WorkPageResponse struct {
 	} `json:"media"`
 	Preview        *string `json:"preview"`
 	NSFWPreference string  `json:"nsfwPreference"`
+	ViewCount      int     `json:"viewCount"`
+	DownloadCount  int     `json:"downloadCount"`
 	Takedown       *struct {
 		Reason string    `json:"reason"`
 		At     time.Time `json:"at"`

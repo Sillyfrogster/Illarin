@@ -88,6 +88,8 @@ type WorkDetail struct {
 	Follow                *notify.WorkFollow       `json:"follow,omitempty"`
 	Takedown              *WorkTakedown            `json:"takedown,omitempty"`
 	DraftedChangesVersion *int64                   `json:"draftedChangesVersion,omitempty"`
+	ViewCount             int                      `json:"viewCount"`
+	DownloadCount         int                      `json:"downloadCount"`
 }
 
 type WorkDetailVisibility string
