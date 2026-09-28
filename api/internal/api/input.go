@@ -78,11 +78,11 @@ func ReadBoundedJSON(c *gin.Context, destination any, limit int64, tooLargeMessa
 	return true
 }
 
-// RequestSource is the address a request came from, trusting the proxy only on loopback
+// RequestSource is the address a request came from, trusting a proxy on loopback or a private network
 func RequestSource(c *gin.Context) string {
 	host := remoteHost(c.Request.RemoteAddr)
 	ip := net.ParseIP(host)
-	if ip == nil || !ip.IsLoopback() {
+	if ip == nil || !(ip.IsLoopback() || ip.IsPrivate()) {
 		return host
 	}
 	forwarded := strings.Split(c.GetHeader("X-Forwarded-For"), ",")

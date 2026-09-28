@@ -75,13 +75,22 @@ const CLAUSES: LegalClause[] = [
           downloaded or sent to an app, or a work is published, Illarin records
           which of those happened, the work where there is one, and the day. The
           record holds no account, no IP address, no time of day, and nothing
-          about the browser. Illarin reads the browser&rsquo;s name only to skip
+          about the browser. Illarin reads the browser&rsquo;s name to skip
           known bots, and never stores it. Views by a work&rsquo;s creator and
           sends to the creator&rsquo;s own apps are not recorded. Each night
           Illarin adds these records up into totals for each day and deletes the
           records older than 30 days. The daily totals are kept, and a
           work&rsquo;s page shows its total views and downloads, with sends to
           an app counted as downloads.
+        </p>
+        <p>
+          A view counts once per reader, per work, per day. To tell readers
+          apart, Illarin turns your IP address, your browser&rsquo;s user agent
+          string, and the work into a code, using a secret made new each day.
+          The code can&rsquo;t be turned back into your address or matched
+          across two days or two works, and the IP address and user agent are
+          never stored. At midnight UTC the day&rsquo;s secret and every code
+          made with it are deleted.
         </p>
 
         <h3>1.8 Monitoring</h3>
@@ -277,9 +286,11 @@ const CLAUSES: LegalClause[] = [
           that. Sign-in sessions, email verification links, password reset
           links, and app connection codes all expire on their own. Page view
           records and the counts described in 1.7 are deleted after 30 days, and
-          the daily totals made from them are kept. Server logs are kept for a
-          short rolling window. Once Illarin takes payments, payment records are
-          kept for as long as tax law requires, even after the account is gone.
+          the daily totals made from them are kept. The codes that keep a view
+          from counting twice are deleted at midnight UTC each day. Server logs
+          are kept for a short rolling window. Once Illarin takes payments,
+          payment records are kept for as long as tax law requires, even after
+          the account is gone.
         </p>
       </>
     ),

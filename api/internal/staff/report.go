@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/readerkey"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -33,7 +34,7 @@ func (s *Service) RunRollup(ctx context.Context, onError func(error)) {
 	}
 }
 
-// Rollup writes the totals for every complete day, ranks works by their last 30 days, adds Umami's visits, and deletes events past their retention
+// Rollup writes the totals for every complete day, ranks works by their last 30 days, adds Umami's visits, deletes events past their retention and earlier days' reader keys
 func (s *Service) Rollup(ctx context.Context, now time.Time) error {
 	today := now.UTC().Truncate(24 * time.Hour)
 	tx, err := s.pool.Begin(ctx)
@@ -52,6 +53,9 @@ func (s *Service) Rollup(ctx context.Context, now time.Time) error {
 	if _, err := tx.Exec(ctx, `delete from events where day < $1::date`,
 		day(today.AddDate(0, 0, -EventRetentionDays))); err != nil {
 		return fmt.Errorf("delete events past their retention: %w", err)
+	}
+	if err := readerkey.Forget(ctx, tx, today); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `select rank_works($1::date)`, day(today)); err != nil {
 		return fmt.Errorf("rank works by their last 30 days: %w", err)

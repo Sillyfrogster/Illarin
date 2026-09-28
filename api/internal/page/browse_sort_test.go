@@ -51,8 +51,9 @@ func TestActivitySortsRankTheLast30DaysOfPublicWorksAndPageFromOneRanking(t *tes
 		t.Fatalf("unlist status = %d, want 204: %s", got.Code, got.Body.String())
 	}
 
-	for _, workID := range []string{first, first, second, third, unlisted, unlisted, unlisted} {
-		viewWork(t, router, workID, browserAgent, nil)
+	readerAgent := func(reader int) string { return browserAgent + " reader/" + strconv.Itoa(reader) }
+	for reader, workID := range []string{first, first, second, third, unlisted, unlisted, unlisted} {
+		viewWork(t, router, workID, readerAgent(reader), nil)
 	}
 	download := func(workID string, session *http.Cookie) {
 		t.Helper()
@@ -92,8 +93,8 @@ func TestActivitySortsRankTheLast30DaysOfPublicWorksAndPageFromOneRanking(t *tes
 	if viewed.NextCursor == nil || viewed.NextCursor.RankedOn == "" {
 		t.Fatalf("first page by views cursor = %+v, want one naming its ranking day", viewed.NextCursor)
 	}
-	for range 5 {
-		viewWork(t, router, fourth, browserAgent, nil)
+	for reader := range 5 {
+		viewWork(t, router, fourth, readerAgent(reader), nil)
 	}
 	rollUp(2)
 

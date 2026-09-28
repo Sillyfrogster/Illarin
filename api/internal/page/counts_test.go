@@ -9,7 +9,10 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/page"
+	"github.com/Sillyfrogster/Illarin/api/internal/readerkey"
 	"github.com/Sillyfrogster/Illarin/api/internal/staff"
+	"github.com/google/uuid"
 )
 
 const browserAgent = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
@@ -27,7 +30,6 @@ func TestAWorkPageCountsReaderViewsAndPublicDownloadsOnly(t *testing.T) {
 	}
 	draft := apitest.StartCharacter(t, router, session)
 
-	viewWork(t, router, workID, browserAgent, nil)
 	viewWork(t, router, workID, browserAgent, nil)
 	viewWork(t, router, workID, browserAgent, session)
 	viewWork(t, router, workID, "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", nil)
@@ -49,8 +51,8 @@ func TestAWorkPageCountsReaderViewsAndPublicDownloadsOnly(t *testing.T) {
 	}
 
 	page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID)
-	if page.ViewCount != 2 || page.DownloadCount != 1 {
-		t.Fatalf("counts = %d views and %d downloads, want 2 reader views and 1 public download", page.ViewCount, page.DownloadCount)
+	if page.ViewCount != 1 || page.DownloadCount != 1 {
+		t.Fatalf("counts = %d views and %d downloads, want 1 reader view and 1 public download", page.ViewCount, page.DownloadCount)
 	}
 	var draftViews int
 	if err := pool.QueryRow(t.Context(), `select count(*) from events where work_id = $1`, draft.ID).Scan(&draftViews); err != nil {
@@ -81,6 +83,74 @@ func TestViewCountsSurviveTheNightlyRollup(t *testing.T) {
 
 	if page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID); page.ViewCount != 4 {
 		t.Fatalf("views = %d, want the 3 rolled up and today's 1", page.ViewCount)
+	}
+}
+
+func TestAViewCountsOncePerReaderPerWorkPerUTCDayAndTheDaysSecretGoesWithIt(t *testing.T) {
+	t.Parallel()
+	router, session, pool := harness.NewConnectRouter(t)
+	first := apitest.PublishedCharacter(t, router, session)
+	second := apitest.PublishedCharacter(t, router, session)
+	fromGateway := func(workID, reader string) {
+		t.Helper()
+		request := apitest.BrowserMutation(httptest.NewRequest(http.MethodPost, "/v1/works/"+workID+"/views", nil))
+		request.Header.Set("User-Agent", browserAgent)
+		request.RemoteAddr = "172.18.0.4:41000"
+		if reader != "" {
+			request.Header.Set("X-Forwarded-For", "203.0.113.50, "+reader)
+		} else {
+			request.RemoteAddr = ""
+		}
+		if viewed := apitest.Send(t, router, request); viewed.Code != http.StatusNoContent {
+			t.Fatalf("view status = %d, want 204: %s", viewed.Code, viewed.Body.String())
+		}
+	}
+	views := func(workID string) int {
+		t.Helper()
+		return apitest.FetchWorkPage(t, router, "/v1/works/"+workID).ViewCount
+	}
+
+	fromGateway(first, "198.51.100.7")
+	fromGateway(first, "198.51.100.7")
+	fromGateway(second, "198.51.100.7")
+	fromGateway(first, "198.51.100.8")
+	fromGateway(first, "")
+	fromGateway(first, "")
+	if got, want := views(first), 3; got != want {
+		t.Fatalf("first work views = %d, want %d: two readers and the one without an address, each once", got, want)
+	}
+	if got := views(second); got != 1 {
+		t.Fatalf("second work views = %d, want the same reader counted again on another work", got)
+	}
+
+	today := time.Now().UTC()
+	pages := page.NewService(pool, apitest.WorksOver(t, pool, format.NewRegistry()))
+	reader := readerkey.Reader{Address: "198.51.100.7", Agent: browserAgent}
+	if err := pages.RecordView(t.Context(), uuid.MustParse(first), nil, reader, today.AddDate(0, 0, 1)); err != nil {
+		t.Fatalf("record tomorrow's view: %v", err)
+	}
+	if got := views(first); got != 4 {
+		t.Fatalf("first work views = %d, want the same reader counted again the next day", got)
+	}
+	var secrets, keys int
+	if err := pool.QueryRow(t.Context(), `
+		select (select count(*) from reader_secrets where day <= $1::date),
+		       (select count(*) from reader_keys where day <= $1::date)
+	`, today.Format(time.DateOnly)).Scan(&secrets, &keys); err != nil {
+		t.Fatalf("count today's secret and keys: %v", err)
+	}
+	if secrets != 0 || keys != 0 {
+		t.Fatalf("after the day rolled over, today's secret and keys = %d and %d, want none", secrets, keys)
+	}
+
+	if err := staff.NewService(apitest.WorksOver(t, pool, format.NewRegistry())).Rollup(t.Context(), today.AddDate(0, 0, 2)); err != nil {
+		t.Fatalf("roll up: %v", err)
+	}
+	if err := pool.QueryRow(t.Context(), `select count(*) from reader_secrets`).Scan(&secrets); err != nil {
+		t.Fatalf("count secrets: %v", err)
+	}
+	if secrets != 0 {
+		t.Fatalf("secrets after a quiet day's rollup = %d, want none", secrets)
 	}
 }
 
