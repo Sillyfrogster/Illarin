@@ -7,7 +7,6 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/readerkey"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -34,7 +33,7 @@ func (s *Service) RunRollup(ctx context.Context, onError func(error)) {
 	}
 }
 
-// Rollup writes the totals for every complete day, ranks works by their last 30 days, adds Umami's visits, deletes events past their retention and earlier days' reader keys and counted sends
+// Rollup writes the totals for every complete day, ranks works by their last 30 days, deletes events past their retention and earlier days' reader keys and counted sends
 func (s *Service) Rollup(ctx context.Context, now time.Time) error {
 	today := now.UTC().Truncate(24 * time.Hour)
 	tx, err := s.pool.Begin(ctx)
@@ -63,34 +62,8 @@ func (s *Service) Rollup(ctx context.Context, now time.Time) error {
 	if _, err := tx.Exec(ctx, `select rank_works($1::date)`, day(today)); err != nil {
 		return fmt.Errorf("rank works by their last 30 days: %w", err)
 	}
-	if err := recordVisits(ctx, tx, today); err != nil {
-		return err
-	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit the rollup: %w", err)
-	}
-	return nil
-}
-
-// recordVisits counts Umami's visits per day where Umami runs, over the same complete days the report reads
-func recordVisits(ctx context.Context, tx pgx.Tx, today time.Time) error {
-	var present bool
-	if err := tx.QueryRow(ctx, `select to_regclass('umami.website_event') is not null`).Scan(&present); err != nil {
-		return fmt.Errorf("look for Umami's tables: %w", err)
-	}
-	if !present {
-		return nil
-	}
-	if _, err := tx.Exec(ctx, `
-		insert into daily_totals (day, kind, work_id, count)
-		select day, 'visit', null, count(distinct visit_id)
-		  from (select (created_at at time zone 'utc')::date as day, visit_id
-		          from umami.website_event where event_type = 1) as views
-		 where day >= $1::date and day < $2::date
-		 group by day
-		on conflict (day, kind, work_id) do update set count = excluded.count
-	`, day(today.AddDate(0, 0, -ReportDays)), day(today)); err != nil {
-		return fmt.Errorf("record Umami's visits: %w", err)
 	}
 	return nil
 }
@@ -137,18 +110,6 @@ func (s *Service) Report(ctx context.Context, now time.Time) (Report, error) {
 	}
 	if err := rows.Err(); err != nil {
 		return Report{}, fmt.Errorf("read the daily totals: %w", err)
-	}
-	var umamiPresent bool
-	if err := s.pool.QueryRow(ctx, `select to_regclass('umami.website_event') is not null`).Scan(&umamiPresent); err != nil {
-		return Report{}, fmt.Errorf("look for Umami's tables: %w", err)
-	}
-	if umamiPresent {
-		if err := s.pool.QueryRow(ctx, `
-			select count(distinct visit_id)::int from umami.website_event
-			 where event_type = 1 and created_at >= $1 and created_at < $2
-		`, through, through.AddDate(0, 0, 1)).Scan(&report.Days[ReportDays-1].Visits); err != nil {
-			return Report{}, fmt.Errorf("read today's visits: %w", err)
-		}
 	}
 	report.Previous, err = s.totalsBetween(ctx, day(from.AddDate(0, 0, -ReportDays)), day(from.AddDate(0, 0, -1)))
 	if err != nil {

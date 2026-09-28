@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -76,6 +77,14 @@ func ReadBoundedJSON(c *gin.Context, destination any, limit int64, tooLargeMessa
 		return false
 	}
 	return true
+}
+
+// knownBots stops only honest bots; a bot posing as a browser still counts
+var knownBots = regexp.MustCompile(`(?i)bot\b|crawl|spider|slurp|headless|facebookexternalhit|curl|wget|python|go-http`)
+
+// CountsAsReader is whether a request's user agent looks like a browser rather than an honest bot
+func CountsAsReader(agent string) bool {
+	return agent != "" && !knownBots.MatchString(agent)
 }
 
 // RequestSource is the address a request came from, trusting a proxy on loopback or a private network

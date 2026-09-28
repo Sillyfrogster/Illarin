@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
@@ -13,9 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
-
-// knownBots stops only honest bots; a bot posing as a browser still counts as a view
-var knownBots = regexp.MustCompile(`(?i)bot\b|crawl|spider|slurp|headless|facebookexternalhit|curl|wget|python|go-http`)
 
 // RecordView counts one display of a published work's page by anyone but its creator, once per reader on now's UTC day
 func (s *Service) RecordView(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID, reader readerkey.Reader, now time.Time) error {
@@ -65,7 +61,7 @@ func (h *Handlers) RecordView(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if agent := c.Request.UserAgent(); agent != "" && !knownBots.MatchString(agent) {
+	if agent := c.Request.UserAgent(); api.CountsAsReader(agent) {
 		reader := readerkey.Reader{Address: api.RequestSource(c), Agent: agent}
 		if err := h.works.RecordView(c.Request.Context(), id, viewerID, reader, time.Now()); err != nil {
 			api.Refuse(c, http.StatusInternalServerError, "could not count the view")

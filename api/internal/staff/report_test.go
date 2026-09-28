@@ -98,24 +98,11 @@ func TestTheNightlyRollupKeepsDailyTotalsAndDropsEventsAfterThirtyDays(t *testin
 		insert into events (kind, work_id, day) values
 			('download', $1, '2026-09-19'), ('download', $1, '2026-09-19'), ('sign_up', null, '2026-09-19'),
 			('download', $1, '2026-08-20'), ('send', $1, '2026-08-21'),
-			('publish', $1, '2026-09-20')
+			('publish', $1, '2026-09-20'),
+			('visit', null, '2026-09-19'), ('visit', null, '2026-09-19')
 	`, workID); err != nil {
 		t.Fatalf("insert events: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `
-		create schema umami;
-		create table umami.website_event (visit_id uuid, event_type integer, created_at timestamptz)
-	`); err != nil {
-		t.Fatalf("stand in for Umami: %v", err)
-	}
-	if _, err := pool.Exec(ctx, `
-		insert into umami.website_event values
-			($1, 1, '2026-09-19 10:00+00'), ($1, 1, '2026-09-19 10:05+00'), ($2, 1, '2026-09-19 23:59+00'),
-			($3, 2, '2026-09-19 12:00+00'), ($4, 1, '2026-09-20 01:00+00')
-	`, uuid.New(), uuid.New(), uuid.New(), uuid.New()); err != nil {
-		t.Fatalf("insert Umami's rows: %v", err)
-	}
-
 	service := staff.NewService(apitest.WorksOver(t, pool, format.NewRegistry()))
 	for range 2 {
 		if err := service.Rollup(ctx, today); err != nil {
@@ -215,14 +202,8 @@ func TestReportShowsEventsRecordedToday(t *testing.T) {
 	t.Parallel()
 	pool := testdb.Connect(t)
 	ctx := t.Context()
-	if _, err := pool.Exec(ctx, `insert into events (kind) values ('sign_up')`); err != nil {
+	if _, err := pool.Exec(ctx, `insert into events (kind) values ('sign_up'), ('visit')`); err != nil {
 		t.Fatalf("record sign-up: %v", err)
-	}
-	if _, err := pool.Exec(ctx, `create schema umami; create table umami.website_event (visit_id uuid, event_type integer, created_at timestamptz)`); err != nil {
-		t.Fatalf("set up visits: %v", err)
-	}
-	if _, err := pool.Exec(ctx, `insert into umami.website_event values ($1, 1, now()), ($1, 1, now())`, uuid.New()); err != nil {
-		t.Fatalf("record visits: %v", err)
 	}
 	report, err := staff.NewService(apitest.WorksOver(t, pool, format.NewRegistry())).Report(ctx, time.Now())
 	if err != nil {

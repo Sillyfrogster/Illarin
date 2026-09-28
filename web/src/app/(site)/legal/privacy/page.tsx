@@ -65,33 +65,34 @@ const CLAUSES: LegalClause[] = [
           your IP address points to. It sets no cookie, stores nothing in your
           browser, and keeps neither your IP address nor anything tied to your
           account, so no identity is kept. Every page view record is deleted
-          after 30 days. What stays is the number of visits on each day, and
-          that number is kept.
+          after 30 days. Staff read only Umami&rsquo;s traffic charts, and no
+          number Illarin shows comes from it.
         </p>
 
         <h3>1.7 Counts of what happens</h3>
         <p>
-          When an account is created, a work&rsquo;s page is viewed, a work is
-          downloaded or sent to an app, or a work is published, Illarin records
-          which of those happened, the work where there is one, and the day. The
-          record holds no account, no IP address, no time of day, and nothing
-          about the browser. Illarin reads the browser&rsquo;s name to skip
-          known bots, and never stores it. Views by a work&rsquo;s creator and
-          sends to the creator&rsquo;s own apps are not recorded. Each night
-          Illarin adds these records up into totals for each day and deletes the
-          records older than 30 days. The daily totals are kept, and a
-          work&rsquo;s page shows its total views and downloads, with sends to
-          an app counted as downloads.
+          When an account is created, the site is visited, a work&rsquo;s page
+          is viewed, a work is downloaded or sent to an app, or a work is
+          published, Illarin records which of those happened, the work where
+          there is one, and the day. The record holds no account, no IP address,
+          no time of day, and nothing about the browser. Illarin reads the
+          browser&rsquo;s name to skip known bots, and never stores it. Views by
+          a work&rsquo;s creator and sends to the creator&rsquo;s own apps are
+          not recorded. Each night Illarin adds these records up into totals for
+          each day and deletes the records older than 30 days. The daily totals
+          are kept, and a work&rsquo;s page shows its total views and downloads,
+          with sends to an app counted as downloads.
         </p>
         <p>
-          A view or a download counts once per reader, per work, per day, and a
-          send counts once per app, per work, per day. To tell readers apart,
-          Illarin turns your IP address, your browser&rsquo;s user agent string,
-          and the work into a code, using a secret made new each day. The code
-          can&rsquo;t be turned back into your address or matched across two
-          days or two works, and the IP address and user agent are never stored.
-          At midnight UTC the day&rsquo;s secret and every code made with it are
-          deleted.
+          A view or a download counts once per reader, per work, per day, a
+          visit to the site counts once per reader per day, and a send counts
+          once per app, per work, per day. To tell readers apart, Illarin turns
+          your IP address, your browser&rsquo;s user agent string, and the work,
+          where there is one, into a code, using a secret made new each day. The
+          code can&rsquo;t be turned back into your address or matched across
+          two days or two works, and the IP address and user agent are never
+          stored. At midnight UTC the day&rsquo;s secret and every code made
+          with it are deleted.
         </p>
 
         <h3>1.8 Monitoring</h3>

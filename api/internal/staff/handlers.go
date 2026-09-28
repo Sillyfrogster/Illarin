@@ -26,6 +26,7 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodDelete, "/v1/works/:id/takedown", d.JSON, h.LiftTakedown)
 	routes.Handle(http.MethodPut, "/v1/works/:id/takedown", d.JSON, h.TakeDownWork)
 	routes.Handle(http.MethodGet, "/v1/staff/report", d.JSON, h.GetReport)
+	routes.Handle(http.MethodPost, "/v1/visits", d.JSON, h.RecordVisit)
 	registerAliases(routes, h)
 }
 
