@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/account"
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/page"
+	"github.com/Sillyfrogster/Illarin/api/internal/readerkey"
 	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -131,9 +133,14 @@ const (
 		"so Illarin made no file rather than one missing a picture. Try again in a moment."
 )
 
+// reader is who a download came from, as the daily key sees them
+func reader(c *gin.Context) readerkey.Reader {
+	return readerkey.Reader{Address: api.RequestSource(c), Agent: c.Request.UserAgent()}
+}
+
 func (h *Handlers) HandOffExport(c *gin.Context, download Export) {
 	if download.Record != nil {
-		if err := h.downloads.Record(c.Request.Context(), *download.Record); err != nil {
+		if err := h.downloads.Record(c.Request.Context(), *download.Record, reader(c), time.Now()); err != nil {
 			Refuse(c, err)
 			return
 		}
@@ -146,7 +153,7 @@ func (h *Handlers) HandOffExport(c *gin.Context, download Export) {
 }
 
 func (h *Handlers) HandOffSource(c *gin.Context, download Source) {
-	if err := h.downloads.Record(c.Request.Context(), download.Record); err != nil {
+	if err := h.downloads.Record(c.Request.Context(), download.Record, reader(c), time.Now()); err != nil {
 		Refuse(c, err)
 		return
 	}

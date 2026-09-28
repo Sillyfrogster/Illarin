@@ -2,7 +2,6 @@ package page
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -13,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // knownBots stops only honest bots; a bot posing as a browser still counts as a view
@@ -32,20 +30,14 @@ func (s *Service) RecordView(ctx context.Context, id uuid.UUID, viewerID *uuid.U
 			   and work.deleted_at is null and work.taken_down_at is null
 			   and work.owner_id is distinct from $2
 		), seen as (
-			insert into reader_keys (day, key) select $3, $4 from work
+			insert into reader_keys (day, kind, key) select $3, 'view', $4 from work
 			on conflict do nothing returning day
 		)
 		insert into events (kind, work_id, day) select 'view', $1, day from seen
-	`, id, viewerID, day, key); err != nil && !secretGone(err) {
+	`, id, viewerID, day, key); err != nil && !readerkey.SecretGone(err) {
 		return fmt.Errorf("record a work view: %w", err)
 	}
 	return nil
-}
-
-// secretGone is a view keyed just before midnight whose day was deleted before it was saved
-func secretGone(err error) bool {
-	var databaseError *pgconn.PgError
-	return errors.As(err, &databaseError) && databaseError.Code == "23503"
 }
 
 // lifetimeCounts reads a work's views, downloads counting sends, sends alone and current followers

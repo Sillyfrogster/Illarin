@@ -327,3 +327,77 @@ func TestTheCreatorSeesEachFollowerOnceAndRealChangesAreCountedWithoutWhoMadeThe
 		t.Fatalf("totals = %d follows and %d unfollows with %d events left, want 3, 2 and 0", follows, unfollows, left)
 	}
 }
+
+func TestARepeatedPublicDownloadTheSameDayIsRecordedButCountedOnce(t *testing.T) {
+	t.Parallel()
+	router, session, pool := harness.NewConnectRouter(t)
+	workID := apitest.PublishedCharacter(t, router, session)
+	download := func(address string) {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodGet, "/download/"+workID+"/test_opaque", nil)
+		request.Header.Set("User-Agent", browserAgent)
+		request.RemoteAddr = address + ":41000"
+		if got := apitest.Send(t, router, request); got.Code != http.StatusOK {
+			t.Fatalf("download status = %d, want 200: %s", got.Code, got.Body.String())
+		}
+	}
+	viewWork(t, router, workID, browserAgent, nil)
+
+	download("198.51.100.7")
+	download("198.51.100.7")
+	download("198.51.100.8")
+	if records := apitest.DownloadRecordCount(t, pool, "public"); records != 3 {
+		t.Fatalf("public download records = %d, want every handoff kept", records)
+	}
+	if got := apitest.FetchWorkPage(t, router, "/v1/works/"+workID).DownloadCount; got != 2 {
+		t.Fatalf("downloads = %d, want each reader once", got)
+	}
+
+	works := apitest.WorksOver(t, pool, format.NewRegistry())
+	if err := staff.NewService(works).Rollup(t.Context(), time.Now().UTC().AddDate(0, 0, 1)); err != nil {
+		t.Fatalf("roll up: %v", err)
+	}
+	if listed := apitest.ListItems(t, router, "/v1/works?sort=downloads"); len(listed) != 1 || listed[0].DownloadCount != 2 {
+		t.Fatalf("ranked cards = %+v, want the one work ranked on its 2 readers", listed)
+	}
+}
+
+func TestARepeatedSendToTheSameAppTheSameDayCountsOnce(t *testing.T) {
+	t.Parallel()
+	router, creator, pool := harness.NewConnectRouter(t)
+	reader := apitest.AddVerifiedUser(t, router, pool, "reader@example.com", "quiet.reader")
+	desk := apitest.ConnectApp(t, router, reader, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, desk.AccessToken, []string{"test_opaque"})
+	shelf := apitest.ConnectApp(t, router, reader, "Paper Lantern", "shelf", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, shelf.AccessToken, []string{"test_opaque"})
+	workID := apitest.PublishedCharacter(t, router, creator)
+	deliver := func(app apitest.AppCredentials) {
+		t.Helper()
+		if queued := apitest.SendToApp(t, router, reader, workID, app.ConnectedApp.ID); queued.Code != http.StatusAccepted {
+			t.Fatalf("send status = %d, want 202: %s", queued.Code, queued.Body.String())
+		}
+		collected := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, app.AccessToken, nil))
+		apitest.Collect(t, router, app.AccessToken, []string{collected.Sends[0].ID})
+	}
+	sends := func() int {
+		t.Helper()
+		return apitest.FetchWorkPage(t, router, "/v1/works/"+workID).SendCount
+	}
+
+	deliver(desk)
+	deliver(desk)
+	if got := sends(); got != 1 {
+		t.Fatalf("sends = %d, want the same app counted once", got)
+	}
+	deliver(shelf)
+	if got := sends(); got != 2 {
+		t.Fatalf("sends = %d, want another app counted", got)
+	}
+	if _, err := pool.Exec(t.Context(), `update counted_sends set day = day - 1`); err != nil {
+		t.Fatalf("move today's counted sends to yesterday: %v", err)
+	}
+	deliver(desk)
+	if got := sends(); got != 3 {
+		t.Fatalf("sends = %d, want the same app counted again the next day", got)
+	}
+}

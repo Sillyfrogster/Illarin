@@ -34,7 +34,7 @@ func (s *Service) RunRollup(ctx context.Context, onError func(error)) {
 	}
 }
 
-// Rollup writes the totals for every complete day, ranks works by their last 30 days, adds Umami's visits, deletes events past their retention and earlier days' reader keys
+// Rollup writes the totals for every complete day, ranks works by their last 30 days, adds Umami's visits, deletes events past their retention and earlier days' reader keys and counted sends
 func (s *Service) Rollup(ctx context.Context, now time.Time) error {
 	today := now.UTC().Truncate(24 * time.Hour)
 	tx, err := s.pool.Begin(ctx)
@@ -56,6 +56,9 @@ func (s *Service) Rollup(ctx context.Context, now time.Time) error {
 	}
 	if err := readerkey.Forget(ctx, tx, today); err != nil {
 		return err
+	}
+	if _, err := tx.Exec(ctx, `delete from counted_sends where day < $1::date`, day(today)); err != nil {
+		return fmt.Errorf("delete earlier counted sends: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `select rank_works($1::date)`, day(today)); err != nil {
 		return fmt.Errorf("rank works by their last 30 days: %w", err)

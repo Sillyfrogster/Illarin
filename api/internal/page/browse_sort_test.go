@@ -55,9 +55,12 @@ func TestActivitySortsRankTheLast30DaysOfPublicWorksAndPageFromOneRanking(t *tes
 	for reader, workID := range []string{first, first, second, third, unlisted, unlisted, unlisted} {
 		viewWork(t, router, workID, readerAgent(reader), nil)
 	}
+	downloads := 0
 	download := func(workID string, session *http.Cookie) {
 		t.Helper()
+		downloads++
 		request := httptest.NewRequest(http.MethodGet, "/download/"+workID+"/test_opaque", nil)
+		request.RemoteAddr = "198.51.100." + strconv.Itoa(downloads) + ":41000"
 		if session != nil {
 			request = apitest.Authorized(request, session)
 		}

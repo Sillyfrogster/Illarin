@@ -6,11 +6,13 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/db"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Reader is the address and user-agent a request came with, hashed and never stored
@@ -48,4 +50,10 @@ func Forget(ctx context.Context, conn db.DBTX, day time.Time) error {
 		return fmt.Errorf("delete earlier reader secrets: %w", err)
 	}
 	return nil
+}
+
+// SecretGone is a key made just before midnight whose day was deleted before the key was saved
+func SecretGone(err error) bool {
+	var databaseError *pgconn.PgError
+	return errors.As(err, &databaseError) && databaseError.Code == "23503"
 }

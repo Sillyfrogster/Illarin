@@ -84,13 +84,14 @@ const CLAUSES: LegalClause[] = [
           an app counted as downloads.
         </p>
         <p>
-          A view counts once per reader, per work, per day. To tell readers
-          apart, Illarin turns your IP address, your browser&rsquo;s user agent
-          string, and the work into a code, using a secret made new each day.
-          The code can&rsquo;t be turned back into your address or matched
-          across two days or two works, and the IP address and user agent are
-          never stored. At midnight UTC the day&rsquo;s secret and every code
-          made with it are deleted.
+          A view or a download counts once per reader, per work, per day, and a
+          send counts once per app, per work, per day. To tell readers apart,
+          Illarin turns your IP address, your browser&rsquo;s user agent string,
+          and the work into a code, using a secret made new each day. The code
+          can&rsquo;t be turned back into your address or matched across two
+          days or two works, and the IP address and user agent are never stored.
+          At midnight UTC the day&rsquo;s secret and every code made with it are
+          deleted.
         </p>
 
         <h3>1.8 Monitoring</h3>
@@ -287,10 +288,10 @@ const CLAUSES: LegalClause[] = [
           links, and app connection codes all expire on their own. Page view
           records and the counts described in 1.7 are deleted after 30 days, and
           the daily totals made from them are kept. The codes that keep a view
-          from counting twice are deleted at midnight UTC each day. Server logs
-          are kept for a short rolling window. Once Illarin takes payments,
-          payment records are kept for as long as tax law requires, even after
-          the account is gone.
+          or a download from counting twice are deleted at midnight UTC each
+          day. Server logs are kept for a short rolling window. Once Illarin
+          takes payments, payment records are kept for as long as tax law
+          requires, even after the account is gone.
         </p>
       </>
     ),
