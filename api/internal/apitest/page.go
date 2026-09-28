@@ -36,7 +36,7 @@ type WorkPageResponse struct {
 	NSFWPreference string  `json:"nsfwPreference"`
 	ViewCount      int     `json:"viewCount"`
 	DownloadCount  int     `json:"downloadCount"`
-	SendCount      *int    `json:"sendCount"`
+	SendCount      int     `json:"sendCount"`
 	FollowerCount  *int    `json:"followerCount"`
 	Takedown       *struct {
 		Reason string    `json:"reason"`

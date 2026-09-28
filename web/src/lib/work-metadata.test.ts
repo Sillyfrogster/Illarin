@@ -32,6 +32,7 @@ function work(over: Partial<WorkDetail> = {}): WorkDetail {
     nsfwPreference: "blurred",
     viewCount: 0,
     downloadCount: 0,
+    sendCount: 0,
     ...over,
   };
 }

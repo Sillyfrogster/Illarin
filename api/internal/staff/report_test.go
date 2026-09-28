@@ -19,7 +19,8 @@ import (
 func TestADownloadASendASignUpAndAPublishEachRecordOneEventWithNoIdentity(t *testing.T) {
 	t.Parallel()
 	router, session, pool := harness.NewConnectRouter(t)
-	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	reader := apitest.AddVerifiedUser(t, router, pool, "reader@example.com", "quiet.reader")
+	credentials := apitest.ConnectApp(t, router, reader, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
 	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
 	workID := apitest.PublishedCharacter(t, router, session)
 
@@ -27,7 +28,7 @@ func TestADownloadASendASignUpAndAPublishEachRecordOneEventWithNoIdentity(t *tes
 	if downloaded.Code != http.StatusOK {
 		t.Fatalf("download status = %d, want 200: %s", downloaded.Code, downloaded.Body.String())
 	}
-	if queued := apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID); queued.Code != http.StatusAccepted {
+	if queued := apitest.SendToApp(t, router, reader, workID, credentials.ConnectedApp.ID); queued.Code != http.StatusAccepted {
 		t.Fatalf("send status = %d, want 202: %s", queued.Code, queued.Body.String())
 	}
 	collected := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil))
@@ -37,7 +38,7 @@ func TestADownloadASendASignUpAndAPublishEachRecordOneEventWithNoIdentity(t *tes
 	apitest.Collect(t, router, credentials.AccessToken, []string{collected.Sends[0].ID})
 
 	counts := eventCounts(t, pool)
-	want := map[string]int{"sign_up": 1, "publish": 1, "download": 1, "send": 1}
+	want := map[string]int{"sign_up": 2, "publish": 1, "download": 1, "send": 1}
 	for kind, n := range want {
 		if counts[kind] != n {
 			t.Fatalf("events = %v, want %v", counts, want)
@@ -60,8 +61,8 @@ func TestADownloadASendASignUpAndAPublishEachRecordOneEventWithNoIdentity(t *tes
 	}
 	report := apitest.DecodeResponse[staff.Report](t, response)
 	today := report.Days[len(report.Days)-1]
-	if today.Downloads != 1 || today.Sends != 1 || today.SignUps != 1 || today.Publishes != 1 {
-		t.Fatalf("report today = %+v, want one of each event", today)
+	if today.Downloads != 1 || today.Sends != 1 || today.SignUps != 2 || today.Publishes != 1 {
+		t.Fatalf("report today = %+v, want two sign-ups and one of each other event", today)
 	}
 	if len(report.TopWorks) != 1 || report.TopWorks[0].ID != workID || report.TopWorks[0].Downloads != 1 {
 		t.Fatalf("report most downloaded works = %+v, want the downloaded work", report.TopWorks)

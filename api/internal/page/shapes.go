@@ -90,7 +90,7 @@ type WorkDetail struct {
 	DraftedChangesVersion *int64                   `json:"draftedChangesVersion,omitempty"`
 	ViewCount             int                      `json:"viewCount"`
 	DownloadCount         int                      `json:"downloadCount"`
-	SendCount             *int                     `json:"sendCount,omitempty"`
+	SendCount             int                      `json:"sendCount"`
 	FollowerCount         *int                     `json:"followerCount,omitempty"`
 }
 

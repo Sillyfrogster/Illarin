@@ -76,10 +76,12 @@ const CLAUSES: LegalClause[] = [
           which of those happened, the work where there is one, and the day. The
           record holds no account, no IP address, no time of day, and nothing
           about the browser. Illarin reads the browser&rsquo;s name only to skip
-          known bots, and never stores it. Views by a work&rsquo;s creator are
-          not recorded. Each night Illarin adds these records up into totals for
-          each day and deletes the records older than 30 days. The daily totals
-          are kept, and a work&rsquo;s page shows its total views and downloads.
+          known bots, and never stores it. Views by a work&rsquo;s creator and
+          sends to the creator&rsquo;s own apps are not recorded. Each night
+          Illarin adds these records up into totals for each day and deletes the
+          records older than 30 days. The daily totals are kept, and a
+          work&rsquo;s page shows its total views and downloads, with sends to
+          an app counted as downloads.
         </p>
 
         <h3>1.8 Monitoring</h3>

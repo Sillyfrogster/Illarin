@@ -96,17 +96,15 @@ func viewWork(t *testing.T, router http.Handler, workID, agent string, session *
 	}
 }
 
-func TestOnlyTheCreatorSeesSendsTheirAppAcknowledged(t *testing.T) {
+func TestAReadersAcknowledgedSendCountsOnceAsAPublicDownloadAndTheCreatorsOwnSendNever(t *testing.T) {
 	t.Parallel()
-	router, session, pool := harness.NewConnectRouter(t)
-	credentials := apitest.ConnectApp(t, router, session, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
-	apitest.DeclareFormats(t, router, credentials.AccessToken, []string{"test_opaque"})
-	workID := apitest.PublishedCharacter(t, router, session)
-	sends := func() *int {
-		t.Helper()
-		return apitest.DecodeResponse[apitest.WorkPageResponse](t, apitest.Send(t, router, apitest.Authorized(
-			httptest.NewRequest(http.MethodGet, "/v1/works/"+workID, nil), session))).SendCount
-	}
+	router, creator, pool := harness.NewConnectRouter(t)
+	reader := apitest.AddVerifiedUser(t, router, pool, "reader@example.com", "quiet.reader")
+	desk := apitest.ConnectApp(t, router, reader, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, desk.AccessToken, []string{"test_opaque"})
+	studio := apitest.ConnectApp(t, router, creator, "Paper Lantern", "studio", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, studio.AccessToken, []string{"test_opaque"})
+	workID := apitest.PublishedCharacter(t, router, creator)
 	expireLeases := func(attempts int) {
 		t.Helper()
 		if _, err := pool.Exec(t.Context(), `
@@ -116,38 +114,77 @@ func TestOnlyTheCreatorSeesSendsTheirAppAcknowledged(t *testing.T) {
 			t.Fatalf("expire the send leases: %v", err)
 		}
 	}
-	collect := func() apitest.CollectedSends {
+	collect := func(token string) apitest.CollectedSends {
 		t.Helper()
-		return apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, credentials.AccessToken, nil))
+		return apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, token, nil))
 	}
-	acknowledge := func(id string) {
+	acknowledge := func(token, id string) {
 		t.Helper()
-		apitest.Collect(t, router, credentials.AccessToken, []string{id})
+		apitest.Collect(t, router, token, []string{id})
 	}
 
-	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
-	first := collect().Sends[0].ID
+	apitest.SendToApp(t, router, reader, workID, desk.ConnectedApp.ID)
+	first := collect(desk.AccessToken).Sends[0].ID
 	expireLeases(0)
-	if retried := collect(); len(retried.Sends) != 1 || retried.Sends[0].ID != first {
+	if retried := collect(desk.AccessToken); len(retried.Sends) != 1 || retried.Sends[0].ID != first {
 		t.Fatalf("retried collection = %+v, want the same send again", retried.Sends)
 	}
-	if count := sends(); count == nil || *count != 0 {
-		t.Fatalf("send count before acknowledgement = %v, want 0", count)
+	if page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID); page.SendCount != 0 {
+		t.Fatalf("send count before acknowledgement = %d, want 0", page.SendCount)
 	}
-	acknowledge(first)
-	acknowledge(first)
+	acknowledge(desk.AccessToken, first)
+	acknowledge(desk.AccessToken, first)
 
-	apitest.SendToApp(t, router, session, workID, credentials.ConnectedApp.ID)
-	second := collect().Sends[0].ID
+	apitest.SendToApp(t, router, reader, workID, desk.ConnectedApp.ID)
+	second := collect(desk.AccessToken).Sends[0].ID
 	expireLeases(apitest.SendSettings().MaxAttempts)
-	apitest.Collect(t, router, credentials.AccessToken, nil)
-	acknowledge(second)
+	apitest.Collect(t, router, desk.AccessToken, nil)
+	acknowledge(desk.AccessToken, second)
 
-	if count := sends(); count == nil || *count != 1 {
-		t.Fatalf("send count = %v, want 1 acknowledged send", count)
+	apitest.SendToApp(t, router, creator, workID, studio.ConnectedApp.ID)
+	acknowledge(studio.AccessToken, collect(studio.AccessToken).Sends[0].ID)
+	if got := apitest.Send(t, router, httptest.NewRequest(http.MethodGet, "/download/"+workID+"/test_opaque", nil)); got.Code != http.StatusOK {
+		t.Fatalf("download status = %d, want 200: %s", got.Code, got.Body.String())
 	}
-	if page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID); page.SendCount != nil {
-		t.Fatalf("reader sees send count %d, want none", *page.SendCount)
+
+	page := apitest.FetchWorkPage(t, router, "/v1/works/"+workID)
+	if page.DownloadCount != 2 || page.SendCount != 1 {
+		t.Fatalf("counts = %d downloads with %d sent, want the public download plus the reader's one acknowledged send",
+			page.DownloadCount, page.SendCount)
+	}
+	var sendEvents int
+	if err := pool.QueryRow(t.Context(), `select count(*) from events where kind = 'send' and work_id = $1`, workID).
+		Scan(&sendEvents); err != nil {
+		t.Fatalf("count send events: %v", err)
+	}
+	if sendEvents != 1 {
+		t.Fatalf("send events = %d, want only the reader's", sendEvents)
+	}
+}
+
+func TestAWorkThatCanOnlyBeSentRanksByItsSendsInMostDownloaded(t *testing.T) {
+	t.Parallel()
+	router, creator, pool := harness.NewConnectRouter(t)
+	sealed := apitest.PublishPrivatePromptPreset(t, router, creator, "Sealed preset", "Private for allowed apps only.")
+	newer := apitest.PublishPrivatePromptPreset(t, router, creator, "Newer preset", "Also private.")
+	reader := apitest.AddVerifiedUser(t, router, pool, "reader@example.com", "quiet.reader")
+	desk := apitest.ConnectApp(t, router, reader, "Paper Lantern", "desk", []string{apitest.ReceivePermission})
+	apitest.DeclareFormats(t, router, desk.AccessToken, []string{"preset_lumiverse"})
+	if queued := apitest.SendToApp(t, router, reader, sealed, desk.ConnectedApp.ID); queued.Code != http.StatusAccepted {
+		t.Fatalf("send status = %d, want 202: %s", queued.Code, queued.Body.String())
+	}
+	collected := apitest.DecodeResponse[apitest.CollectedSends](t, apitest.Collect(t, router, desk.AccessToken, nil))
+	apitest.Collect(t, router, desk.AccessToken, []string{collected.Sends[0].ID})
+
+	works := apitest.WorksOver(t, pool, format.NewRegistry())
+	if err := staff.NewService(works).Rollup(t.Context(), time.Now().UTC().AddDate(0, 0, 1)); err != nil {
+		t.Fatalf("roll up: %v", err)
+	}
+
+	listed := apitest.ListItems(t, router, "/v1/works?sort=downloads&type=preset")
+	assertOrder(t, listed, sealed, newer)
+	if listed[0].DownloadCount != 1 {
+		t.Fatalf("card downloads = %d, want the one send", listed[0].DownloadCount)
 	}
 }
 

@@ -132,7 +132,7 @@ func TestWorkPageCarriesOnlyItsOwnFields(t *testing.T) {
 		"hasPrivatePrompts": true, "linkedInstallOnly": true, "allowedApps": true, "eligibleApps": true,
 		"latestVersion": true, "extensionDependencies": true, "installedAppVersions": true,
 		"kind": true, "discovery": true, "latestUpdate": true,
-		"viewCount": true, "downloadCount": true,
+		"viewCount": true, "downloadCount": true, "sendCount": true,
 	}
 	for key := range body {
 		if !wantKeys[key] {

@@ -226,7 +226,7 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        (select coalesce(sum(counted.count), 0) from work_day_counts counted
          where counted.work_id = a.id and counted.kind = 'view')::int as view_count,
        (select coalesce(sum(counted.count), 0) from work_day_counts counted
-         where counted.work_id = a.id and counted.kind = 'download')::int as download_count
+         where counted.work_id = a.id and counted.kind in ('download', 'send'))::int as download_count
   from works a
  cross join ranking
   left join work_rankings ranked_work on ranked_work.day = ranking.day and ranked_work.work_id = a.id
@@ -1006,7 +1006,7 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
        (select coalesce(sum(counted.count), 0) from work_day_counts counted
          where counted.work_id = a.id and counted.kind = 'view')::int as view_count,
        (select coalesce(sum(counted.count), 0) from work_day_counts counted
-         where counted.work_id = a.id and counted.kind = 'download')::int as download_count
+         where counted.work_id = a.id and counted.kind in ('download', 'send'))::int as download_count
   from profile_featured_works featured
   join works a on a.id = featured.work_id
   left join work_summaries summary on summary.work_id = a.id
