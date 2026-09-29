@@ -70,3 +70,8 @@ proxy-check: ## Check the local nginx configuration
 production-proxy-check: ## Check the production nginx configuration
 	docker run --rm -v "$(CURDIR)/nginx/production.conf:/etc/nginx/nginx.conf:ro" \
 		nginx:1.31.2-alpine3.23 nginx -t
+
+.PHONY: shots
+shots: ## Photograph one part of a page in every state; set URL and TARGET, and SIGNED_IN=1 for a signed-in page
+	@test -n "$$URL" && test -n "$$TARGET" || { echo "Set URL and TARGET, for example make shots URL=/settings TARGET='[role=radiogroup]'."; exit 1; }
+	.ai/tools/shots.ts "$$URL" "$$TARGET" $(if $(SIGNED_IN),--signed-in)
