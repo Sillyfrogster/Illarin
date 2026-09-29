@@ -55,7 +55,11 @@ export default async function WorkPage({
   });
 
   return (
-    <DraftedChangesProvider key={work.id} version={work.draftedChangesVersion}>
+    <DraftedChangesProvider
+      key={work.id}
+      version={work.draftedChangesVersion}
+      workId={work.id}
+    >
       <WorkspaceProvider
         addableBlocks={work.addableBlocks ?? []}
         allowedApps={work.allowedApps}
@@ -71,6 +75,7 @@ export default async function WorkPage({
         isDraft={isDraft}
         isOwner={work.isOwner}
         unpublishedChanges={Boolean(work.unpublishedChanges)}
+        version={work.draftedChangesVersion ?? 0}
       >
         <ShelfProvider>
           <ExtensionDependenciesProvider

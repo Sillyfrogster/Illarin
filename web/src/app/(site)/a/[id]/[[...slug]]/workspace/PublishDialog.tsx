@@ -47,7 +47,7 @@ export function PublishDialog({
 }) {
   const workspace = useWorkspace();
   const liveCandidate = useDraftedChanges();
-  const [candidate] = useState(() => ({ version: liveCandidate.version }));
+  const [candidate] = useState(() => ({ ...liveCandidate }));
   const router = useRouter();
   const [groups, setGroups] = useState<VersionChangeGroup[] | null>(null);
   const [waiting, setWaiting] = useState(false);

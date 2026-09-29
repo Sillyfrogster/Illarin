@@ -24,6 +24,7 @@ import type { AppName } from "@/lib/api/shapes";
 import {
   DRAFTED_CHANGES_SAVED,
   DRAFTED_CHANGES_STALE,
+  isOlderThanSaved,
   useDraftedChanges,
 } from "@/lib/drafted-changes";
 import { promptsMadePublic } from "../MakePublicConfirmation";
@@ -119,6 +120,7 @@ export function WorkspaceProvider({
   allowedApps,
   eligibleApps,
   unpublishedChanges,
+  version,
   children,
 }: {
   addableBlocks: AddableBlock[];
@@ -130,6 +132,7 @@ export function WorkspaceProvider({
   allowedApps: AppName[];
   eligibleApps: AppName[];
   unpublishedChanges: boolean;
+  version: number;
   children: ReactNode;
 }) {
   const candidate = useDraftedChanges();
@@ -363,12 +366,12 @@ export function WorkspaceProvider({
   }, []);
 
   useEffect(() => {
-    if (saving.current) return;
+    if (saving.current || isOlderThanSaved(workId, version)) return;
     applyServerBlocks(blocks);
-  }, [applyServerBlocks, blocks]);
+  }, [applyServerBlocks, blocks, version, workId]);
 
   useEffect(() => {
-    if (saving.current) return;
+    if (saving.current || isOlderThanSaved(workId, version)) return;
     const incomingDetails = {
       blurb: details.blurb,
       isNsfw: details.isNsfw,
@@ -381,7 +384,14 @@ export function WorkspaceProvider({
         : incomingDetails,
     );
     setSavedDetails(incomingDetails);
-  }, [details.blurb, details.isNsfw, details.name, details.tags]);
+  }, [
+    details.blurb,
+    details.isNsfw,
+    details.name,
+    details.tags,
+    version,
+    workId,
+  ]);
 
   const editBlockList = useCallback(
     (change: (blocks: WorkBlock[]) => WorkBlock[]) => {

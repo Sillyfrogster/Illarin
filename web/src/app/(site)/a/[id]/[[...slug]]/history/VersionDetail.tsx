@@ -250,6 +250,7 @@ function VersionManagement({
                 () =>
                   restoreWorkVersion(
                     {
+                      workId,
                       version: owner.draftedChangesVersion,
                     } satisfies Candidate,
                     workId,
