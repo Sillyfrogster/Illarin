@@ -7,6 +7,7 @@ import { NumberTicker } from "@/components/ui/number-ticker";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn, focusRing } from "@/lib/cn";
+import { spring } from "@/lib/springs";
 
 export type DockState =
   | "failed"
@@ -153,7 +154,7 @@ export function Dock({
   return (
     <div
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-4 transition-[padding] duration-500 ease-wipe motion-reduce:transition-none md:pb-7",
+        "pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-4 transition-[padding] duration-240 ease-wipe motion-reduce:transition-none md:pb-7",
         railOpen && "max-lg:hidden lg:pr-[28rem]",
       )}
     >
@@ -168,7 +169,7 @@ export function Dock({
               : { opacity: 0, y: 96 }
         }
         layoutId={reduced ? undefined : layoutId}
-        transition={{ duration: reduced ? 0 : 0.45, ease: [0.22, 1, 0.36, 1] }}
+        transition={reduced ? { duration: 0 } : spring.slow}
       >
         <div
           aria-live="polite"

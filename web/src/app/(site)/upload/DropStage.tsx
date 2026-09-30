@@ -5,6 +5,7 @@ import { FileArchive, FileImage, FileJson } from "lucide-react";
 import { useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { spring } from "@/lib/springs";
 
 const SHEETS = [
   { Icon: FileImage, name: ".png", rest: -11, fanned: -20, shift: -44 },
@@ -43,7 +44,7 @@ export function FannedSheets({
           )}
           initial={false}
           key={name}
-          transition={{ type: "spring", stiffness: 320, damping: 22 }}
+          transition={spring.slow}
         >
           <Icon
             className={cn(index === 1 ? "text-accent" : "text-mute")}
@@ -78,12 +79,12 @@ export function DropStage({
     <section
       aria-labelledby={`${field}-heading`}
       className={cn(
-        "group relative flex flex-col items-center gap-8 overflow-hidden rounded-plate px-6 py-10 transition-colors duration-300 sm:flex-row sm:gap-10 sm:px-10 sm:py-12",
+        "group relative flex flex-col items-center gap-8 overflow-hidden rounded-plate px-6 py-10 transition-colors duration-240 sm:flex-row sm:gap-10 sm:px-10 sm:py-12",
         over ? "bg-accent-wash" : "bg-inset",
       )}
     >
       <FannedSheets
-        className="transition-transform duration-500 ease-[var(--ease-wipe)] group-hover:-translate-y-1 motion-reduce:transform-none"
+        className="transition-transform duration-240 ease-[var(--ease-wipe)] group-hover:-translate-y-1 motion-reduce:transform-none"
         open={over}
       />
       <div className="flex min-w-0 flex-col items-center text-center sm:items-start sm:text-left">

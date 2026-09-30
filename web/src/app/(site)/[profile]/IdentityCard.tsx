@@ -392,7 +392,7 @@ function LinkRow({
         <span className="min-w-0 truncate text-mute">{text}</span>
         <ArrowUpRight
           aria-hidden="true"
-          className="ml-auto size-3.5 shrink-0 text-mute transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none"
+          className="ml-auto size-3.5 shrink-0 text-mute transition-transform duration-160 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none"
         />
       </a>
     </li>

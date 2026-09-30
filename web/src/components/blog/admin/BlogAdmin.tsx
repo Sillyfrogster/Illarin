@@ -89,7 +89,7 @@ export function BlogAdmin() {
       <section
         aria-labelledby="register-heading"
         className={cn(
-          "mt-8 min-w-0 transition-[padding] duration-500 ease-wipe motion-reduce:transition-none",
+          "mt-8 min-w-0 transition-[padding] duration-240 ease-wipe motion-reduce:transition-none",
           step && "lg:pr-[30rem]",
         )}
       >

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { startPost } from "@/lib/api/posts";
 import type { BlogWorkspace } from "@/lib/api/query";
+import { spring } from "@/lib/springs";
 
 export function StartPost({
   onFailure,
@@ -61,7 +62,7 @@ export function StartPost({
       className="w-full rounded-plate bg-deep p-5 sm:p-6"
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
       onSubmit={start}
-      transition={{ duration: reduced ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
+      transition={reduced ? { duration: 0 } : spring.slow}
     >
       <h2 className="font-display text-section font-medium tracking-tight text-ink">
         New post

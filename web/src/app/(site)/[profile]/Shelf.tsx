@@ -179,7 +179,7 @@ export function Shelf({
         <div
           aria-busy={pending || query.isFetching || undefined}
           className={cn(
-            "mt-8 transition-opacity duration-200 motion-reduce:transition-none",
+            "mt-8 transition-opacity duration-160 motion-reduce:transition-none",
             (pending || (query.isFetching && !query.isFetchingNextPage)) &&
               "opacity-60",
           )}

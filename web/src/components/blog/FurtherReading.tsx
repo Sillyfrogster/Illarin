@@ -34,7 +34,7 @@ export function FurtherReading({ posts }: { posts: PostSummary[] }) {
               </span>
               <ArrowRight
                 aria-hidden="true"
-                className="size-4 shrink-0 text-mute transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
+                className="size-4 shrink-0 text-mute transition-transform duration-160 group-hover:translate-x-1 motion-reduce:transition-none"
               />
             </Link>
           </li>

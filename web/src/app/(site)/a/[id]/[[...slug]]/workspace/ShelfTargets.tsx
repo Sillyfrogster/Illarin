@@ -6,11 +6,10 @@ import type { ReactNode } from "react";
 import { RichText } from "@/components/ui/RichText";
 import type { ShelfPiece } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
+import { spring } from "@/lib/springs";
 import { sectionName } from "./ShelfPiece";
 import { useShelf } from "./shelf";
 import { useWorkspace } from "./state";
-
-const OPEN = { type: "spring", stiffness: 360, damping: 32 } as const;
 
 /** ShelfRoom moves the page clear of the shelf on wide screens, so every block stays in reach of a drag. */
 export function ShelfRoom({ children }: { children: ReactNode }) {
@@ -19,7 +18,7 @@ export function ShelfRoom({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        "transition-[padding] duration-[440ms] ease-[var(--ease-wipe)] motion-reduce:transition-none",
+        "transition-[padding] duration-240 ease-[var(--ease-wipe)] motion-reduce:transition-none",
         open && "lg:pr-[28rem]",
       )}
     >
@@ -40,7 +39,7 @@ export function GhostBlock({ piece }: { piece: ShelfPiece }) {
       className="relative flex min-h-40 flex-col gap-3 overflow-hidden rounded-plate border-2 border-accent/70 border-dashed bg-accent-wash/40 px-6 py-5"
       data-shelf-ghost
       initial={still ? false : { opacity: 0, scale: 0.97, filter: "blur(4px)" }}
-      transition={OPEN}
+      transition={spring.moderate}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="font-display text-title font-medium tracking-tight text-ink wrap-anywhere">
@@ -85,7 +84,7 @@ export function TextTarget({
     <div
       className={cn(
         "relative",
-        "after:pointer-events-none after:absolute after:-inset-3 after:rounded-plate after:opacity-0 after:transition-[opacity,background-color,box-shadow] after:duration-200 after:content-[''] motion-reduce:after:transition-none",
+        "after:pointer-events-none after:absolute after:-inset-3 after:rounded-plate after:opacity-0 after:transition-[opacity,background-color,box-shadow] after:duration-160 after:content-[''] motion-reduce:after:transition-none",
         shown &&
           "after:opacity-100 after:inset-ring-2 after:inset-ring-accent/30",
         (over || adding) && "after:bg-accent-wash/50 after:inset-ring-accent",

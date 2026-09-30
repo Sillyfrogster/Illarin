@@ -32,7 +32,7 @@ export function ArchiveLead({
         >
           <Image
             alt={cover.alt}
-            className="h-auto max-h-[26rem] w-full object-contain transition-transform duration-500 group-hover:scale-[1.02] motion-reduce:transform-none"
+            className="h-auto max-h-[26rem] w-full object-contain transition-transform duration-240 group-hover:scale-[1.02] motion-reduce:transform-none"
             height={cover.height}
             priority
             src={cover.url}
@@ -43,7 +43,7 @@ export function ArchiveLead({
             aria-hidden="true"
             className="absolute right-4 bottom-4 flex size-12 items-center justify-center rounded-full bg-field text-ink"
           >
-            <ArrowRight className="size-5 -rotate-45 transition-transform duration-300 group-hover:rotate-0 motion-reduce:transition-none" />
+            <ArrowRight className="size-5 -rotate-45 transition-transform duration-240 group-hover:rotate-0 motion-reduce:transition-none" />
           </span>
         </Link>
       ) : null}

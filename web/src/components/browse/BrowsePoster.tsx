@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import type { BrowseWork, NsfwPreference } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { posterFace, type TypeSetting, typeSetting } from "@/lib/poster-face";
+import { spring } from "@/lib/springs";
 import { workCounts } from "@/lib/work-counts";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_LABELS } from "@/lib/work-types";
@@ -23,7 +24,7 @@ const SETTING: Record<TypeSetting, string> = {
 };
 
 const PLATE =
-  "overflow-hidden rounded-plate transition duration-500 group-hover:-translate-y-1 motion-reduce:transform-none motion-reduce:transition-none";
+  "overflow-hidden rounded-plate transition duration-240 group-hover:-translate-y-1 motion-reduce:transform-none motion-reduce:transition-none";
 
 const GROUNDS = [
   {
@@ -85,7 +86,7 @@ export function BrowsePoster({
           initial: { opacity: 0, scale: 0.92 },
           animate: { opacity: 1, scale: 1 },
           exit: { opacity: 0, scale: 0.92 },
-          transition: { type: "spring", stiffness: 300, damping: 30 } as const,
+          transition: spring.slow,
         }
       : {};
   return (
@@ -104,7 +105,7 @@ export function BrowsePoster({
           {work.cover ? (
             <Image
               alt=""
-              className="size-full object-contain transition-transform duration-700 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
+              className="size-full object-contain transition-transform duration-240 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
               fill
               loading={eager ? "eager" : "lazy"}
               onError={() => setFailed(true)}
@@ -130,7 +131,7 @@ export function BrowsePoster({
           <p
             aria-hidden="true"
             className={cn(
-              "min-w-0 font-display font-medium tracking-[-0.035em] text-balance [overflow-wrap:anywhere] transition-colors duration-300 motion-reduce:transition-none",
+              "min-w-0 font-display font-medium tracking-[-0.035em] text-balance [overflow-wrap:anywhere] transition-colors duration-240 motion-reduce:transition-none",
               groundFor(work.id).title,
               SETTING[typeSetting(name)],
             )}
@@ -141,7 +142,7 @@ export function BrowsePoster({
       )}
 
       <div className="pt-3.5">
-        <h3 className="line-clamp-2 font-display text-[1.0625rem] leading-[1.3] font-medium tracking-[-0.015em] [overflow-wrap:anywhere] transition-colors duration-200 group-hover:text-accent motion-reduce:transition-none">
+        <h3 className="line-clamp-2 font-display text-[1.0625rem] leading-[1.3] font-medium tracking-[-0.015em] [overflow-wrap:anywhere] transition-colors duration-160 group-hover:text-accent motion-reduce:transition-none">
           {title}
         </h3>
 

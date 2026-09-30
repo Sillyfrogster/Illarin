@@ -105,7 +105,7 @@ export function NotificationEntry({
   return (
     <li
       className={cn(
-        "group/entry relative rounded-control transition-colors duration-150 motion-reduce:transition-none",
+        "group/entry relative rounded-control transition-colors duration-160 motion-reduce:transition-none",
         unread ? "bg-accent-wash/45 hover:bg-accent-wash/80" : "hover:bg-deep",
       )}
     >

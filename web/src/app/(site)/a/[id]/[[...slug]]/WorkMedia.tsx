@@ -15,6 +15,7 @@ import {
   readWorkReveal,
   writeWorkReveal,
 } from "@/lib/nsfw-preference";
+import { spring } from "@/lib/springs";
 import { CoverControl } from "./CoverControl";
 
 interface WorkMediaProps {
@@ -90,7 +91,7 @@ export function WorkMedia({
       <motion.div
         className="relative"
         initial={false}
-        transition={{ type: "spring", stiffness: 180, damping: 22 }}
+        transition={spring.slow}
         whileHover={reduced || useFallback ? undefined : { rotate: -1, y: -5 }}
       >
         {useFallback ? (
@@ -149,7 +150,7 @@ export function WorkMedia({
                 aria-current={index === here}
                 aria-label={`Image ${index + 1} of ${presentationMedia.length}`}
                 className={cn(
-                  "block aspect-square w-full overflow-hidden rounded-control bg-media outline-offset-3 transition-transform duration-200 motion-reduce:transition-none",
+                  "block aspect-square w-full overflow-hidden rounded-control bg-media outline-offset-3 transition-transform duration-160 motion-reduce:transition-none",
                   index === here
                     ? "inset-ring-2 inset-ring-accent"
                     : "opacity-70 hover:-translate-y-0.5 hover:opacity-100",

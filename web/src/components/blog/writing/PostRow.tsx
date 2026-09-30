@@ -39,7 +39,7 @@ export function PostRow({
   const going = goingLiveAt(post);
 
   return (
-    <li className="group relative min-w-0 rounded-plate px-4 py-5 transition-colors duration-200 not-first:border-t not-first:border-rule/45 hover:border-transparent hover:bg-deep motion-reduce:transition-none sm:px-5">
+    <li className="group relative min-w-0 rounded-plate px-4 py-5 transition-colors duration-160 not-first:border-t not-first:border-rule/45 hover:border-transparent hover:bg-deep motion-reduce:transition-none sm:px-5">
       <div className="float-right relative z-2 ml-3">
         <PostOwnerMenu post={post} onChanged={onChanged} />
       </div>

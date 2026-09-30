@@ -101,7 +101,7 @@ export function DefaultCover({
         )}
       >
         <span
-          className="absolute -z-1 inset-0 bg-current/15 transition-transform duration-500 group-hover/cover:rotate-45 motion-reduce:transition-none"
+          className="absolute -z-1 inset-0 bg-current/15 transition-transform duration-240 group-hover/cover:rotate-45 motion-reduce:transition-none"
           style={{ clipPath: STAR }}
         />
         <Icon size={compact ? 22 : 38} strokeWidth={1.25} />

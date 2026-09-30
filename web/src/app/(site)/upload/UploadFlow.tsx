@@ -11,6 +11,7 @@ import {
   type UploadOperation,
 } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
+import { spring } from "@/lib/springs";
 import { workHref } from "@/lib/work-url";
 import { DropStage, FannedSheets } from "./DropStage";
 import { ScanView, type Upload } from "./ScanView";
@@ -36,7 +37,7 @@ const SWAP = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -8 },
-  transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+  transition: spring.slow,
 } as const;
 
 /** UploadFlow sends a chosen file straight away, scans it on screen while it travels, and opens the draft it becomes. */
@@ -196,7 +197,7 @@ export function UploadFlow() {
             className="pointer-events-none fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-field/80 backdrop-blur-md"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={spring.moderate}
           >
             <FannedSheets className="scale-125" open />
             <p className="font-display text-title font-medium text-ink">

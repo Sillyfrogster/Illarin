@@ -189,13 +189,13 @@ export function WorkBlocks({
                       className={cn(
                         "group/block relative min-w-0 scroll-mt-[calc(var(--header-height)+5rem)] [container-name:block] [container-type:inline-size]",
                         writing &&
-                          "after:pointer-events-none after:absolute after:-inset-x-5 after:-inset-y-4 after:rounded-plate after:opacity-0 after:ring-1 after:ring-accent/45 after:transition-opacity after:duration-200 after:content-[''] hover:after:opacity-100 focus-within:after:opacity-100 motion-reduce:after:transition-none",
+                          "after:pointer-events-none after:absolute after:-inset-x-5 after:-inset-y-4 after:rounded-plate after:opacity-0 after:ring-1 after:ring-accent/45 after:transition-opacity after:duration-160 after:content-[''] hover:after:opacity-100 focus-within:after:opacity-100 motion-reduce:after:transition-none",
                         drag.dragging === block.id && "opacity-45",
                         drag.over === block.id &&
                           "after:!opacity-100 after:!ring-2 after:!ring-accent",
                         shelf.glowing === block.id &&
                           "after:!opacity-100 after:!ring-2 after:!ring-accent",
-                        writing && "after:duration-700",
+                        writing && "after:duration-240",
                         writing && block.hidden && "bg-deep/60 px-5 pt-6 pb-7",
                       )}
                       data-block-id={block.id}

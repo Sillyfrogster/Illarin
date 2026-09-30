@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { cn } from "@/lib/cn";
+import { spring } from "@/lib/springs";
 
 const STAGGER_MS = 70;
 
@@ -62,14 +63,14 @@ export function Arrive({
   return (
     <motion.div
       className={cn(
-        "motion-safe:transition-[opacity,translate] motion-safe:duration-700 motion-safe:ease-[var(--ease-wipe)]",
+        "motion-safe:transition-[opacity,translate] motion-safe:duration-240 motion-safe:ease-[var(--ease-wipe)]",
         waiting && !quiet && "translate-y-[18px] opacity-0",
         className,
       )}
       layout={layout && !still ? "position" : false}
       ref={node}
       style={{ transitionDelay: `${place * STAGGER_MS}ms`, ...style }}
-      transition={{ type: "spring", stiffness: 380, damping: 36 }}
+      transition={spring.slow}
     >
       {children}
     </motion.div>

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import type { BrowseType } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { fileWeight } from "@/lib/file-weight";
+import { spring } from "@/lib/springs";
 import { TYPE_LABELS } from "@/lib/work-types";
 import type { ScanPart } from "./scan-file";
 
@@ -24,8 +25,6 @@ export type Upload =
   | { at: "lost" }
   | { at: "found"; name: string; type: BrowseType }
   | { at: "refused"; message: string };
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 /** The whole local scan takes about this long, however many parts the file holds. */
 const SCAN_MS = 3600;
@@ -107,7 +106,7 @@ export function ScanView({
             animate={{ opacity: 1, y: 0 }}
             className="mt-2 flex items-center gap-2 text-lede text-ink wrap-anywhere"
             initial={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.35, ease: EASE }}
+            transition={spring.slow}
           >
             <TypeMark
               className="size-5 shrink-0 text-accent"
@@ -159,7 +158,7 @@ function Carrying({ upload }: { upload: Upload }) {
       </div>
       <div className="relative mt-2 h-1 overflow-hidden rounded-full bg-deep">
         <div
-          className="absolute inset-0 origin-left rounded-full bg-action transition-transform duration-300 ease-out"
+          className="absolute inset-0 origin-left rounded-full bg-action transition-transform duration-240 ease-out"
           style={{ transform: `scaleX(${sent})` }}
         />
         {upload.at === "reading" ? (
@@ -220,12 +219,12 @@ function PartList({
               <motion.li
                 animate={{ opacity: 1, x: 0 }}
                 className={cn(
-                  "flex min-h-12 items-center gap-3 rounded-control px-2 py-1.5 transition-colors duration-300",
+                  "flex min-h-12 items-center gap-3 rounded-control px-2 py-1.5 transition-colors duration-240",
                   current ? "bg-accent-wash" : "bg-transparent",
                 )}
                 initial={still ? false : { opacity: 0, x: -10 }}
                 key={part.id}
-                transition={{ duration: 0.25, ease: EASE }}
+                transition={spring.slow}
               >
                 <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[6px] bg-deep">
                   {part.picture ? (
@@ -308,7 +307,7 @@ function Viewer({
     <div className="relative mx-auto w-52 md:w-full">
       <div
         className={cn(
-          "relative aspect-[5/6] overflow-hidden rounded-plate bg-media shadow-[0_20px_45px_-20px_rgb(0_0_0/0.5)] transition-[filter] duration-500",
+          "relative aspect-[5/6] overflow-hidden rounded-plate bg-media shadow-[0_20px_45px_-20px_rgb(0_0_0/0.5)] transition-[filter] duration-240",
           upload.at === "refused" && "grayscale",
         )}
       >
@@ -322,7 +321,7 @@ function Viewer({
                 still ? false : { opacity: 0, x: 24, filter: "blur(6px)" }
               }
               key={part.id}
-              transition={{ duration: 0.28, ease: EASE }}
+              transition={spring.slow}
             >
               <PartFace part={part} pace={pace} still={Boolean(still)} />
             </motion.div>
@@ -362,12 +361,7 @@ function Viewer({
                 : "bg-stop text-on-stop",
             )}
             initial={still ? false : { scale: 0, opacity: 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 500,
-              damping: 20,
-              delay: 0.1,
-            }}
+            transition={{ ...spring.slow, delay: 0.1 }}
           >
             {upload.at === "found" ? (
               <Check aria-hidden="true" size={20} strokeWidth={2.6} />
@@ -410,7 +404,7 @@ function PartFace({
             initial={still ? false : { opacity: 0, y: 4 }}
             // biome-ignore lint/suspicious/noArrayIndexKey: lines of one fixed part
             key={index}
-            transition={{ delay: index * step, duration: 0.2 }}
+            transition={{ ...spring.moderate, delay: index * step }}
           >
             {line}
           </motion.p>
