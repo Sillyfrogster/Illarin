@@ -312,6 +312,19 @@ export async function fetchWork(
   return data;
 }
 
+/** fetchWorkConnectedApps lists the signed-in reader's connected apps for a work, empty when signed out. */
+export async function fetchWorkConnectedApps(
+  id: string,
+  cookie: string,
+): Promise<WorkConnectedApp[]> {
+  const { data } = await api<WorkConnectedAppList>(
+    "GET",
+    `/v1/works/${id}/connected-apps`,
+    { headers: { cookie } },
+  );
+  return data?.items ?? [];
+}
+
 /** fetchBuildChoices asks which types can be built from nothing and which apps each asks for. */
 export async function fetchBuildChoices(): Promise<BuildChoices> {
   const { data, error } = await api<BuildChoices>("GET", "/v1/build-choices");

@@ -3,11 +3,16 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { shellClasses } from "@/components/layout/Shell";
-import { fetchWork, type WorkDetail } from "@/lib/api/query";
+import {
+  fetchWork,
+  fetchWorkConnectedApps,
+  type WorkDetail,
+} from "@/lib/api/query";
 import { DraftedChangesProvider } from "@/lib/drafted-changes";
 import { ExtensionDependenciesProvider } from "@/lib/extension-dependencies";
 import { readableForMetadata } from "@/lib/site-metadata";
 import { workMetadata } from "@/lib/work-metadata";
+import { canSendWork } from "@/lib/work-send";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { isWorkId, workRedirect } from "@/lib/work-url";
 import { GitHubReleases } from "./GitHubReleases";
@@ -46,6 +51,9 @@ export default async function WorkPage({
     : published;
   if (!work) notFound();
 
+  const connectedApps = canSendWork(work)
+    ? await fetchWorkConnectedApps(work.id, (await cookies()).toString())
+    : [];
   const typeLabel = TYPE_LABELS[work.type];
   const isDraft = work.lifecycle === "draft";
   const sharedDate = new Date(work.createdAt).toLocaleDateString("en-US", {
@@ -85,6 +93,7 @@ export default async function WorkPage({
               <div className="relative isolate overflow-x-clip pb-chapter">
                 <article>
                   <WorkHeader
+                    connectedApps={connectedApps}
                     work={work}
                     typeLabel={typeLabel}
                     sharedDate={sharedDate}

@@ -11,7 +11,7 @@ import { FormattingNotice, RichText } from "@/components/ui/RichText";
 import { RadioGroup } from "@/components/ui/radio-group";
 import { TagField } from "@/components/ui/tag-field";
 import { WorkOwnerMenu } from "@/components/work/WorkOwnerMenu";
-import type { WorkDetail } from "@/lib/api/query";
+import type { WorkConnectedApp, WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { formattingWasRemoved } from "@/lib/rich-text";
 import { spring } from "@/lib/springs";
@@ -57,11 +57,13 @@ function nameSize(name: string): string {
 }
 
 export function WorkHeader({
+  connectedApps,
   work,
   typeLabel,
   sharedDate,
   shellClassName,
 }: {
+  connectedApps: WorkConnectedApp[];
   work: WorkDetail;
   typeLabel: string;
   sharedDate: string;
@@ -81,6 +83,7 @@ export function WorkHeader({
   const sendable = canSendWork(work);
   const download = (
     <GetWork
+      connectedApps={connectedApps}
       sendable={sendable}
       typeLabel={typeLabel.toLowerCase()}
       work={work}
@@ -370,6 +373,7 @@ export function WorkHeader({
               <div className="mt-7">
                 <GetWork
                   aside={<FollowControl />}
+                  connectedApps={connectedApps}
                   sendable={sendable}
                   typeLabel={typeLabel.toLowerCase()}
                   work={work}

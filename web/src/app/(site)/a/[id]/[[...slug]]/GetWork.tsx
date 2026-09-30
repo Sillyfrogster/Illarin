@@ -51,11 +51,13 @@ const POLL_LIMIT = 20;
 /** GetWork is the work page's download control. */
 export function GetWork({
   aside,
+  connectedApps: initialApps,
   sendable,
   typeLabel,
   work,
 }: {
   aside?: ReactNode;
+  connectedApps: WorkConnectedApp[];
   sendable: boolean;
   typeLabel: string;
   work: Pick<
@@ -72,7 +74,7 @@ export function GetWork({
   >;
 }) {
   const { account } = useAuth();
-  const [connectedApps, setConnectedApps] = useState<WorkConnectedApp[]>([]);
+  const [connectedApps, setConnectedApps] = useState(initialApps);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
   const [offering, setOffering] = useState(false);
@@ -90,6 +92,7 @@ export function GetWork({
   }, [work.id]);
 
   useEffect(() => {
+    if (account === undefined) return;
     if (!account || !sendable) {
       setConnectedApps([]);
       return;
