@@ -43,7 +43,7 @@ export function FormatMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
+      <DropdownMenuContent align="end">
         {downloads.map((offered) => (
           <DropdownMenuItem asChild key={offered.format}>
             <a

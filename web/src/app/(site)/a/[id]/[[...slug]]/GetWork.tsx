@@ -256,7 +256,7 @@ export function GetWork({
                 <Button
                   aria-label="More ways to get it"
                   className={SPLIT_END}
-                  size="compact"
+                  size="icon"
                   variant="primary"
                 >
                   <ChevronDown aria-hidden="true" />
