@@ -219,14 +219,14 @@
   --type-ui: 0.875rem;
   --type-meta: 0.75rem;
 
-  --surface-1: light-dark(#fafafa, #171717);
-  --surface-2: light-dark(#fcfcfc, #1e1e1e);
-  --surface-3: light-dark(#ffffff, #252525);
-  --surface-4: light-dark(#ffffff, #2c2c2c);
-  --surface-5: light-dark(#ffffff, #333333);
-  --surface-6: light-dark(#ffffff, #3a3a3a);
-  --surface-7: light-dark(#ffffff, #414141);
-  --surface-8: light-dark(#ffffff, #484848);
+  --surface-1: light-dark(#fafafa, #121212);
+  --surface-2: light-dark(#fcfcfc, #171717);
+  --surface-3: light-dark(#ffffff, #1c1c1c);
+  --surface-4: light-dark(#ffffff, #212121);
+  --surface-5: light-dark(#ffffff, #262626);
+  --surface-6: light-dark(#ffffff, #2b2b2b);
+  --surface-7: light-dark(#ffffff, #303030);
+  --surface-8: light-dark(#ffffff, #353535);
   --shadow-color: light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.18));
   --shadow-1:
     inset 0 0 0 1px light-dark(transparent, rgb(255 255 255 / 0.02)),

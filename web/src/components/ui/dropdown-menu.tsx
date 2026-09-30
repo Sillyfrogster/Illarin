@@ -24,11 +24,12 @@ import {
   popupScrollAreaClass,
   popupViewportClass,
 } from "@/lib/popup";
-import { exitFallbackMs, spring } from "@/lib/springs";
+import { spring } from "@/lib/springs";
 import {
   useFluidHover,
   useRegisterFluidHoverItem,
 } from "@/lib/use-fluid-hover";
+import { usePresence } from "@/lib/use-presence";
 
 const MenuOpenContext = createContext(false);
 
@@ -88,20 +89,11 @@ function DropdownMenuContent({
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const open = useContext(MenuOpenContext);
-  const [mounted, setMounted] = useState(open);
+  const { mounted, onExitComplete } = usePresence(open, spring.fast);
   const containerRef = useRef<HTMLDivElement>(null);
   const hover = useFluidHover(containerRef, { isItemDisabled: isDisabledRow });
   const { registerItem, setActiveIndex, remeasure, handlers } = hover;
   const counter = useRef(0);
-
-  useEffect(() => {
-    if (open) {
-      setMounted(true);
-      return;
-    }
-    const id = setTimeout(() => setMounted(false), exitFallbackMs(spring.fast));
-    return () => clearTimeout(id);
-  }, [open]);
 
   useEffect(() => {
     if (open && mounted) remeasure();
@@ -136,9 +128,7 @@ function DropdownMenuContent({
           }
           className={cn("z-90 outline-none", popupMotionClass)}
           initial={{ opacity: 0, y: "var(--popup-enter-y)", scaleY: 0.96 }}
-          onAnimationComplete={() => {
-            if (!open) setMounted(false);
-          }}
+          onAnimationComplete={onExitComplete}
           transition={open ? spring.fast : spring.fast.exit}
         >
           <RowsContext.Provider value={rows}>

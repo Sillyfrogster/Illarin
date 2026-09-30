@@ -55,7 +55,7 @@ export function CollectionBrowser({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
         aria-describedby={undefined}
-        className="w-full"
+        className="max-w-[1120px]"
         onCloseAutoFocus={(event) => {
           if (!returnTo) return;
           event.preventDefault();

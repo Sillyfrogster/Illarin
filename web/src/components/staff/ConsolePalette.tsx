@@ -41,7 +41,7 @@ export function ConsolePalette({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="top-[12vh] bottom-auto max-w-[34rem] p-0">
+      <DialogContent className="max-w-[34rem] p-0" position="top">
         <DialogTitle className="sr-only">Go to a section</DialogTitle>
         <DialogDescription className="sr-only">
           Type to narrow the console's sections, then press Enter.

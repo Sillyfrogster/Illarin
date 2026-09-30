@@ -7,11 +7,11 @@ import {
   type ReactElement,
   type ReactNode,
   useContext,
-  useEffect,
   useState,
 } from "react";
 import { fontWeights } from "@/lib/font-weight";
-import { exitFallbackMs, spring } from "@/lib/springs";
+import { spring } from "@/lib/springs";
+import { usePresence } from "@/lib/use-presence";
 
 const DEFAULT_DELAY = 200;
 
@@ -53,17 +53,8 @@ function Tooltip({
   sideOffset?: number;
 }) {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const { mounted, onExitComplete } = usePresence(open, spring.fast);
   const grouped = useContext(TooltipGroupContext);
-
-  useEffect(() => {
-    if (open) {
-      setMounted(true);
-      return;
-    }
-    const id = setTimeout(() => setMounted(false), exitFallbackMs(spring.fast));
-    return () => clearTimeout(id);
-  }, [open]);
 
   const tooltip = (
     <TooltipPrimitive.Root onOpenChange={setOpen} open={open}>
@@ -80,9 +71,7 @@ function Tooltip({
               animate={{ opacity: open ? 1 : 0, x: 0, y: 0 }}
               className="max-w-64 rounded-control bg-ink px-2 py-1 font-ui text-label text-field"
               initial={{ opacity: 0, ...SLIDE[side] }}
-              onAnimationComplete={() => {
-                if (!open) setMounted(false);
-              }}
+              onAnimationComplete={onExitComplete}
               style={{ fontVariationSettings: fontWeights.medium }}
               transition={open ? spring.fast : spring.fast.exit}
             >

@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import type { WorkElement } from "@/lib/api/query";
 
@@ -41,46 +48,35 @@ export function MakePublicConfirmation({
   onMakePublic: () => void;
   replacement?: boolean;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => dialog.current?.showModal(), []);
-
   return (
-    <dialog
-      aria-labelledby="make-public-title"
-      aria-describedby="make-public-description"
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-plate bg-plane p-0 text-ink backdrop:bg-black/60"
-      onCancel={(event) => {
-        event.preventDefault();
-        onKeepPrivate();
+    <AlertDialog
+      onOpenChange={(open) => {
+        if (!open) onKeepPrivate();
       }}
-      ref={dialog}
+      open
     >
-      <div className="p-6">
-        <h2
-          id="make-public-title"
-          className="font-display text-section font-medium text-ink"
-        >
-          Make these prompts public?
-        </h2>
-        <p id="make-public-description" className="mt-3 text-ui text-mute">
+      <AlertDialogContent>
+        <AlertDialogTitle>Make these prompts public?</AlertDialogTitle>
+        <AlertDialogDescription>
           {replacement ? "Applying this file" : "Saving"} makes{" "}
           {namePrompts(prompts)} public. Readers can read them at once, in this
           version and earlier ones.
           {keepsAPrivatePrompt
             ? ""
             : " With no private prompts left, this preset downloads as a file again."}
-        </p>
-      </div>
-      <footer className="flex flex-wrap justify-end gap-2 border-rule border-t p-4">
-        <Button disabled={pending} onClick={onKeepPrivate} variant="ghost">
-          Keep private
-        </Button>
-        <Button loading={pending} onClick={onMakePublic} variant="stop">
-          {replacement ? "Apply and make public" : "Make public"}
-        </Button>
-      </footer>
-    </dialog>
+        </AlertDialogDescription>
+        <AlertDialogFooter>
+          <AlertDialogCancel asChild>
+            <Button disabled={pending} variant="ghost">
+              Keep private
+            </Button>
+          </AlertDialogCancel>
+          <Button loading={pending} onClick={onMakePublic} variant="stop">
+            {replacement ? "Apply and make public" : "Make public"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

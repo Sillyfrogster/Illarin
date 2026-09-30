@@ -1,7 +1,16 @@
 "use client";
 
 import { ChevronRight, RotateCcw, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   deletePreservedData,
   fetchPreservedData,
@@ -167,58 +176,36 @@ function DeleteNamespaceDialog({
   onCancel: () => void;
   onDelete: () => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const description = namespace.label;
-
-  useEffect(() => dialog.current?.showModal(), []);
-
   return (
-    <dialog
-      ref={dialog}
-      className={
-        "m-auto w-[min(30rem,calc(100vw-2rem))] rounded-plate bg-plane p-0 text-ink backdrop:bg-black/60"
-      }
-      onCancel={(event) => {
-        event.preventDefault();
-        onCancel();
+    <AlertDialog
+      onOpenChange={(open) => {
+        if (!open) onCancel();
       }}
+      open
     >
-      <div
-        className={
-          "p-5 [&_h2]:mt-1 [&_h2]:font-display [&_h2]:text-section [&_h2]:font-medium [&_h2]:text-ink [&_p]:mt-2 [&_p]:text-ui [&_p]:text-mute"
-        }
-      >
-        <p className={"text-meta text-mute"}>Remove file extras</p>
-        <h2>Remove {description}?</h2>
-        <p>
+      <AlertDialogContent className="max-w-[30rem]">
+        <p className="text-meta text-mute">Remove file extras</p>
+        <AlertDialogTitle>Remove {namespace.label}?</AlertDialogTitle>
+        <AlertDialogDescription>
           This detail came with your original file. Downloads in that format
           stop carrying it.
-        </p>
-        <p className={"mt-2 text-meta text-mute"}>
+        </AlertDialogDescription>
+        <p className="text-meta text-mute">
           This cannot be undone here. Re-upload the original file if you need it
           back.
         </p>
-      </div>
-      <footer
-        className={
-          "flex flex-wrap justify-end gap-2 border-rule border-t p-4 [&>button]:min-h-11 [&>button]:rounded-control [&>button]:px-4 [&>button]:text-ui [&>button]:font-medium [&>button]:outline-offset-3 [&>button]:disabled:opacity-45"
-        }
-      >
-        <button type="button" onClick={onCancel} disabled={pending}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          className={
-            "inline-flex min-h-11 items-center gap-2 rounded-control bg-stop px-4 text-ui font-medium text-on-stop outline-offset-3 disabled:opacity-45"
-          }
-          onClick={onDelete}
-          disabled={pending}
-        >
-          <Trash2 size={17} aria-hidden="true" />
-          {pending ? "Removing…" : "Remove permanently"}
-        </button>
-      </footer>
-    </dialog>
+        <AlertDialogFooter>
+          <AlertDialogCancel asChild>
+            <Button disabled={pending} variant="ghost">
+              Cancel
+            </Button>
+          </AlertDialogCancel>
+          <Button loading={pending} onClick={onDelete} variant="stop">
+            <Trash2 aria-hidden="true" />
+            {pending ? "Removing…" : "Remove permanently"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
