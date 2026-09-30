@@ -181,7 +181,7 @@ function DayReadout({
 }) {
   return (
     <div className="shrink-0 lg:w-[13rem]">
-      <p className="font-ui text-label tracking-[0.06em] text-mute uppercase">
+      <p className="font-ui text-meta text-mute">
         {weekday(day)}
       </p>
       <p className="font-display text-[1.5rem] leading-tight font-medium tracking-[-0.03em] text-ink">
