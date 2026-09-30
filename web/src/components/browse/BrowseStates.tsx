@@ -1,4 +1,11 @@
 import type { ReactNode } from "react";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export const GRID =
   "m-0 grid list-none grid-cols-2 items-start gap-x-4 gap-y-9 p-0 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-5";
@@ -23,6 +30,7 @@ export function BrowseLoading() {
   );
 }
 
+/** Message is the empty state for a listing with nothing to show. */
 export function Message({
   action,
   body,
@@ -33,14 +41,12 @@ export function Message({
   title: string;
 }) {
   return (
-    <div className="rounded-plate bg-deep px-6 py-14 text-center sm:px-12">
-      <h3 className="font-display text-title font-medium tracking-[-0.02em]">
-        {title}
-      </h3>
-      {body ? (
-        <p className="mx-auto mt-3 max-w-[46ch] text-prose text-mute">{body}</p>
-      ) : null}
-      {action ? <div className="mt-6 flex justify-center">{action}</div> : null}
-    </div>
+    <Empty className="bg-deep">
+      <EmptyHeader>
+        <EmptyTitle as="h3">{title}</EmptyTitle>
+        {body ? <EmptyDescription>{body}</EmptyDescription> : null}
+      </EmptyHeader>
+      {action ? <EmptyContent>{action}</EmptyContent> : null}
+    </Empty>
   );
 }
