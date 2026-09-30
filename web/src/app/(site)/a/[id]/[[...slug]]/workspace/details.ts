@@ -26,6 +26,6 @@ export function blurbCharacterCount(blurb: string): number {
 
 export function blurbLimitMessage(blurb: string): string {
   return blurbCharacterCount(blurb) > BLURB_LIMIT
-    ? `The blurb must be ${BLURB_LIMIT} characters or fewer.`
+    ? `Keep the blurb to ${BLURB_LIMIT} characters.`
     : "";
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, PencilLine } from "lucide-react";
+import { ArrowLeft, EyeOff, Globe, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, BadgeList } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { BadgeList } from "@/components/ui/badge";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
@@ -14,7 +14,6 @@ import { WorkOwnerMenu } from "@/components/work/WorkOwnerMenu";
 import type { WorkConnectedApp, WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { formattingWasRemoved } from "@/lib/rich-text";
-import { spring } from "@/lib/springs";
 import { tagSearchHref } from "@/lib/tag-search";
 import { workDisplayName } from "@/lib/work-name";
 import { canSendWork } from "@/lib/work-send";
@@ -31,6 +30,7 @@ import {
   blurbLimitMessage,
 } from "./workspace/details";
 import { EditableText } from "./workspace/EditableText";
+import { FileMark } from "./workspace/fields";
 import { useWorkspace } from "./workspace/state";
 
 const TAG_PREVIEW_LIMIT = 8;
@@ -46,6 +46,33 @@ const RATINGS: { value: RatingKey; label: string; isNsfw: boolean | null }[] = [
 function ratingLabel(isNsfw: boolean | null): string {
   if (isNsfw === null) return "Rating not set";
   return isNsfw ? "Adult content" : "No adult content";
+}
+
+/** OwnerPageState tells the owner whether this page is a private draft, drafted changes, or what readers see. */
+function OwnerPageState({
+  isDraft,
+  unpublished,
+}: {
+  isDraft: boolean;
+  unpublished: boolean;
+}) {
+  const [Icon, words] = isDraft
+    ? [EyeOff, "Private draft · only you can see this"]
+    : unpublished
+      ? [
+          PencilLine,
+          "Drafted changes · readers still see the published version",
+        ]
+      : [Globe, "Published · this is what readers see"];
+  return (
+    <Alert
+      className="mt-4 flex items-center gap-2 font-medium"
+      tone={isDraft || unpublished ? "done" : "quiet"}
+    >
+      <Icon aria-hidden="true" />
+      {words}
+    </Alert>
+  );
 }
 
 /** Long names step down the type scale so they wrap in a few lines, not a column of single words */
@@ -78,6 +105,8 @@ export function WorkHeader({
     : RATINGS.filter((rating) => rating.isNsfw !== null);
   const blurbCount = blurbCharacterCount(workspace.details.blurb);
   const blurbTrouble = blurbLimitMessage(workspace.details.blurb);
+  const inFile = (field: string) =>
+    !isDraft && writing && Boolean(work.fileFields?.includes(field));
   const covers = coverMedia(work.media);
   const showsMedia = covers.length > 0 || (work.isOwner && writing);
   const sendable = canSendWork(work);
@@ -110,9 +139,17 @@ export function WorkHeader({
           ) : null}
         </div>
 
+        {work.isOwner ? (
+          <OwnerPageState
+            isDraft={isDraft}
+            unpublished={workspace.unpublishedChanges}
+          />
+        ) : null}
+
         {work.isOwner && writing ? (
-          <p className="mt-4 text-meta text-mute">
-            Select text to edit it. Use block controls to arrange content.
+          <p className="mt-3 text-meta text-mute">
+            Click any text to edit it. Each block has a menu to move, resize or
+            hide it.
           </p>
         ) : null}
 
@@ -141,7 +178,7 @@ export function WorkHeader({
               onChange={(name) =>
                 workspace.writeDetails({ ...workspace.details, name })
               }
-              placeholder="Name this page"
+              placeholder={`Name this ${typeLabel.toLowerCase()}`}
               singleLine
               value={
                 writing
@@ -149,6 +186,11 @@ export function WorkHeader({
                   : workDisplayName(workspace.details.name)
               }
             />
+            {inFile("name") ? (
+              <p className="mt-3">
+                <FileMark />
+              </p>
+            ) : null}
             <p className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-ui text-mute">
               <span
                 aria-hidden="true"
@@ -167,23 +209,6 @@ export function WorkHeader({
                   Private prompts
                 </>
               ) : null}
-              {isDraft ? <Badge tone="accent">Private draft</Badge> : null}
-              <AnimatePresence initial={false}>
-                {work.isOwner && !isDraft && workspace.unpublishedChanges ? (
-                  <motion.span
-                    key="drafted"
-                    initial={{ opacity: 0, clipPath: "inset(0 100% 0 0)" }}
-                    animate={{ opacity: 1, clipPath: "inset(0 0% 0 0)" }}
-                    exit={{ opacity: 0, clipPath: "inset(0 0 0 100%)" }}
-                    transition={spring.slow}
-                    className="inline-flex items-center gap-2 rounded-control bg-accent-wash px-3 py-1 text-meta text-accent"
-                    role="status"
-                  >
-                    <PencilLine aria-hidden="true" size={14} />
-                    Drafted changes
-                  </motion.span>
-                ) : null}
-              </AnimatePresence>
             </p>
             {writing ? (
               <fieldset
@@ -210,7 +235,7 @@ export function WorkHeader({
                 />
                 {workspace.details.isNsfw === null ? (
                   <p className="mt-2 text-label text-mute">
-                    Answer the adult content question before publishing.
+                    Say whether this is adult content before you publish.
                   </p>
                 ) : null}
               </fieldset>
@@ -252,10 +277,10 @@ export function WorkHeader({
                   work.media.find((image) => image.isCover)?.id ?? "coverless"
                 }
                 type={work.type}
-                typeLabel={typeLabel.toLowerCase()}
                 media={work.media}
                 name={work.name}
                 preference={work.nsfwPreference}
+                coverInFile={inFile("cover")}
                 writing={work.isOwner && writing}
               />
             </div>
@@ -266,7 +291,16 @@ export function WorkHeader({
               <Field
                 hint="A short description for readers and search."
                 htmlFor="work-blurb"
-                label="Blurb"
+                label={
+                  inFile("blurb") ? (
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      Blurb
+                      <FileMark />
+                    </span>
+                  ) : (
+                    "Blurb"
+                  )
+                }
                 trailing={
                   <span
                     className={
@@ -306,19 +340,14 @@ export function WorkHeader({
                   <FormattingNotice />
                 ) : null}
               </div>
-            ) : (
-              <p className="max-w-[42ch] font-prose text-lede text-mute">
-                The creator has not written a blurb for this{" "}
-                {typeLabel.toLowerCase()} yet.
-              </p>
-            )}
+            ) : null}
 
             {writing ? (
               <div className="mt-5 max-w-[42ch]">
                 <Field
                   htmlFor="work-tag"
                   label="Tags"
-                  hint="Tags help readers find this work in search. Press Enter after each one. Up to 32, with 64 characters each."
+                  hint={`Readers find this ${typeLabel.toLowerCase()} by its tags. Up to 32.`}
                   trouble={tagTrouble || undefined}
                 >
                   <TagField
@@ -356,12 +385,9 @@ export function WorkHeader({
               <BadgeList
                 className="mt-5 max-w-[42ch]"
                 items={workspace.details.tags.map((tag) => ({
-                  href:
-                    isDraft ||
-                    (work.isOwner &&
-                      (workspace.unpublishedChanges || workspace.dirty))
-                      ? undefined
-                      : tagSearchHref(tag.trim().toLowerCase()),
+                  href: isDraft
+                    ? undefined
+                    : tagSearchHref(tag.trim().toLowerCase()),
                   id: tag,
                   label: tag,
                 }))}

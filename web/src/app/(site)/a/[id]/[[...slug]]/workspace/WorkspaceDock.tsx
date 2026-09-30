@@ -35,7 +35,7 @@ const STATUS: Record<SaveState, string> = {
   private: "Drafted changes",
   published: "Published",
   saving: "Saving",
-  unsaved: "Saving soon",
+  unsaved: "Saving",
 };
 
 export const EDIT_CONTROL = "work-edit-control";
@@ -70,7 +70,7 @@ export function WorkspaceDock({
         <>
           <DockAction onClick={workspace.stopEditing}>Done</DockAction>
           {workspace.saveState === "failed" ? (
-            <DockAction onClick={workspace.save}>Retry</DockAction>
+            <DockAction onClick={workspace.save}>Try again</DockAction>
           ) : null}
           <DockAction
             disabled={

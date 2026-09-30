@@ -99,7 +99,11 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 
       {workspace.editing ? (
         <WorkspaceDock
-          detail={detail(workspace.isDraft, workspace.saveState)}
+          detail={detail(
+            workspace.isDraft,
+            workspace.saveState,
+            workspace.unpublishedChanges,
+          )}
           takenDown={props.takenDown}
           typeName={props.typeName}
           visibility={props.visibility}
@@ -112,16 +116,12 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
       <AnimatePresence>
         {pane?.kind === "conflict" ? (
           <WorkspaceRail
-            description="Your writing is still on the page. Copy anything worth keeping, then reload to work from the newer drafted changes."
+            description="Copy anything you want to keep, then reload."
             key="conflict"
-            title="Newer drafted changes exist"
+            title="This was edited somewhere else"
             tone="stop"
           >
             <div className="flex flex-col gap-5">
-              <p className="text-ui text-mute">
-                This page was saved in another session. Copy any unsaved text,
-                then reload to edit the latest version.
-              </p>
               <Button
                 className="self-start"
                 onClick={() => window.location.reload()}
@@ -388,13 +388,11 @@ function ActivationSweep() {
   );
 }
 
-function detail(isDraft: boolean, state: string): string {
+function detail(isDraft: boolean, state: string, unpublished: boolean): string {
   if (state === "failed")
     return "Your edits are still on this page. Try saving again.";
   if (isDraft) return "Only you can open this page.";
-  if (state === "private" || state === "unsaved" || state === "saving") {
-    return "Readers do not have your changes yet.";
-  }
+  if (unpublished) return "Readers still see the published version.";
   return "All changes are published.";
 }
 

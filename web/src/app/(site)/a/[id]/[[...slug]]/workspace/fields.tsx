@@ -1,10 +1,21 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, FileText, Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
+
+/** FileMark marks a field written into the downloaded file, which waits for Publish on a published work. */
+export function FileMark() {
+  return (
+    <Badge tone="accent">
+      <FileText aria-hidden="true" className="size-3.5" />
+      In the file · waits for Publish
+    </Badge>
+  );
+}
 
 export function FieldGroup({
   children,

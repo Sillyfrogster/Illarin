@@ -18,9 +18,7 @@ describe("workspace blurb limit", () => {
     const blurb = "🌙".repeat(BLURB_LIMIT + 1);
 
     expect(blurbCharacterCount(blurb)).toBe(401);
-    expect(blurbLimitMessage(blurb)).toBe(
-      "The blurb must be 400 characters or fewer.",
-    );
+    expect(blurbLimitMessage(blurb)).toBe("Keep the blurb to 400 characters.");
     expect(blurb).toBe("🌙".repeat(401));
   });
 });

@@ -22,10 +22,10 @@ interface WorkMediaProps {
   id: string;
   media: WorkImage[];
   type: BrowseType;
-  typeLabel: string;
   name: string;
   isNsfw: boolean | null;
   preference: NsfwPreference;
+  coverInFile: boolean;
   writing: boolean;
 }
 
@@ -44,10 +44,10 @@ export function WorkMedia({
   id,
   media,
   type,
-  typeLabel,
   name,
   isNsfw,
   preference,
+  coverInFile,
   writing,
 }: WorkMediaProps) {
   const { account } = useAuth();
@@ -180,9 +180,9 @@ export function WorkMedia({
 
       {writing ? (
         <CoverControl
+          inFile={coverInFile}
+          preview={useFallback ? undefined : source}
           workId={id}
-          hasCover={presentationMedia.length > 0}
-          typeLabel={typeLabel}
         />
       ) : null}
     </div>

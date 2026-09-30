@@ -1,22 +1,27 @@
 "use client";
 
 import { ImagePlus } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { addWorkImage } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { useDraftedChanges } from "@/lib/drafted-changes";
+import { FileMark } from "./workspace/fields";
 
-/** CoverControl offers a display picture to every type of work. */
+/** The smallest cover that stays sharp at twice the pixel density on the work page and in Browse. */
+const COVER_SIZE = "750 × 1000";
+
+/** CoverControl adds or replaces a work's cover and shows the 3:4 crop Browse gives it. */
 export function CoverControl({
+  inFile,
+  preview,
   workId,
-  hasCover,
-  typeLabel,
 }: {
+  inFile: boolean;
+  preview?: string;
   workId: string;
-  hasCover: boolean;
-  typeLabel: string;
 }) {
   const candidate = useDraftedChanges();
   const router = useRouter();
@@ -35,7 +40,7 @@ export function CoverControl({
       setTrouble(
         error instanceof Error
           ? error.message
-          : "The picture could not be added. Try again.",
+          : "The cover could not be added. Try again.",
       );
     } finally {
       setSending(false);
@@ -44,28 +49,47 @@ export function CoverControl({
   }
 
   return (
-    <div className="mt-3 flex flex-col items-center gap-2">
-      <input
-        accept="image/*"
-        hidden
-        onChange={(event) => send(event.target.files?.[0] ?? null)}
-        ref={file}
-        type="file"
-      />
-      <Button loading={sending} onClick={() => file.current?.click()}>
-        {sending ? null : <ImagePlus aria-hidden="true" />}
-        {hasCover ? "Replace the display picture" : "Add a display picture"}
-      </Button>
-      <p
-        aria-live="polite"
-        className={cn(
-          "max-w-[34ch] text-center font-ui text-label",
-          trouble ? "text-stop" : "text-mute",
-        )}
-      >
-        {trouble ||
-          `Shown for this ${typeLabel} in Browse and on shared links.`}
-      </p>
+    <div className="mt-4 flex items-start gap-4">
+      {preview ? (
+        <figure className="w-16 shrink-0">
+          <div className="relative aspect-3/4 overflow-hidden rounded-control bg-inset">
+            <Image
+              alt=""
+              className="object-cover object-top"
+              fill
+              sizes="64px"
+              src={preview}
+              unoptimized
+            />
+          </div>
+          <figcaption className="mt-1 text-center font-ui text-label text-mute">
+            In Browse
+          </figcaption>
+        </figure>
+      ) : null}
+      <div className="flex min-w-0 flex-col items-start gap-2">
+        <input
+          accept="image/*"
+          hidden
+          onChange={(event) => send(event.target.files?.[0] ?? null)}
+          ref={file}
+          type="file"
+        />
+        <Button loading={sending} onClick={() => file.current?.click()}>
+          {sending ? null : <ImagePlus aria-hidden="true" />}
+          {preview ? "Replace cover" : "Add cover"}
+        </Button>
+        {inFile ? <FileMark /> : null}
+        <p
+          aria-live="polite"
+          className={cn(
+            "font-ui text-label",
+            trouble ? "text-stop" : "text-mute",
+          )}
+        >
+          {trouble || `Browse crops it to 3:4. Use at least ${COVER_SIZE}.`}
+        </p>
+      </div>
     </div>
   );
 }
