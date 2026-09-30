@@ -16,6 +16,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 import { BlockRow, InsertRow, LinkRow } from "./EditorRows";
 import {
@@ -315,17 +316,18 @@ function Control({
   shortcut?: string;
 }) {
   return (
-    <button
-      aria-expanded={expanded}
-      aria-label={label}
-      aria-pressed={expanded === undefined ? active : undefined}
-      className={cn(CONTROL, (active || expanded) && ACTIVE)}
-      disabled={!controls.editable || ready === false}
-      onClick={press}
-      title={shortcut ? `${label} (${shortcut})` : label}
-      type="button"
-    >
-      {children}
-    </button>
+    <Tooltip content={shortcut ? `${label} (${shortcut})` : label}>
+      <button
+        aria-expanded={expanded}
+        aria-label={label}
+        aria-pressed={expanded === undefined ? active : undefined}
+        className={cn(CONTROL, (active || expanded) && ACTIVE)}
+        disabled={!controls.editable || ready === false}
+        onClick={press}
+        type="button"
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }

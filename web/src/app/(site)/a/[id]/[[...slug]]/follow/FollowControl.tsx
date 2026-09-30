@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 import { followWords } from "@/lib/work-follow";
 import { useWorkFollowing } from "./state";
@@ -25,20 +26,21 @@ export function FollowControl() {
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          aria-label={words.name}
-          className={cn(
-            words.following &&
-              "bg-accent-wash text-accent hover:bg-accent-wash/70 hover:text-accent",
-          )}
-          size="icon"
-          title={words.detail}
-          variant="ghost"
-        >
-          <Icon aria-hidden="true" />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip content={words.name}>
+        <PopoverTrigger asChild>
+          <Button
+            aria-label={words.name}
+            className={cn(
+              words.following &&
+                "bg-accent-wash text-accent hover:bg-accent-wash/70 hover:text-accent",
+            )}
+            size="icon"
+            variant="ghost"
+          >
+            <Icon aria-hidden="true" />
+          </Button>
+        </PopoverTrigger>
+      </Tooltip>
       <PopoverContent
         align="start"
         aria-label={`Updates to this ${following.typeName}`}

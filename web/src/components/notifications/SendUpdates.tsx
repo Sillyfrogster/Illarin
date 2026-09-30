@@ -2,6 +2,7 @@
 
 import { Check, CircleAlert, SendHorizontal } from "lucide-react";
 import { useState } from "react";
+import { Tooltip } from "@/components/ui/tooltip";
 import { api } from "@/lib/api/client";
 import type { Notification } from "@/lib/api/notifications";
 import { cn } from "@/lib/cn";
@@ -48,18 +49,21 @@ export function SendUpdates({
         {apps.map((app) => {
           const state = stateOf(app);
           return (
-            <button
-              aria-label={sendLabel(app, state)}
-              className={cn(CHIP, LOOK[state])}
-              disabled={state === "sending" || state === "waiting"}
+            <Tooltip
+              content={`${app.appName}: ${app.name}`}
               key={app.connectedAppId}
-              onClick={() => void send(app)}
-              title={`${app.appName} — ${app.name}`}
-              type="button"
             >
-              <Mark state={state} />
-              <span className="truncate">{app.name}</span>
-            </button>
+              <button
+                aria-label={sendLabel(app, state)}
+                className={cn(CHIP, LOOK[state])}
+                disabled={state === "sending" || state === "waiting"}
+                onClick={() => void send(app)}
+                type="button"
+              >
+                <Mark state={state} />
+                <span className="truncate">{app.name}</span>
+              </button>
+            </Tooltip>
           );
         })}
       </div>

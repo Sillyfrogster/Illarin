@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { ShinyButton } from "@/components/ui/shiny-button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn, focusRing } from "@/lib/cn";
 
 export type DockState =
@@ -64,38 +65,39 @@ export function DockTool({
 }) {
   const shown = words ?? label;
   return (
-    <button
-      aria-label={label}
-      aria-pressed={active}
-      className={cn(
-        TOOL,
-        worded && WORDED_TOOL,
-        worded && "max-@3xl/dock:w-11 max-@3xl/dock:px-0",
-      )}
-      onClick={onClick}
-      title={label}
-      type="button"
-    >
-      <Icon aria-hidden="true" size={18} />
-      {worded ? (
-        <span className="max-@3xl/dock:sr-only" aria-hidden="true">
-          {shown}
-        </span>
-      ) : null}
-      {count ? (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "inline-flex min-w-5 items-center justify-center rounded-full bg-action px-1.5 font-ui text-label leading-5 font-semibold text-on-accent tabular-nums",
-            worded
-              ? "max-@3xl/dock:absolute max-@3xl/dock:-top-1 max-@3xl/dock:-right-1"
-              : "absolute -top-1 -right-1",
-          )}
-        >
-          {count}
-        </span>
-      ) : null}
-    </button>
+    <Tooltip content={label}>
+      <button
+        aria-label={label}
+        aria-pressed={active}
+        className={cn(
+          TOOL,
+          worded && WORDED_TOOL,
+          worded && "max-@3xl/dock:w-11 max-@3xl/dock:px-0",
+        )}
+        onClick={onClick}
+        type="button"
+      >
+        <Icon aria-hidden="true" size={18} />
+        {worded ? (
+          <span className="max-@3xl/dock:sr-only" aria-hidden="true">
+            {shown}
+          </span>
+        ) : null}
+        {count ? (
+          <span
+            aria-hidden="true"
+            className={cn(
+              "inline-flex min-w-5 items-center justify-center rounded-full bg-action px-1.5 font-ui text-label leading-5 font-semibold text-on-accent tabular-nums",
+              worded
+                ? "max-@3xl/dock:absolute max-@3xl/dock:-top-1 max-@3xl/dock:-right-1"
+                : "absolute -top-1 -right-1",
+            )}
+          >
+            {count}
+          </span>
+        ) : null}
+      </button>
+    </Tooltip>
   );
 }
 

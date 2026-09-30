@@ -2,6 +2,7 @@
 
 import type { ComponentProps, ReactNode } from "react";
 import { Select } from "@/components/ui/select";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 
 const CHOICE =
@@ -71,18 +72,22 @@ export function Choice({
   strong?: boolean;
   word?: string;
 }) {
-  return (
+  const button = (
     <button
       aria-label={label}
       className={cn(CHOICE, strong && STRONG)}
       disabled={ready === false}
       onClick={press}
-      title={label}
       type="button"
     >
       {children}
       <span aria-hidden="true">{word ?? label}</span>
     </button>
+  );
+  return word && word !== label ? (
+    <Tooltip content={label}>{button}</Tooltip>
+  ) : (
+    button
   );
 }
 

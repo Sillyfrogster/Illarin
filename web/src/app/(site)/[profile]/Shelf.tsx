@@ -11,6 +11,7 @@ import { BrowseLoading, GRID, Message } from "@/components/browse/BrowseStates";
 import { useBrowseNavigation } from "@/components/browse/use-browse-navigation";
 import { Button } from "@/components/ui/button";
 import { Scroller } from "@/components/ui/scroller";
+import { Tooltip } from "@/components/ui/tooltip";
 import { TravellingHighlight } from "@/components/ui/travelling-highlight";
 import {
   type BrowseCursor,
@@ -23,8 +24,9 @@ import {
   workKeys,
 } from "@/lib/api/query";
 import { buildBrowseHref } from "@/lib/browse-url";
-import { cn } from "@/lib/cn";
+import { cn, focusRing } from "@/lib/cn";
 import { FEATURED_LIMIT } from "@/lib/profile-portfolio";
+import { spring } from "@/lib/springs";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_PLURALS, WORK_TYPES } from "@/lib/work-types";
 
@@ -366,45 +368,48 @@ function PinToggle({ pinning, work }: { pinning: Pinning; work: BrowseWork }) {
   const full = !pinned && pinning.featured.length >= FEATURED_LIMIT;
   const name = workDisplayName(work.name);
   return (
-    <button
-      aria-label={pinned ? `Unfeature ${name}` : `Feature ${name}`}
-      aria-pressed={pinned}
-      className={cn(
-        "grid size-11 place-items-center rounded-control backdrop-blur-sm transition duration-200 outline-offset-2 motion-reduce:transition-none",
-        pinned
-          ? "bg-action text-on-accent shadow-[0_6px_16px_-6px_var(--v-action)]"
-          : "bg-plane/80 text-ink hover:bg-plane focus-visible:opacity-100 [@media(hover:hover)]:opacity-0",
-        !pinned &&
-          (full
-            ? "opacity-40 group-hover:opacity-40"
-            : "group-hover:opacity-100"),
-      )}
-      disabled={pinning.pending || full}
-      onClick={() => pinning.toggle(work)}
-      title={
+    <Tooltip
+      content={
         full
           ? `Up to ${FEATURED_LIMIT} featured`
           : pinned
             ? "Featured"
             : "Feature"
       }
-      type="button"
     >
-      <motion.span
-        animate={{ scale: 1, rotate: 0 }}
-        className="flex"
-        initial={still ? false : { scale: 0.5, rotate: pinned ? -30 : 30 }}
-        key={pinned ? "pinned" : "loose"}
-        transition={{ type: "spring", stiffness: 500, damping: 22 }}
+      <button
+        aria-label={pinned ? `Unfeature ${name}` : `Feature ${name}`}
+        aria-pressed={pinned}
+        className={cn(
+          `grid size-control place-items-center rounded-control backdrop-blur-sm transition duration-160 ${focusRing}`,
+          pinned
+            ? "bg-action text-on-accent shadow-[0_6px_16px_-6px_var(--v-action)]"
+            : "bg-plane/80 text-ink hover:bg-plane focus-visible:opacity-100 [@media(hover:hover)]:opacity-0",
+          !pinned &&
+            (full
+              ? "opacity-40 group-hover:opacity-40"
+              : "group-hover:opacity-100"),
+        )}
+        disabled={pinning.pending || full}
+        onClick={() => pinning.toggle(work)}
+        type="button"
       >
-        <Pin
-          aria-hidden="true"
-          className="size-4"
-          fill={pinned ? "currentColor" : "none"}
-          strokeWidth={1.9}
-        />
-      </motion.span>
-    </button>
+        <motion.span
+          animate={{ scale: 1, rotate: 0 }}
+          className="flex"
+          initial={still ? false : { scale: 0.5, rotate: pinned ? -30 : 30 }}
+          key={pinned ? "pinned" : "loose"}
+          transition={spring.slow}
+        >
+          <Pin
+            aria-hidden="true"
+            className="size-4"
+            fill={pinned ? "currentColor" : "none"}
+            strokeWidth={1.9}
+          />
+        </motion.span>
+      </button>
+    </Tooltip>
   );
 }
 

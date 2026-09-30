@@ -10,6 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   type NotificationCursor,
   notificationKeys,
@@ -123,16 +124,17 @@ function NotificationPanel({
             <CheckCheck aria-hidden="true" />
             Mark all read
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Clear all"
-            disabled={entries.length === 0 || clearAll.isPending}
-            onClick={() => clearAll.mutate()}
-          >
-            <Trash2 aria-hidden="true" />
-            <span className="sr-only">Clear all notifications</span>
-          </Button>
+          <Tooltip content="Clear all">
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={entries.length === 0 || clearAll.isPending}
+              onClick={() => clearAll.mutate()}
+            >
+              <Trash2 aria-hidden="true" />
+              <span className="sr-only">Clear all notifications</span>
+            </Button>
+          </Tooltip>
         </div>
       </div>
       {markAll.isError ? (
