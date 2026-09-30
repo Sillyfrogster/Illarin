@@ -1,15 +1,15 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, PencilLine, X } from "lucide-react";
+import { ArrowLeft, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { ChipSet } from "@/components/ui/Chip";
 import { Field } from "@/components/ui/field";
-import { Input, Textarea } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/input";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
 import { RadioGroup } from "@/components/ui/radio-group";
+import { TagField } from "@/components/ui/tag-field";
 import { WorkOwnerMenu } from "@/components/work/WorkOwnerMenu";
 import type { WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
@@ -72,7 +72,6 @@ export function WorkHeader({
   shellClassName: string;
 }) {
   const workspace = useWorkspace();
-  const [tagInput, setTagInput] = useState("");
   const [tagTrouble, setTagTrouble] = useState("");
   const isDraft = work.lifecycle === "draft";
   const writing = workspace.editing;
@@ -324,77 +323,39 @@ export function WorkHeader({
                 <Field
                   htmlFor="work-tag"
                   label="Tags"
-                  hint="Tags help readers find this work in search. Up to 32, with 64 characters each."
+                  hint="Tags help readers find this work in search. Press Enter after each one. Up to 32, with 64 characters each."
                   trouble={tagTrouble || undefined}
                 >
-                  <form
-                    className="flex gap-2"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const tag = tagInput.trim();
-                      if (!tag || Array.from(tag).length > 64) {
-                        setTagTrouble("Use 1 to 64 characters for each tag.");
-                        return;
-                      }
-                      if (workspace.details.tags.includes(tag)) {
-                        setTagTrouble("That tag is already here.");
-                        return;
-                      }
-                      if (workspace.details.tags.length >= 32) {
-                        setTagTrouble("Use up to 32 tags.");
-                        return;
-                      }
+                  <TagField
+                    onAdd={(tag) => {
+                      const trouble =
+                        Array.from(tag).length > 64
+                          ? "Use 1 to 64 characters for each tag."
+                          : workspace.details.tags.includes(tag)
+                            ? "That tag is already here."
+                            : workspace.details.tags.length >= 32
+                              ? "Use up to 32 tags."
+                              : "";
+                      setTagTrouble(trouble);
+                      if (trouble) return false;
                       workspace.writeDetails({
                         ...workspace.details,
                         tags: [...workspace.details.tags, tag],
                       });
-                      setTagInput("");
-                      setTagTrouble("");
+                      return true;
                     }}
-                  >
-                    <Input
-                      aria-describedby={
-                        tagTrouble
-                          ? "work-tag-trouble work-tag-hint"
-                          : "work-tag-hint"
-                      }
-                      aria-invalid={Boolean(tagTrouble) || undefined}
-                      id="work-tag"
-                      onChange={(event) => {
-                        setTagInput(event.target.value);
-                        setTagTrouble("");
-                      }}
-                      value={tagInput}
-                    />
-                    <Button className="shrink-0" type="submit">
-                      Add
-                    </Button>
-                  </form>
+                    onRemove={(index) => {
+                      setTagTrouble("");
+                      workspace.writeDetails({
+                        ...workspace.details,
+                        tags: workspace.details.tags.filter(
+                          (_, at) => at !== index,
+                        ),
+                      });
+                    }}
+                    tags={workspace.details.tags}
+                  />
                 </Field>
-                {workspace.details.tags.length > 0 ? (
-                  <ul className="mt-3 flex list-none flex-wrap gap-2">
-                    {workspace.details.tags.map((tag, index) => (
-                      <li key={tag}>
-                        <button
-                          aria-label={`Remove ${tag}`}
-                          className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-control bg-deep px-3 text-label text-ink outline-offset-3 [overflow-wrap:anywhere] hover:bg-rule/40"
-                          onClick={() =>
-                            workspace.writeDetails({
-                              ...workspace.details,
-                              tags: workspace.details.tags.filter(
-                                (_, at) => at !== index,
-                              ),
-                            })
-                          }
-                          type="button"
-                        >
-                          {tag}
-                          <X aria-hidden="true" size={14} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
               </div>
             ) : workspace.details.tags.length > 0 ? (
               <ChipSet
