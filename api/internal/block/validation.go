@@ -171,7 +171,7 @@ func ValidateStructure(holder Block) error {
 		}
 		return fmt.Errorf(
 			"%s has no room for %s in %s. Move or remove %s before changing the layout",
-			holder.Definition, strings.Join(stranded, ", "), holder.Layout,
+			holder.Definition, strings.Join(stranded, ", "), holder.Layout.label(),
 			strings.ToLower(strings.Join(stranded, ", ")),
 		)
 	}
@@ -228,7 +228,7 @@ func ValidateStructure(holder Block) error {
 		if !slices.Contains(available, element.Slot) {
 			return fmt.Errorf(
 				"%s is in slot %q, but %s has only %s. Move it to one of those slots before saving",
-				name, element.Slot, holder.Layout, joinSlots(available),
+				name, element.Slot, holder.Layout.label(), joinSlots(available),
 			)
 		}
 		if prior, exists := occupied[element.Slot]; exists {
@@ -263,7 +263,7 @@ func ValidateBuilderConstraints(workType string, before []Block, after []Block) 
 		if !slices.Contains(definition.Layouts, holder.Layout) {
 			available := make([]string, len(definition.Layouts))
 			for i, layout := range definition.Layouts {
-				available[i] = string(layout)
+				available[i] = layout.label()
 			}
 			return fmt.Errorf(
 				"%s can use %s. Choose one of those layouts before saving",
@@ -281,18 +281,18 @@ func ValidateBuilderConstraints(workType string, before []Block, after []Block) 
 		switch {
 		case original.Layout != holder.Layout && original.Width == holder.Width:
 			return fmt.Errorf(
-				"%s needs %s, and this block is %s. Widen it first",
-				holder.Layout, minimum.label(), holder.Width.label(),
+				"The %s layout needs %s, and this block is %s. Widen it first",
+				holder.Layout.label(), minimum.label(), holder.Width.label(),
 			)
 		case original.Layout == holder.Layout && original.Width != holder.Width:
 			return fmt.Errorf(
-				"%s needs %s, and this block is %s. Choose another layout before narrowing it",
-				holder.Layout, minimum.label(), holder.Width.label(),
+				"The %s layout needs %s, and this block is %s. Choose another layout before narrowing it",
+				holder.Layout.label(), minimum.label(), holder.Width.label(),
 			)
 		default:
 			return fmt.Errorf(
-				"%s needs %s, and this block is %s. Change one before saving",
-				holder.Layout, minimum.label(), holder.Width.label(),
+				"The %s layout needs %s, and this block is %s. Change one before saving",
+				holder.Layout.label(), minimum.label(), holder.Width.label(),
 			)
 		}
 	}

@@ -474,7 +474,7 @@ func TestChoosingALayoutThatNeedsMoreWidthNamesTheFirstFix(t *testing.T) {
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("trio at two thirds status = %d, want 400: %s", response.Code, response.Body.String())
 	}
-	for _, want := range []string{"trio", "full width", "Widen it first"} {
+	for _, want := range []string{"three columns", "full width", "Widen it first"} {
 		if !strings.Contains(response.Body.String(), want) {
 			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
 		}
@@ -503,7 +503,7 @@ func TestNarrowingBelowTheCurrentLayoutNamesTheFirstFix(t *testing.T) {
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("narrow trio status = %d, want 400: %s", response.Code, response.Body.String())
 	}
-	for _, want := range []string{"trio", "full width", "Choose another layout before narrowing it"} {
+	for _, want := range []string{"three columns", "full width", "Choose another layout before narrowing it"} {
 		if !strings.Contains(response.Body.String(), want) {
 			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
 		}
@@ -526,7 +526,7 @@ func TestALayoutTheDefinitionDoesNotOfferNamesTheAvailableChoices(t *testing.T) 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("unoffered layout status = %d, want 400: %s", response.Code, response.Body.String())
 	}
-	for _, want := range []string{"Greetings and examples", "stack-2", "stack-3"} {
+	for _, want := range []string{"Greetings and examples", "two stacked", "three stacked"} {
 		if !strings.Contains(response.Body.String(), want) {
 			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
 		}
@@ -578,7 +578,7 @@ func TestSwitchingThreeMessagesBackToStackTwoNamesTheStrandedElement(t *testing.
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("three messages in stack-2 status = %d, want 400: %s", response.Code, response.Body.String())
 	}
-	for _, want := range []string{"Group-only greetings", "stack-2", "Move or remove"} {
+	for _, want := range []string{"Group-only greetings", "two stacked", "Move or remove"} {
 		if !strings.Contains(response.Body.String(), want) {
 			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
 		}
