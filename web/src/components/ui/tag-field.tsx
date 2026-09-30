@@ -46,7 +46,7 @@ export function TagField({
   return (
     <div
       className={cn(
-        "flex min-h-control w-full min-w-0 flex-wrap items-center gap-1 rounded-control border border-edge p-1 font-ui text-ui text-ink shadow-[0_1px_2px_0_rgb(0_0_0/0.05)] transition-[background-color,border-color,box-shadow] duration-80 hover:border-accent/50 hover:bg-hover has-[input:focus-visible]:border-accent has-[input:focus-visible]:bg-transparent has-[input:focus-visible]:ring-[3px] has-[input:focus-visible]:ring-accent/50 has-[[aria-invalid=true]]:border-stop dark:bg-edge/10",
+        "flex min-h-control w-full min-w-0 flex-wrap items-center gap-1 rounded-control border border-edge p-1 font-ui text-ui text-ink shadow-[0_1px_2px_0_rgb(0_0_0/0.05)] transition-[background-color,border-color,box-shadow] duration-80 hover:border-accent/50 hover:bg-hover has-[input:focus-visible]:border-accent has-[input:focus-visible]:bg-transparent has-[[aria-invalid=true]]:border-stop dark:bg-edge/10",
         className,
       )}
     >

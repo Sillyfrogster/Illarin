@@ -45,4 +45,4 @@ export function cn(...values: ClassValue[]) {
 
 /** focusRing is the one keyboard focus ring every control draws in place of the global outline. */
 export const focusRing =
-  "outline-none focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent/50";
+  "outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";

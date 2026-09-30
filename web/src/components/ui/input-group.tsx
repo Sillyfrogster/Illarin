@@ -12,7 +12,7 @@ function InputGroup({ className, ...props }: ComponentProps<"div">) {
       className={cn(
         "group/input-group relative flex h-control w-full min-w-0 items-center rounded-control border border-edge font-ui text-ui shadow-[0_1px_2px_0_rgb(0_0_0/0.05)] transition-[background-color,border-color,box-shadow] duration-80 hover:border-accent/50 hover:bg-hover dark:bg-edge/10",
         "has-[>[data-align=inline-start]]:[&>input]:pl-1.5 has-[>[data-align=inline-end]]:[&>input]:pr-1.5",
-        "has-[input:focus-visible]:border-accent has-[input:focus-visible]:bg-transparent has-[input:focus-visible]:ring-[3px] has-[input:focus-visible]:ring-accent/50",
+        "has-[input:focus-visible]:border-accent has-[input:focus-visible]:bg-transparent",
         "has-[[aria-invalid=true]]:border-stop has-[input:disabled]:opacity-50",
         className,
       )}
@@ -61,7 +61,7 @@ function InputGroupInput({ className, ...props }: ComponentProps<"input">) {
   return (
     <Input
       className={cn(
-        "h-full flex-1 rounded-none border-0 bg-transparent shadow-none hover:bg-transparent focus-visible:ring-0 dark:bg-transparent",
+        "h-full flex-1 rounded-none border-0 bg-transparent shadow-none hover:bg-transparent dark:bg-transparent",
         className,
       )}
       {...props}

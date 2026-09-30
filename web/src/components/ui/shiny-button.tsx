@@ -16,7 +16,7 @@ import { spring } from "@/lib/springs";
 
 const MotionLink = motion.create(Link);
 
-const SHINY = `relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control bg-action font-ui text-ui font-medium text-on-accent transition-shadow duration-160 hover:text-on-accent hover:shadow-[0_0_20px_color-mix(in_oklab,var(--v-action)_40%,transparent)] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 ${focusRing}`;
+const SHINY = `relative inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control bg-action font-ui text-ui font-medium text-on-accent transition-shadow duration-160 hover:text-on-accent hover:shadow-[0_0_20px_color-mix(in_oklab,var(--v-action)_40%,transparent)] disabled:pointer-events-none disabled:opacity-50 focus-visible:ring-offset-1 focus-visible:ring-offset-field [&_svg]:size-4 [&_svg]:shrink-0 ${focusRing}`;
 
 const SIZES = {
   default: "h-control px-4 has-[>span>svg:first-child]:pl-3",
