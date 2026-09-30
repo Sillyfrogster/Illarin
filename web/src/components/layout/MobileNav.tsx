@@ -6,15 +6,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { MobileDrawer } from "@/components/ui/mobile-drawer";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { useAuth } from "@/lib/auth";
+import { focusRing } from "@/lib/cn";
 import { AppearanceMenu } from "./AppearanceMenu";
 import { DestinationIcon } from "./DestinationIcon";
 import {
@@ -25,8 +20,7 @@ import {
 } from "./destinations";
 import { SIGN_OUT_FAILURE, useSignOut } from "./use-sign-out";
 
-const ROW =
-  "flex min-h-12 items-center rounded-control px-3 text-ui text-ink hover:bg-deep aria-[current=page]:text-accent";
+const ROW = `flex min-h-control items-center rounded-control px-3 text-ui text-ink transition-colors duration-80 hover:bg-hover aria-[current=page]:bg-accent-wash aria-[current=page]:text-accent ${focusRing}`;
 
 export function MobileNav() {
   const pathname = usePathname();
@@ -36,6 +30,7 @@ export function MobileNav() {
   const publish = publishAction(account);
   const destinations = accountDestinations(account, writer);
 
+  const trigger = useRef<HTMLButtonElement>(null);
   const previousPathname = useRef(pathname);
   useEffect(() => {
     if (previousPathname.current === pathname) return;
@@ -44,30 +39,33 @@ export function MobileNav() {
   }, [pathname]);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu aria-hidden="true" />
-          <span className="sr-only">Open navigation</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="md:hidden">
-        <div className="flex min-h-14 items-center justify-between px-[calc(var(--gutter)-0.75rem)] shadow-[inset_0_-1px_0_var(--v-rule)]">
-          <SheetTitle className="px-3">
-            <BrandLogo />
-          </SheetTitle>
-          <SheetClose asChild>
-            <Button variant="ghost" size="icon">
-              <X aria-hidden="true" />
-              <span className="sr-only">Close navigation</span>
-            </Button>
-          </SheetClose>
+    <>
+      <Button
+        aria-expanded={open}
+        className="md:hidden"
+        onClick={() => setOpen(true)}
+        ref={trigger}
+        size="icon"
+        variant="ghost"
+      >
+        <Menu aria-hidden="true" />
+        <span className="sr-only">Open navigation</span>
+      </Button>
+      <MobileDrawer
+        onClose={() => setOpen(false)}
+        open={open}
+        title="Navigation"
+        triggerRef={trigger}
+      >
+        <div className="flex items-center justify-between px-3 pt-3 pb-2">
+          <BrandLogo className="px-2" />
+          <Button onClick={() => setOpen(false)} size="icon" variant="ghost">
+            <X aria-hidden="true" />
+            <span className="sr-only">Close navigation</span>
+          </Button>
         </div>
-        <SheetDescription className="sr-only">
-          Site navigation and account
-        </SheetDescription>
 
-        <nav className="grid px-[calc(var(--gutter)-0.75rem)] pt-3">
+        <nav className="grid gap-0.5 px-3 pt-1 pb-4">
           {primaryDestinations().map((item) => (
             <Link
               key={item.href}
@@ -80,9 +78,9 @@ export function MobileNav() {
               {item.label}
             </Link>
           ))}
-          <Button asChild variant="primary" className="my-3">
-            <Link href={publish.href}>{publish.label}</Link>
-          </Button>
+          <ShinyButton className="my-3" href={publish.href}>
+            {publish.label}
+          </ShinyButton>
 
           {account ? (
             <p className="flex items-center gap-2.5 px-3 pt-2 pb-3 text-meta text-mute">
@@ -135,7 +133,7 @@ export function MobileNav() {
             </>
           ) : null}
         </nav>
-      </SheetContent>
-    </Sheet>
+      </MobileDrawer>
+    </>
   );
 }

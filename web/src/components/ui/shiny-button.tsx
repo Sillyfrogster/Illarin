@@ -60,7 +60,7 @@ function ShinyButton({
   const inside = (
     <>
       <span
-        className="relative flex size-full items-center justify-center gap-[inherit]"
+        className="relative flex size-full items-center justify-center [gap:inherit]"
         style={{ maskImage: TEXT_MASK }}
       >
         {loading ? <Spinner /> : null}

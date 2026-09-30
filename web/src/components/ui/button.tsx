@@ -81,7 +81,7 @@ function Button({
           SURFACES[variant ?? "secondary"],
         )}
       />
-      <span className="flex min-w-0 flex-1 items-center justify-[inherit] gap-[inherit]">
+      <span className="flex min-w-0 flex-1 items-center [justify-content:inherit] [gap:inherit]">
         {loading ? <Spinner /> : null}
         {label}
       </span>
