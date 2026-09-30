@@ -45,6 +45,38 @@ export function orderedFormats(
   ];
 }
 
+export type MainAction =
+  | { kind: "send"; app: WorkConnectedApp }
+  | { kind: "download"; format: DownloadFormat; label: string | null }
+  | { kind: "original" };
+
+/** mainAction picks what the work page's main button does: send to a connected app, else download for the chosen app, else the recommended format, else the owner's original. */
+export function mainAction({
+  connected,
+  downloads,
+  forApp,
+  hasOriginal,
+  readerApp,
+}: {
+  connected: WorkConnectedApp[];
+  downloads: DownloadFormat[];
+  forApp: AppFormat | null;
+  hasOriginal: boolean;
+  readerApp: string | null;
+}): MainAction | null {
+  const receiving = connected.filter((one) => one.canReceive);
+  const chosen = receiving.find(
+    (one) => one.appName.toLowerCase() === readerApp,
+  );
+  const app = chosen ?? (forApp ? null : receiving[0]);
+  if (app) return { kind: "send", app };
+  const format = forApp
+    ? downloads.find((one) => one.format === forApp.format)
+    : downloads[0];
+  if (format) return { kind: "download", format, label: forApp?.label ?? null };
+  return hasOriginal ? { kind: "original" } : null;
+}
+
 /** installsInApp says whether an app installs this type rather than reading it as content. */
 export function installsInApp(type: string): boolean {
   return type === "extension";

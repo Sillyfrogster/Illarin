@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -27,6 +28,7 @@ export function FormatMenu({
   children,
   downloads,
   extra,
+  hint,
   original = null,
   version,
   workId,
@@ -35,6 +37,7 @@ export function FormatMenu({
   children: ReactNode;
   downloads: DownloadFormat[];
   extra?: ReactNode;
+  hint?: string;
   original?: OriginalUpload | null;
   version?: number;
   workId: string;
@@ -44,6 +47,7 @@ export function FormatMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {hint ? <DropdownMenuLabel>{hint}</DropdownMenuLabel> : null}
         {downloads.map((offered) => (
           <DropdownMenuItem asChild key={offered.format}>
             <a

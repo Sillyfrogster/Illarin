@@ -35,6 +35,7 @@ import { installedVersionsLine } from "@/lib/installed-app-versions";
 import {
   installsInApp,
   isWaiting,
+  mainAction,
   orderedFormats,
   readerAppFormat,
   sendActionLabel,
@@ -153,9 +154,6 @@ export function GetWork({
   const forApp = readerAppFormat(work.appFormats, work.readerApp);
   const formats = orderedFormats(work.downloads, forApp?.format ?? null);
   const downloads = work.hasPrivatePrompts ? [] : formats;
-  const others = forApp
-    ? downloads.filter((one) => one.format !== forApp.format)
-    : [];
   const receiving = connectedApps.filter((one) => one.canReceive);
   const original = work.isOwner ? work.original : null;
   const versionsLine = installedVersionsLine(work);
@@ -165,16 +163,24 @@ export function GetWork({
   const standing = installs
     ? []
     : connectedApps.filter((one) => one.send !== null);
+  const main = mainAction({
+    connected: connectedApps,
+    downloads,
+    forApp,
+    hasOriginal: original !== null,
+    readerApp: work.readerApp,
+  });
 
-  if (downloads.length === 0 && !original && receiving.length === 0) {
+  if (!main) {
     return aside ? <div className="flex">{aside}</div> : null;
   }
 
-  const sendFirst = !forApp && downloads.length === 0 && !original;
-  const primarySend = sendFirst ? (receiving[0] ?? null) : null;
-  const menuSends = receiving.filter((app) => app !== primarySend);
-  const menuFormats = forApp ? others : downloads;
-  const menuOriginal = forApp || downloads.length > 0 ? original : null;
+  const mainFormat = main.kind === "download" ? main.format.format : null;
+  const menuFormats = downloads.filter((one) => one.format !== mainFormat);
+  const menuOriginal = main.kind === "original" ? null : original;
+  const menuSends = receiving.filter(
+    (app) => main.kind !== "send" || app !== main.app,
+  );
   const extra =
     menuSends.length > 0 || downloads.length > 0 ? (
       <>
@@ -204,70 +210,67 @@ export function GetWork({
       </>
     ) : null;
   const hasMenu = menuFormats.length > 0 || menuOriginal || extra;
-  const joined = hasMenu && !(downloads.length > 0 && !forApp);
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="inline-flex">
-          {downloads.length > 0 && forApp ? (
-            <Button
-              asChild
-              className={cn(joined && SPLIT_START)}
-              variant="primary"
-            >
-              <a
-                href={`/download/${work.id}/${forApp.format}`}
-                onClick={() => setOffering(true)}
-              >
-                <Download aria-hidden="true" />
-                Download for {forApp.label}
-              </a>
-            </Button>
-          ) : primarySend ? (
+          {main.kind === "send" ? (
             <SendButton
-              app={primarySend}
+              app={main.app}
               busy={busy}
-              className={cn(joined && SPLIT_START)}
+              className={cn(hasMenu && SPLIT_START)}
               installs={installs}
               onSend={send}
             />
-          ) : original && downloads.length === 0 ? (
+          ) : (
             <Button
               asChild
-              className={cn(joined && SPLIT_START)}
+              className={cn(hasMenu && SPLIT_START)}
               variant="primary"
             >
-              <a href={`/download/${work.id}`}>
-                <FileDown aria-hidden="true" />
-                Original upload
+              <a
+                href={
+                  main.kind === "download"
+                    ? `/download/${work.id}/${main.format.format}`
+                    : `/download/${work.id}`
+                }
+                onClick={() => main.kind === "download" && setOffering(true)}
+              >
+                {main.kind === "download" ? (
+                  <Download aria-hidden="true" />
+                ) : (
+                  <FileDown aria-hidden="true" />
+                )}
+                {main.kind === "download"
+                  ? main.label
+                    ? `Download for ${main.label}`
+                    : "Download"
+                  : "Original upload"}
               </a>
             </Button>
-          ) : null}
+          )}
           {hasMenu ? (
             <FormatMenu
               downloads={menuFormats}
               extra={extra}
+              hint={
+                forApp && menuFormats.length > 0
+                  ? `The main button picks the format ${forApp.label} reads.`
+                  : undefined
+              }
               onDownload={() => setOffering(true)}
               original={menuOriginal}
               workId={work.id}
             >
-              {joined ? (
-                <Button
-                  aria-label="More ways to get it"
-                  className={SPLIT_END}
-                  size="icon"
-                  variant="primary"
-                >
-                  <ChevronDown aria-hidden="true" />
-                </Button>
-              ) : (
-                <Button variant="primary">
-                  <Download aria-hidden="true" />
-                  Download {typeLabel}
-                  <ChevronDown aria-hidden="true" />
-                </Button>
-              )}
+              <Button
+                aria-label="More ways to get it"
+                className={SPLIT_END}
+                size="icon"
+                variant="primary"
+              >
+                <ChevronDown aria-hidden="true" />
+              </Button>
             </FormatMenu>
           ) : null}
         </div>

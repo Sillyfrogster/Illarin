@@ -5,6 +5,7 @@ import {
   connectedAppStanding,
   downloadAddress,
   installsInApp,
+  mainAction,
   orderedFormats,
   readerAppFormat,
   sendActionLabel,
@@ -164,4 +165,54 @@ test("a download names its version only where one is chosen", () => {
   expect(downloadAddress({ workId: "work", format: "charx", version: 3 })).toBe(
     "/download/work/charx?version=3",
   );
+});
+
+test("the main button sends to a connected app, else downloads for the chosen app, else the recommended format", () => {
+  const downloads = [
+    offered("ccv3", "Character Card V3", true),
+    offered("charx", "CharX", false),
+  ];
+  const forApp = { format: "charx", id: "sillytavern", label: "SillyTavern" };
+  const base = {
+    connected: [],
+    downloads,
+    forApp: null,
+    hasOriginal: false,
+    readerApp: null,
+  };
+  const desk = connectedApp();
+  expect(mainAction(base)).toEqual({
+    kind: "download",
+    format: downloads[0],
+    label: null,
+  });
+  expect(mainAction({ ...base, forApp, readerApp: "sillytavern" })).toEqual({
+    kind: "download",
+    format: downloads[1],
+    label: "SillyTavern",
+  });
+  expect(mainAction({ ...base, connected: [desk] })).toEqual({
+    kind: "send",
+    app: desk,
+  });
+  expect(
+    mainAction({
+      ...base,
+      connected: [desk],
+      forApp,
+      readerApp: "sillytavern",
+    })?.kind,
+  ).toBe("download");
+  expect(
+    mainAction({
+      ...base,
+      connected: [desk],
+      forApp: null,
+      readerApp: "lumiverse",
+    })?.kind,
+  ).toBe("send");
+  expect(mainAction({ ...base, downloads: [], hasOriginal: true })).toEqual({
+    kind: "original",
+  });
+  expect(mainAction({ ...base, downloads: [] })).toBeNull();
 });
