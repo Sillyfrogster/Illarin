@@ -206,7 +206,7 @@ func TestGitHubReleaseHoldsUnpublishedEditsAndLeavesFailuresVisible(t *testing.T
 	if _, err := pool.Exec(t.Context(), `update extension_release_sources set verified_at = now() - interval '2 hours' where work_id = $1`, id); err != nil {
 		t.Fatal(err)
 	}
-	if saved := apitest.SaveDetails(t, router, session, workID, `{"name":"Edited locally","blurb":"","isNsfw":false}`); saved.Code != 204 {
+	if saved := apitest.SaveDetails(t, router, session, workID, `{"name":"Quiet Toolbox","blurb":"","isNsfw":true}`); saved.Code != 204 {
 		t.Fatalf("save edits: %d %s", saved.Code, saved.Body.String())
 	}
 	if _, err := service.CheckNext(t.Context()); err != nil {
@@ -225,7 +225,7 @@ func TestGitHubReleaseHoldsUnpublishedEditsAndLeavesFailuresVisible(t *testing.T
 	if err := service.Retry(t.Context(), owner, id, 51); err == nil {
 		t.Fatal("resumed while edits still exist")
 	}
-	if _, err := pool.Exec(t.Context(), `update works set name = 'Quiet Toolbox' where id = $1`, id); err != nil {
+	if _, err := pool.Exec(t.Context(), `update works set is_nsfw = false where id = $1`, id); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.Retry(t.Context(), owner, id, 51); err != nil {
@@ -252,7 +252,7 @@ func TestGitHubReleaseFailureKeepsPublishedBytes(t *testing.T) {
 	if _, err := pool.Exec(t.Context(), `update extension_release_sources set verified_at = now() - interval '2 hours' where work_id = $1`, id); err != nil {
 		t.Fatal(err)
 	}
-	if saved := apitest.SaveDetails(t, router, session, workID, `{"name":"Edited locally","blurb":"","isNsfw":false}`); saved.Code != 204 {
+	if saved := apitest.SaveDetails(t, router, session, workID, `{"name":"Quiet Toolbox","blurb":"","isNsfw":true}`); saved.Code != 204 {
 		t.Fatalf("save edits: %d %s", saved.Code, saved.Body.String())
 	}
 	if _, err := service.CheckNext(t.Context()); err != nil {
@@ -269,7 +269,7 @@ func TestGitHubReleaseFailureKeepsPublishedBytes(t *testing.T) {
 	if status != "held" || apitest.VersionNumber(t, pool, workID) != 1 {
 		t.Fatalf("invalid archive bypassed unpublished edits: %s", status)
 	}
-	if _, err := pool.Exec(t.Context(), `update works set name = 'Quiet Toolbox' where id = $1`, id); err != nil {
+	if _, err := pool.Exec(t.Context(), `update works set is_nsfw = false where id = $1`, id); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.Retry(t.Context(), owner, id, 51); err != nil {

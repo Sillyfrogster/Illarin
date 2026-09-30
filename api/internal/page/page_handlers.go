@@ -132,6 +132,7 @@ func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
 	addable := toAPIAddableBlocks(found.Type, found.IsOwner)
 	return WorkDetail{
 		DraftedChangesVersion: found.DraftedChangesVersion,
+		FileFields:            found.FileFields,
 		UnpublishedChanges:    found.UnpublishedChanges,
 		ViewCount:             found.ViewCount,
 		DownloadCount:         found.DownloadCount,

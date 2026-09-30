@@ -122,7 +122,7 @@ func declaration(id string) format.Declaration {
 	return format.Declaration{
 		ID: id, Label: labels[id], Type: Type,
 		Direction:   format.Direction{Read: true, Write: true},
-		Recognition: recognition, Roles: roles, Header: header,
+		Recognition: recognition, Roles: roles, Header: header, WritesCover: true,
 		Limits: format.ContentLimits{
 			PayloadBytes: block.MaxPayloadBytes, CollectionItems: block.MaxCollectionItems,
 			ItemBytes: block.MaxItemBytes, ArchiveFiles: format.MaxArchiveFiles,

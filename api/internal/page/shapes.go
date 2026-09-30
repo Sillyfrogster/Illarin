@@ -65,6 +65,7 @@ type WorkDetail struct {
 	Visibility            WorkDetailVisibility     `json:"visibility"`
 	Downloads             []DownloadFormat         `json:"downloads"`
 	EligibleApps          []AppName                `json:"eligibleApps"`
+	FileFields            []string                 `json:"fileFields,omitempty"`
 	ExtensionDependencies []ExtensionDependency    `json:"extensionDependencies"`
 	Id                    uuid.UUID                `json:"id"`
 	Identifier            *string                  `json:"identifier,omitempty"`

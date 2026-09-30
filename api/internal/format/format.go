@@ -405,6 +405,8 @@ type Declaration struct {
 	TestedOriginalFormats    []string
 	PreservesOriginalFormats []string
 	KeepsUpload              bool
+	// WritesCover says the written file carries the work's cover, so a new cover waits for Publish.
+	WritesCover bool
 	// KeepsPrivatePrompts says an app reading this format keeps a work's private prompts out of sight.
 	KeepsPrivatePrompts bool
 }
