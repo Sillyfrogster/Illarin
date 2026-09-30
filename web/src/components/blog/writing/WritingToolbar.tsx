@@ -16,8 +16,8 @@ import {
   Undo2,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
+import { Toggle, toggleClasses } from "@/components/ui/toggle";
 import { Tooltip } from "@/components/ui/tooltip";
-import { cn } from "@/lib/cn";
 import { BlockRow, InsertRow, LinkRow } from "./EditorRows";
 import {
   GalleryPictureRow,
@@ -30,11 +30,6 @@ import { type Controls, useControls } from "./use-controls";
 import { useToolbarKeys } from "./use-toolbar-keys";
 
 type Opened = "none" | "link" | "insert" | PictureIntent;
-
-const CONTROL =
-  "grid size-11 shrink-0 place-items-center rounded-control text-mute outline-offset-3 transition-colors duration-200 hover:bg-deep hover:text-ink disabled:pointer-events-none disabled:opacity-40 motion-reduce:transition-none";
-
-const ACTIVE = "bg-action text-on-accent hover:bg-action hover:text-on-accent";
 
 export function WritingToolbar({
   editor,
@@ -315,19 +310,30 @@ function Control({
   ready?: boolean;
   shortcut?: string;
 }) {
+  const disabled = !controls.editable || ready === false;
   return (
     <Tooltip content={shortcut ? `${label} (${shortcut})` : label}>
-      <button
-        aria-expanded={expanded}
-        aria-label={label}
-        aria-pressed={expanded === undefined ? active : undefined}
-        className={cn(CONTROL, (active || expanded) && ACTIVE)}
-        disabled={!controls.editable || ready === false}
-        onClick={press}
-        type="button"
-      >
-        {children}
-      </button>
+      {expanded === undefined ? (
+        <Toggle
+          aria-label={label}
+          disabled={disabled}
+          onPressedChange={press}
+          pressed={active}
+        >
+          {children}
+        </Toggle>
+      ) : (
+        <button
+          aria-expanded={expanded}
+          aria-label={label}
+          className={toggleClasses}
+          disabled={disabled}
+          onClick={press}
+          type="button"
+        >
+          {children}
+        </button>
+      )}
     </Tooltip>
   );
 }
