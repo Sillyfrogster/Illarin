@@ -70,7 +70,7 @@ export function Row({
   trailing?: ReactNode;
 }) {
   const row = (
-    <li className="group relative flex min-w-0 gap-4 rounded-plate bg-plane px-4 py-5 transition-colors duration-160 not-first:border-t not-first:border-rule/45 hover:border-transparent hover:bg-deep motion-reduce:transition-none data-dragging:border-transparent data-dragging:shadow-popover sm:px-5">
+    <li className="group relative flex min-w-0 gap-4 rounded-plate bg-plane px-4 py-5 transition-colors duration-160 not-first:before:absolute not-first:before:inset-x-4 not-first:before:top-0 not-first:before:h-px not-first:before:bg-rule/45 not-first:before:content-[''] hover:bg-deep hover:before:opacity-0 motion-reduce:transition-none data-dragging:shadow-popover data-dragging:before:opacity-0 sm:px-5">
       {lead}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
