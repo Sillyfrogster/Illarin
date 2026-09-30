@@ -218,7 +218,7 @@ with ranking as (
                     (select max(day) from work_rankings)) as day
 )
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, ranked.published_at, ranked.activity, ranking.day::date as ranked_on, a.lifecycle,
+       a.type, a.is_nsfw, a.tags, ranked.published_at, ranked.activity, ranking.day::date as ranked_on, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
@@ -327,6 +327,7 @@ type BrowseWorksRow struct {
 	Creator         string
 	Type            string
 	IsNsfw          pgtype.Bool
+	Tags            []string
 	PublishedAt     pgtype.Timestamptz
 	Activity        int32
 	RankedOn        pgtype.Date
@@ -377,6 +378,7 @@ func (q *Queries) BrowseWorks(ctx context.Context, arg BrowseWorksParams) ([]Bro
 			&i.Creator,
 			&i.Type,
 			&i.IsNsfw,
+			&i.Tags,
 			&i.PublishedAt,
 			&i.Activity,
 			&i.RankedOn,
@@ -998,7 +1000,7 @@ func (q *Queries) FailSend(ctx context.Context, arg FailSendParams) error {
 
 const featuredWorks = `-- name: FeaturedWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, a.created_at::timestamptz as published_at, 0::int as activity, null::date as ranked_on, a.lifecycle,
+       a.type, a.is_nsfw, a.tags, a.created_at::timestamptz as published_at, 0::int as activity, null::date as ranked_on, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
@@ -1035,6 +1037,7 @@ type FeaturedWorksRow struct {
 	Creator         string
 	Type            string
 	IsNsfw          pgtype.Bool
+	Tags            []string
 	PublishedAt     pgtype.Timestamptz
 	Activity        int32
 	RankedOn        pgtype.Date
@@ -1065,6 +1068,7 @@ func (q *Queries) FeaturedWorks(ctx context.Context, arg FeaturedWorksParams) ([
 			&i.Creator,
 			&i.Type,
 			&i.IsNsfw,
+			&i.Tags,
 			&i.PublishedAt,
 			&i.Activity,
 			&i.RankedOn,
@@ -2907,6 +2911,50 @@ func (q *Queries) SoftDeleteWork(ctx context.Context, arg SoftDeleteWorkParams) 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const suggestTags = `-- name: SuggestTags :many
+select lower(btrim(stored.tag))::text as tag, count(*)::int as works
+  from works a
+ cross join lateral unnest(a.tags) stored(tag)
+ where a.lifecycle = 'published' and a.visibility = 'listed'
+   and a.deleted_at is null and a.taken_down_at is null
+   and ($1::text <> 'hidden' or not a.is_nsfw)
+   and position($2::text in lower(btrim(stored.tag))) > 0
+ group by 1
+ order by position($2::text in lower(btrim(stored.tag))) = 1 desc, count(*) desc, 1
+ limit $3
+`
+
+type SuggestTagsParams struct {
+	NsfwPreference string
+	Typed          string
+	PageSize       int32
+}
+
+type SuggestTagsRow struct {
+	Tag   string
+	Works int32
+}
+
+func (q *Queries) SuggestTags(ctx context.Context, arg SuggestTagsParams) ([]SuggestTagsRow, error) {
+	rows, err := q.db.Query(ctx, suggestTags, arg.NsfwPreference, arg.Typed, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SuggestTagsRow
+	for rows.Next() {
+		var i SuggestTagsRow
+		if err := rows.Scan(&i.Tag, &i.Works); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const takeConnectionRateLimit = `-- name: TakeConnectionRateLimit :one

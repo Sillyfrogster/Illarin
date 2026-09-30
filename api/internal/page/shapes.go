@@ -201,6 +201,15 @@ type WorkTag struct {
 	Value string `json:"value"`
 }
 
+type WorkTagSuggestion struct {
+	Value string `json:"value"`
+	Count int    `json:"count"`
+}
+
+type WorkTagSuggestionList struct {
+	Tags []WorkTagSuggestion `json:"tags"`
+}
+
 type WorkTakedown struct {
 	At     time.Time `json:"at"`
 	Reason string    `json:"reason"`
@@ -215,6 +224,7 @@ type BrowseWork struct {
 	Type          BrowseWorkType        `json:"type"`
 	Name          string                `json:"name"`
 	OwnerState    *BrowseWorkOwnerState `json:"ownerState,omitempty"`
+	Tags          []WorkTag             `json:"tags"`
 	Takedown      *WorkTakedown         `json:"takedown,omitempty"`
 	ViewCount     int                   `json:"viewCount"`
 	DownloadCount int                   `json:"downloadCount"`
@@ -354,6 +364,19 @@ type ListWorksParams struct {
 	BeforeCount *int                 `json:"beforeCount,omitempty"`
 	RankedOn    *time.Time           `json:"rankedOn,omitempty"`
 }
+
+type SuggestTagsParams struct {
+	Q    *string                `json:"q,omitempty"`
+	Nsfw *SuggestTagsParamsNsfw `json:"nsfw,omitempty"`
+}
+
+type SuggestTagsParamsNsfw string
+
+const (
+	SuggestTagsParamsNsfwBlurred SuggestTagsParamsNsfw = "blurred"
+	SuggestTagsParamsNsfwHidden  SuggestTagsParamsNsfw = "hidden"
+	SuggestTagsParamsNsfwShown   SuggestTagsParamsNsfw = "shown"
+)
 
 type GetWorkParams struct {
 	DraftedChanges *bool              `json:"draftedChanges,omitempty"`

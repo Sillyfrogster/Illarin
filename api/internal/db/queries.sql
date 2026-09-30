@@ -32,7 +32,7 @@ with ranking as (
                     (select max(day) from work_rankings)) as day
 )
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, ranked.published_at, ranked.activity, ranking.day::date as ranked_on, a.lifecycle,
+       a.type, a.is_nsfw, a.tags, ranked.published_at, ranked.activity, ranking.day::date as ranked_on, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
@@ -114,7 +114,7 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
 
 -- name: FeaturedWorks :many
 select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
-       a.type, a.is_nsfw, a.created_at::timestamptz as published_at, 0::int as activity, null::date as ranked_on, a.lifecycle,
+       a.type, a.is_nsfw, a.tags, a.created_at::timestamptz as published_at, 0::int as activity, null::date as ranked_on, a.lifecycle,
        cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
        a.visibility, a.taken_down_at, a.taken_down_reason,
        array(select offered.format ->> 'format'
@@ -138,6 +138,18 @@ select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
    and a.deleted_at is null and a.taken_down_at is null
    and (sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
  order by featured.position;
+
+-- name: SuggestTags :many
+select lower(btrim(stored.tag))::text as tag, count(*)::int as works
+  from works a
+ cross join lateral unnest(a.tags) stored(tag)
+ where a.lifecycle = 'published' and a.visibility = 'listed'
+   and a.deleted_at is null and a.taken_down_at is null
+   and (sqlc.arg('nsfw_preference')::text <> 'hidden' or not a.is_nsfw)
+   and position(sqlc.arg('typed')::text in lower(btrim(stored.tag))) > 0
+ group by 1
+ order by position(sqlc.arg('typed')::text in lower(btrim(stored.tag))) = 1 desc, count(*) desc, 1
+ limit sqlc.arg('page_size');
 
 -- name: CountBrowseWorks :one
 select count(*)

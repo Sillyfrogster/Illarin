@@ -60,6 +60,7 @@ type BrowseItem struct {
 	Creator    string
 	Type       string
 	IsNSFW     *bool
+	Tags       []DetailTag
 	OwnerState string
 	Cover      *Cover
 	Takedown   *Takedown
@@ -84,6 +85,11 @@ type Option struct {
 	Label    string
 	Count    int
 	Selected bool
+}
+
+type TagSuggestion struct {
+	Value string
+	Count int
 }
 
 type Filter struct {
@@ -209,6 +215,25 @@ func (s *Service) Browse(
 	return page, nil
 }
 
+// SuggestTags lists the tags on listed works that contain what the reader typed, those starting with it first, then the most used
+func (s *Service) SuggestTags(ctx context.Context, typed string, preference work.NSFWPreference, limit int) ([]TagSuggestion, error) {
+	typed = normalizeBrowseText(typed)
+	if typed == "" {
+		return []TagSuggestion{}, nil
+	}
+	rows, err := db.New(s.pool).SuggestTags(ctx, db.SuggestTagsParams{
+		NsfwPreference: string(preference), Typed: typed, PageSize: int32(limit),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("suggest tags: %w", err)
+	}
+	suggestions := make([]TagSuggestion, 0, len(rows))
+	for _, row := range rows {
+		suggestions = append(suggestions, TagSuggestion{Value: row.Tag, Count: int(row.Works)})
+	}
+	return suggestions, nil
+}
+
 // Featured lists the works a creator chose to show first, in their order, under the reader's adult content setting
 func (s *Service) Featured(ctx context.Context, creatorID uuid.UUID, preference work.NSFWPreference) ([]BrowseItem, error) {
 	rows, err := db.New(s.pool).FeaturedWorks(ctx, db.FeaturedWorksParams{
@@ -229,6 +254,7 @@ func (s *Service) browseItem(row db.BrowseWorksRow, ownProfile bool, preference 
 	item := BrowseItem{
 		ID: uuidFromPgtype(row.ID), Name: row.Name, Creator: row.Creator,
 		Type: row.Type, IsNSFW: boolFromPgtype(row.IsNsfw),
+		Tags:  detailTags(row.Tags),
 		Apps:  format.AppsReading(row.Formats),
 		Views: int(row.ViewCount), Downloads: int(row.DownloadCount),
 	}
