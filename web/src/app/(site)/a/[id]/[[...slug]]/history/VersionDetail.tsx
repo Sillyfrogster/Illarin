@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import type { Candidate } from "@/lib/drafted-changes";
+import { versionTag } from "@/lib/version-label";
 import { workHref } from "@/lib/work-url";
 import {
   earlierVersions,
@@ -85,7 +86,9 @@ export function VersionDetail({
           </h3>
           <p className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-meta text-mute">
             <time dateTime={version.recordedAt}>{versionDate(version)}</time>
-            {version.versionLabel ? <span>v{version.versionLabel}</span> : null}
+            {version.versionLabel ? (
+              <span>{versionTag(version.versionLabel)}</span>
+            ) : null}
             {version.notesEditedAt ? <span>Notes edited</span> : null}
           </p>
         </div>

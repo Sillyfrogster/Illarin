@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Item, ItemGroup } from "@/components/ui/item";
 import type { RecordedVersion } from "@/lib/api/query";
 import { cn, focusRing } from "@/lib/cn";
+import { versionTag } from "@/lib/version-label";
 import { versionDate, versionTitle } from "@/lib/work-versions";
 
 /** VersionList runs every recorded version down one line, newest first. */
@@ -61,7 +62,9 @@ export function VersionList({
                 <time dateTime={version.recordedAt}>
                   {versionDate(version)}
                 </time>
-                {version.versionLabel ? ` · v${version.versionLabel}` : null}
+                {version.versionLabel
+                  ? ` · ${versionTag(version.versionLabel)}`
+                  : null}
               </span>
             </button>
           </Item>

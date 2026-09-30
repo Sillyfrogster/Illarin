@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/query";
 import { cn, focusRing } from "@/lib/cn";
 import { PHONE_WIDTH, useMediaQuery } from "@/lib/use-media-query";
+import { versionTag } from "@/lib/version-label";
 import { workHref } from "@/lib/work-url";
 import { versionDate, versionSummary, versionTitle } from "@/lib/work-versions";
 import { type HistoryOwner, VersionDetail } from "./VersionDetail";
@@ -118,7 +119,9 @@ export function VersionHistory({
                 {versionTitle(latest)}
               </span>
               <time dateTime={latest.recordedAt}>{versionDate(latest)}</time>
-              {latest.versionLabel ? <span>v{latest.versionLabel}</span> : null}
+              {latest.versionLabel ? (
+                <span>{versionTag(latest.versionLabel)}</span>
+              ) : null}
             </span>
             <span className="line-clamp-2 font-ui text-meta text-mute">
               {versionSummary(latest, typeName)}
