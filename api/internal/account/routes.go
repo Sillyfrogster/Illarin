@@ -41,6 +41,7 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodPut, "/v1/account/password", d.JSON, h.SetPassword)
 	routes.Handle(http.MethodPut, "/v1/account/nsfw-preference", d.JSON, h.SetNsfwPreference)
 	routes.Handle(http.MethodPut, "/v1/account/app-preference", d.JSON, h.SetAppPreference)
+	routes.Handle(http.MethodPut, "/v1/account/artwork", d.JSON, h.SetArtwork)
 	routes.Handle(http.MethodGet, "/v1/account/preferences", d.JSON, h.GetPreferences)
 	registerAliases(routes, h)
 }

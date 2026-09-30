@@ -2193,7 +2193,7 @@ func (q *Queries) OriginalFileLocation(ctx context.Context, arg OriginalFileLoca
 }
 
 const preferencesBySessionHash = `-- name: PreferencesBySessionHash :one
-select u.app_preference, u.nsfw_preference
+select u.app_preference, u.nsfw_preference, u.artwork
   from sessions session
   join users u on u.id = session.user_id
  where session.token_hash = $1 and session.expires_at > now()
@@ -2202,12 +2202,13 @@ select u.app_preference, u.nsfw_preference
 type PreferencesBySessionHashRow struct {
 	AppPreference  pgtype.Text
 	NsfwPreference string
+	Artwork        bool
 }
 
 func (q *Queries) PreferencesBySessionHash(ctx context.Context, tokenHash []byte) (PreferencesBySessionHashRow, error) {
 	row := q.db.QueryRow(ctx, preferencesBySessionHash, tokenHash)
 	var i PreferencesBySessionHashRow
-	err := row.Scan(&i.AppPreference, &i.NsfwPreference)
+	err := row.Scan(&i.AppPreference, &i.NsfwPreference, &i.Artwork)
 	return i, err
 }
 
@@ -2733,6 +2734,27 @@ type SetAppPreferenceBySessionHashParams struct {
 
 func (q *Queries) SetAppPreferenceBySessionHash(ctx context.Context, arg SetAppPreferenceBySessionHashParams) (int64, error) {
 	result, err := q.db.Exec(ctx, setAppPreferenceBySessionHash, arg.AppPreference, arg.TokenHash)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const setArtworkBySessionHash = `-- name: SetArtworkBySessionHash :execrows
+update users u
+   set artwork = $1, updated_at = now()
+  from sessions session
+ where session.user_id = u.id and session.token_hash = $2
+   and session.expires_at > now()
+`
+
+type SetArtworkBySessionHashParams struct {
+	Artwork   bool
+	TokenHash []byte
+}
+
+func (q *Queries) SetArtworkBySessionHash(ctx context.Context, arg SetArtworkBySessionHashParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setArtworkBySessionHash, arg.Artwork, arg.TokenHash)
 	if err != nil {
 		return 0, err
 	}

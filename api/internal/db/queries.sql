@@ -441,7 +441,7 @@ update users u
    and session.expires_at > now();
 
 -- name: PreferencesBySessionHash :one
-select u.app_preference, u.nsfw_preference
+select u.app_preference, u.nsfw_preference, u.artwork
   from sessions session
   join users u on u.id = session.user_id
  where session.token_hash = $1 and session.expires_at > now();
@@ -449,6 +449,13 @@ select u.app_preference, u.nsfw_preference
 -- name: SetAppPreferenceBySessionHash :execrows
 update users u
    set app_preference = $1, updated_at = now()
+  from sessions session
+ where session.user_id = u.id and session.token_hash = $2
+   and session.expires_at > now();
+
+-- name: SetArtworkBySessionHash :execrows
+update users u
+   set artwork = $1, updated_at = now()
   from sessions session
  where session.user_id = u.id and session.token_hash = $2
    and session.expires_at > now();

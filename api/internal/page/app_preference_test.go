@@ -211,3 +211,31 @@ func TestASignedInReadersAppIsKeptOnTheAccount(t *testing.T) {
 		t.Errorf("preferences = %+v, want RisuAI and blurred", preferences)
 	}
 }
+
+func TestTheArtworkSettingFollowsTheAccount(t *testing.T) {
+	t.Parallel()
+	router, session := oneAppThemeRouter(t)
+
+	read := func() bool {
+		answer := apitest.Send(t, router, browseRequest("/v1/auth/session", session))
+		var state struct {
+			Artwork bool `json:"artwork"`
+		}
+		if err := json.Unmarshal(answer.Body.Bytes(), &state); err != nil {
+			t.Fatalf("decode session: %v", err)
+		}
+		return state.Artwork
+	}
+	if !read() {
+		t.Fatal("a new account has artwork off, want on")
+	}
+	saved := apitest.Send(t, router, apitest.AuthorizedJSONRequest(
+		t, http.MethodPut, "/v1/account/artwork", `{"on":false}`, session,
+	))
+	if saved.Code != http.StatusNoContent {
+		t.Fatalf("save artwork status = %d, want 204: %s", saved.Code, saved.Body.String())
+	}
+	if read() {
+		t.Error("after switching artwork off the session still says on")
+	}
+}

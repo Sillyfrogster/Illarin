@@ -171,6 +171,12 @@ type CountedFollow struct {
 	WorkID    pgtype.UUID
 }
 
+type CountedSend struct {
+	Day            pgtype.Date
+	ConnectedAppID pgtype.UUID
+	WorkID         pgtype.UUID
+}
+
 type CreatorFollow struct {
 	AccountID pgtype.UUID
 	CreatorID pgtype.UUID
@@ -499,6 +505,17 @@ type PublicProfileLink struct {
 	Url      string
 }
 
+type ReaderKey struct {
+	Day  pgtype.Date
+	Key  []byte
+	Kind string
+}
+
+type ReaderSecret struct {
+	Day    pgtype.Date
+	Secret []byte
+}
+
 type RestrictedProfile struct {
 	UserID       pgtype.UUID
 	RestrictedBy pgtype.UUID
@@ -584,6 +601,7 @@ type User struct {
 	DefaultIncludeTags             []byte
 	DefaultExcludeTags             []byte
 	AppPreference                  pgtype.Text
+	Artwork                        bool
 }
 
 type Work struct {
