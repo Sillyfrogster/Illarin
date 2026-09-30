@@ -99,15 +99,13 @@ export function DropStage({
           uploads the moment you choose it.
         </p>
         <input
-          className="sr-only"
-          id={field}
+          hidden
           onChange={(event) => {
             const chosen = event.target.files?.[0];
             event.target.value = "";
             if (chosen) onFile(chosen);
           }}
           ref={input}
-          tabIndex={-1}
           type="file"
         />
         <Button

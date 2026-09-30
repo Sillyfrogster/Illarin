@@ -38,7 +38,7 @@ export function ItemGroup({
   className,
   label,
 }: {
-  as?: "ul" | "ol" | "dl";
+  as?: "ul" | "ol";
   children: ReactNode;
   className?: string;
   label?: string;

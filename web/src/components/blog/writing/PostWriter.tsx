@@ -212,6 +212,7 @@ export function PostWriter({ id }: { id: string }) {
 
   return (
     <div className={`${shellClasses} pt-6 pb-40`}>
+      <h1 className="sr-only">Edit post</h1>
       <div className="mx-auto max-w-[64rem]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link

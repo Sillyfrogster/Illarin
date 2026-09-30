@@ -66,7 +66,10 @@ export function ScopedArchive({
   return (
     <ArchivePage archive={archive} scope={scope}>
       {archive.posts.length > 0 ? (
-        <ArchiveList narrowed={NARROWED[scope.kind]} posts={archive.posts} />
+        <>
+          <h2 className="sr-only">Posts</h2>
+          <ArchiveList narrowed={NARROWED[scope.kind]} posts={archive.posts} />
+        </>
       ) : (
         <p className="max-w-[44ch] pb-section font-prose text-lede text-mute">
           No posts published here yet.

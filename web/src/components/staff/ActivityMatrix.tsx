@@ -87,20 +87,20 @@ export function ActivityMatrix({
 
       <div className="flex flex-col gap-4 px-4 pt-4 lg:flex-row lg:gap-6">
         <DayReadout day={days[shown]} series={series} shown={shown} />
-        <div
-          aria-label="The day being read"
-          aria-valuemax={last}
-          aria-valuemin={0}
-          aria-valuenow={shown}
-          aria-valuetext={`${weekday(days[shown])} ${reportDate(days[shown], true)}`}
-          className="min-w-0 flex-1 rounded-control outline-offset-4"
-          onKeyDown={move}
-          onPointerLeave={() => setHeld(null)}
-          role="slider"
-          tabIndex={0}
-        >
+        <div className="min-w-0 flex-1">
           <Scroller>
-            <div className="relative min-w-[34rem]">
+            <div
+              aria-label="The day being read"
+              aria-valuemax={last}
+              aria-valuemin={0}
+              aria-valuenow={shown}
+              aria-valuetext={`${weekday(days[shown])} ${reportDate(days[shown], true)}`}
+              className="relative min-w-[34rem] rounded-control outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent focus-visible:ring-inset"
+              onKeyDown={move}
+              onPointerLeave={() => setHeld(null)}
+              role="slider"
+              tabIndex={0}
+            >
               <Bands days={days} shown={shown} />
               <div className="relative flex flex-col gap-2">
                 {series.map((one) => (

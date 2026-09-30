@@ -454,20 +454,17 @@ export function ElementContent({
 
   if (element.type === "field_list" && "fields" in content) {
     return (
-      <ItemGroup as="dl">
+      <ItemGroup>
         {content.fields.slice(0, itemLimit).map((field, index) => (
-          <Item
-            as="div"
-            className="!flex-row !gap-x-5 @max-[330px]:!flex-col @max-[330px]:!gap-y-0.5"
-            itemKey={`${index}`}
-            key={`${index}-${field.name ?? ""}`}
-          >
-            <dt className={cn(ITEM_META, "basis-[38%] shrink-0")}>
-              {field.name || "Unnamed"}
-            </dt>
-            <dd className={cn(ITEM_BODY, "min-w-0 flex-1 text-ink")}>
-              <RichText text={field.value} />
-            </dd>
+          <Item itemKey={`${index}`} key={`${index}-${field.name ?? ""}`}>
+            <dl className="flex gap-x-5 @max-[330px]:flex-col @max-[330px]:gap-y-0.5">
+              <dt className={cn(ITEM_META, "basis-[38%] shrink-0")}>
+                {field.name || "Unnamed"}
+              </dt>
+              <dd className={cn(ITEM_BODY, "min-w-0 flex-1 text-ink")}>
+                <RichText text={field.value} />
+              </dd>
+            </dl>
           </Item>
         ))}
       </ItemGroup>

@@ -171,6 +171,7 @@ function Workbench({
           </div>
         </header>
         <div className="min-w-0 flex-1 px-3 py-4 sm:px-4 sm:py-5 2xl:px-8">
+          <h1 className="sr-only">{current?.label ?? "Console"}</h1>
           {children}
         </div>
       </SidebarInset>

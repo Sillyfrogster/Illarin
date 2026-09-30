@@ -292,9 +292,9 @@ export function SidebarItem({
   );
 }
 
-export function SidebarInset({ className, ...props }: ComponentProps<"div">) {
+export function SidebarInset({ className, ...props }: ComponentProps<"main">) {
   return (
-    <div
+    <main
       className={cn("flex min-w-0 flex-1 flex-col bg-field", className)}
       {...props}
     />

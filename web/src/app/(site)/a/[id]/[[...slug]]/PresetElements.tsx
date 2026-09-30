@@ -188,10 +188,9 @@ export function SettingGroup({
   const named = shown.filter((setting) => setting.slot.rank !== "unrecognised");
   const raw = shown.filter((setting) => setting.slot.rank === "unrecognised");
   return (
-    <ItemGroup as="dl">
+    <ItemGroup>
       {named.map((setting) => (
         <Item
-          as="div"
           itemKey={setting.id ?? setting.name}
           key={setting.id ?? setting.name}
         >
@@ -203,7 +202,6 @@ export function SettingGroup({
       ) : null}
       {raw.map((setting) => (
         <Item
-          as="div"
           itemKey={setting.id ?? setting.name}
           key={setting.id ?? setting.name}
         >
@@ -223,7 +221,7 @@ export function SettingBody({
 }) {
   return (
     <>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-0.5">
+      <dl className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-0.5">
         <dt
           className={cn(
             "min-w-0 [overflow-wrap:anywhere]",
@@ -235,7 +233,7 @@ export function SettingBody({
         <dd className={ITEM_VALUE}>
           <SettingValue name={setting.name} value={setting.value} />
         </dd>
-      </div>
+      </dl>
       {setting.slot.note ? (
         <p className={cn(ITEM_META, "max-w-[52ch] text-pretty")}>
           {setting.slot.note}

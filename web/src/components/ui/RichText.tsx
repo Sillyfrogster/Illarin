@@ -112,7 +112,11 @@ function Block({ block }: { block: RichBlock }) {
 
   if (block.kind === "code") {
     return (
-      <pre className="overflow-x-auto rounded-control bg-deep px-4 py-3 font-mono text-[0.86em] leading-relaxed text-ink/90">
+      <pre
+        className="overflow-x-auto rounded-control bg-deep px-4 py-3 font-mono text-[0.86em] leading-relaxed text-ink/90"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: A block that scrolls sideways has to be reachable by keyboard.
+        tabIndex={0}
+      >
         {block.text}
       </pre>
     );
