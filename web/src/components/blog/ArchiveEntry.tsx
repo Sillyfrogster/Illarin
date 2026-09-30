@@ -73,7 +73,7 @@ export function ArchiveLead({
           <Byline byline={post.byline} />
         </div>
         <Link
-          className="mt-6 inline-flex min-h-11 items-center gap-3 text-ui font-medium text-accent hover:text-ink"
+          className="mt-6 inline-flex min-h-control items-center gap-3 text-ui font-medium text-accent hover:text-ink"
           href={address}
         >
           Read post

@@ -2,6 +2,7 @@
 
 import { Check, CircleAlert, SendHorizontal } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { api } from "@/lib/api/client";
 import type { Notification } from "@/lib/api/notifications";
@@ -9,16 +10,6 @@ import { cn } from "@/lib/cn";
 
 type SendApp = NonNullable<Notification["sendTo"]>[number];
 type Progress = "ready" | "sending" | "waiting" | "failed";
-
-const CHIP =
-  "inline-flex min-h-11 max-w-full items-center gap-2 rounded-control px-3 text-meta font-medium outline-offset-2 transition-colors duration-200 motion-reduce:transition-none [&_svg]:size-3.5 [&_svg]:shrink-0";
-
-const LOOK: Record<Progress, string> = {
-  ready: "bg-deep text-ink hover:bg-accent-wash hover:text-accent",
-  sending: "bg-deep text-mute",
-  waiting: "bg-transparent text-mute inset-ring inset-ring-edge",
-  failed: "bg-stop-wash text-stop hover:bg-stop-wash/80",
-};
 
 /** The sends an update entry offers, one for each of the reader's connected apps that holds an older copy. */
 export function SendUpdates({
@@ -53,16 +44,19 @@ export function SendUpdates({
               content={`${app.appName}: ${app.name}`}
               key={app.connectedAppId}
             >
-              <button
+              <Button
                 aria-label={sendLabel(app, state)}
-                className={cn(CHIP, LOOK[state])}
+                className={cn(
+                  "max-w-full",
+                  state === "failed" && "text-stop hover:text-stop",
+                )}
                 disabled={state === "sending" || state === "waiting"}
                 onClick={() => void send(app)}
-                type="button"
+                size="compact"
               >
                 <Mark state={state} />
                 <span className="truncate">{app.name}</span>
-              </button>
+              </Button>
             </Tooltip>
           );
         })}

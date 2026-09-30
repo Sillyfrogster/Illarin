@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { DragEventHandler } from "react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip } from "@/components/ui/tooltip";
 import type { WorkBlock } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import {
@@ -34,9 +36,6 @@ import {
 import { gripId } from "./arrangement";
 import { blockDestinations, relaidBlock } from "./composition";
 import { useWorkspace } from "./state";
-
-const TOOL =
-  "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-control px-2 text-meta font-medium text-mute outline-offset-3 hover:bg-plane hover:text-ink data-[state=open]:bg-plane data-[state=open]:text-ink";
 
 const WIDTH_HINTS: Record<BlockWidth, string> = {
   full: "The whole row.",
@@ -90,44 +89,51 @@ export function BlockTools({
   return (
     <div
       aria-label={`${block.title} controls`}
-      className="flex shrink-0 items-center gap-0.5 rounded-plate bg-deep p-0.5 opacity-0 transition-opacity duration-200 group-focus-within/block:opacity-100 group-hover/block:opacity-100 motion-reduce:transition-none max-md:opacity-100"
+      className="flex shrink-0 items-center gap-0.5 rounded-plate bg-deep p-0.5 opacity-0 transition-opacity duration-160 group-focus-within/block:opacity-100 group-hover/block:opacity-100 motion-reduce:transition-none max-md:opacity-100"
       data-measurement-ignore
       role="toolbar"
     >
-      <button
-        aria-label={`Move “${block.title}”, ${position + 1} of ${total}. Drag it, or press the up and down arrows.`}
-        className={cn(TOOL, "cursor-grab px-1.5 active:cursor-grabbing")}
-        disabled={total < 2 || arrangement.busy}
-        id={gripId(block.id)}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowUp" && position > 0) {
-            event.preventDefault();
-            move(position - 1);
-          }
-          if (event.key === "ArrowDown" && position < total - 1) {
-            event.preventDefault();
-            move(position + 1);
-          }
-        }}
-        type="button"
-        {...grip}
-      >
-        <GripVertical aria-hidden="true" size={15} />
-      </button>
+      <Tooltip content="Drag to move">
+        <Button
+          aria-label={`Move “${block.title}”, ${position + 1} of ${total}. Drag it, or press the up and down arrows.`}
+          className="cursor-grab active:cursor-grabbing"
+          disabled={total < 2 || arrangement.busy}
+          id={gripId(block.id)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowUp" && position > 0) {
+              event.preventDefault();
+              move(position - 1);
+            }
+            if (event.key === "ArrowDown" && position < total - 1) {
+              event.preventDefault();
+              move(position + 1);
+            }
+          }}
+          size="icon-compact"
+          variant="ghost"
+          {...grip}
+        >
+          <GripVertical aria-hidden="true" />
+        </Button>
+      </Tooltip>
 
       <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label={`Width of “${block.title}”, now ${WIDTH_LABELS[block.width]}`}
-          className={TOOL}
-        >
-          <Columns3 aria-hidden="true" size={15} />
-          <span className="max-lg:sr-only">{WIDTH_LABELS[block.width]}</span>
-          {suggestion ? (
-            <span
-              aria-hidden="true"
-              className="size-1.5 shrink-0 rounded-full bg-accent"
-            />
-          ) : null}
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label={`Width of “${block.title}”, now ${WIDTH_LABELS[block.width]}`}
+            className="max-lg:px-2"
+            size="compact"
+            variant="ghost"
+          >
+            <Columns3 aria-hidden="true" />
+            <span className="max-lg:sr-only">{WIDTH_LABELS[block.width]}</span>
+            {suggestion ? (
+              <span
+                aria-hidden="true"
+                className="size-1.5 shrink-0 rounded-full bg-accent"
+              />
+            ) : null}
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>
@@ -164,14 +170,18 @@ export function BlockTools({
 
       {block.allowedLayouts.length > 1 ? (
         <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label={`Layout of “${block.title}”, now ${LAYOUT_LABELS[block.layout]}`}
-            className={TOOL}
-          >
-            <LayoutGrid aria-hidden="true" size={15} />
-            <span className="max-lg:sr-only">
-              {LAYOUT_LABELS[block.layout]}
-            </span>
+          <DropdownMenuTrigger asChild>
+            <Button
+              aria-label={`Layout of “${block.title}”, now ${LAYOUT_LABELS[block.layout]}`}
+              className="max-lg:px-2"
+              size="compact"
+              variant="ghost"
+            >
+              <LayoutGrid aria-hidden="true" />
+              <span className="max-lg:sr-only">
+                {LAYOUT_LABELS[block.layout]}
+              </span>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>
@@ -212,12 +222,17 @@ export function BlockTools({
       ) : null}
 
       <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label={`More for “${block.title}”`}
-          className={cn(TOOL, "px-1.5")}
-        >
-          <Ellipsis aria-hidden="true" size={15} />
-        </DropdownMenuTrigger>
+        <Tooltip content="More">
+          <DropdownMenuTrigger asChild>
+            <Button
+              aria-label={`More for “${block.title}”`}
+              size="icon-compact"
+              variant="ghost"
+            >
+              <Ellipsis aria-hidden="true" />
+            </Button>
+          </DropdownMenuTrigger>
+        </Tooltip>
         <DropdownMenuContent align="end">
           <DropdownMenuItem
             disabled={position === 0 || arrangement.busy}

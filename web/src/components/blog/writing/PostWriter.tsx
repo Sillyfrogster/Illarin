@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { shellClasses } from "@/components/layout/Shell";
+import { Button } from "@/components/ui/button";
 import { Gate } from "@/components/ui/gate";
 import { PageWaiting } from "@/components/ui/waiting";
 import {
@@ -214,7 +215,7 @@ export function PostWriter({ id }: { id: string }) {
       <div className="mx-auto max-w-[64rem]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
-            className="inline-flex min-h-11 items-center gap-2 font-ui text-meta text-mute outline-offset-3 hover:text-ink"
+            className="inline-flex min-h-control items-center gap-2 font-ui text-meta text-mute outline-offset-3 hover:text-ink"
             href="/posts"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
@@ -386,13 +387,13 @@ export function PostWriter({ id }: { id: string }) {
                 Your writing is still on the page. Copy anything worth keeping,
                 then open the newer copy to work from it.
               </p>
-              <button
-                className="inline-flex min-h-11 items-center justify-center rounded-control bg-action px-5 font-ui text-ui font-medium text-on-accent outline-offset-3"
+              <Button
+                className="self-start"
                 onClick={() => void load()}
-                type="button"
+                variant="primary"
               >
                 Open the newer copy
-              </button>
+              </Button>
             </div>
           </WorkspaceRail>
         ) : null}

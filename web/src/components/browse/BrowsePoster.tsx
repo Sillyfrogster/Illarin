@@ -155,7 +155,7 @@ export function BrowsePoster({
             <>
               <span aria-hidden="true">·</span>
               <Link
-                className="relative z-1 -my-3 inline-flex min-h-11 min-w-0 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
+                className="relative z-1 -my-3 inline-flex min-h-control min-w-0 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
                 href={`/@${work.creator}`}
                 prefetch={false}
               >

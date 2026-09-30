@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { ANY_APP } from "@/components/preferences/PreferenceChoices";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { WorkOwnerMenu } from "@/components/work/WorkOwnerMenu";
 import {
   type BrowseCursor,
@@ -242,21 +243,20 @@ export function BrowseSurface({
                 ? "1 matching work is hidden by your adult content setting."
                 : `${overview.suppressed} matching works are hidden by your adult content setting.`}
             </span>
-            <button
-              className="min-h-11 font-ui text-ui font-medium text-accent underline-offset-4 hover:underline"
-              onClick={() => setAdultOpen(true)}
-              type="button"
-            >
+            <Button onClick={() => setAdultOpen(true)} size="compact">
               Change adult content
-            </button>
-            <button
-              aria-label="Dismiss"
-              className="ml-auto grid size-11 place-items-center rounded-control text-mute hover:text-ink"
-              onClick={() => setDismissedSuppression(suppressionKey)}
-              type="button"
-            >
-              <X aria-hidden="true" className="size-4" />
-            </button>
+            </Button>
+            <Tooltip content="Dismiss">
+              <Button
+                aria-label="Dismiss"
+                className="ml-auto"
+                onClick={() => setDismissedSuppression(suppressionKey)}
+                size="icon"
+                variant="ghost"
+              >
+                <X aria-hidden="true" />
+              </Button>
+            </Tooltip>
           </output>
         ) : null}
 

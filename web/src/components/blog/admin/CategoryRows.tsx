@@ -10,6 +10,7 @@ import {
   Rows,
 } from "@/components/register/RowParts";
 import { Consequence, StepForm } from "@/components/register/StepParts";
+import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Sortable, SortableItemHandle } from "@/components/ui/sortable";
@@ -105,13 +106,13 @@ export function CategoryRows({
           {retired.map((category) => (
             <PastRow
               action={
-                <button
-                  className="inline-flex min-h-11 items-center rounded-control px-3 font-ui text-meta font-medium text-accent outline-offset-3 hover:underline"
+                <Button
                   onClick={() => bringBack(category)}
-                  type="button"
+                  size="compact"
+                  variant="ghost"
                 >
                   Reactivate category
-                </button>
+                </Button>
               }
               key={category.id}
             >

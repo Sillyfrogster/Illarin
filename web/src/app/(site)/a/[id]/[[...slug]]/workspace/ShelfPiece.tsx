@@ -73,18 +73,18 @@ export function SectionRow({
       <Spine done={placed} last={last} working={busy} />
       <div
         className={cn(
-          "min-w-0 rounded-control transition-colors duration-150 motion-reduce:transition-none",
+          "min-w-0 rounded-control transition-colors duration-160 motion-reduce:transition-none",
           !placed && "hover:bg-deep",
           open && !placed && "bg-deep",
           isDragging && "opacity-35",
         )}
       >
-        <div className="flex min-h-11 items-center gap-1 pr-1">
+        <div className="flex min-h-control items-center gap-1 pr-1">
           <button
             aria-controls={preview}
             aria-expanded={placed ? undefined : open}
             className={cn(
-              "group/row flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-control py-2 pl-2 text-left outline-offset-2",
+              "group/row flex min-h-control min-w-0 flex-1 items-center gap-2 rounded-control py-2 pl-2 text-left outline-offset-2",
               shelf.canDrag &&
                 !placed &&
                 "cursor-grab touch-none active:cursor-grabbing",
@@ -238,14 +238,14 @@ function PlaceMenu({ piece }: { piece: ShelfPiece }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
+        <Button
           aria-label={`Place “${sectionName(piece)}”`}
-          className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-accent outline-offset-2 hover:bg-accent-wash disabled:opacity-45 data-[state=open]:bg-action data-[state=open]:text-on-accent"
           disabled={shelf.busy !== null}
-          type="button"
+          size="icon"
+          variant="ghost"
         >
-          <Plus aria-hidden="true" className="size-5" />
-        </button>
+          <Plus aria-hidden="true" />
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
@@ -357,7 +357,7 @@ export function PictureTile({
               <Image
                 alt=""
                 className={cn(
-                  "size-full object-cover transition-transform duration-300 hover:scale-105 motion-reduce:transition-none",
+                  "size-full object-cover transition-transform duration-240 hover:scale-105 motion-reduce:transition-none",
                   placed && "opacity-40",
                 )}
                 height={piece.media.height}

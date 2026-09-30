@@ -50,28 +50,28 @@ export default async function SettingsPage({
             className="mt-5 grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-1"
           >
             <a
-              className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              className="flex min-h-control items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
               href="#browse"
             >
               <Compass aria-hidden="true" className="size-4 text-accent" />
               Browse
             </a>
             <a
-              className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              className="flex min-h-control items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
               href="#ways-in"
             >
               <KeyRound aria-hidden="true" className="size-4 text-accent" />
               Sign-in methods
             </a>
             <a
-              className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              className="flex min-h-control items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
               href="#connected-apps"
             >
               <Plug aria-hidden="true" className="size-4 text-accent" />
               Connected apps
             </a>
             <a
-              className="flex min-h-11 items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              className="flex min-h-control items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
               href="#discord-channel"
             >
               <Send aria-hidden="true" className="size-4 text-accent" />

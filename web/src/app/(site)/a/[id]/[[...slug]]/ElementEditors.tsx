@@ -3,6 +3,7 @@
 import { ImagePlus } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -382,18 +383,22 @@ function ImageEditor({
           {message}
         </p>
       ) : null}
-      <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 self-start rounded-control bg-deep px-4 text-meta font-medium text-ink hover:bg-rule/45 has-disabled:opacity-45">
-        <ImagePlus aria-hidden="true" size={16} />
+      <Button
+        className="self-start"
+        disabled={pending}
+        loading={uploading}
+        onClick={() => file.current?.click()}
+      >
+        {uploading ? null : <ImagePlus aria-hidden="true" />}
         {uploading ? "Adding…" : "Add image"}
-        <input
-          accept="image/*"
-          className="sr-only"
-          disabled={pending || uploading}
-          onChange={(event) => void upload(event.target.files?.[0] ?? null)}
-          ref={file}
-          type="file"
-        />
-      </label>
+      </Button>
+      <input
+        accept="image/*"
+        hidden
+        onChange={(event) => void upload(event.target.files?.[0] ?? null)}
+        ref={file}
+        type="file"
+      />
     </div>
   );
 }

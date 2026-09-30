@@ -42,6 +42,7 @@ import {
   SortableItem,
   SortableItemHandle,
 } from "@/components/ui/sortable";
+import { Tooltip } from "@/components/ui/tooltip";
 import type { Profile, ProfileLink } from "@/lib/api/query";
 import type { SaveProfileRequest } from "@/lib/api/shapes";
 import { cn } from "@/lib/cn";
@@ -283,25 +284,30 @@ function Avatar({
       </UiAvatar>
       {editing ? (
         <>
-          <button
-            aria-label={picture ? "Change picture" : "Add picture"}
-            className="absolute -right-1 -bottom-1 grid size-11 place-items-center rounded-full bg-action text-on-accent shadow-[0_6px_16px_-6px_var(--v-action)] outline-offset-3 hover:bg-action/90 disabled:opacity-45"
-            disabled={editing.picturePending}
-            onClick={() => picker.current?.click()}
-            type="button"
-          >
-            <PencilLine aria-hidden="true" className="size-4" />
-          </button>
-          {picture ? (
-            <button
-              className="absolute top-0 -right-1 grid size-9 place-items-center rounded-full bg-plane text-mute ring-1 ring-rule outline-offset-2 hover:text-stop"
-              aria-label="Remove picture"
+          <Tooltip content={picture ? "Change picture" : "Add picture"}>
+            <Button
+              aria-label={picture ? "Change picture" : "Add picture"}
+              className="absolute! -right-1 -bottom-1 rounded-full"
               disabled={editing.picturePending}
-              onClick={editing.onRemoveAvatar}
-              type="button"
+              onClick={() => picker.current?.click()}
+              size="icon"
+              variant="primary"
             >
-              <X aria-hidden="true" className="size-4" />
-            </button>
+              <PencilLine aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          {picture ? (
+            <Tooltip content="Remove picture">
+              <Button
+                aria-label="Remove picture"
+                className="absolute! top-0 -right-1 rounded-full bg-field hover:text-stop"
+                disabled={editing.picturePending}
+                onClick={editing.onRemoveAvatar}
+                size="icon-compact"
+              >
+                <X aria-hidden="true" />
+              </Button>
+            </Tooltip>
           ) : null}
           <input
             accept="image/png,image/jpeg,image/webp,image/gif"
@@ -376,7 +382,7 @@ function LinkRow({
   return (
     <li>
       <a
-        className="group flex min-h-11 items-center gap-3 rounded-control px-2 font-ui text-ui text-ink hover:bg-deep hover:text-ink"
+        className="group flex min-h-control items-center gap-3 rounded-control px-2 font-ui text-ui text-ink hover:bg-deep hover:text-ink"
         href={href}
         rel={external ? "nofollow ugc noopener" : undefined}
         target={external ? "_blank" : undefined}
@@ -526,14 +532,17 @@ function LinkEditor({
           value={link.address}
         />
       </div>
-      <button
-        aria-label={`Remove ${name}`}
-        className="grid size-11 place-items-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-stop"
-        onClick={() => onChange(removeLink(links, index))}
-        type="button"
-      >
-        <X aria-hidden="true" className="size-4" />
-      </button>
+      <Tooltip content={`Remove ${name}`}>
+        <Button
+          aria-label={`Remove ${name}`}
+          className="hover:text-stop"
+          onClick={() => onChange(removeLink(links, index))}
+          size="icon"
+          variant="ghost"
+        >
+          <X aria-hidden="true" />
+        </Button>
+      </Tooltip>
     </SortableItem>
   );
 }

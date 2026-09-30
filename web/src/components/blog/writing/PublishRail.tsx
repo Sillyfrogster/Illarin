@@ -211,7 +211,7 @@ function Offer({
   return (
     <button
       className={cn(
-        "flex w-full items-start gap-3 rounded-plate p-4 text-left outline-offset-3 transition-colors duration-200 hover:bg-deep motion-reduce:transition-none",
+        "flex w-full items-start gap-3 rounded-plate p-4 text-left outline-offset-3 transition-colors duration-160 hover:bg-deep motion-reduce:transition-none",
         tone === "stop" ? "text-stop" : "text-accent",
       )}
       onClick={onChoose}

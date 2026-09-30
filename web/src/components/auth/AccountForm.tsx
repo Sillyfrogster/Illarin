@@ -254,7 +254,7 @@ export function AccountForm({
           trailing={
             signUp ? null : (
               <Link
-                className="-mx-1 inline-flex min-h-11 items-center px-1 font-ui text-meta font-medium text-accent underline-offset-4 hover:underline"
+                className="-mx-1 inline-flex min-h-control items-center px-1 font-ui text-meta font-medium text-accent underline-offset-4 hover:underline"
                 href="/forgot-password"
               >
                 Forgot password?

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +17,6 @@ import type { BrowseFilters, BrowsePage } from "@/lib/api/query";
 import { chooseFilter } from "@/lib/browse-url";
 import { cn } from "@/lib/cn";
 import { TYPE_PLURALS } from "@/lib/work-types";
-import { CONTROL } from "./BrowseStates";
 
 const ANY = "any";
 
@@ -52,15 +52,17 @@ export function FilterMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={cn(CONTROL, className)}>
-        <SlidersHorizontal aria-hidden="true" className="size-4 text-mute" />
-        Filters
-        {inUse ? (
-          <span className="grid h-5 min-w-5 place-items-center rounded-full bg-action px-1.5 text-label text-on-accent tabular-nums">
-            {inUse}
-          </span>
-        ) : null}
-        <ChevronDown aria-hidden="true" className="size-4 text-mute" />
+      <DropdownMenuTrigger asChild>
+        <Button className={cn("gap-1.5", className)}>
+          <SlidersHorizontal aria-hidden="true" className="text-mute" />
+          Filters
+          {inUse ? (
+            <span className="grid h-5 min-w-5 place-items-center rounded-full bg-action px-1.5 text-label text-on-accent tabular-nums">
+              {inUse}
+            </span>
+          ) : null}
+          <ChevronDown aria-hidden="true" className="text-mute" />
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
@@ -154,28 +156,28 @@ export function ActiveFilters({
     <ul className="m-0 flex list-none flex-wrap items-center gap-2 p-0 font-ui text-meta">
       {inUse.map(({ facet, option }) => (
         <li key={facet.key}>
-          <button
+          <Button
             aria-label={`Remove ${facet.label}: ${option.label}`}
-            className="inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-control bg-accent-wash py-1 pr-2 pl-3 text-left font-medium text-ink outline-offset-2 transition-colors duration-200 hover:bg-action hover:text-on-accent motion-reduce:transition-none"
+            className="h-auto min-h-control-compact max-w-full py-1 whitespace-normal pr-2 text-left"
             onClick={() => navigate(chooseFilter(filters, facet.key, null))}
-            type="button"
+            size="compact"
           >
             <span className="min-w-0 [overflow-wrap:anywhere]">
               {facet.label}: {option.label}
             </span>
-            <X aria-hidden="true" className="size-3.5 shrink-0" />
-          </button>
+            <X aria-hidden="true" />
+          </Button>
         </li>
       ))}
       {inUse.length > 1 ? (
         <li>
-          <button
-            className="inline-flex min-h-9 items-center rounded-control px-2 font-medium text-mute outline-offset-2 hover:text-ink"
+          <Button
             onClick={() => navigate({ ...filters, facet: undefined })}
-            type="button"
+            size="compact"
+            variant="ghost"
           >
             Clear filters
-          </button>
+          </Button>
         </li>
       ) : null}
     </ul>

@@ -188,14 +188,15 @@ function Browser({
             pane === "index" && "hidden",
           )}
         >
-          <button
-            className="mb-4 inline-flex min-h-control items-center gap-2 font-ui text-meta text-mute hover:text-ink sm:hidden"
+          <Button
+            className="-ml-3 mb-4 sm:hidden"
             onClick={() => setPane("index")}
-            type="button"
+            size="compact"
+            variant="ghost"
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
+            <ArrowLeft aria-hidden="true" />
             Back to the list
-          </button>
+          </Button>
           {current ? (
             <Panel key={current.key} labelledBy={`${names}-${current.key}`}>
               <div

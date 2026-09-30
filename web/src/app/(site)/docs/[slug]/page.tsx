@@ -32,7 +32,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
       <div className="grid min-w-0 gap-10 lg:grid-cols-[13.5rem_minmax(0,1fr)_12rem] lg:gap-10">
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <Link
-            className="flex min-h-11 items-center font-ui text-meta text-mute hover:text-accent"
+            className="flex min-h-control items-center font-ui text-meta text-mute hover:text-accent"
             href="/docs"
           >
             ← All documentation
@@ -45,7 +45,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
             {DOCS.map((entry) => (
               <Link
                 aria-current={entry.slug === slug ? "page" : undefined}
-                className="flex min-h-11 items-center rounded-control px-3 font-ui text-ui text-mute hover:bg-deep hover:text-ink aria-[current=page]:bg-deep aria-[current=page]:font-medium aria-[current=page]:text-ink"
+                className="flex min-h-control items-center rounded-control px-3 font-ui text-ui text-mute hover:bg-deep hover:text-ink aria-[current=page]:bg-deep aria-[current=page]:font-medium aria-[current=page]:text-ink"
                 href={`/docs/${entry.slug}`}
                 key={entry.slug}
               >

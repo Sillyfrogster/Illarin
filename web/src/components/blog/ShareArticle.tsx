@@ -2,6 +2,8 @@
 
 import { Check, Link2, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   hasNativeShare,
   type ShareState,
@@ -9,9 +11,6 @@ import {
 } from "@/lib/article-share";
 
 const REPORT_LINGERS = 4000;
-
-const ACTION =
-  "inline-flex min-h-11 items-center gap-2 rounded-control px-3 text-ui text-mute transition-colors hover:bg-deep hover:text-ink";
 
 export function ShareArticle({
   permalink,
@@ -56,27 +55,27 @@ export function ShareArticle({
   const report = shareReport(state);
   return (
     <div className="-ml-3 grid justify-items-start gap-1">
-      <button className={ACTION} onClick={copy} type="button">
+      <Button onClick={copy} variant="ghost">
         {state === "copied" ? (
-          <Check aria-hidden="true" className="size-4 text-accent" />
+          <Check aria-hidden="true" className="text-accent" />
         ) : (
-          <Link2 aria-hidden="true" className="size-4" />
+          <Link2 aria-hidden="true" />
         )}
         Copy link
-      </button>
+      </Button>
       {sheet ? (
-        <button className={ACTION} onClick={hand} type="button">
-          <Share2 aria-hidden="true" className="size-4" />
+        <Button onClick={hand} variant="ghost">
+          <Share2 aria-hidden="true" />
           Share
-        </button>
+        </Button>
       ) : null}
       <output className="ml-3 block text-meta leading-5 text-mute text-pretty empty:hidden">
         {report.said}
       </output>
       {report.reveal ? (
-        <input
+        <Input
           aria-label="This article's link"
-          className="ml-3 h-10 w-full rounded-control bg-deep px-3 font-mono text-[13px] text-ink"
+          className="ml-3 font-mono"
           readOnly
           ref={address}
           value={permalink}

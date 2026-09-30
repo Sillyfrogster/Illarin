@@ -1,14 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
-
-const CHOICE =
-  "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control bg-plane px-3.5 font-ui text-meta font-medium text-ink outline-offset-3 transition-colors duration-200 hover:bg-rule/45 disabled:pointer-events-none disabled:opacity-45 motion-reduce:transition-none";
-
-const STRONG =
-  "bg-action text-on-accent hover:bg-action/90 hover:text-on-accent";
 
 const LABEL = "shrink-0 font-ui text-meta text-mute";
 
@@ -72,16 +67,16 @@ export function Choice({
   word?: string;
 }) {
   const button = (
-    <button
+    <Button
       aria-label={label}
-      className={cn(CHOICE, strong && STRONG)}
       disabled={ready === false}
       onClick={press}
-      type="button"
+      size="compact"
+      variant={strong ? "primary" : "secondary"}
     >
       {children}
       <span aria-hidden="true">{word ?? label}</span>
-    </button>
+    </Button>
   );
   return word && word !== label ? (
     <Tooltip content={label}>{button}</Tooltip>

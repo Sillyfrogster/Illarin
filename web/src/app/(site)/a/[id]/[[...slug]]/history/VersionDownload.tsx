@@ -120,7 +120,7 @@ function VersionChoices({
         {orderedFormats(offered.downloads).map((one) => (
           <li key={one.format}>
             <a
-              className="flex min-h-11 items-center rounded-control px-3 text-ui text-ink outline-offset-3 hover:bg-accent-wash"
+              className="flex min-h-control items-center rounded-control px-3 text-ui text-ink outline-offset-3 hover:bg-accent-wash"
               href={downloadAddress({
                 workId,
                 format: one.format,

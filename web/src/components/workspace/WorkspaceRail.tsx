@@ -83,13 +83,14 @@ export function RailBack({
   onClick: () => void;
 }) {
   return (
-    <button
-      className="-ml-2 inline-flex min-h-11 items-center gap-1 self-start rounded-control pr-3 pl-1 font-ui text-meta font-medium text-accent outline-offset-3 hover:underline"
+    <Button
+      className="-ml-3 self-start"
       onClick={onClick}
-      type="button"
+      size="compact"
+      variant="ghost"
     >
-      <ChevronLeft aria-hidden="true" size={16} />
+      <ChevronLeft aria-hidden="true" />
       {children}
-    </button>
+    </Button>
   );
 }

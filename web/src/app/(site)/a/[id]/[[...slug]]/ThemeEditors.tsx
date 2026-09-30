@@ -2,6 +2,7 @@
 
 import { FilePlus2 } from "lucide-react";
 import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -106,14 +107,14 @@ function ColorRows({
       {colors.map((color, index) => (
         <div className="flex flex-wrap items-end gap-2" key={color.id ?? index}>
           <label
-            className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-control focus-within:outline focus-within:outline-2 focus-within:outline-accent focus-within:outline-offset-2"
+            className="relative grid size-control shrink-0 place-items-center overflow-hidden rounded-control focus-within:outline focus-within:outline-2 focus-within:outline-accent focus-within:outline-offset-2"
             style={{ backgroundColor: color.value }}
           >
             <span className="sr-only">
               Choose {color.name || `color ${index + 1}`}
             </span>
             <input
-              className="size-11 cursor-pointer opacity-0"
+              className="size-control cursor-pointer opacity-0"
               disabled={pending}
               onChange={(event) =>
                 onChange(
@@ -295,19 +296,22 @@ export function StylesheetSetEditor({
         ) : (
           <Note>No files attached.</Note>
         )}
-        <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 self-start rounded-control bg-deep px-4 text-meta font-medium text-ink hover:bg-rule/45 has-disabled:opacity-45">
-          <FilePlus2 aria-hidden="true" size={16} />
+        <Button
+          className="self-start"
+          disabled={pending}
+          onClick={() => fileInput.current?.click()}
+        >
+          <FilePlus2 aria-hidden="true" />
           Attach files
-          <input
-            accept="font/*,.woff,.woff2,.ttf,.otf"
-            className="sr-only"
-            disabled={pending}
-            multiple
-            onChange={(event) => void addFiles(event.target.files)}
-            ref={fileInput}
-            type="file"
-          />
-        </label>
+        </Button>
+        <input
+          accept="font/*,.woff,.woff2,.ttf,.otf"
+          hidden
+          multiple
+          onChange={(event) => void addFiles(event.target.files)}
+          ref={fileInput}
+          type="file"
+        />
         {message ? (
           <p className="text-meta text-stop" role="alert">
             {message}

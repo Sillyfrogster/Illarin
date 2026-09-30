@@ -163,7 +163,7 @@ export function OwnerMenu({
           ) : dialog === "copy" && href ? (
             <input
               aria-label="Link"
-              className="mt-4 min-h-11 w-full rounded-control bg-deep px-3 text-ui"
+              className="mt-4 min-h-control w-full rounded-control bg-deep px-3 text-ui"
               readOnly
               value={new URL(href, location.origin).href}
               onFocus={(event) => event.target.select()}

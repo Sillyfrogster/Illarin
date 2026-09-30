@@ -25,7 +25,7 @@ export function SiteFooter() {
               source file stays intact.
             </p>
             <a
-              className="mt-3 flex min-h-11 w-fit items-center text-meta text-ink hover:text-accent"
+              className="mt-3 flex min-h-control w-fit items-center text-meta text-ink hover:text-accent"
               download
               href="/brand/illarin-brandkit.zip"
             >
@@ -34,7 +34,7 @@ export function SiteFooter() {
             <ul className="mt-2 grid list-none">
               <li>
                 <a
-                  className="flex min-h-11 w-fit items-center gap-2 text-meta text-ink hover:text-accent"
+                  className="flex min-h-control w-fit items-center gap-2 text-meta text-ink hover:text-accent"
                   href={DISCORD_INVITE}
                   rel="noopener"
                   target="_blank"
@@ -45,7 +45,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <a
-                  className="flex min-h-11 w-fit items-center gap-2 text-meta text-ink hover:text-accent"
+                  className="flex min-h-control w-fit items-center gap-2 text-meta text-ink hover:text-accent"
                   href={KOFI_PAGE}
                   rel="noopener"
                   target="_blank"

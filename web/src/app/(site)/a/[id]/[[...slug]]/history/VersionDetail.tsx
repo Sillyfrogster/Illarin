@@ -202,7 +202,7 @@ function VersionManagement({
 
   return (
     <div className="mt-8 max-w-[38rem] border-rule border-t pt-2">
-      <div className="flex min-h-11 flex-wrap items-center gap-x-1">
+      <div className="flex min-h-control flex-wrap items-center gap-x-1">
         {!current ? (
           <Button
             aria-expanded={mode === "restore"}

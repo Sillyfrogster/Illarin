@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import type {
@@ -85,14 +86,13 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   return (
     <>
       {!workspace.isOwner && canTakeDown && workspace.pane === null ? (
-        <button
-          className="fixed right-4 bottom-4 z-30 inline-flex min-h-11 items-center gap-2 rounded-control bg-ink px-4 text-meta font-medium text-field shadow-popover outline-offset-3"
+        <Button
+          className="fixed right-4 bottom-4 z-30 bg-field shadow-popover"
           onClick={() => workspace.openPane({ kind: "staff" })}
-          type="button"
         >
-          <ShieldAlert aria-hidden="true" size={16} />
+          <ShieldAlert aria-hidden="true" />
           Staff tools
-        </button>
+        </Button>
       ) : null}
 
       {workspace.editing ? <div aria-hidden="true" className="h-28" /> : null}
@@ -122,13 +122,13 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
                 This page was saved in another session. Copy any unsaved text,
                 then reload to edit the latest version.
               </p>
-              <button
-                className="min-h-11 rounded-control bg-action px-5 text-ui font-medium text-on-accent outline-offset-3"
+              <Button
+                className="self-start"
                 onClick={() => window.location.reload()}
-                type="button"
+                variant="primary"
               >
                 Reload the page
-              </button>
+              </Button>
             </div>
           </WorkspaceRail>
         ) : null}

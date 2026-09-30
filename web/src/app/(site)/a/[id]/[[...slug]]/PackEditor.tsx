@@ -3,6 +3,7 @@
 import { ImagePlus, UserRound, X } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -302,31 +303,33 @@ function AvatarField({
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-1">
-          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control bg-deep px-4 text-meta font-medium text-ink hover:bg-rule/45 has-disabled:opacity-45">
-            <ImagePlus aria-hidden="true" size={16} />
+          <Button
+            disabled={pending}
+            loading={uploading}
+            onClick={() => file.current?.click()}
+          >
+            {uploading ? null : <ImagePlus aria-hidden="true" />}
             {uploading ? "Adding…" : source ? "Replace avatar" : "Add avatar"}
-            <input
-              accept="image/*"
-              className="sr-only"
-              disabled={pending || uploading}
-              onChange={(event) => void upload(event.target.files?.[0] ?? null)}
-              ref={file}
-              type="file"
-            />
-          </label>
+          </Button>
+          <input
+            accept="image/*"
+            hidden
+            onChange={(event) => void upload(event.target.files?.[0] ?? null)}
+            ref={file}
+            type="file"
+          />
           {record.avatarUrl ? (
-            <button
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink disabled:opacity-45"
+            <Button
               disabled={pending || uploading}
               onClick={() => {
                 setPreview("");
                 onChange({ avatarUrl: undefined });
               }}
-              type="button"
+              variant="ghost"
             >
-              <X aria-hidden="true" size={15} />
+              <X aria-hidden="true" />
               Remove avatar
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>

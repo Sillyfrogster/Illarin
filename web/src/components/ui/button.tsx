@@ -18,8 +18,8 @@ const buttonVariants = cva(
         primary:
           "text-on-accent hover:text-on-accent focus-visible:ring-offset-1 focus-visible:ring-offset-field",
         secondary:
-          "text-ink hover:text-accent focus-visible:ring-0 data-[state=open]:text-accent",
-        ghost: "text-mute hover:text-ink data-[state=open]:text-ink",
+          "text-ink hover:text-accent focus-visible:ring-0 opened:text-accent",
+        ghost: "text-mute hover:text-ink opened:text-ink",
         stop: "text-on-stop hover:text-on-stop focus-visible:ring-offset-1 focus-visible:ring-offset-field",
         link: "text-accent underline-offset-4 hover:text-accent hover:underline",
       },
@@ -45,9 +45,9 @@ const SURFACES: Record<ButtonVariant, string> = {
   primary:
     "[--fill:var(--v-action)] group-hover:[--fill:color-mix(in_oklab,var(--v-action)_88%,var(--v-field))] group-active:[--fill:color-mix(in_oklab,var(--v-action)_78%,var(--v-field))] bg-(--fill) shadow-[0_0_0_1px_var(--fill)] group-active:shadow-[0_0_0_0px_var(--fill)]",
   secondary:
-    "[--ring:var(--v-edge)] group-focus-visible:[--ring:var(--v-accent)] group-hover:[--ring:color-mix(in_oklab,var(--v-accent)_60%,transparent)] group-data-[state=open]:[--ring:color-mix(in_oklab,var(--v-accent)_60%,transparent)] shadow-[0_0_0_1px_var(--ring),inset_0_0_0_0px_var(--ring)] group-hover:bg-hover group-active:bg-active group-data-[state=open]:bg-active group-active:shadow-[0_0_0_0px_var(--ring),inset_0_0_0_1px_var(--ring)]",
+    "[--ring:var(--v-edge)] group-focus-visible:[--ring:var(--v-accent)] group-hover:[--ring:color-mix(in_oklab,var(--v-accent)_60%,transparent)] group-opened:[--ring:color-mix(in_oklab,var(--v-accent)_60%,transparent)] shadow-[0_0_0_1px_var(--ring),inset_0_0_0_0px_var(--ring)] group-hover:bg-hover group-active:bg-active group-opened:bg-active group-active:shadow-[0_0_0_0px_var(--ring),inset_0_0_0_1px_var(--ring)]",
   ghost:
-    "shadow-[0_0_0_1px_transparent] group-hover:bg-hover group-hover:shadow-[0_0_0_1px_var(--v-hover)] group-active:bg-active group-data-[state=open]:bg-active group-active:shadow-[0_0_0_0px_var(--v-active)]",
+    "shadow-[0_0_0_1px_transparent] group-hover:bg-hover group-hover:shadow-[0_0_0_1px_var(--v-hover)] group-active:bg-active group-opened:bg-active group-active:shadow-[0_0_0_0px_var(--v-active)]",
   stop: "[--fill:var(--v-stop)] group-hover:[--fill:color-mix(in_oklab,var(--v-stop)_88%,var(--v-field))] group-active:[--fill:color-mix(in_oklab,var(--v-stop)_78%,var(--v-field))] bg-(--fill) shadow-[0_0_0_1px_var(--fill)] group-active:shadow-[0_0_0_0px_var(--fill)]",
   link: "hidden",
 };

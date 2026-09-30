@@ -82,7 +82,7 @@ export function ConnectedAppRow({
         </div>
 
         {cut ? (
-          <span className="inline-flex min-h-11 items-center font-ui text-meta font-medium text-mute">
+          <span className="inline-flex min-h-control items-center font-ui text-meta font-medium text-mute">
             Revoked
           </span>
         ) : (

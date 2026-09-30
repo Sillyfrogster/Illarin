@@ -28,7 +28,7 @@ export function BlogMasthead({ categories }: { categories: BlogCategory[] }) {
       <div className="mx-auto flex w-full max-w-[var(--shell)] flex-wrap items-center justify-between gap-x-6 px-[var(--gutter)] py-2 sm:min-h-14 sm:flex-nowrap sm:py-0">
         <div className="flex min-w-0 items-center">
           <Link
-            className="flex min-h-11 items-center font-display text-[1.375rem] leading-none font-medium tracking-[-0.02em] text-ink"
+            className="flex min-h-control items-center font-display text-[1.375rem] leading-none font-medium tracking-[-0.02em] text-ink"
             href={BLOG_HOME}
           >
             Blog

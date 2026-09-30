@@ -111,7 +111,7 @@ export function LegalPage({
           ) : null}
 
           <a
-            className="mt-group inline-flex min-h-11 items-center gap-2 font-ui text-meta text-mute outline-offset-3 hover:text-ink"
+            className="mt-group inline-flex min-h-control items-center gap-2 font-ui text-meta text-mute outline-offset-3 hover:text-ink"
             href="#document-top"
           >
             Back to the top

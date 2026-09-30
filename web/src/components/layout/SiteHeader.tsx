@@ -78,7 +78,7 @@ export function SiteHeader() {
         <Link
           href="/"
           aria-label="Illarin home"
-          className="flex min-h-11 items-center text-ink"
+          className="flex min-h-control items-center text-ink"
         >
           <BrandLogo className="w-28 md:w-32" />
         </Link>
@@ -90,7 +90,7 @@ export function SiteHeader() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex min-h-11 items-center text-ink"
+              className="flex min-h-control items-center text-ink"
             >
               {item.label}
             </Link>
@@ -138,7 +138,7 @@ export function SiteHeader() {
           <Link
             href="/"
             aria-label="Illarin home"
-            className="flex min-h-11 items-center gap-2 text-ink"
+            className="flex min-h-control items-center gap-2 text-ink"
           >
             <BrandLogo className="sm:w-36" />
           </Link>

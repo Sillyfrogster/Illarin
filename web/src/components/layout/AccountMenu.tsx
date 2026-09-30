@@ -32,7 +32,7 @@ export function AccountMenu() {
         <Button
           variant="ghost"
           size="compact"
-          className="min-w-11 max-w-48 gap-2.5 text-ink"
+          className="min-w-control max-w-48 gap-2.5 text-ink"
         >
           <CircleUserRound aria-hidden="true" />
           <span className="hidden truncate lg:inline">

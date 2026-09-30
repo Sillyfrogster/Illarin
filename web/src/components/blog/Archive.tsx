@@ -125,7 +125,7 @@ function ArchiveFacts({
       </span>
       {scope.kind === "Blog" ? null : (
         <Link
-          className="flex min-h-11 items-center gap-2 text-mute hover:text-ink"
+          className="flex min-h-control items-center gap-2 text-mute hover:text-ink"
           href={BLOG_HOME}
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
@@ -134,7 +134,7 @@ function ArchiveFacts({
       )}
       {scope.home ? (
         <a
-          className="flex min-h-11 items-center gap-2 text-mute hover:text-ink"
+          className="flex min-h-control items-center gap-2 text-mute hover:text-ink"
           href={scope.home}
           rel="noreferrer noopener"
           target="_blank"
@@ -144,7 +144,7 @@ function ArchiveFacts({
         </a>
       ) : null}
       <a
-        className="flex min-h-11 items-center gap-2 text-mute hover:text-ink"
+        className="flex min-h-control items-center gap-2 text-mute hover:text-ink"
         href={feedAddresses(scope.address).rss}
       >
         <Rss aria-hidden="true" className="size-4" />

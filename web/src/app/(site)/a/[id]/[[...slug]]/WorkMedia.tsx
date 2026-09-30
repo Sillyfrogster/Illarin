@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
+import { Button } from "@/components/ui/button";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import type { BrowseType, NsfwPreference, WorkImage } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
@@ -127,17 +128,16 @@ export function WorkMedia({
           </p>
         ) : null}
         {canReveal && !revealed ? (
-          <button
-            className="absolute right-4 bottom-4 inline-flex min-h-11 items-center gap-2 rounded-control bg-field px-4 text-meta font-medium text-ink shadow-cover outline-offset-3"
+          <Button
+            className="absolute right-4 bottom-4 bg-field shadow-cover"
             onClick={() => {
               setRevealed(true);
               writeWorkReveal(id);
             }}
-            type="button"
           >
-            <Eye aria-hidden="true" className="size-4" />
+            <Eye aria-hidden="true" />
             Show images
-          </button>
+          </Button>
         ) : null}
       </motion.div>
 

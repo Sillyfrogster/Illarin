@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
+import { cn } from "@/lib/cn";
 
 export function FieldGroup({
   children,
@@ -28,15 +29,21 @@ export function FieldPair({ children }: { children: ReactNode }) {
 
 export function AddAction({
   children,
+  className,
   disabled,
   onClick,
 }: {
   children: ReactNode;
+  className?: string;
   disabled?: boolean;
   onClick: () => void;
 }) {
   return (
-    <Button className="self-start" disabled={disabled} onClick={onClick}>
+    <Button
+      className={cn("self-start", className)}
+      disabled={disabled}
+      onClick={onClick}
+    >
       <Plus aria-hidden="true" />
       {children}
     </Button>
@@ -45,11 +52,13 @@ export function AddAction({
 
 export function RemoveAction({
   children,
+  className,
   disabled,
   label,
   onClick,
 }: {
   children?: ReactNode;
+  className?: string;
   disabled?: boolean;
   label?: string;
   onClick: () => void;
@@ -57,7 +66,7 @@ export function RemoveAction({
   const button = (
     <Button
       aria-label={label}
-      className="text-stop hover:text-stop"
+      className={cn("text-stop hover:text-stop", className)}
       disabled={disabled}
       onClick={onClick}
       size={children ? "default" : "icon"}

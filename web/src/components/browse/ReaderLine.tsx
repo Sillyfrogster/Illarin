@@ -6,6 +6,7 @@ import {
   ADULT_CHOICES,
   ANY_APP,
 } from "@/components/preferences/PreferenceChoices";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { BrowsePage, NsfwPreference } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { CONTROL } from "./BrowseStates";
 
 const ADULT_STATES: Record<NsfwPreference, string> = {
   hidden: "Adult works hidden",
@@ -55,24 +55,23 @@ export function ReaderLine({
           <span className="flex basis-full flex-wrap items-center gap-2 sm:basis-auto">
             <span className="mr-1">Works in</span>
             {overview.apps.map((option) => (
-              <button
-                className="inline-flex min-h-9 items-center rounded-control bg-accent-wash px-3 font-medium text-ink outline-offset-2 transition-colors duration-200 hover:bg-action hover:text-on-accent disabled:opacity-55 motion-reduce:transition-none"
+              <Button
                 disabled={locked}
                 key={option.value}
                 onClick={() => setApp(option.value)}
-                type="button"
+                size="compact"
               >
                 {option.label}
-              </button>
+              </Button>
             ))}
-            <button
-              className="inline-flex min-h-9 items-center rounded-control px-2.5 font-medium text-mute outline-offset-2 hover:bg-deep hover:text-ink disabled:opacity-55"
+            <Button
               disabled={locked}
               onClick={() => setApp(ANY_APP)}
-              type="button"
+              size="compact"
+              variant="ghost"
             >
               Any app
-            </button>
+            </Button>
           </span>
         ) : (
           <Choice
@@ -138,9 +137,11 @@ function Choice({
 }) {
   return (
     <DropdownMenu onOpenChange={onOpenChange} open={open}>
-      <DropdownMenuTrigger className={CONTROL} disabled={locked}>
-        {label}
-        <ChevronDown aria-hidden="true" className="size-4 text-mute" />
+      <DropdownMenuTrigger asChild disabled={locked}>
+        <Button className="gap-1.5">
+          {label}
+          <ChevronDown aria-hidden="true" className="text-mute" />
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"

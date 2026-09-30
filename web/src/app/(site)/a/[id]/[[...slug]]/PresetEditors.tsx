@@ -7,6 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -473,18 +474,17 @@ function SettingRow({
         value={setting.value}
       />
       <div className="flex flex-wrap items-center gap-1">
-        <button
-          className="inline-flex min-h-11 items-center rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink disabled:opacity-45"
+        <Button
           disabled={pending}
           onClick={() =>
             onChange({
               value: supplied ? undefined : emptyValue(setting.type),
             })
           }
-          type="button"
+          variant="ghost"
         >
           {supplied ? "Leave it out" : "Fill it in"}
-        </button>
+        </Button>
         <RemoveAction
           disabled={pending}
           label={`Remove ${setting.name}`}

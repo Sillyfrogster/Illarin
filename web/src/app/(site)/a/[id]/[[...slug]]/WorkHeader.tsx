@@ -100,7 +100,7 @@ export function WorkHeader({
       <div className={shellClassName}>
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
           <Link
-            className="inline-flex min-h-11 items-center gap-2 text-meta text-mute hover:text-ink"
+            className="inline-flex min-h-control items-center gap-2 text-meta text-mute hover:text-ink"
             href="/browse"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />

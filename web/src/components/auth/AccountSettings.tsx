@@ -258,7 +258,7 @@ function WayAction({
 
 function Settled() {
   return (
-    <span className="inline-flex min-h-11 items-center gap-2 font-ui text-meta font-medium text-accent">
+    <span className="inline-flex min-h-control items-center gap-2 font-ui text-meta font-medium text-accent">
       <Check aria-hidden="true" className="size-4" strokeWidth={2} />
       Verified
     </span>

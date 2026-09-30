@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDownWideNarrow, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { BrowseFilters, BrowseSort } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { CONTROL } from "./BrowseStates";
 
 const SORTS: Record<BrowseSort, string> = {
   recent: "Newest",
@@ -32,14 +32,16 @@ export function SortMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={cn(CONTROL, className)}>
-        <ArrowDownWideNarrow
-          aria-hidden="true"
-          className="hidden size-4 text-mute sm:block"
-        />
-        <span className="sr-only">Sort: </span>
-        <span className="truncate">{SORTS[sort]}</span>
-        <ChevronDown aria-hidden="true" className="size-4 text-mute" />
+      <DropdownMenuTrigger asChild>
+        <Button className={cn("gap-1.5", className)}>
+          <ArrowDownWideNarrow
+            aria-hidden="true"
+            className="hidden text-mute sm:block"
+          />
+          <span className="sr-only">Sort: </span>
+          <span className="truncate">{SORTS[sort]}</span>
+          <ChevronDown aria-hidden="true" className="text-mute" />
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuRadioGroup

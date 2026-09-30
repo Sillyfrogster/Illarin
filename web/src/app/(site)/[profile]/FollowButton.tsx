@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { followCreator, stopFollowingCreator } from "@/lib/api/profile";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
-
-const SPRING = { type: "spring", stiffness: 380, damping: 32 } as const;
+import { spring } from "@/lib/springs";
 
 /** Follow collapses into a circle while it saves, shows a check, and settles as Following. */
 export function FollowButton({
@@ -61,11 +60,11 @@ export function FollowButton({
   return (
     <div className="min-w-0">
       <motion.button
-        animate={{ width: collapsed ? 44 : "100%" }}
+        animate={{ width: collapsed ? "var(--control)" : "100%" }}
         aria-busy={phase === "saving" || undefined}
         aria-pressed={following}
         className={cn(
-          "relative flex h-11 items-center justify-center overflow-hidden rounded-control font-ui text-ui font-medium tracking-tight outline-offset-3 transition-colors duration-200",
+          "relative flex h-control items-center justify-center overflow-hidden rounded-control font-ui text-ui font-medium tracking-tight outline-offset-3 transition-colors duration-160",
           following || collapsed
             ? "bg-accent-wash text-accent"
             : "bg-action text-on-accent shadow-[0_4px_14px_-5px_var(--v-action),inset_0_1px_0_rgb(255_255_255/0.18)] hover:bg-action/90",
@@ -73,7 +72,7 @@ export function FollowButton({
         disabled={account === undefined}
         initial={false}
         onClick={change}
-        transition={still ? { duration: 0 } : SPRING}
+        transition={still ? { duration: 0 } : spring.moderate}
         type="button"
       >
         <AnimatePresence initial={false} mode="popLayout">

@@ -15,6 +15,12 @@
   }
 }
 
+/* An open menu or popover trigger, read from aria-expanded too because a Tooltip around the trigger overwrites data-state */
+@custom-variant opened (&:is(
+    [data-state="open"],
+    [aria-haspopup][aria-expanded="true"]
+  ));
+
 @theme {
   --color-*: initial;
   --font-*: initial;

@@ -73,7 +73,7 @@ export function DockTool({
         className={cn(
           TOOL,
           worded && WORDED_TOOL,
-          worded && "max-@3xl/dock:w-11 max-@3xl/dock:px-0",
+          worded && "max-@3xl/dock:w-control max-@3xl/dock:px-0",
         )}
         onClick={onClick}
         type="button"

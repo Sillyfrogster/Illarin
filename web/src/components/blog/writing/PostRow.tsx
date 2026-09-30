@@ -83,7 +83,7 @@ export function PostRow({
           {post.deletion ? <Deadline until={post.deletion.until} /> : null}
           {state === "published" ? (
             <Link
-              className="inline-flex min-h-11 items-center font-ui text-label font-medium text-accent underline-offset-4 outline-offset-3 hover:underline"
+              className="inline-flex min-h-control items-center font-ui text-label font-medium text-accent underline-offset-4 outline-offset-3 hover:underline"
               href={postPath(post.slug)}
             >
               Read it on the blog

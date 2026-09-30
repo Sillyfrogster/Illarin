@@ -33,7 +33,7 @@ export function AuthPage({
         {switchTo ? (
           <div className="flex justify-center px-6 py-1.5">
             <Link
-              className="inline-flex min-h-11 items-center rounded-control px-3 font-ui text-ui font-medium text-accent underline-offset-4 hover:underline"
+              className="inline-flex min-h-control items-center rounded-control px-3 font-ui text-ui font-medium text-accent underline-offset-4 hover:underline"
               href={`${switchTo.href}${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
             >
               {switchTo.label}

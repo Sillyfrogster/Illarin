@@ -4,7 +4,7 @@ import { archiveSteps } from "@/lib/archive-pages";
 import { pageAddress } from "@/lib/blog-paths";
 
 const STEP =
-  "flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-control px-3 text-ui";
+  "flex min-h-control min-w-control items-center justify-center gap-1 rounded-control px-3 text-ui";
 
 export function ArchivePages({
   address,

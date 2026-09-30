@@ -11,18 +11,14 @@ import {
   TextQuote,
 } from "lucide-react";
 import { type ComponentType, useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 import type { MarkdownAction } from "@/lib/markdown-edit";
 
-const TOOL =
-  "inline-flex size-11 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-plane hover:text-ink md:size-9";
-
-const SUMMARY =
-  "inline-flex min-h-9 items-center gap-1 rounded-control font-ui text-label text-mute outline-offset-3 hover:text-ink";
-
 type Tool = {
   action: MarkdownAction;
-  icon: ComponentType<{ "aria-hidden": "true"; size: number }>;
+  icon: ComponentType<{ "aria-hidden": "true" }>;
   label: string;
 };
 
@@ -55,37 +51,37 @@ export function FormattingBar({
           role="toolbar"
         >
           {TOOLS.map(({ action, icon: Icon, label }) => (
-            <button
-              aria-label={label}
-              className={TOOL}
-              key={action}
-              onClick={() => apply(action)}
-              onMouseDown={(event) => event.preventDefault()}
-              type="button"
-            >
-              <Icon aria-hidden="true" size={15} />
-            </button>
+            <Tooltip content={label} key={action}>
+              <Button
+                aria-label={label}
+                onClick={() => apply(action)}
+                onMouseDown={(event) => event.preventDefault()}
+                size="icon-compact"
+                variant="ghost"
+              >
+                <Icon aria-hidden="true" />
+              </Button>
+            </Tooltip>
           ))}
         </div>
-        <button
+        <Button
           aria-controls={detail}
           aria-expanded={open}
-          className={SUMMARY}
           data-measurement-ignore
           onClick={() => setOpen((shown) => !shown)}
           onMouseDown={(event) => event.preventDefault()}
-          type="button"
+          size="compact"
+          variant="ghost"
         >
           Markdown works here
           <ChevronDown
             aria-hidden="true"
             className={cn(
-              "transition-transform duration-200 motion-reduce:transition-none",
+              "transition-transform duration-160 motion-reduce:transition-none",
               open && "rotate-180",
             )}
-            size={13}
           />
-        </button>
+        </Button>
       </div>
       {open ? (
         <dl

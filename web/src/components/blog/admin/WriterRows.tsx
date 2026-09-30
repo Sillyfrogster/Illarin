@@ -114,7 +114,7 @@ export function WriterStep({
     return (
       <>
         <Link
-          className="mb-5 inline-flex min-h-11 items-center font-ui text-meta font-medium text-accent underline-offset-4 outline-offset-3 hover:underline"
+          className="mb-5 inline-flex min-h-control items-center font-ui text-meta font-medium text-accent underline-offset-4 outline-offset-3 hover:underline"
           href={`/@${existing.handle}`}
         >
           View profile

@@ -356,7 +356,7 @@ function Viewer({
           <motion.span
             animate={{ scale: 1, opacity: 1 }}
             className={cn(
-              "absolute -right-3 -bottom-3 flex size-11 items-center justify-center rounded-full shadow-[0_8px_20px_-8px_rgb(0_0_0/0.5)]",
+              "absolute -right-3 -bottom-3 flex size-control items-center justify-center rounded-full shadow-[0_8px_20px_-8px_rgb(0_0_0/0.5)]",
               upload.at === "found"
                 ? "bg-action text-on-accent"
                 : "bg-stop text-on-stop",

@@ -20,7 +20,7 @@ export function Article({ post }: { post: PublicPost }) {
     <article className={`${shellClasses} pb-16`} id="article-top">
       <div className="mt-6 flex items-center justify-between gap-4">
         <Link
-          className="mt-6 inline-flex min-h-11 items-center gap-2 text-meta text-mute hover:text-ink"
+          className="mt-6 inline-flex min-h-control items-center gap-2 text-meta text-mute hover:text-ink"
           href={BLOG_HOME}
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
@@ -54,7 +54,7 @@ export function Article({ post }: { post: PublicPost }) {
           <div className="mt-section flex flex-wrap items-center justify-between gap-4 rounded-plate bg-deep p-5">
             <p className="text-ui">Subscribe to blog updates.</p>
             <a
-              className="flex min-h-11 items-center gap-2 text-ui font-medium text-accent hover:text-ink"
+              className="flex min-h-control items-center gap-2 text-ui font-medium text-accent hover:text-ink"
               href={BLOG_FEEDS.rss}
             >
               <Rss aria-hidden="true" className="size-4" />
@@ -63,7 +63,7 @@ export function Article({ post }: { post: PublicPost }) {
           </div>
           <FurtherReading posts={post.related} />
           <a
-            className="mt-group inline-flex min-h-11 items-center gap-2 text-meta text-mute hover:text-ink"
+            className="mt-group inline-flex min-h-control items-center gap-2 text-meta text-mute hover:text-ink"
             href="#article-top"
           >
             Back to top

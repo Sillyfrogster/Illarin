@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { Notification } from "@/lib/api/notifications";
@@ -119,14 +120,15 @@ export function NotificationEntry({
         <SendUpdates workId={work.id} apps={sends} />
       ) : null}
       <Tooltip content="Remove">
-        <button
-          type="button"
+        <Button
+          aria-label="Remove this notification"
+          className="absolute top-2 right-2 opacity-0 group-hover/entry:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
           onClick={() => onRemove(entry)}
-          className="absolute top-2 right-2 inline-flex size-8 items-center justify-center rounded-control text-mute opacity-0 outline-offset-2 transition-[opacity,background-color,color] duration-200 group-hover/entry:opacity-100 hover:bg-plane hover:text-ink focus-visible:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none"
+          size="icon-compact"
+          variant="ghost"
         >
-          <X aria-hidden="true" className="size-4" />
-          <span className="sr-only">Remove this notification</span>
-        </button>
+          <X aria-hidden="true" />
+        </Button>
       </Tooltip>
     </li>
   );

@@ -26,7 +26,7 @@ export function SubtleTabs<T extends string>({
 }: {
   tabs: readonly SubtleTab<T>[];
   chosen: T;
-  onChoose: (value: T) => void;
+  onChoose?: (value: T) => void;
   className?: string;
 }) {
   const { containerRef, hover, itemRefs, chosenPlate } = useChoicePlates(
@@ -78,6 +78,7 @@ export function SubtleTabs<T extends string>({
               href={tab.href}
               key={tab.value}
               onClick={(event: MouseEvent) => {
+                if (!onChoose) return;
                 if (event.metaKey || event.ctrlKey || event.shiftKey) return;
                 event.preventDefault();
                 onChoose(tab.value);
@@ -91,7 +92,7 @@ export function SubtleTabs<T extends string>({
           <button
             {...shared}
             key={tab.value}
-            onClick={() => onChoose(tab.value)}
+            onClick={() => onChoose?.(tab.value)}
             type="button"
           >
             {inside}

@@ -1,8 +1,9 @@
 "use client";
 
-import { ImagePlus, Loader2 } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { addWorkImage } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { useDraftedChanges } from "@/lib/drafted-changes";
@@ -22,7 +23,6 @@ export function CoverControl({
   const file = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
   const [trouble, setTrouble] = useState("");
-  const field = useId();
 
   async function send(chosen: File | null) {
     if (!chosen || sending) return;
@@ -47,29 +47,15 @@ export function CoverControl({
     <div className="mt-3 flex flex-col items-center gap-2">
       <input
         accept="image/*"
-        className="sr-only"
-        id={field}
+        hidden
         onChange={(event) => send(event.target.files?.[0] ?? null)}
         ref={file}
         type="file"
       />
-      <label
-        className={cn(
-          "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control bg-deep px-4 font-ui text-meta font-medium text-ink transition-colors duration-200 hover:bg-rule/45 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent has-[:focus-visible]:outline-offset-3 motion-reduce:transition-none",
-          sending && "pointer-events-none opacity-60",
-        )}
-        htmlFor={field}
-      >
-        {sending ? (
-          <Loader2
-            aria-hidden="true"
-            className="size-4 animate-spin text-accent"
-          />
-        ) : (
-          <ImagePlus aria-hidden="true" className="size-4 text-accent" />
-        )}
+      <Button loading={sending} onClick={() => file.current?.click()}>
+        {sending ? null : <ImagePlus aria-hidden="true" />}
         {hasCover ? "Replace the display picture" : "Add a display picture"}
-      </label>
+      </Button>
       <p
         aria-live="polite"
         className={cn(

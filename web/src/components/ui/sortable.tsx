@@ -197,7 +197,7 @@ export function SortableItemHandle({
     <button
       aria-label={label}
       className={cn(
-        "inline-flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-control text-mute outline-offset-3 select-none hover:bg-deep hover:text-ink disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent",
+        "inline-flex size-control shrink-0 cursor-grab touch-none items-center justify-center rounded-control text-mute outline-offset-3 select-none hover:bg-deep hover:text-ink disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent",
         dragging && "cursor-grabbing",
         className,
       )}
