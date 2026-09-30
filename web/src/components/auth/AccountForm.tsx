@@ -23,7 +23,6 @@ import { api } from "@/lib/api/client";
 import type { AppName, NsfwPreference } from "@/lib/api/query";
 import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/cn";
 
 const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 

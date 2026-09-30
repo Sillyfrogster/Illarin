@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { ShinyButton } from "@/components/ui/shiny-button";
-import type { Post, PostRevision } from "@/lib/api/query";
+import type { PostRevision } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
 import { revisionWords } from "@/lib/post-history";

@@ -55,17 +55,11 @@ export function Field({
   return (
     <FieldContext.Provider value={{ id, describedBy, invalid: !!trouble }}>
       <div
-        aria-labelledby={`${id}-label`}
         className={cn("grid min-w-0 gap-2", className)}
         data-invalid={trouble ? "" : undefined}
-        role="group"
       >
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <label
-            className="font-ui text-ui font-medium text-ink"
-            htmlFor={id}
-            id={`${id}-label`}
-          >
+          <label className="font-ui text-ui font-medium text-ink" htmlFor={id}>
             {label}
           </label>
           {trailing}

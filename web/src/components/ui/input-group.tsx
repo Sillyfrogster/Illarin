@@ -17,7 +17,6 @@ function InputGroup({ className, ...props }: ComponentProps<"div">) {
         className,
       )}
       data-slot="input-group"
-      role="group"
       {...props}
     />
   );

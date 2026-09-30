@@ -69,9 +69,7 @@ const ScrollArea = forwardRef<
         {isTouch ? (
           <div
             ref={ref}
-            role="group"
             data-slot="scroll-area"
-            aria-roledescription="scroll area"
             className={cn("relative overflow-hidden", className)}
             {...props}
           >
@@ -84,6 +82,7 @@ const ScrollArea = forwardRef<
                 orientation === "both" && "overflow-auto",
                 viewportClassName,
               )}
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrolling region has to take focus so the keyboard can scroll it
               tabIndex={0}
             >
               {children}
