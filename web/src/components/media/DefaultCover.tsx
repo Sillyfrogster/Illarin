@@ -107,7 +107,7 @@ export function DefaultCover({
         <Icon size={compact ? 22 : 38} strokeWidth={1.25} />
       </span>
       {compact ? null : (
-        <span className="relative z-1 text-label font-semibold tracking-[0.18em] uppercase">
+        <span className="relative z-1 text-meta font-medium">
           {TYPE_LABELS[type]}
         </span>
       )}

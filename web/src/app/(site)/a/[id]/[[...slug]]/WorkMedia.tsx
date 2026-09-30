@@ -119,7 +119,7 @@ export function WorkMedia({
           </ImageZoom>
         )}
         {isNsfw === true ? (
-          <p className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-control bg-media/85 px-2.5 py-1 text-label font-medium tracking-wide text-on-media uppercase">
+          <p className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-control bg-media/85 px-2.5 py-1 text-label font-medium text-on-media">
             {showClear ? (
               <Eye aria-hidden="true" className="size-3.5" />
             ) : (

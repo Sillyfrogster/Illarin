@@ -21,7 +21,7 @@ export function PostCode({
       {language === "plain" ? null : (
         <span
           aria-hidden="true"
-          className="block px-5 pb-1 text-right text-label font-semibold tracking-[0.06em] text-mute uppercase"
+          className="block px-5 pb-1 text-right text-label font-medium text-mute"
         >
           {label}
         </span>
