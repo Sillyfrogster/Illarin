@@ -17,10 +17,10 @@ import { workHref } from "@/lib/work-url";
 import { TypeMark } from "./TypeMark";
 
 const SETTING: Record<TypeSetting, string> = {
-  grand: "text-[clamp(1.9rem,2.9vw,2.6rem)] leading-[1.02]",
-  large: "text-[clamp(1.5rem,2.1vw,1.95rem)] leading-[1.07]",
-  medium: "text-[clamp(1.15rem,1.5vw,1.4rem)] leading-[1.15]",
-  small: "text-[clamp(0.95rem,1.1vw,1.05rem)] leading-[1.35]",
+  grand: "text-[clamp(1.25rem,17cqi,2.6rem)] leading-[1.02]",
+  large: "text-[clamp(1.1rem,12.5cqi,1.95rem)] leading-[1.07]",
+  medium: "text-[clamp(1rem,9cqi,1.4rem)] leading-[1.15]",
+  small: "text-[clamp(0.85rem,6.5cqi,1.05rem)] leading-[1.35]",
 };
 
 const PLATE =
@@ -119,7 +119,7 @@ export function BrowsePoster({
         <div
           className={cn(
             PLATE,
-            "flex aspect-5/6 min-w-0 flex-col justify-between p-5",
+            "@container flex aspect-5/6 min-w-0 flex-col justify-between p-5",
             groundFor(work.id).plate,
           )}
         >
