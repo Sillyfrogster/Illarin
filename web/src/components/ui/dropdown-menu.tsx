@@ -25,11 +25,11 @@ import {
   popupViewportClass,
 } from "@/lib/popup";
 import { spring } from "@/lib/springs";
-import { useKeyboardNavGate } from "@/lib/use-keyboard-nav-gate";
 import {
   useFluidHover,
   useRegisterFluidHoverItem,
 } from "@/lib/use-fluid-hover";
+import { useKeyboardNavGate } from "@/lib/use-keyboard-nav-gate";
 import { usePresence } from "@/lib/use-presence";
 
 const MenuOpenContext = createContext(false);

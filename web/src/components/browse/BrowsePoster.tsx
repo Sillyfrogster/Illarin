@@ -5,6 +5,7 @@ import { CircleHelp, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import type { BrowseWork, NsfwPreference } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { posterFace, type TypeSetting, typeSetting } from "@/lib/poster-face";
@@ -177,23 +178,23 @@ export function BrowsePoster({
 
         <div className="mt-2.5 flex flex-wrap gap-2 empty:hidden">
           {work.ownerState ? (
-            <span className="inline-flex min-h-6 items-center rounded-control bg-accent-wash px-2 font-ui text-label font-medium text-accent capitalize">
+            <Badge className="capitalize" tone="accent">
               {work.ownerState}
-            </span>
+            </Badge>
           ) : null}
           {work.isNsfw === null ? (
-            <span className="inline-flex min-h-6 items-center gap-1.5 rounded-control bg-deep px-2 font-ui text-label text-mute">
+            <Badge>
               <CircleHelp aria-hidden="true" className="size-3" />
               Rating not set
-            </span>
+            </Badge>
           ) : null}
           {work.isNsfw ? (
-            <span className="inline-flex min-h-6 items-center gap-1.5 rounded-control bg-stop-wash px-2 font-ui text-label font-medium text-stop">
+            <Badge tone="stop">
               {blurred ? (
                 <EyeOff aria-hidden="true" className="size-3" />
               ) : null}
               {blurred ? "Adult · blurred" : "Adult"}
-            </span>
+            </Badge>
           ) : null}
         </div>
 

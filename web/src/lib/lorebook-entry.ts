@@ -1,4 +1,4 @@
-import type { ChipItem } from "@/components/ui/Chip";
+import type { BadgeItem } from "@/components/ui/badge";
 
 type ReadableEntry = {
   id?: string;
@@ -26,8 +26,8 @@ export type EntryPresentation = {
   position: number;
   name: string;
   named: EntryNaming;
-  keys: ChipItem[];
-  secondaryKeys: ChipItem[];
+  keys: BadgeItem[];
+  secondaryKeys: BadgeItem[];
   firing: string[];
   note: string;
   isOff: boolean;
@@ -75,7 +75,7 @@ export function readEntry(
 function nameFor(
   entry: ReadableEntry,
   position: number,
-  keys: readonly ChipItem[],
+  keys: readonly BadgeItem[],
 ): { name: string; named: EntryNaming } {
   const written = entry.name?.trim();
   if (written) return { name: written, named: "written" };
@@ -98,7 +98,7 @@ function opening(text: string): string {
   return `${words.trimEnd()}\u2026`;
 }
 
-function chips(keys: readonly string[]): ChipItem[] {
+function chips(keys: readonly string[]): BadgeItem[] {
   return keys
     .map((key, index) => ({ id: `${index}-${key.trim()}`, label: key.trim() }))
     .filter((chip) => chip.label !== "");

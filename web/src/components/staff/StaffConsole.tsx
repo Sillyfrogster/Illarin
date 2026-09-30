@@ -8,6 +8,7 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { AppearanceMenu } from "@/components/layout/AppearanceMenu";
 import { NothingHere } from "@/components/layout/NothingHere";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Rail,
   RailBadge,
@@ -155,7 +156,7 @@ function Workbench({
             <span aria-hidden="true" className="hidden text-rule sm:inline">
               /
             </span>
-            <span className="truncate font-medium tracking-[0.04em] text-ink uppercase">
+            <span className="truncate font-medium text-ink">
               {current?.label ?? "Console"}
             </span>
           </p>
@@ -168,9 +169,7 @@ function Workbench({
             >
               <Search aria-hidden="true" />
               <span className="sr-only sm:not-sr-only">Search</span>
-              <kbd className="hidden rounded-[5px] bg-deep px-1.5 py-0.5 font-ui text-label text-mute sm:inline">
-                Ctrl K
-              </kbd>
+              <Kbd className="hidden sm:inline-flex">Ctrl K</Kbd>
             </Button>
             <AppearanceMenu />
           </div>

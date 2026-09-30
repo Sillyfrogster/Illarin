@@ -1,3 +1,5 @@
+import { Badge } from "@/components/ui/badge";
+
 export function DeclaredValues({
   label,
   values,
@@ -12,11 +14,8 @@ export function DeclaredValues({
         {values.length > 0 ? (
           <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
             {values.map((value) => (
-              <li
-                className="rounded-control bg-deep px-2.5 py-1 font-mono text-meta text-ink"
-                key={value}
-              >
-                {value}
+              <li key={value}>
+                <Badge className="font-mono font-normal">{value}</Badge>
               </li>
             ))}
           </ul>

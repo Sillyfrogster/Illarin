@@ -14,6 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Arrive } from "@/components/ui/arrive";
+import { Badge } from "@/components/ui/badge";
 import type {
   BrowseType,
   WorkBlock,
@@ -216,9 +217,9 @@ export function WorkBlocks({
                         <div className="flex min-w-0 flex-1 basis-45 flex-wrap items-baseline gap-x-2.5 gap-y-1">
                           <BlockTitle block={block} />
                           {writing && block.required ? (
-                            <span className="shrink-0 rounded-control bg-deep px-2 py-1 text-label text-mute">
+                            <Badge className="shrink-0">
                               {block.hideable ? "Required" : "Always shown"}
-                            </span>
+                            </Badge>
                           ) : null}
                           <BlockCounts elements={block.elements} />
                         </div>

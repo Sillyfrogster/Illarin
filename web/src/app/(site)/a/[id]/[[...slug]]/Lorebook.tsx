@@ -1,4 +1,4 @@
-import { ChipSet } from "@/components/ui/Chip";
+import { BadgeList } from "@/components/ui/badge";
 import { RichText } from "@/components/ui/RichText";
 import { Run, RunItem } from "@/components/ui/run";
 import type { LorebookEntry } from "@/lib/api/query";
@@ -44,7 +44,7 @@ export function EntryBody({ entry }: { entry: EntryPresentation }) {
       </div>
       <p className={ITEM_META}>{entry.firing.join(" · ")}</p>
       {entry.keys.length > 0 ? (
-        <ChipSet
+        <BadgeList
           className="mt-0.5"
           items={entry.keys}
           limit={KEY_PREVIEW_LIMIT}
@@ -53,7 +53,7 @@ export function EntryBody({ entry }: { entry: EntryPresentation }) {
       {entry.secondaryKeys.length > 0 ? (
         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1.5">
           <p className={ITEM_META}>Second keys</p>
-          <ChipSet items={entry.secondaryKeys} limit={KEY_PREVIEW_LIMIT} />
+          <BadgeList items={entry.secondaryKeys} limit={KEY_PREVIEW_LIMIT} />
         </div>
       ) : null}
       {entry.text.trim() ? (

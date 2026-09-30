@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
@@ -48,9 +49,7 @@ export function PublishSubject({
         <p className="flex flex-wrap items-center gap-2 font-ui text-meta">
           <span className="text-mute">{from}</span>
           <ArrowRight aria-hidden="true" className="size-3.5 text-mute" />
-          <span className="rounded-full bg-accent-wash px-2.5 py-0.5 font-medium text-accent">
-            {to}
-          </span>
+          <Badge tone="accent">{to}</Badge>
         </p>
       </div>
     </div>

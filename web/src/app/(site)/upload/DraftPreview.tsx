@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { DefaultCover } from "@/components/media/DefaultCover";
+import { Badge } from "@/components/ui/badge";
 import type { BrowseType } from "@/lib/api/query";
 import type {
   ColorSetContent,
@@ -48,9 +49,9 @@ export function DraftPreview({
           <p className="mt-2 flex flex-wrap items-center gap-1.5 text-label text-mute">
             <span className="size-1.5 rounded-full bg-accent" />
             {TYPE_LABELS[type]}
-            <span className="rounded-control bg-accent-wash px-1.5 py-0.5 font-medium text-accent">
+            <Badge size="compact" tone="accent">
               Private draft
-            </span>
+            </Badge>
           </p>
         </div>
         <span className="relative block aspect-[5/6] overflow-hidden rounded-control shadow-[0_14px_30px_-16px_rgb(0_0_0/0.5)]">

@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { ChipSet } from "@/components/ui/Chip";
+import { Badge, BadgeList } from "@/components/ui/badge";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
@@ -168,11 +168,7 @@ export function WorkHeader({
                   Private prompts
                 </>
               ) : null}
-              {isDraft ? (
-                <span className="rounded-control bg-accent-wash px-2 py-0.5 text-label font-medium text-ink">
-                  Private draft
-                </span>
-              ) : null}
+              {isDraft ? <Badge tone="accent">Private draft</Badge> : null}
               <AnimatePresence initial={false}>
                 {work.isOwner && !isDraft && workspace.unpublishedChanges ? (
                   <motion.span
@@ -358,7 +354,7 @@ export function WorkHeader({
                 </Field>
               </div>
             ) : workspace.details.tags.length > 0 ? (
-              <ChipSet
+              <BadgeList
                 className="mt-5 max-w-[42ch]"
                 items={workspace.details.tags.map((tag) => ({
                   href:

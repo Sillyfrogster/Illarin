@@ -1,6 +1,6 @@
 import { Lock } from "lucide-react";
 import { Fragment } from "react";
-import { ChipSet } from "@/components/ui/Chip";
+import { BadgeList } from "@/components/ui/badge";
 import { RichText } from "@/components/ui/RichText";
 import { Run, RunHeading, RunItem } from "@/components/ui/run";
 import type {
@@ -318,7 +318,7 @@ export function VariableBody({ variable }: { variable: PresetVariable }) {
         <RichText className={ITEM_BODY} text={variable.description} />
       ) : null}
       {variable.options && variable.options.length > 0 ? (
-        <ChipSet
+        <BadgeList
           className="mt-1"
           items={variable.options.map((option, position) => ({
             id: `${position}-${option.value}`,
