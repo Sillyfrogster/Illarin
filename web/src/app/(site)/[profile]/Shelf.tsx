@@ -11,8 +11,8 @@ import { BrowseLoading, GRID, Message } from "@/components/browse/BrowseStates";
 import { useBrowseNavigation } from "@/components/browse/use-browse-navigation";
 import { Button } from "@/components/ui/button";
 import { Scroller } from "@/components/ui/scroller";
+import { SubtleTabs } from "@/components/ui/subtle-tabs";
 import { Tooltip } from "@/components/ui/tooltip";
-import { TravellingHighlight } from "@/components/ui/travelling-highlight";
 import {
   type BrowseCursor,
   type BrowseFilters,
@@ -31,9 +31,6 @@ import { workDisplayName } from "@/lib/work-name";
 import { TYPE_PLURALS, WORK_TYPES } from "@/lib/work-types";
 
 const PAGE = 24;
-
-const TAB =
-  "relative flex min-h-11 items-center gap-1.5 rounded-control px-3.5 font-ui text-ui font-medium whitespace-nowrap outline-offset-3 transition-colors duration-300 motion-reduce:transition-none";
 
 export type Pinning = {
   featured: string[];
@@ -150,59 +147,31 @@ export function Shelf({
         {nothingAtAll || tabs.length < 3 ? null : (
           <nav aria-label="Type" className="mt-4 -ml-1 min-w-0">
             <Scroller buttonClassName="bottom-0.5">
-              <TravellingHighlight
+              <SubtleTabs
                 chosen={filters.type ?? "all"}
-                className="w-max"
-                plateClassName="rounded-control"
-              >
-                <ul className="m-0 flex w-max list-none gap-1 p-1">
-                  {tabs.map((tab) => {
-                    const here = (filters.type ?? "all") === tab.key;
-                    return (
-                      <li key={tab.key}>
-                        <Link
-                          aria-current={here ? "page" : undefined}
-                          className={cn(
-                            TAB,
-                            here
-                              ? "text-on-accent"
-                              : "text-mute hover:text-ink",
-                          )}
-                          data-cell={tab.key}
-                          href={buildBrowseHref(
-                            { ...filters, type: tab.type, facet: undefined },
-                            basePath,
-                          )}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            navigate({
-                              ...filters,
-                              type: tab.type,
-                              facet: undefined,
-                            });
-                          }}
-                        >
-                          {tab.label}
-                          {tab.count === undefined ? null : (
-                            <span
-                              className={cn(
-                                "font-ui text-meta tabular-nums",
-                                here ? "text-on-accent/80" : "text-mute",
-                              )}
-                            >
-                              <span className="sr-only">, </span>
-                              {tab.count}
-                              <span className="sr-only">
-                                {tab.count === 1 ? " work" : " works"}
-                              </span>
-                            </span>
-                          )}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </TravellingHighlight>
+                onChoose={(key) => {
+                  const tab = tabs.find((one) => one.key === key);
+                  navigate({ ...filters, type: tab?.type, facet: undefined });
+                }}
+                tabs={tabs.map((tab) => ({
+                  value: tab.key,
+                  label: tab.label,
+                  href: buildBrowseHref(
+                    { ...filters, type: tab.type, facet: undefined },
+                    basePath,
+                  ),
+                  count:
+                    tab.count === undefined ? undefined : (
+                      <>
+                        <span className="sr-only">, </span>
+                        {tab.count}
+                        <span className="sr-only">
+                          {tab.count === 1 ? " work" : " works"}
+                        </span>
+                      </>
+                    ),
+                }))}
+              />
             </Scroller>
           </nav>
         )}

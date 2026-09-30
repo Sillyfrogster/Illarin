@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Shell } from "@/components/layout/Shell";
+import { RegisterRail } from "@/components/register/RegisterRail";
 import { Alert } from "@/components/ui/alert";
 import { Gate } from "@/components/ui/gate";
 import { readWorkspace } from "@/lib/api/blog";
@@ -14,9 +15,9 @@ import {
   nothingThere,
   STANDINGS,
   type Standing,
+  standingName,
 } from "@/lib/post-standing";
 import { PostRow } from "./PostRow";
-import { StandingRail } from "./StandingRail";
 import { StartPost } from "./StartPost";
 
 export function PostDesk() {
@@ -174,7 +175,16 @@ function Inside({
         ) : null}
 
         <div className="mt-5">
-          <StandingRail chosen={standing} counts={counts} onChoose={onChoose} />
+          <RegisterRail
+            cells={STANDINGS.map((one) => ({
+              id: one,
+              name: standingName(one),
+              count: counts[one],
+            }))}
+            chosen={standing}
+            label="Which posts"
+            onChoose={onChoose}
+          />
         </div>
 
         {standing === "deleted" ? (
