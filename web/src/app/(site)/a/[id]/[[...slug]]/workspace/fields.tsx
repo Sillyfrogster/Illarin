@@ -33,44 +33,6 @@ export function ChoiceField(props: ComponentProps<"select">) {
   return <Select {...props} className={cn("w-full", props.className)} />;
 }
 
-export function Switch({
-  checked,
-  hint,
-  label,
-  onChange,
-  pending,
-}: {
-  checked: boolean;
-  hint?: string;
-  label: string;
-  onChange: (checked: boolean) => void;
-  pending: boolean;
-}) {
-  return (
-    <label
-      className={cn(
-        "flex min-h-11 cursor-pointer items-start gap-3 rounded-control p-3 text-ui text-ink",
-        checked ? "bg-accent-wash" : "bg-deep",
-        pending && "opacity-60",
-      )}
-    >
-      <input
-        checked={checked}
-        className="mt-1 size-4 shrink-0 accent-[var(--v-action)]"
-        disabled={pending}
-        onChange={(event) => onChange(event.target.checked)}
-        type="checkbox"
-      />
-      <span className="min-w-0">
-        {label}
-        {hint ? (
-          <span className="mt-1 block text-meta text-mute">{hint}</span>
-        ) : null}
-      </span>
-    </label>
-  );
-}
-
 export function AddAction({
   children,
   disabled,

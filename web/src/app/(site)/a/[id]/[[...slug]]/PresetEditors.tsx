@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
+import { Switch } from "@/components/ui/switch";
 import type {
   PresetSetting,
   PresetVariable,
@@ -31,7 +32,6 @@ import {
   FieldPair,
   Note,
   RemoveAction,
-  Switch,
 } from "./workspace/fields";
 
 const PROMPT_ROLES: {
@@ -306,8 +306,8 @@ function FragmentFields({
           checked={fragment.private ?? false}
           hint="Its text is sent only to an allowed connected app."
           label="Private prompt"
-          onChange={(isPrivate) => onChange({ private: isPrivate })}
-          pending={pending}
+          onCheckedChange={(isPrivate) => onChange({ private: isPrivate })}
+          disabled={pending}
         />
       ) : null}
 
@@ -370,8 +370,8 @@ function FragmentFields({
           checked={fragment.enabled}
           hint="A switched-off fragment stays in the preset and reaches no model."
           label="Enabled"
-          onChange={(enabled) => onChange({ enabled })}
-          pending={pending}
+          onCheckedChange={(enabled) => onChange({ enabled })}
+          disabled={pending}
         />
       </FieldGroup>
 
@@ -597,8 +597,8 @@ function ValueField({
       <Switch
         checked={value.boolean ?? false}
         label={value.boolean ? "Yes" : "No"}
-        onChange={(boolean) => onChange({ boolean })}
-        pending={pending}
+        onCheckedChange={(boolean) => onChange({ boolean })}
+        disabled={pending}
       />
     );
   }
@@ -1013,10 +1013,10 @@ function ScriptFields({
             checked={targets.includes(target.value)}
             key={target.value}
             label={target.label}
-            onChange={(on) =>
+            onCheckedChange={(on) =>
               onChange({ targets: toggle(targets, target.value, on) })
             }
-            pending={pending}
+            disabled={pending}
           />
         ))}
       </FieldGroup>
@@ -1027,10 +1027,10 @@ function ScriptFields({
             checked={affects.includes(effect.value)}
             key={effect.value}
             label={effect.label}
-            onChange={(on) =>
+            onCheckedChange={(on) =>
               onChange({ affects: toggle(affects, effect.value, on) })
             }
-            pending={pending}
+            disabled={pending}
           />
         ))}
       </FieldGroup>
@@ -1072,14 +1072,14 @@ function ScriptFields({
           checked={script.enabled}
           hint="A switched-off script stays in the preset and changes nothing."
           label="Enabled"
-          onChange={(enabled) => onChange({ enabled })}
-          pending={pending}
+          onCheckedChange={(enabled) => onChange({ enabled })}
+          disabled={pending}
         />
         <Switch
           checked={script.runOnEdit ?? false}
           label="Run it again when a message is edited"
-          onChange={(runOnEdit) => onChange({ runOnEdit })}
-          pending={pending}
+          onCheckedChange={(runOnEdit) => onChange({ runOnEdit })}
+          disabled={pending}
         />
       </FieldGroup>
 

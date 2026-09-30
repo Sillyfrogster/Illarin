@@ -2,6 +2,7 @@
 
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import type { LorebookEntry } from "@/lib/api/query";
 import { CollectionStep } from "./workspace/CollectionStep";
 import {
@@ -11,7 +12,7 @@ import {
   without,
   writeLines,
 } from "./workspace/collection";
-import { ChoiceField, FieldGroup, FieldPair, Switch } from "./workspace/fields";
+import { ChoiceField, FieldGroup, FieldPair } from "./workspace/fields";
 
 export function entryName(entry: LorebookEntry, position: number): string {
   if (entry.name?.trim()) return entry.name;
@@ -115,22 +116,22 @@ function EntryFields({
           checked={entry.enabled}
           hint="A switched-off entry stays in the book and reaches no model."
           label="Enabled"
-          onChange={(enabled) => onChange({ enabled })}
-          pending={pending}
+          onCheckedChange={(enabled) => onChange({ enabled })}
+          disabled={pending}
         />
         <Switch
           checked={entry.constant ?? false}
           hint="On whatever the conversation says, keys or no keys."
           label="Always on"
-          onChange={(constant) => onChange({ constant })}
-          pending={pending}
+          onCheckedChange={(constant) => onChange({ constant })}
+          disabled={pending}
         />
         <Switch
           checked={entry.selective ?? false}
           hint="One of the keys below has to turn up too."
           label="Require a secondary key"
-          onChange={(selective) => onChange({ selective })}
-          pending={pending}
+          onCheckedChange={(selective) => onChange({ selective })}
+          disabled={pending}
         />
         <Field hint="one per line" label="Second keys">
           <Textarea
@@ -146,8 +147,8 @@ function EntryFields({
           checked={entry.caseSensitive ?? false}
           hint='Off: "Dragon" matches "dragon".'
           label="Match the case of a key"
-          onChange={(caseSensitive) => onChange({ caseSensitive })}
-          pending={pending}
+          onCheckedChange={(caseSensitive) => onChange({ caseSensitive })}
+          disabled={pending}
         />
       </FieldGroup>
 
@@ -188,26 +189,26 @@ function EntryFields({
         <Switch
           checked={recursion.exclude ?? false}
           label="Don't let this entry switch others on"
-          onChange={(exclude) =>
+          onCheckedChange={(exclude) =>
             onChange({ recursion: { ...recursion, exclude } })
           }
-          pending={pending}
+          disabled={pending}
         />
         <Switch
           checked={recursion.prevent ?? false}
           label="Don't let other entries switch this one on"
-          onChange={(prevent) =>
+          onCheckedChange={(prevent) =>
             onChange({ recursion: { ...recursion, prevent } })
           }
-          pending={pending}
+          disabled={pending}
         />
         <Switch
           checked={recursion.delayUntil ?? false}
           label="Hold it back until a later pass"
-          onChange={(delayUntil) =>
+          onCheckedChange={(delayUntil) =>
             onChange({ recursion: { ...recursion, delayUntil } })
           }
-          pending={pending}
+          disabled={pending}
         />
       </FieldGroup>
     </div>

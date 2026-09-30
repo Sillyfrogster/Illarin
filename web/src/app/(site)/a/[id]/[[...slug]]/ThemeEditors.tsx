@@ -4,6 +4,7 @@ import { FilePlus2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import type {
   ColorSetContent,
   StylesheetSetContent,
@@ -21,7 +22,6 @@ import {
   ItemMoveActions,
   Note,
   RemoveAction,
-  Switch,
 } from "./workspace/fields";
 
 export function ColorSetEditor({
@@ -356,8 +356,8 @@ function ComponentSheet({
         checked={sheet.enabled}
         hint="Disable this stylesheet to keep it out of downloads."
         label="Included"
-        onChange={(enabled) => onChange({ enabled })}
-        pending={pending}
+        onCheckedChange={(enabled) => onChange({ enabled })}
+        disabled={pending}
       />
       <div className="flex flex-wrap items-center gap-1">
         <ItemMoveActions moves={moves} pending={pending} />

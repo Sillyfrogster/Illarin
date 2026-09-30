@@ -10,6 +10,7 @@ import {
   SortableItem,
   SortableItemHandle,
 } from "@/components/ui/sortable";
+import { Switch } from "@/components/ui/switch";
 import {
   addWorkImage,
   type WorkElement,
@@ -26,7 +27,7 @@ import {
 } from "./PresetEditors";
 import { ColorSetEditor, StylesheetSetEditor } from "./ThemeEditors";
 import { moveItem, replaceAt, without } from "./workspace/collection";
-import { InlineItem, Note, Switch } from "./workspace/fields";
+import { InlineItem, Note } from "./workspace/fields";
 
 type ImageItem = {
   mediaId: string;
@@ -355,7 +356,7 @@ function ImageEditor({
                             checked={item.omitFromDownloads !== true}
                             hint="Off leaves it out of downloads by default."
                             label="Include in downloads"
-                            onChange={(included) =>
+                            onCheckedChange={(included) =>
                               onChange(
                                 replaceAt(items, index, {
                                   omitFromDownloads: included
@@ -364,7 +365,7 @@ function ImageEditor({
                                 }),
                               )
                             }
-                            pending={pending}
+                            disabled={pending}
                           />
                         ) : null}
                       </div>
