@@ -25,6 +25,7 @@ import {
   popupViewportClass,
 } from "@/lib/popup";
 import { spring } from "@/lib/springs";
+import { useKeyboardNavGate } from "@/lib/use-keyboard-nav-gate";
 import {
   useFluidHover,
   useRegisterFluidHoverItem,
@@ -79,6 +80,13 @@ const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
+/** returnFocusQuietly gives focus back to a pointer-opened menu's trigger without the keyboard ring. */
+function returnFocusQuietly(content: EventTarget | null) {
+  const id = (content as HTMLElement | null)?.getAttribute("aria-labelledby");
+  const trigger = id ? document.getElementById(id) : null;
+  trigger?.focus({ focusVisible: false, preventScroll: true } as FocusOptions);
+}
+
 /** DropdownMenuContent is Fluid Functionalism's dropdown popup: a raised surface that grows from its trigger, with one plate that follows the pointer between rows. */
 function DropdownMenuContent({
   className,
@@ -86,9 +94,11 @@ function DropdownMenuContent({
   align = "start",
   sideOffset = 6,
   collisionPadding = 16,
+  onCloseAutoFocus,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const open = useContext(MenuOpenContext);
+  const { keyboardNavRef, trackKeyboardNav } = useKeyboardNavGate(open);
   const { mounted, onExitComplete } = usePresence(open, spring.fast);
   const containerRef = useRef<HTMLDivElement>(null);
   const hover = useFluidHover(containerRef, { isItemDisabled: isDisabledRow });
@@ -117,6 +127,13 @@ function DropdownMenuContent({
         asChild
         collisionPadding={collisionPadding}
         forceMount
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          if (event.defaultPrevented || keyboardNavRef.current) return;
+          event.preventDefault();
+          returnFocusQuietly(event.target);
+        }}
+        onKeyDownCapture={trackKeyboardNav}
         sideOffset={sideOffset}
         {...props}
       >
