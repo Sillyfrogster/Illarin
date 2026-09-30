@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { RadioGroup } from "@/components/ui/radio-group";
 import {
   Slab,
   SlabFoot,
@@ -184,45 +185,27 @@ export function GitHubReleases({ workId }: { workId: string }) {
               </div>
               <div className="flex flex-col gap-5">
                 <fieldset>
-                  <legend className="mb-3 text-meta font-medium text-ink">
+                  <legend className="mb-2 text-meta font-medium text-ink">
                     File to import
                   </legend>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <label
-                      className={`flex min-h-20 cursor-pointer items-start gap-3 rounded-control p-3 inset-ring transition-colors ${!useAttachment ? "bg-accent-wash inset-ring-accent" : "bg-field inset-ring-edge hover:bg-deep"}`}
-                    >
-                      <input
-                        checked={!useAttachment}
-                        className="mt-1 accent-accent"
-                        onChange={() => setUseAttachment(false)}
-                        type="radio"
-                        name="release-file"
-                      />
-                      <span className="text-ui font-medium text-ink">
-                        Source archive
-                        <span className="mt-1 block text-meta font-normal text-mute">
-                          GitHub&apos;s release archive
-                        </span>
-                      </span>
-                    </label>
-                    <label
-                      className={`flex min-h-20 cursor-pointer items-start gap-3 rounded-control p-3 inset-ring transition-colors ${useAttachment ? "bg-accent-wash inset-ring-accent" : "bg-field inset-ring-edge hover:bg-deep"}`}
-                    >
-                      <input
-                        checked={useAttachment}
-                        className="mt-1 accent-accent"
-                        onChange={() => setUseAttachment(true)}
-                        type="radio"
-                        name="release-file"
-                      />
-                      <span className="text-ui font-medium text-ink">
-                        Named file
-                        <span className="mt-1 block text-meta font-normal text-mute">
-                          Same attachment on each release
-                        </span>
-                      </span>
-                    </label>
-                  </div>
+                  <RadioGroup
+                    onValueChange={(next) =>
+                      setUseAttachment(next === "attachment")
+                    }
+                    options={[
+                      {
+                        value: "archive",
+                        label: "Source archive",
+                        hint: "GitHub's release archive",
+                      },
+                      {
+                        value: "attachment",
+                        label: "Named file",
+                        hint: "Same attachment on each release",
+                      },
+                    ]}
+                    value={useAttachment ? "attachment" : "archive"}
+                  />
                   {useAttachment ? (
                     <Input
                       aria-label="Attachment file name"

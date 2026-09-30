@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
+import { Segmented } from "@/components/ui/segmented";
 import {
   acceptWorkReplacement,
   cancelWorkReplacement,
@@ -196,32 +197,22 @@ export function ReplacementStep({
                     <p className="text-ui text-ink" id={`subject-${role}`}>
                       {replacementSubjectLabel(role)}
                     </p>
-                    <div
+                    <Segmented
                       aria-labelledby={`subject-${role}`}
-                      className="flex flex-wrap gap-2"
-                      role="radiogroup"
-                    >
-                      {(["keep", "remove"] as const).map((answer) => (
-                        <label
-                          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control bg-deep px-4 text-meta text-ink has-checked:bg-accent-wash"
-                          key={answer}
-                        >
-                          <input
-                            checked={decisions[role] === answer}
-                            className="size-4 accent-[var(--v-action)]"
-                            name={`decision-${role}`}
-                            onChange={() =>
-                              setDecisions((current) => ({
-                                ...current,
-                                [role]: answer,
-                              }))
-                            }
-                            type="radio"
-                          />
-                          {answer === "keep" ? "Keep it" : "Remove it"}
-                        </label>
-                      ))}
-                    </div>
+                      className="self-start"
+                      name={`decision-${role}`}
+                      onValueChange={(answer) =>
+                        setDecisions((current) => ({
+                          ...current,
+                          [role]: answer,
+                        }))
+                      }
+                      options={[
+                        { value: "keep", label: "Keep it" },
+                        { value: "remove", label: "Remove it" },
+                      ]}
+                      value={decisions[role] ?? null}
+                    />
                   </div>
                 ))}
               </div>

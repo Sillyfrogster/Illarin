@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, PencilLine, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -8,10 +8,12 @@ import { ChipSet } from "@/components/ui/Chip";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
+import { RadioGroup } from "@/components/ui/radio-group";
 import { WorkOwnerMenu } from "@/components/work/WorkOwnerMenu";
 import type { WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { formattingWasRemoved } from "@/lib/rich-text";
+import { spring } from "@/lib/springs";
 import { workDisplayName } from "@/lib/work-name";
 import { canSendWork } from "@/lib/work-send";
 import { FollowControl } from "./follow/FollowControl";
@@ -31,10 +33,12 @@ import { useWorkspace } from "./workspace/state";
 
 const TAG_PREVIEW_LIMIT = 8;
 
-const RATINGS: { label: string; value: boolean | null }[] = [
-  { label: "Not answered", value: null },
-  { label: "No adult content", value: false },
-  { label: "Adult content", value: true },
+type RatingKey = "unanswered" | "no" | "yes";
+
+const RATINGS: { value: RatingKey; label: string; isNsfw: boolean | null }[] = [
+  { value: "unanswered", label: "Not answered", isNsfw: null },
+  { value: "no", label: "No adult content", isNsfw: false },
+  { value: "yes", label: "Adult content", isNsfw: true },
 ];
 
 function ratingLabel(isNsfw: boolean | null): string {
@@ -69,12 +73,11 @@ export function WorkHeader({
   const workspace = useWorkspace();
   const [tagInput, setTagInput] = useState("");
   const [tagTrouble, setTagTrouble] = useState("");
-  const reduced = useReducedMotion();
   const isDraft = work.lifecycle === "draft";
   const writing = workspace.editing;
   const ratings = isDraft
     ? RATINGS
-    : RATINGS.filter((rating) => rating.value !== null);
+    : RATINGS.filter((rating) => rating.isNsfw !== null);
   const blurbCount = blurbCharacterCount(workspace.details.blurb);
   const blurbTrouble = blurbLimitMessage(workspace.details.blurb);
   const covers = coverMedia(work.media);
@@ -177,10 +180,7 @@ export function WorkHeader({
                     initial={{ opacity: 0, clipPath: "inset(0 100% 0 0)" }}
                     animate={{ opacity: 1, clipPath: "inset(0 0% 0 0)" }}
                     exit={{ opacity: 0, clipPath: "inset(0 0 0 100%)" }}
-                    transition={{
-                      duration: reduced ? 0 : 0.35,
-                      ease: [0.4, 0, 0.2, 1],
-                    }}
+                    transition={spring.slow}
                     className="inline-flex items-center gap-2 rounded-control bg-accent-wash px-3 py-1 text-meta text-accent"
                     role="status"
                   >
@@ -196,24 +196,23 @@ export function WorkHeader({
                 id="adult-content-answer"
               >
                 <legend className="text-label text-mute">Adult content</legend>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {ratings.map((rating) => (
-                    <button
-                      aria-pressed={rating.value === workspace.details.isNsfw}
-                      className="min-h-11 rounded-control bg-deep px-4 text-meta text-ink outline-offset-3 aria-pressed:bg-action aria-pressed:text-on-accent"
-                      key={rating.label}
-                      onClick={() =>
-                        workspace.writeDetails({
-                          ...workspace.details,
-                          isNsfw: rating.value,
-                        })
-                      }
-                      type="button"
-                    >
-                      {rating.label}
-                    </button>
-                  ))}
-                </div>
+                <RadioGroup
+                  className="mt-2"
+                  onValueChange={(key) =>
+                    workspace.writeDetails({
+                      ...workspace.details,
+                      isNsfw:
+                        RATINGS.find((rating) => rating.value === key)
+                          ?.isNsfw ?? null,
+                    })
+                  }
+                  options={ratings}
+                  value={
+                    RATINGS.find(
+                      (rating) => rating.isNsfw === workspace.details.isNsfw,
+                    )?.value ?? null
+                  }
+                />
                 {workspace.details.isNsfw === null ? (
                   <p className="mt-2 text-label text-mute">
                     Answer the adult content question before publishing.

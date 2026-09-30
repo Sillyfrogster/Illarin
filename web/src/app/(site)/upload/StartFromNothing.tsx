@@ -1,20 +1,19 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
 import { Button } from "@/components/ui/button";
+import { RadioGroup } from "@/components/ui/radio-group";
 import { type BrowseType, startWork } from "@/lib/api/query";
 import type { BuildChoice, BuildChoices } from "@/lib/api/shapes";
 import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/cn";
+import { spring } from "@/lib/springs";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
 import { DraftPreview } from "./DraftPreview";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 /** StartFromNothing lets a creator pick a type, and the app where the type needs one, beside the page that draft opens with. */
 export function StartFromNothing({
@@ -53,7 +52,6 @@ export function StartFromNothing({
 
 function Builder({ choices }: { choices: BuildChoice[] }) {
   const router = useRouter();
-  const still = useReducedMotion();
   const [chosen, setChosen] = useState(choices[0]);
   const [apps, setApps] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
@@ -80,50 +78,31 @@ function Builder({ choices }: { choices: BuildChoice[] }) {
 
   return (
     <div className="mt-7 grid items-start gap-6 lg:grid-cols-[13rem_minmax(0,1fr)_14rem] lg:gap-8">
-      <fieldset className="flex min-w-0 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] lg:flex-col lg:overflow-visible">
-        <legend className="sr-only">Type</legend>
-        {choices.map((choice) => {
-          const listed = choice.type as BrowseType;
-          const selected = choice.type === chosen.type;
-          return (
-            <label
-              className={cn(
-                "relative flex min-h-14 shrink-0 cursor-pointer items-center gap-3 rounded-control py-2 pr-4 pl-2 font-ui text-ui font-medium transition-colors duration-200 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent has-[:focus-visible]:outline-offset-3",
-                selected ? "text-on-accent" : "text-ink hover:bg-deep",
-              )}
-              key={choice.type}
-            >
-              {selected ? (
-                <motion.span
-                  className="absolute inset-0 rounded-control bg-action shadow-[0_4px_14px_-5px_var(--v-action)]"
-                  layoutId={still ? undefined : "draft-type"}
-                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                />
-              ) : null}
-              <input
-                checked={selected}
-                className="sr-only"
-                name="draft-type"
-                onChange={() => setChosen(choice)}
-                type="radio"
-              />
-              <span className="relative block aspect-[5/6] w-8 overflow-hidden rounded-[6px]">
-                <DefaultCover compact type={listed} />
-              </span>
-              <span className="relative">{TYPE_LABELS[listed]}</span>
-            </label>
-          );
-        })}
-      </fieldset>
+      <RadioGroup
+        aria-label="Type"
+        onValueChange={(next) =>
+          setChosen(choices.find((choice) => choice.type === next) ?? chosen)
+        }
+        options={choices.map((choice) => ({
+          value: choice.type,
+          label: TYPE_LABELS[choice.type as BrowseType],
+          media: (
+            <span className="relative block aspect-[5/6] w-6 shrink-0 overflow-hidden rounded-[5px]">
+              <DefaultCover compact type={choice.type as BrowseType} />
+            </span>
+          ),
+        }))}
+        value={chosen.type}
+      />
 
       <AnimatePresence initial={false} mode="wait">
         <motion.div
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          exit={{ opacity: 0, y: -6, filter: "blur(4px)" }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6, transition: spring.moderate.exit }}
           className="min-w-0 max-lg:order-3"
-          initial={still ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
+          initial={{ opacity: 0, y: 10 }}
           key={chosen.type}
-          transition={{ duration: 0.28, ease: EASE }}
+          transition={spring.moderate}
         >
           {draft ? <DraftPreview blocks={draft.blocks} type={type} /> : null}
         </motion.div>
@@ -131,52 +110,22 @@ function Builder({ choices }: { choices: BuildChoice[] }) {
 
       <div className="grid min-w-0 content-start gap-5 max-lg:order-2 lg:sticky lg:top-[calc(var(--header-height)+2rem)]">
         {chosen.apps.length > 0 ? (
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="text-meta font-medium text-ink">App</legend>
             <p className="mt-0.5 text-label text-mute">
               Presets and themes are made for one app.
             </p>
-            <div className="mt-2.5 grid gap-1.5">
-              {chosen.apps.map((named) => {
-                const selected = named.id === app;
-                return (
-                  <label
-                    className={cn(
-                      "relative flex min-h-11 cursor-pointer items-center rounded-control px-3.5 font-ui text-ui transition-colors duration-200 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent has-[:focus-visible]:outline-offset-2",
-                      selected
-                        ? "font-medium text-accent"
-                        : "text-ink hover:bg-deep",
-                    )}
-                    key={named.id}
-                  >
-                    {selected ? (
-                      <motion.span
-                        className="absolute inset-0 rounded-control bg-accent-wash"
-                        layoutId={still ? undefined : `draft-app-${type}`}
-                        transition={{
-                          type: "spring",
-                          stiffness: 420,
-                          damping: 34,
-                        }}
-                      />
-                    ) : null}
-                    <input
-                      checked={selected}
-                      className="sr-only"
-                      name={`app-${type}`}
-                      onChange={() =>
-                        setApps((current) => ({
-                          ...current,
-                          [type]: named.id,
-                        }))
-                      }
-                      type="radio"
-                    />
-                    <span className="relative">{named.label}</span>
-                  </label>
-                );
-              })}
-            </div>
+            <RadioGroup
+              className="mt-2.5"
+              onValueChange={(next) =>
+                setApps((current) => ({ ...current, [type]: next }))
+              }
+              options={chosen.apps.map((named) => ({
+                value: named.id,
+                label: named.label,
+              }))}
+              value={app}
+            />
           </fieldset>
         ) : null}
 
