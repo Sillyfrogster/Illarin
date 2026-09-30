@@ -63,7 +63,9 @@ export function SubtleTabs<T extends string>({
                   "font-prose text-meta tabular-nums",
                   tab.attention && !here
                     ? "rounded-control bg-stop-wash px-1.5 text-stop"
-                    : "opacity-70",
+                    : here
+                      ? "text-accent"
+                      : "text-mute",
                 )}
               >
                 {tab.count}

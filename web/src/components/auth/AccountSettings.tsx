@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Gate } from "@/components/ui/gate";
 import { Input } from "@/components/ui/input";
+import { Item, ItemGroup } from "@/components/ui/item";
 import { type WayIn, type WayInId, waysIn } from "@/lib/account-access";
 import { readRefusal, refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
@@ -130,9 +131,9 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
 
       {said ? <Alert tone="done">{said}</Alert> : null}
 
-      <ul className="m-0 grid list-none gap-px overflow-hidden rounded-plate bg-rule p-0">
+      <ItemGroup label="Sign-in methods">
         {ways.map((way) => (
-          <li className="bg-plane" key={way.id}>
+          <Item className="p-0" key={way.id}>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-4 px-5 py-5">
               <span
                 className={cn(
@@ -188,9 +189,9 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
                 </Button>
               </form>
             ) : null}
-          </li>
+          </Item>
         ))}
-      </ul>
+      </ItemGroup>
 
       {discord?.settled && !discord.canDetach ? (
         <p className="font-ui text-meta text-mute" id="detach-requirement">

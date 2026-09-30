@@ -9,6 +9,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { Item } from "@/components/ui/item";
 import { cn } from "@/lib/cn";
 import {
   installedHere,
@@ -39,7 +40,7 @@ export function ConnectedAppRow({
   const confirmationId = `revoke-${app.id}`;
 
   return (
-    <li className={cn("bg-plane px-5 py-5", cut && "opacity-60")}>
+    <Item className="px-5 py-5">
       <div className="flex flex-wrap items-start gap-x-5 gap-y-4">
         <span
           className={cn(
@@ -157,6 +158,6 @@ export function ConnectedAppRow({
           </AccordionItem>
         </Accordion>
       )}
-    </li>
+    </Item>
   );
 }

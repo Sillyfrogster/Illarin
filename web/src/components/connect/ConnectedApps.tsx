@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ItemGroup } from "@/components/ui/item";
 import { refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
@@ -216,7 +217,7 @@ export function ConnectedApps() {
             </p>
           </div>
         ) : (
-          <ul className="m-0 grid list-none gap-px overflow-hidden rounded-plate bg-rule p-0">
+          <ItemGroup label="Connected apps">
             {apps.map((app) => (
               <ConnectedAppRow
                 app={app}
@@ -229,7 +230,7 @@ export function ConnectedApps() {
                 revoking={revoking === app.id}
               />
             ))}
-          </ul>
+          </ItemGroup>
         )}
       </div>
     </section>
