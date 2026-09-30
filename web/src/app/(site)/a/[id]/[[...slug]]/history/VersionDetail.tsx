@@ -199,7 +199,7 @@ function VersionManagement({
       <div className="flex min-h-11 flex-wrap items-center gap-x-1">
         {!current ? (
           <Button
-            aria-pressed={mode === "restore"}
+            aria-expanded={mode === "restore"}
             className={cn("-ml-3", mode === "restore" && "text-ink")}
             onClick={() => setMode("restore")}
             size="compact"
@@ -210,7 +210,7 @@ function VersionManagement({
           </Button>
         ) : null}
         <Button
-          aria-pressed={mode === "correct"}
+          aria-expanded={mode === "correct"}
           className={cn(mode === "correct" && "text-ink")}
           onClick={() => setMode("correct")}
           size="compact"
@@ -221,7 +221,7 @@ function VersionManagement({
         </Button>
         {!current && !version.withdrawnAt ? (
           <Button
-            aria-pressed={mode === "withdraw"}
+            aria-expanded={mode === "withdraw"}
             className={cn(mode === "withdraw" && "text-stop")}
             onClick={() => setMode("withdraw")}
             size="compact"
