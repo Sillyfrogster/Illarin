@@ -4,7 +4,6 @@ import {
   motion,
   useMotionTemplate,
   useMotionValueEvent,
-  useReducedMotion,
   useScroll,
   useTransform,
 } from "framer-motion";
@@ -17,6 +16,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { LineLink } from "@/components/ui/line-link";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { useAuth } from "@/lib/auth";
+import { spring } from "@/lib/springs";
 import { AccountMenu } from "./AccountMenu";
 import {
   isCurrentPage,
@@ -33,7 +33,6 @@ export function SiteHeader() {
   const { scrollY } = useScroll();
   const depth = useTransform(scrollY, [0, 40], [0.16, 0.36], { clamp: true });
   const lift = useMotionTemplate`drop-shadow(0 6px 10px rgb(0 0 0 / ${depth}))`;
-  const reducedMotion = useReducedMotion();
   const header = useRef<HTMLElement>(null);
   const scrollDirection = useRef({ direction: 0, anchor: 0 });
   const [hidden, setHidden] = useState(false);
@@ -62,10 +61,7 @@ export function SiteHeader() {
   const motionProps = {
     animate: { y: hidden ? -120 : 0 },
     initial: false,
-    transition: {
-      duration: reducedMotion ? 0 : 0.22,
-      ease: "easeOut" as const,
-    },
+    transition: spring.slow,
     onFocusCapture: () => setHidden(false),
     ref: header,
   };
