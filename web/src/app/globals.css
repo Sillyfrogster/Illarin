@@ -59,15 +59,15 @@
   --text-section--line-height: 1.3;
   --text-brand: 1.75rem;
   --text-brand--line-height: 1.5;
-  --text-lede: 1.1875rem;
+  --text-lede: var(--type-lede);
   --text-lede--line-height: 1.6;
-  --text-article: 1.0625rem;
+  --text-article: var(--type-article);
   --text-article--line-height: 1.85;
-  --text-prose: 1rem;
+  --text-prose: var(--type-prose);
   --text-prose--line-height: 1.8;
-  --text-ui: 0.9375rem;
+  --text-ui: var(--type-ui);
   --text-ui--line-height: 1.5;
-  --text-meta: 0.8125rem;
+  --text-meta: var(--type-meta);
   --text-meta--line-height: 1.5;
   --text-label: 0.75rem;
   --text-label--line-height: 1.5;
@@ -76,9 +76,32 @@
   --spacing-group: 2rem;
   --spacing-section: 4rem;
   --spacing-chapter: 6rem;
+  --spacing-control: var(--control);
+  --spacing-control-compact: var(--control-compact);
+  --spacing-segment: calc(var(--control) - 0.5rem);
+  --spacing-segment-compact: calc(var(--control-compact) - 0.25rem);
 
   --radius-control: 10px;
   --radius-plate: 14px;
+
+  --color-hover: var(--v-hover);
+  --color-active: var(--v-active);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-surface-5: var(--surface-5);
+  --color-surface-6: var(--surface-6);
+  --color-surface-7: var(--surface-7);
+  --color-surface-8: var(--surface-8);
+  --shadow-surface-1: var(--shadow-1);
+  --shadow-surface-2: var(--shadow-2);
+  --shadow-surface-3: var(--shadow-3);
+  --shadow-surface-4: var(--shadow-4);
+  --shadow-surface-5: var(--shadow-5);
+  --shadow-surface-6: var(--shadow-6);
+  --shadow-surface-7: var(--shadow-7);
+  --shadow-surface-8: var(--shadow-8);
 
   --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-pop-in: pop-in 150ms var(--ease-wipe);
@@ -185,6 +208,86 @@
   --v-media: #050505;
   --v-on-media: #f5f5f2;
 
+  --v-hover: light-dark(rgb(0 0 0 / 0.04), rgb(255 255 255 / 0.06));
+  --v-active: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
+
+  --control: 2.25rem;
+  --control-compact: 1.75rem;
+  --type-lede: 1.125rem;
+  --type-article: 1rem;
+  --type-prose: 0.9375rem;
+  --type-ui: 0.875rem;
+  --type-meta: 0.75rem;
+
+  --surface-1: light-dark(#fafafa, #171717);
+  --surface-2: light-dark(#fcfcfc, #1e1e1e);
+  --surface-3: light-dark(#ffffff, #252525);
+  --surface-4: light-dark(#ffffff, #2c2c2c);
+  --surface-5: light-dark(#ffffff, #333333);
+  --surface-6: light-dark(#ffffff, #3a3a3a);
+  --surface-7: light-dark(#ffffff, #414141);
+  --surface-8: light-dark(#ffffff, #484848);
+  --shadow-color: light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.18));
+  --shadow-1:
+    inset 0 0 0 1px light-dark(transparent, rgb(255 255 255 / 0.02)),
+    0 0 0 1px light-dark(var(--shadow-color), transparent);
+  --shadow-2:
+    inset 0 1px 0 0 light-dark(transparent, rgb(255 255 255 / 0.01)),
+    inset 0 0 0 1px light-dark(transparent, rgb(255 255 255 / 0.02)),
+    0 0 0 1px light-dark(var(--shadow-color), transparent),
+    0 1px 1px -0.5px var(--shadow-color);
+  --shadow-3:
+    inset 0 1px 0 0 light-dark(transparent, rgb(255 255 255 / 0.02)),
+    inset 0 0 0 1px light-dark(transparent, rgb(255 255 255 / 0.02)),
+    0 0 0 1px light-dark(var(--shadow-color), rgb(0 0 0 / 0.12)),
+    0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color);
+  --shadow-4:
+    inset 0 1px 0 0 light-dark(transparent, rgb(255 255 255 / 0.02)),
+    inset 0 0 0 1px light-dark(transparent, rgb(255 255 255 / 0.04)),
+    0 0 0 1px light-dark(var(--shadow-color), rgb(0 0 0 / 0.14)),
+    0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color),
+    0 6px 6px -3px var(--shadow-color);
+  --shadow-5:
+    inset 0 1px 0 0 light-dark(transparent, rgb(255 255 255 / 0.04)),
+    inset 0 0 0 1px light-dark(transparent, rgb(255 255 255 / 0.04)),
+    0 0 0 1px light-dark(var(--shadow-color), rgb(0 0 0 / 0.16)),
+    0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color),
+    0 6px 6px -3px var(--shadow-color),
+    0 12px 12px -6px var(--shadow-color);
+  --shadow-6:
+    inset 0 1px 0 0 light-dark(transparent, rgb(255 255 255 / 0.04)),
+    inset 0 0 0 1px light-dark(transparent, rgb(255 255 255 / 0.06)),
+    0 0 0 1px light-dark(var(--shadow-color), rgb(0 0 0 / 0.18)),
+    0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color),
+    0 6px 6px -3px var(--shadow-color),
+    0 12px 12px -6px var(--shadow-color),
+    0 24px 24px -12px var(--shadow-color);
+  --shadow-7:
+    inset 0 1px 0 0 light-dark(transparent, rgb(255 255 255 / 0.06)),
+    inset 0 0 0 1px light-dark(transparent, rgb(255 255 255 / 0.06)),
+    0 0 0 1px light-dark(var(--shadow-color), rgb(0 0 0 / 0.2)),
+    0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color),
+    0 6px 6px -3px var(--shadow-color),
+    0 12px 12px -6px var(--shadow-color),
+    0 24px 24px -12px var(--shadow-color),
+    0 48px 48px -24px var(--shadow-color);
+  --shadow-8:
+    inset 0 1px 0 0 light-dark(transparent, rgb(255 255 255 / 0.06)),
+    inset 0 0 0 1px light-dark(transparent, rgb(255 255 255 / 0.06)),
+    0 0 0 1px light-dark(var(--shadow-color), rgb(0 0 0 / 0.22)),
+    0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color),
+    0 6px 6px -3px var(--shadow-color),
+    0 12px 12px -6px var(--shadow-color),
+    0 24px 24px -12px var(--shadow-color),
+    0 48px 48px -24px var(--shadow-color),
+    0 96px 96px -48px var(--shadow-color);
+
   --shell: 86rem;
   --gutter: 20px;
   --header-height: 72px;
@@ -225,6 +328,18 @@
 @media (min-width: 1280px) {
   :root {
     --gutter: 56px;
+  }
+}
+
+@media (pointer: coarse) {
+  :root {
+    --control: 2.75rem;
+    --control-compact: 2.75rem;
+    --type-lede: 1.1875rem;
+    --type-article: 1.0625rem;
+    --type-prose: 1rem;
+    --type-ui: 0.9375rem;
+    --type-meta: 0.8125rem;
   }
 }
 

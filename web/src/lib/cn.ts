@@ -3,6 +3,18 @@ import { extendTailwindMerge } from "tailwind-merge";
 
 const merge = extendTailwindMerge({
   extend: {
+    theme: {
+      spacing: [
+        "control",
+        "control-compact",
+        "segment",
+        "segment-compact",
+        "flow",
+        "group",
+        "section",
+        "chapter",
+      ],
+    },
     classGroups: {
       "font-size": [
         {
@@ -22,6 +34,7 @@ const merge = extendTailwindMerge({
         },
       ],
       "font-family": [{ font: ["display", "ui", "prose"] }],
+      rounded: [{ rounded: ["control", "plate"] }],
     },
   },
 });
@@ -29,3 +42,7 @@ const merge = extendTailwindMerge({
 export function cn(...values: ClassValue[]) {
   return merge(clsx(values));
 }
+
+/** focusRing is the one keyboard focus ring every control draws in place of the global outline. */
+export const focusRing =
+  "outline-none focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent/50";
