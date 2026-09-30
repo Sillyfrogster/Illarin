@@ -2,9 +2,14 @@
 
 import { ShieldAlert } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import {
   type PendingConnection,
   readableExpiry,
@@ -138,32 +143,36 @@ export function ConnectionDecision({
         ) : null}
       </div>
 
-      <MorphingDisclosure
+      <Accordion
         className="border-t border-rule pt-3"
-        summary="Capabilities"
+        collapsible
+        type="single"
       >
-        <div className="pt-4 pb-2">
-          <p className="font-ui text-meta text-mute">
-            Self-reported technical details. They never grant permission.
-          </p>
-          <dl className="mt-4 grid gap-4 sm:grid-cols-3">
-            <DeclaredValues
-              label="Accepted formats"
-              values={connection.acceptedFormats}
-            />
-            <DeclaredValues
-              label="Capabilities"
-              values={connection.capabilities}
-            />
-            <div>
-              <dt className="font-ui text-meta text-mute">Protocol</dt>
-              <dd className="mt-1 font-ui text-ui text-ink">
-                Version {connection.protocolVersion}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </MorphingDisclosure>
+        <AccordionItem value="capabilities">
+          <AccordionTrigger>Capabilities</AccordionTrigger>
+          <AccordionContent className="pt-4 pb-2">
+            <p className="font-ui text-meta text-mute">
+              Self-reported technical details. They never grant permission.
+            </p>
+            <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+              <DeclaredValues
+                label="Accepted formats"
+                values={connection.acceptedFormats}
+              />
+              <DeclaredValues
+                label="Capabilities"
+                values={connection.capabilities}
+              />
+              <div>
+                <dt className="font-ui text-meta text-mute">Protocol</dt>
+                <dd className="mt-1 font-ui text-ui text-ink">
+                  Version {connection.protocolVersion}
+                </dd>
+              </div>
+            </dl>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }

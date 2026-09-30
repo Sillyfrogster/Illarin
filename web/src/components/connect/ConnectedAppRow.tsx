@@ -2,8 +2,13 @@
 
 import { Plug, PlugZap } from "lucide-react";
 import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import { cn } from "@/lib/cn";
 import {
   installedHere,
@@ -117,32 +122,40 @@ export function ConnectedAppRow({
       </div>
 
       {cut ? null : (
-        <MorphingDisclosure className="mt-3" summary="Capabilities">
-          <dl className="grid gap-4 pt-3 pb-1 sm:grid-cols-3">
-            {app.appVersion ? (
-              <DeclaredValues label="Version" values={[app.appVersion]} />
-            ) : null}
-            <DeclaredValues label="Formats" values={app.acceptedFormats} />
-            <DeclaredValues label="Capabilities" values={app.capabilities} />
-            {app.protocolVersion !== null ? (
-              <DeclaredValues
-                label="Protocol"
-                values={[`Version ${app.protocolVersion}`]}
-              />
-            ) : null}
-            <div className="sm:col-span-3">
-              <dt className="font-ui text-meta text-mute">
-                Refresh credential
-              </dt>
-              <dd className="mt-1 font-mono text-meta text-ink">
-                {app.prefix}
-              </dd>
-            </div>
-          </dl>
-          <p className="pb-1 font-ui text-meta text-mute">
-            Self-reported compatibility, not permission.
-          </p>
-        </MorphingDisclosure>
+        <Accordion className="mt-3" collapsible type="single">
+          <AccordionItem value="capabilities">
+            <AccordionTrigger>Capabilities</AccordionTrigger>
+            <AccordionContent>
+              <dl className="grid gap-4 pt-3 pb-1 sm:grid-cols-3">
+                {app.appVersion ? (
+                  <DeclaredValues label="Version" values={[app.appVersion]} />
+                ) : null}
+                <DeclaredValues label="Formats" values={app.acceptedFormats} />
+                <DeclaredValues
+                  label="Capabilities"
+                  values={app.capabilities}
+                />
+                {app.protocolVersion !== null ? (
+                  <DeclaredValues
+                    label="Protocol"
+                    values={[`Version ${app.protocolVersion}`]}
+                  />
+                ) : null}
+                <div className="sm:col-span-3">
+                  <dt className="font-ui text-meta text-mute">
+                    Refresh credential
+                  </dt>
+                  <dd className="mt-1 font-mono text-meta text-ink">
+                    {app.prefix}
+                  </dd>
+                </div>
+              </dl>
+              <p className="pb-1 font-ui text-meta text-mute">
+                Self-reported compatibility, not permission.
+              </p>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       )}
     </li>
   );

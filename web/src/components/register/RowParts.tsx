@@ -1,6 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { SortableItem } from "@/components/ui/sortable";
 import { cn } from "@/lib/cn";
 
@@ -192,12 +197,18 @@ export function Past({
 }) {
   return (
     <div className="mt-8 max-w-[34rem]">
-      <MorphingDisclosure
+      <Accordion
         className="rounded-plate bg-deep px-5 py-4"
-        summary={summary}
+        collapsible
+        type="single"
       >
-        <ul className="mt-4 flex list-none flex-col gap-1">{children}</ul>
-      </MorphingDisclosure>
+        <AccordionItem value="past">
+          <AccordionTrigger>{summary}</AccordionTrigger>
+          <AccordionContent>
+            <ul className="mt-4 flex list-none flex-col gap-1">{children}</ul>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }

@@ -7,8 +7,13 @@ import {
   useMemo,
   useRef,
 } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Arrive } from "@/components/ui/arrive";
-import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import type {
   BrowseType,
   WorkBlock,
@@ -290,26 +295,27 @@ export function WorkBlocks({
           </div>
         )}
         {modelContent.length > 0 ? (
-          <MorphingDisclosure
+          <Accordion
             className="mt-section rounded-plate bg-deep/70 px-5 py-3"
-            summary="Model instructions"
-            trailing={
-              <span className="font-ui text-meta text-mute">
-                Sent to the model with every chat.
-              </span>
-            }
+            collapsible
+            type="single"
           >
-            <div className="grid gap-8 pt-5 pb-2">
-              {modelContent.map(({ element }) => (
-                <ElementBody
-                  element={element}
-                  images={images}
-                  isOwner={false}
-                  key={element.id}
-                />
-              ))}
-            </div>
-          </MorphingDisclosure>
+            <AccordionItem value="model">
+              <AccordionTrigger trailing="Sent to the model with every chat.">
+                Model instructions
+              </AccordionTrigger>
+              <AccordionContent className="grid gap-8 pt-5 pb-2">
+                {modelContent.map(({ element }) => (
+                  <ElementBody
+                    element={element}
+                    images={images}
+                    isOwner={false}
+                    key={element.id}
+                  />
+                ))}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         ) : null}
       </div>
     </>

@@ -1,10 +1,14 @@
 "use client";
 
-import { X } from "lucide-react";
 import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
-import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type {
@@ -215,72 +219,69 @@ function GroupEditor({
   }
 
   return (
-    <MorphingDisclosure
-      summary={
-        groups.length === 0
-          ? "No headings"
-          : `${groups.length} ${groups.length === 1 ? "heading" : "headings"}`
-      }
-    >
-      <div className="flex flex-col gap-3 pt-3">
-        {groups.length === 0 ? (
-          <Note>
-            Fragments run in one list until you add a heading to group them
-            under.
-          </Note>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {groups.map((group, index) => (
-              <li className="flex items-center gap-1" key={group.id ?? index}>
-                <Input
-                  aria-label={`Heading ${index + 1}`}
-                  disabled={pending}
-                  onChange={(event) =>
-                    onChange({
-                      fragments,
-                      groups: replaceAt(groups, index, {
-                        name: event.target.value,
-                      }),
-                    })
-                  }
-                  value={group.name}
-                />
-                <button
-                  aria-label={`Remove the heading ${group.name}`}
-                  className="grid size-11 shrink-0 place-items-center rounded-control text-mute outline-offset-3 hover:bg-stop-wash hover:text-stop disabled:opacity-45"
-                  disabled={pending}
-                  onClick={() => removeGroup(index)}
-                  type="button"
-                >
-                  <X aria-hidden="true" size={16} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            aria-label="A new heading"
-            className="min-w-40 flex-1"
-            disabled={pending}
-            onChange={(event) => setAdding(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              event.preventDefault();
-              addGroup();
-            }}
-            placeholder="A new heading"
-            value={adding}
-          />
-          <AddAction
-            disabled={pending || adding.trim() === ""}
-            onClick={addGroup}
-          >
-            Add heading
-          </AddAction>
-        </div>
-      </div>
-    </MorphingDisclosure>
+    <Accordion collapsible type="single">
+      <AccordionItem value="headings">
+        <AccordionTrigger>
+          {groups.length === 0
+            ? "No headings"
+            : `${groups.length} ${groups.length === 1 ? "heading" : "headings"}`}
+        </AccordionTrigger>
+        <AccordionContent className="flex flex-col gap-3 pt-3">
+          {groups.length === 0 ? (
+            <Note>
+              Fragments run in one list until you add a heading to group them
+              under.
+            </Note>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {groups.map((group, index) => (
+                <li className="flex items-center gap-1" key={group.id ?? index}>
+                  <Input
+                    aria-label={`Heading ${index + 1}`}
+                    disabled={pending}
+                    onChange={(event) =>
+                      onChange({
+                        fragments,
+                        groups: replaceAt(groups, index, {
+                          name: event.target.value,
+                        }),
+                      })
+                    }
+                    value={group.name}
+                  />
+                  <RemoveAction
+                    disabled={pending}
+                    label={`Remove the heading ${group.name}`}
+                    onClick={() => removeGroup(index)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              aria-label="A new heading"
+              className="min-w-40 flex-1"
+              disabled={pending}
+              onChange={(event) => setAdding(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                addGroup();
+              }}
+              placeholder="A new heading"
+              value={adding}
+            />
+            <AddAction
+              disabled={pending || adding.trim() === ""}
+              onClick={addGroup}
+            >
+              Add heading
+            </AddAction>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
