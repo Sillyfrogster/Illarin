@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowUp } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ArticleContents } from "@/components/blog/ArticleContents";
 import { Shell } from "@/components/layout/Shell";
 import {
   clauseAnchor,
@@ -9,7 +10,6 @@ import {
   type LegalHref,
   nextDocument,
 } from "@/lib/legal-documents";
-import { LegalContents } from "./LegalContents";
 
 export type LegalClause = {
   body: ReactNode;
@@ -53,7 +53,7 @@ export function LegalPage({
                 <li key={document.href}>
                   <Link
                     aria-current={document.href === href ? "page" : undefined}
-                    className="flex min-h-11 items-center font-ui text-ui text-mute outline-offset-3 hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-accent"
+                    className="flex min-h-control items-center font-ui text-ui text-mute hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-accent"
                     href={document.href}
                   >
                     {document.title}
@@ -62,7 +62,14 @@ export function LegalPage({
               ))}
             </ul>
           </nav>
-          <LegalContents clauses={clauses} />
+          <ArticleContents
+            entries={clauses.map((clause) => ({
+              anchor: clauseAnchor(clause.heading),
+              label: clause.heading,
+              level: 2,
+            }))}
+            label="In this document"
+          />
         </aside>
 
         <article className="min-w-0 max-w-[70ch]" id="document-top">

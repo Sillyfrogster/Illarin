@@ -1,7 +1,14 @@
 "use client";
 
-import { ChevronRight, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import {
@@ -9,7 +16,6 @@ import {
   type PrivatePromptMismatch,
   resolvePromptCorrespondence,
 } from "@/lib/api/query";
-import { cn } from "@/lib/cn";
 
 const ABSENT = "absent";
 
@@ -60,125 +66,110 @@ export function RecordedPromptsPanel({ workId }: { workId: string }) {
   }
 
   return (
-    <div className={"mt-3.5 border-rule border-t"}>
-      <button
-        className={
-          "flex min-h-16 w-full items-center justify-between gap-3.5 py-3 text-left text-ink outline-offset-3 hover:text-accent"
-        }
-        type="button"
-        aria-expanded={open}
-        aria-controls="recorded-prompts-menu"
-        onClick={() => (open ? setOpen(false) : void read())}
-      >
-        <span
-          className={
-            "grid gap-1 [&>span]:text-meta [&>span]:text-mute [&>strong]:text-ui [&>strong]:font-medium"
-          }
-        >
-          <strong>Match your private prompts to older versions</strong>
-          <span>Unmatched versions hide all prompts and block downloads</span>
-        </span>
-        <ChevronRight
-          className={cn(
-            "shrink-0 text-mute transition-transform duration-200 motion-reduce:transition-none",
-            open && "rotate-90",
-          )}
-          size={18}
-          aria-hidden="true"
-        />
-      </button>
-
-      {open ? (
-        <div className={"pb-3.5"} id="recorded-prompts-menu">
-          <p className={"text-meta text-mute"}>
-            Your private prompts changed identity, so Illarin cannot tell which
-            prompt in an older version they are. Until you say, that version
-            keeps every prompt hidden and refuses downloads.
-          </p>
-          {versions === null ? (
-            <p className={"mt-3 text-meta text-mute italic"}>
-              Loading older versions…
+    <Accordion
+      className="mt-3.5 border-rule border-t pt-2"
+      collapsible
+      onValueChange={(value) => (value ? void read() : setOpen(false))}
+      type="single"
+      value={open ? "open" : ""}
+    >
+      <AccordionItem value="open">
+        <AccordionTrigger>
+          Match your private prompts to older versions
+        </AccordionTrigger>
+        <p className="pl-6 text-meta text-mute">
+          Unmatched versions hide all prompts and block downloads
+        </p>
+        <AccordionContent>
+          <div className="pt-3 pb-3.5 pl-6">
+            <p className={"text-meta text-mute"}>
+              Your private prompts changed identity, so Illarin cannot tell
+              which prompt in an older version they are. Until you say, that
+              version keeps every prompt hidden and refuses downloads.
             </p>
-          ) : versions.length === 0 ? (
-            <p className={"mt-3 text-meta text-mute italic"}>
-              Every recorded version matches your private prompts.
-            </p>
-          ) : (
-            <ul
-              className={
-                "mt-3 flex list-none flex-col gap-5 [&_h3]:text-ui [&_h3]:font-medium [&_h3]:text-ink"
-              }
-            >
-              {versions.map((version) => (
-                <li key={version.version.id}>
-                  <h3>
-                    Version {version.version.number}
-                    {version.version.summary
-                      ? `: ${version.version.summary}`
-                      : ""}
-                  </h3>
-                  {version.unmatched.map((prompt) => (
-                    <Field className="mt-2" key={prompt.id} label={prompt.name}>
-                      <Select
-                        onValueChange={(answer) =>
-                          setAnswers((current) => ({
-                            ...current,
-                            [`${version.version.id}:${prompt.id}`]: answer,
-                          }))
-                        }
-                        options={[
-                          {
-                            value: ABSENT,
-                            label: "This version did not carry it",
-                          },
-                          ...version.recorded.map((choice) => ({
-                            value: choice.id,
-                            label: choice.name,
-                          })),
-                        ]}
-                        value={answerKey(answers, version, prompt.id)}
-                      />
-                    </Field>
-                  ))}
-                  <button
-                    className={
-                      "mt-3 inline-flex min-h-11 items-center rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45"
-                    }
-                    type="button"
-                    disabled={pending !== 0}
-                    onClick={() => void settle(version)}
-                  >
-                    {pending === version.version.number
-                      ? "Saving matches…"
-                      : `Save matches for version ${version.version.number}`}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {message ? (
-            <p className={"mt-3 text-meta text-stop"} role="alert">
-              {message}
-            </p>
-          ) : null}
-          {versions === null ? (
-            <button
-              className={
-                "mt-3 inline-flex min-h-11 items-center gap-2 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3"
-              }
-              type="button"
-              onClick={() => {
-                setVersions(null);
-                void read();
-              }}
-            >
-              <RotateCcw size={14} aria-hidden="true" />
-              Try again
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+            {versions === null ? (
+              <p className={"mt-3 text-meta text-mute italic"}>
+                Loading older versions…
+              </p>
+            ) : versions.length === 0 ? (
+              <p className={"mt-3 text-meta text-mute italic"}>
+                Every recorded version matches your private prompts.
+              </p>
+            ) : (
+              <ul
+                className={
+                  "mt-3 flex list-none flex-col gap-5 [&_h3]:text-ui [&_h3]:font-medium [&_h3]:text-ink"
+                }
+              >
+                {versions.map((version) => (
+                  <li key={version.version.id}>
+                    <h3>
+                      Version {version.version.number}
+                      {version.version.summary
+                        ? `: ${version.version.summary}`
+                        : ""}
+                    </h3>
+                    {version.unmatched.map((prompt) => (
+                      <Field
+                        className="mt-2"
+                        key={prompt.id}
+                        label={prompt.name}
+                      >
+                        <Select
+                          onValueChange={(answer) =>
+                            setAnswers((current) => ({
+                              ...current,
+                              [`${version.version.id}:${prompt.id}`]: answer,
+                            }))
+                          }
+                          options={[
+                            {
+                              value: ABSENT,
+                              label: "This version did not carry it",
+                            },
+                            ...version.recorded.map((choice) => ({
+                              value: choice.id,
+                              label: choice.name,
+                            })),
+                          ]}
+                          value={answerKey(answers, version, prompt.id)}
+                        />
+                      </Field>
+                    ))}
+                    <Button
+                      className="mt-3"
+                      disabled={pending !== 0}
+                      onClick={() => void settle(version)}
+                    >
+                      {pending === version.version.number
+                        ? "Saving matches…"
+                        : `Save matches for version ${version.version.number}`}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {message ? (
+              <p className={"mt-3 text-meta text-stop"} role="alert">
+                {message}
+              </p>
+            ) : null}
+            {versions === null ? (
+              <Button
+                className="mt-3"
+                onClick={() => {
+                  setVersions(null);
+                  void read();
+                }}
+              >
+                <RotateCcw aria-hidden="true" />
+                Try again
+              </Button>
+            ) : null}
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 

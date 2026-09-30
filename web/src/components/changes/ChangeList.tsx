@@ -1,6 +1,13 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import type { VersionChange, VersionChangeGroup } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { wordDiff } from "@/lib/text-diff";
@@ -75,18 +82,31 @@ function ChangeRow({
       </p>
 
       {hasText || hasImage ? (
-        <details className="group mt-1 sm:ml-[5.75rem]">
-          <summary className="inline-flex min-h-9 cursor-pointer list-none items-center text-meta text-mute outline-offset-3 hover:text-ink">
-            <span className="underline decoration-rule underline-offset-4 group-open:decoration-accent">
+        <Collapsible className="mt-1 sm:ml-[5.75rem]">
+          <CollapsibleTrigger asChild>
+            <Button
+              className="group/change -ml-2 px-2"
+              size="compact"
+              variant="ghost"
+            >
+              <ChevronRight
+                aria-hidden="true"
+                className="transition-transform duration-80 group-data-[state=open]/change:rotate-90 motion-reduce:transition-none"
+              />
               {hasImage ? "Show the images" : "Show the wording"}
-            </span>
-          </summary>
-          {hasImage ? (
-            <Pictures after={change.afterImage} before={change.beforeImage} />
-          ) : (
-            <Wording after={change.after ?? ""} before={change.before ?? ""} />
-          )}
-        </details>
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            {hasImage ? (
+              <Pictures after={change.afterImage} before={change.beforeImage} />
+            ) : (
+              <Wording
+                after={change.after ?? ""}
+                before={change.before ?? ""}
+              />
+            )}
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
     </>
   );

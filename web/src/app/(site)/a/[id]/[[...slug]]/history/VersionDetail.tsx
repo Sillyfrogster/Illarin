@@ -1,8 +1,14 @@
 "use client";
 
-import { CircleSlash2, PencilLine, RotateCcw } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import {
+  ChevronRight,
+  CircleSlash2,
+  PencilLine,
+  RotateCcw,
+} from "lucide-react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -396,27 +402,39 @@ function Baseline({
 function Note({ notes }: { notes: string }) {
   const foldable = isLongNote(notes);
   const [shown, setShown] = useState(!foldable);
+  const id = useId();
 
   return (
-    <div className="mt-4 max-w-[60ch]">
+    <Collapsible
+      className="mt-4 max-w-[60ch]"
+      onOpenChange={setShown}
+      open={shown}
+    >
       <p
         className={cn(
           "font-prose text-prose whitespace-pre-wrap text-mute",
           shown ? null : "line-clamp-4",
         )}
+        id={id}
       >
         {notes}
       </p>
       {foldable ? (
-        <button
-          aria-expanded={shown}
-          className="mt-1 inline-flex min-h-11 items-center text-meta font-medium text-accent outline-offset-3 hover:text-ink"
-          onClick={() => setShown(!shown)}
-          type="button"
-        >
-          {shown ? "Show less" : "Read full notes"}
-        </button>
+        <CollapsibleTrigger asChild>
+          <Button
+            aria-controls={id}
+            className="group/notes mt-1 -ml-2 px-2"
+            size="compact"
+            variant="ghost"
+          >
+            <ChevronRight
+              aria-hidden="true"
+              className="transition-transform duration-80 group-data-[state=open]/notes:rotate-90 motion-reduce:transition-none"
+            />
+            {shown ? "Show less" : "Read full notes"}
+          </Button>
+        </CollapsibleTrigger>
       ) : null}
-    </div>
+    </Collapsible>
   );
 }

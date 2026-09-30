@@ -1,7 +1,13 @@
 "use client";
 
-import { ChevronRight, RotateCcw, Trash2 } from "lucide-react";
+import { RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -11,12 +17,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   deletePreservedData,
   fetchPreservedData,
   type PreservedData,
 } from "@/lib/api/query";
-import { cn } from "@/lib/cn";
 import { useDraftedChanges } from "@/lib/drafted-changes";
 
 export function PreservedPanel({ workId }: { workId: string }) {
@@ -58,100 +64,81 @@ export function PreservedPanel({ workId }: { workId: string }) {
   }
 
   return (
-    <div className={"mt-3.5 border-rule border-t"}>
-      <button
-        className={
-          "flex min-h-16 w-full items-center justify-between gap-3.5 py-3 text-left text-ink outline-offset-3 hover:text-accent"
-        }
-        type="button"
-        aria-expanded={open}
-        aria-controls="preserved-menu"
-        onClick={() => {
-          if (open) {
-            setOpen(false);
-          } else {
-            void openMenu();
-          }
-        }}
+    <>
+      <Accordion
+        className="mt-3.5 border-rule border-t pt-2"
+        collapsible
+        onValueChange={(value) => (value ? void openMenu() : setOpen(false))}
+        type="single"
+        value={open ? "open" : ""}
       >
-        <span
-          className={
-            "grid gap-1 [&>span]:text-meta [&>span]:text-mute [&>strong]:text-ui [&>strong]:font-medium"
-          }
-        >
-          <strong>File extras</strong>
-          <span>Data from your file that the page doesn't show</span>
-        </span>
-        <ChevronRight
-          className={cn(
-            "shrink-0 text-mute transition-transform duration-200 motion-reduce:transition-none",
-            open && "rotate-90",
-          )}
-          size={18}
-          aria-hidden="true"
-        />
-      </button>
-
-      {open ? (
-        <div className={"pb-3.5"} id="preserved-menu">
-          <p className={"text-meta text-mute"}>
-            These came with your file but aren't on the page. Removing one takes
-            it out of downloads in that format.
+        <AccordionItem value="open">
+          <AccordionTrigger>File extras</AccordionTrigger>
+          <p className="pl-6 text-meta text-mute">
+            Data from your file that the page doesn't show
           </p>
-          {namespaces === null ? (
-            <p className={"mt-3 text-meta text-mute italic"}>
-              Loading file extras…
-            </p>
-          ) : namespaces.length === 0 ? (
-            <p className={"mt-3 text-meta text-mute italic"}>No file extras</p>
-          ) : (
-            <ul
-              className={
-                "mt-3 list-none border-rule border-t [&>li]:flex [&>li]:min-h-13 [&>li]:items-center [&>li]:justify-between [&>li]:gap-3 [&>li]:border-rule [&>li]:border-b [&>li]:text-ui"
-              }
-            >
-              {namespaces.map((namespace) => (
-                <li key={namespace.name}>
-                  <span>{namespace.label}</span>
-                  <button
-                    className={
-                      "flex size-11 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-stop"
-                    }
-                    type="button"
-                    onClick={() => {
-                      setMessage("");
-                      setDeleting(namespace);
-                    }}
-                  >
-                    <Trash2 size={15} aria-hidden="true" />
-                    <span className="sr-only">Remove {namespace.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {message ? (
-            <p className={"mt-3 text-meta text-stop"} role="alert">
-              {message}
-            </p>
-          ) : null}
-          {namespaces === null ? (
-            <button
-              className={
-                "mt-3 inline-flex min-h-11 items-center gap-2 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3"
-              }
-              type="button"
-              onClick={() => {
-                setNamespaces(null);
-                void openMenu();
-              }}
-            >
-              <RotateCcw size={14} aria-hidden="true" />
-              Try again
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+          <AccordionContent>
+            <div className="pt-3 pb-3.5 pl-6">
+              <p className={"text-meta text-mute"}>
+                These came with your file but aren't on the page. Removing one
+                takes it out of downloads in that format.
+              </p>
+              {namespaces === null ? (
+                <p className={"mt-3 text-meta text-mute italic"}>
+                  Loading file extras…
+                </p>
+              ) : namespaces.length === 0 ? (
+                <p className={"mt-3 text-meta text-mute italic"}>
+                  No file extras
+                </p>
+              ) : (
+                <ul
+                  className={
+                    "mt-3 list-none border-rule border-t [&>li]:flex [&>li]:min-h-13 [&>li]:items-center [&>li]:justify-between [&>li]:gap-3 [&>li]:border-rule [&>li]:border-b [&>li]:text-ui"
+                  }
+                >
+                  {namespaces.map((namespace) => (
+                    <li key={namespace.name}>
+                      <span>{namespace.label}</span>
+                      <Tooltip content={`Remove ${namespace.label}`}>
+                        <Button
+                          aria-label={`Remove ${namespace.label}`}
+                          className="hover:text-stop"
+                          onClick={() => {
+                            setMessage("");
+                            setDeleting(namespace);
+                          }}
+                          size="icon"
+                          variant="ghost"
+                        >
+                          <Trash2 aria-hidden="true" />
+                        </Button>
+                      </Tooltip>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {message ? (
+                <p className={"mt-3 text-meta text-stop"} role="alert">
+                  {message}
+                </p>
+              ) : null}
+              {namespaces === null ? (
+                <Button
+                  className="mt-3"
+                  onClick={() => {
+                    setNamespaces(null);
+                    void openMenu();
+                  }}
+                >
+                  <RotateCcw aria-hidden="true" />
+                  Try again
+                </Button>
+              ) : null}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       {deleting ? (
         <DeleteNamespaceDialog
@@ -161,7 +148,7 @@ export function PreservedPanel({ workId }: { workId: string }) {
           onDelete={() => void remove(deleting.name)}
         />
       ) : null}
-    </div>
+    </>
   );
 }
 
