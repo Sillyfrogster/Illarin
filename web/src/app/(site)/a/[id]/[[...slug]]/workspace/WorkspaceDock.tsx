@@ -150,12 +150,20 @@ function VisibilityMenu({
       <DropdownMenuTrigger asChild>
         <button
           aria-label={`Visibility: ${shown.label}`}
-          className={cn(TOOL, WORDED_TOOL)}
+          className={cn(
+            TOOL,
+            WORDED_TOOL,
+            "@max-3xl/dock:w-control @max-3xl/dock:px-0",
+          )}
           type="button"
         >
           <shown.icon aria-hidden="true" size={18} />
-          {shown.label}
-          <ChevronDown aria-hidden="true" size={14} />
+          <span className="@max-3xl/dock:sr-only">{shown.label}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="@max-3xl/dock:hidden"
+            size={14}
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center" side="top">

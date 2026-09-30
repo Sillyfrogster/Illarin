@@ -74,14 +74,14 @@ export function DockTool({
         className={cn(
           TOOL,
           worded && WORDED_TOOL,
-          worded && "max-@3xl/dock:w-control max-@3xl/dock:px-0",
+          worded && "@max-3xl/dock:w-control @max-3xl/dock:px-0",
         )}
         onClick={onClick}
         type="button"
       >
         <Icon aria-hidden="true" size={18} />
         {worded ? (
-          <span className="max-@3xl/dock:sr-only" aria-hidden="true">
+          <span className="@max-3xl/dock:sr-only" aria-hidden="true">
             {shown}
           </span>
         ) : null}
@@ -91,7 +91,7 @@ export function DockTool({
             className={cn(
               "inline-flex min-w-5 items-center justify-center rounded-full bg-action px-1.5 font-ui text-label leading-5 font-semibold text-on-accent tabular-nums",
               worded
-                ? "max-@3xl/dock:absolute max-@3xl/dock:-top-1 max-@3xl/dock:-right-1"
+                ? "@max-3xl/dock:absolute @max-3xl/dock:-top-1 @max-3xl/dock:-right-1"
                 : "absolute -top-1 -right-1",
             )}
           >
