@@ -107,12 +107,7 @@ export function CheckboxRow({
   const generated = useId();
   const id = box.id ?? generated;
   return (
-    <Row
-      className={className}
-      hint={hint}
-      htmlFor={id}
-      label={label}
-    >
+    <Row className={className} hint={hint} htmlFor={id} label={label}>
       <Checkbox {...box} id={id} />
     </Row>
   );
@@ -156,7 +151,10 @@ export function CheckboxGroup<T extends string>({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the pointer only moves the hover plate; each row is its own checkbox
     <div
-      className={cn("relative -mx-3 grid w-[calc(100%+1.5rem)] max-w-[calc(28rem+1.5rem)] min-w-0", className)}
+      className={cn(
+        "relative -mx-3 grid w-[calc(100%+1.5rem)] max-w-[calc(28rem+1.5rem)] min-w-0",
+        className,
+      )}
       onMouseEnter={hover.handlers.onMouseEnter}
       onMouseLeave={hover.handlers.onMouseLeave}
       onMouseMove={hover.handlers.onMouseMove}
