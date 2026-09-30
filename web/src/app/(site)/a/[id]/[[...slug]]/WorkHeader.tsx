@@ -3,8 +3,7 @@
 import { ArrowLeft, EyeOff, Globe, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Alert } from "@/components/ui/alert";
-import { BadgeList } from "@/components/ui/badge";
+import { Badge, BadgeList } from "@/components/ui/badge";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
@@ -63,15 +62,19 @@ function OwnerPageState({
           PencilLine,
           "Drafted changes · readers still see the published version",
         ]
-      : [Globe, "Published · this is what readers see"];
+      : [Globe, "Published · readers see this page"];
+  if (!isDraft && !unpublished)
+    return (
+      <p className="inline-flex items-center gap-1.5 text-meta text-mute">
+        <Icon aria-hidden="true" className="size-4" />
+        {words}
+      </p>
+    );
   return (
-    <Alert
-      className="mt-4 flex items-center gap-2 font-medium"
-      tone={isDraft || unpublished ? "done" : "quiet"}
-    >
-      <Icon aria-hidden="true" />
+    <Badge className="min-h-control px-3 text-meta" role="status" tone="accent">
+      <Icon aria-hidden="true" className="size-4" />
       {words}
-    </Alert>
+    </Badge>
   );
 }
 
@@ -126,25 +129,26 @@ export function WorkHeader({
       typeName={typeLabel.toLowerCase()}
     >
       <div className={shellClassName}>
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2">
           <Link
-            className="inline-flex min-h-control items-center gap-2 text-meta text-mute hover:text-ink"
+            className="mr-auto inline-flex min-h-control items-center gap-2 text-meta text-mute hover:text-ink"
             href="/browse"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
             Browse
           </Link>
           {work.isOwner ? (
-            <WorkOwnerMenu work={work} onEdit={workspace.startEditing} />
+            <>
+              <div className="order-last w-full sm:order-none sm:w-auto">
+                <OwnerPageState
+                  isDraft={isDraft}
+                  unpublished={workspace.unpublishedChanges}
+                />
+              </div>
+              <WorkOwnerMenu work={work} onEdit={workspace.startEditing} />
+            </>
           ) : null}
         </div>
-
-        {work.isOwner ? (
-          <OwnerPageState
-            isDraft={isDraft}
-            unpublished={workspace.unpublishedChanges}
-          />
-        ) : null}
 
         {work.isOwner && writing ? (
           <p className="mt-3 text-meta text-mute">
