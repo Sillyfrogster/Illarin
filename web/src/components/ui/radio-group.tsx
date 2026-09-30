@@ -89,7 +89,7 @@ function RadioGroup<T extends string>({
     <RadioGroupPrimitive.Root
       {...labelled}
       className={cn(
-        "relative grid w-full max-w-sm min-w-0 select-none",
+        "relative -mx-3 grid w-[calc(100%+1.5rem)] max-w-[calc(24rem+1.5rem)] min-w-0 select-none",
         className,
       )}
       disabled={disabled}

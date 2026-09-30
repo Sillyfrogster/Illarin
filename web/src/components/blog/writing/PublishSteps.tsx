@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckRow } from "@/components/ui/check-row";
+import { CheckboxRow } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { readWorkspace } from "@/lib/api/blog";
@@ -94,9 +94,11 @@ export function PublishStep({
         <ScheduleFields id="publish-schedule" onChange={setWhen} parts={when} />
       ) : null}
       {hasChannel && !post.publishedAt ? (
-        <CheckRow checked={discord} onChange={setDiscord}>
-          Post to the blog's Discord
-        </CheckRow>
+        <CheckboxRow
+          checked={discord}
+          label="Post to the blog's Discord"
+          onCheckedChange={setDiscord}
+        />
       ) : null}
       <Commit
         busy={busy}

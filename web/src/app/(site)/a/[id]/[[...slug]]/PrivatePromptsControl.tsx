@@ -1,6 +1,7 @@
 "use client";
 
 import { ShieldCheck } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import type { WorkElement } from "@/lib/api/query";
 import type { AppName } from "@/lib/api/shapes";
 import { cn } from "@/lib/cn";
@@ -55,37 +56,28 @@ export function PrivatePromptsControl({
         text, so this is not encryption.
       </p>
       {policy.eligibleApps.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 grid">
           {policy.eligibleApps.map((app) => {
             const chosen = policy.allowedApps.some((one) => one.id === app.id);
             return (
-              <label
+              <Switch
+                checked={chosen}
+                disabled={pending}
                 key={app.id}
-                className={cn(
-                  "flex min-h-11 cursor-pointer items-center gap-2 rounded-control px-3 text-ui text-ink",
-                  chosen ? "bg-accent-wash" : "bg-plane",
-                )}
-              >
-                <input
-                  type="checkbox"
-                  checked={chosen}
-                  onChange={(event) =>
-                    policy.onChange(
-                      event.target.checked
-                        ? [
-                            ...policy.allowedApps.filter(
-                              (one) => one.id !== app.id,
-                            ),
-                            app,
-                          ]
-                        : policy.allowedApps.filter((one) => one.id !== app.id),
-                    )
-                  }
-                  disabled={pending}
-                  className="size-4 accent-[var(--v-action)]"
-                />
-                {app.label}
-              </label>
+                label={app.label}
+                onCheckedChange={(on) =>
+                  policy.onChange(
+                    on
+                      ? [
+                          ...policy.allowedApps.filter(
+                            (one) => one.id !== app.id,
+                          ),
+                          app,
+                        ]
+                      : policy.allowedApps.filter((one) => one.id !== app.id),
+                  )
+                }
+              />
             );
           })}
         </div>

@@ -3,6 +3,7 @@
 import { ArrowUpRight, GitBranch, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { CheckboxRow } from "@/components/ui/checkbox";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -217,17 +218,11 @@ export function GitHubReleases({ workId }: { workId: string }) {
                     />
                   ) : null}
                 </fieldset>
-                <label className="flex min-h-11 cursor-pointer items-center gap-3 text-ui text-ink">
-                  <input
-                    checked={includePrereleases}
-                    className="size-4 accent-accent"
-                    onChange={(event) =>
-                      setIncludePrereleases(event.target.checked)
-                    }
-                    type="checkbox"
-                  />
-                  Include prereleases
-                </label>
+                <CheckboxRow
+                  checked={includePrereleases}
+                  label="Include prereleases"
+                  onCheckedChange={setIncludePrereleases}
+                />
               </div>
             </div>
             <SlabFoot className="justify-end gap-2 py-3">

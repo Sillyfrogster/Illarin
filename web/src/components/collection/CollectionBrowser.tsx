@@ -31,6 +31,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/cn";
 import {
   type CollectionItem,
@@ -306,15 +307,12 @@ function Controls({
         </DropdownMenuContent>
       </DropdownMenu>
       {off > 0 ? (
-        <label className="inline-flex min-h-11 items-center gap-2 font-ui text-label text-mute">
-          <input
-            checked={includeOff}
-            className="size-4 accent-[var(--v-action)]"
-            onChange={(event) => onIncludeOff(event.target.checked)}
-            type="checkbox"
-          />
-          Include the {off} that {off === 1 ? "is" : "are"} off
-        </label>
+        <Switch
+          checked={includeOff}
+          label={`Include the ${off} that ${off === 1 ? "is" : "are"} off`}
+          onCheckedChange={onIncludeOff}
+          size="compact"
+        />
       ) : null}
       {shown === total ? null : (
         <p className="font-ui text-label text-mute tabular-nums sm:ml-auto">

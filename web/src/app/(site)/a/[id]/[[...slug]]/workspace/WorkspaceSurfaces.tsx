@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Switch } from "@/components/ui/switch";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import type {
   ReadinessItem,
@@ -311,42 +312,33 @@ function PromptPrivacy() {
     ),
   );
   return lists.map(({ block, element, content }) => (
-    <fieldset
-      className="flex min-w-0 flex-col gap-1 border-0 p-0"
-      key={element.id}
-    >
+    <fieldset className="flex min-w-0 flex-col border-0 p-0" key={element.id}>
       <legend className="mb-2 text-ui font-medium text-ink">
         {element.label || block.title}
       </legend>
       {content.fragments.map((fragment, index) =>
         fragment.marker ? null : (
-          <label
-            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep has-checked:bg-accent-wash"
+          <Switch
+            checked={fragment.private ?? false}
+            disabled={workspace.busy}
             key={fragment.id ?? index}
-          >
-            <input
-              checked={fragment.private ?? false}
-              className="size-4 shrink-0 accent-[var(--v-action)]"
-              disabled={workspace.busy}
-              onChange={(event) =>
-                workspace.writeElement(block.id, {
-                  ...element,
-                  content: {
-                    ...content,
-                    fragments: content.fragments.map((one, at) =>
-                      at === index
-                        ? { ...one, private: event.target.checked }
-                        : one,
-                    ),
-                  },
-                })
-              }
-              type="checkbox"
-            />
-            <span className="min-w-0 wrap-anywhere">
-              {fragmentName(fragment, index)}
-            </span>
-          </label>
+            label={
+              <span className="wrap-anywhere">
+                {fragmentName(fragment, index)}
+              </span>
+            }
+            onCheckedChange={(on) =>
+              workspace.writeElement(block.id, {
+                ...element,
+                content: {
+                  ...content,
+                  fragments: content.fragments.map((one, at) =>
+                    at === index ? { ...one, private: on } : one,
+                  ),
+                },
+              })
+            }
+          />
         ),
       )}
     </fieldset>

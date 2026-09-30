@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { TYPE_LABELS } from "@/lib/work-types";
@@ -106,13 +107,11 @@ export function HearerCheck({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <input
+    <Checkbox
       checked={checked}
-      id={id}
-      className="size-5 shrink-0 cursor-pointer accent-[var(--v-action)] disabled:cursor-default"
       disabled={disabled}
-      onChange={(event) => onChange(event.target.checked)}
-      type="checkbox"
+      id={id}
+      onCheckedChange={onChange}
     />
   );
 }

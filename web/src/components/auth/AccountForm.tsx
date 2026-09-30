@@ -11,6 +11,7 @@ import {
 } from "@/components/preferences/PreferenceChoices";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { CheckboxRow } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -51,7 +52,7 @@ export function AccountForm({
   const [app, setApp] = useState(initialApp);
   const [adult, setAdult] = useState<NsfwPreference>("blurred");
   const [agreed, setAgreed] = useState(false);
-  const terms = useRef<HTMLInputElement>(null);
+  const terms = useRef<HTMLButtonElement>(null);
 
   const signUp = mode === "sign-up";
   const carry = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : "";
@@ -150,38 +151,40 @@ export function AccountForm({
       <div className="grid gap-5">
         {signUp ? (
           <div className="grid gap-2">
-            <label className="flex cursor-pointer items-start gap-3 font-ui text-ui text-ink">
-              <input
-                aria-describedby={failed("terms") ? "terms-trouble" : undefined}
-                aria-invalid={failed("terms") || undefined}
-                checked={agreed}
-                className="mt-1 size-4.5 shrink-0 accent-[var(--v-action)]"
-                name="terms"
-                onChange={(event) => {
-                  setAgreed(event.target.checked);
-                  if (failed("terms")) setRefused(null);
-                }}
-                ref={terms}
-                type="checkbox"
-              />
-              <span>
-                I&rsquo;m 13 or older and agree to the{" "}
-                <Link className={legalLink} href="/legal/terms" target="_blank">
-                  Terms
-                </Link>{" "}
-                and the{" "}
-                <Link
-                  className={legalLink}
-                  href="/legal/privacy"
-                  target="_blank"
-                >
-                  Privacy Policy
-                </Link>
-              </span>
-            </label>
+            <CheckboxRow
+              aria-describedby={failed("terms") ? "terms-trouble" : undefined}
+              aria-invalid={failed("terms") || undefined}
+              checked={agreed}
+              label={
+                <>
+                  I&rsquo;m 13 or older and agree to the{" "}
+                  <Link
+                    className={legalLink}
+                    href="/legal/terms"
+                    target="_blank"
+                  >
+                    Terms
+                  </Link>{" "}
+                  and the{" "}
+                  <Link
+                    className={legalLink}
+                    href="/legal/privacy"
+                    target="_blank"
+                  >
+                    Privacy Policy
+                  </Link>
+                </>
+              }
+              name="terms"
+              onCheckedChange={(on) => {
+                setAgreed(on);
+                if (failed("terms")) setRefused(null);
+              }}
+              ref={terms}
+            />
             {failed("terms") ? (
               <p
-                className="pl-7.5 font-ui text-meta text-stop"
+                className="pl-6.5 font-ui text-meta text-stop"
                 id="terms-trouble"
               >
                 {refused?.error}
