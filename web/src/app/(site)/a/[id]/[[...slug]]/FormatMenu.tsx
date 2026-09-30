@@ -1,10 +1,11 @@
 "use client";
 
-import { Download, FileDown } from "lucide-react";
+import { Columns3, Download, FileDown } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -23,71 +24,88 @@ function fileWord(mediaType: string): string {
   return "File";
 }
 
-/** FormatMenu lists the formats a work downloads in, one click each, with the original upload for its owner and any extra items. */
+/** FormatMenu groups what the arrow beside the main button offers: the other formats, the owner's original, sends to connected apps, and the comparison. */
 export function FormatMenu({
   children,
   downloads,
-  extra,
   hint,
-  original = null,
-  version,
-  workId,
+  onCompare,
   onDownload,
+  original = null,
+  sends,
+  workId,
 }: {
   children: ReactNode;
   downloads: DownloadFormat[];
-  extra?: ReactNode;
   hint?: string;
-  original?: OriginalUpload | null;
-  version?: number;
-  workId: string;
+  onCompare?: () => void;
   onDownload?: () => void;
+  original?: OriginalUpload | null;
+  sends?: ReactNode;
+  workId: string;
 }) {
+  const hasDownloads = downloads.length > 0 || original !== null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {hint ? <DropdownMenuLabel>{hint}</DropdownMenuLabel> : null}
-        {downloads.map((offered) => (
-          <DropdownMenuItem asChild key={offered.format}>
-            <a
-              href={downloadAddress({
-                workId,
-                format: offered.format,
-                version,
-              })}
-              onClick={onDownload}
-            >
-              <Download aria-hidden="true" />
-              <span className="min-w-0">
-                {offered.label}
-                {offered.recommended && downloads.length > 1 ? (
-                  <span className="block text-meta text-mute">Recommended</span>
-                ) : null}
-              </span>
-            </a>
-          </DropdownMenuItem>
-        ))}
-        {original ? (
-          <>
-            {downloads.length > 0 ? <DropdownMenuSeparator /> : null}
-            <DropdownMenuItem asChild>
-              <a href={`/download/${workId}`}>
-                <FileDown aria-hidden="true" />
-                <span className="min-w-0">
-                  Original upload
-                  <span className="block text-meta text-mute">
-                    {original.label ? `${original.label} · ` : ""}
-                    {fileWord(original.mediaType)}, uploaded{" "}
-                    {readableDate(original.arrivedAt)}. Edits made since are not
-                    in it.
+      <DropdownMenuContent align="end" className="w-72">
+        {hasDownloads ? (
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{hint ?? "Download"}</DropdownMenuLabel>
+            {downloads.map((offered) => (
+              <DropdownMenuItem asChild key={offered.format}>
+                <a
+                  href={downloadAddress({ workId, format: offered.format })}
+                  onClick={onDownload}
+                >
+                  <Download aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate">
+                    {offered.label}
                   </span>
-                </span>
-              </a>
+                  {offered.recommended ? (
+                    <span className="text-meta text-mute">Recommended</span>
+                  ) : null}
+                </a>
+              </DropdownMenuItem>
+            ))}
+            {original ? (
+              <DropdownMenuItem
+                asChild
+                className="items-start py-2 [&_svg]:mt-0.5"
+              >
+                <a href={`/download/${workId}`}>
+                  <FileDown aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    Original upload
+                    <span className="block text-meta text-mute">
+                      {fileWord(original.mediaType)}, uploaded{" "}
+                      {readableDate(original.arrivedAt)}. Edits made since are
+                      not in it.
+                    </span>
+                  </span>
+                </a>
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuGroup>
+        ) : null}
+        {sends ? (
+          <>
+            {hasDownloads ? <DropdownMenuSeparator /> : null}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Send</DropdownMenuLabel>
+              {sends}
+            </DropdownMenuGroup>
+          </>
+        ) : null}
+        {onCompare ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={onCompare}>
+              <Columns3 aria-hidden="true" />
+              Compare formats
             </DropdownMenuItem>
           </>
         ) : null}
-        {extra}
       </DropdownMenuContent>
     </DropdownMenu>
   );

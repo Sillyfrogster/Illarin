@@ -4,7 +4,6 @@ import {
   ChevronDown,
   CircleAlert,
   Clock,
-  Columns3,
   Download,
   FileDown,
   Send,
@@ -17,10 +16,7 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api/client";
 import type {
   WorkConnectedApp,
@@ -181,13 +177,9 @@ export function GetWork({
   const menuSends = receiving.filter(
     (app) => main.kind !== "send" || app !== main.app,
   );
-  const extra =
-    menuSends.length > 0 || downloads.length > 0 ? (
-      <>
-        {menuFormats.length > 0 || menuOriginal ? (
-          <DropdownMenuSeparator />
-        ) : null}
-        {menuSends.map((app) => (
+  const sends =
+    menuSends.length > 0
+      ? menuSends.map((app) => (
           <DropdownMenuItem
             disabled={busy || isWaiting(app.send)}
             key={app.connectedAppId}
@@ -200,16 +192,10 @@ export function GetWork({
             )}
             {sendActionLabel(app, installs)}
           </DropdownMenuItem>
-        ))}
-        {downloads.length > 0 ? (
-          <DropdownMenuItem onSelect={() => setComparing(true)}>
-            <Columns3 aria-hidden="true" />
-            Compare formats
-          </DropdownMenuItem>
-        ) : null}
-      </>
-    ) : null;
-  const hasMenu = menuFormats.length > 0 || menuOriginal || extra;
+        ))
+      : null;
+  const hasMenu =
+    menuFormats.length > 0 || menuOriginal || sends || downloads.length > 0;
 
   return (
     <>
@@ -253,14 +239,17 @@ export function GetWork({
           {hasMenu ? (
             <FormatMenu
               downloads={menuFormats}
-              extra={extra}
               hint={
-                forApp && menuFormats.length > 0
-                  ? `The main button picks the format ${forApp.label} reads.`
+                main.kind === "download" && main.label && menuFormats.length > 0
+                  ? `The main button fits ${main.label}.`
                   : undefined
+              }
+              onCompare={
+                downloads.length > 0 ? () => setComparing(true) : undefined
               }
               onDownload={() => setOffering(true)}
               original={menuOriginal}
+              sends={sends}
               workId={work.id}
             >
               <Button
