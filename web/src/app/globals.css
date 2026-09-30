@@ -194,7 +194,7 @@
   --v-ink: light-dark(#000000, #ffffff);
   --v-mute: light-dark(#636363, #a3a3a3);
   --v-rule: light-dark(#d4d4d4, #404040);
-  --v-edge: light-dark(#858585, #737373);
+  --v-edge: light-dark(#d4d4d4, #404040);
   --v-accent: light-dark(#6d28d9, #b89aff);
   --v-action: light-dark(#6d28d9, #7c3aed);
   --v-on-accent: #ffffff;
