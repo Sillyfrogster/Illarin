@@ -12,12 +12,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { CheckboxRow } from "@/components/ui/checkbox";
-import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { InputCopy } from "@/components/ui/input-copy";
 import { Item, ItemGroup } from "@/components/ui/item";
-import { RadioGroup } from "@/components/ui/radio-group";
+import {
+  NO_RELEASE_CHOICE,
+  type ReleaseChoice,
+  ReleaseChoiceFields,
+  releaseChoiceBody,
+} from "@/components/work/ReleaseChoiceFields";
 import { api } from "@/lib/api/client";
 
 type ReleaseSource = {
@@ -48,10 +50,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
   const [source, setSource] = useState<ReleaseSource | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [repository, setRepository] = useState("");
-  const [attachment, setAttachment] = useState("");
-  const [useAttachment, setUseAttachment] = useState(false);
-  const [includePrereleases, setIncludePrereleases] = useState(false);
+  const [choice, setChoice] = useState<ReleaseChoice>(NO_RELEASE_CHOICE);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -127,12 +126,12 @@ export function GitHubReleases({ workId }: { workId: string }) {
         {source && !editing ? (
           <Button
             disabled={busy}
-            onClick={() => void run(refresh)}
+            onClick={() => void run(() => change("POST", "/check"))}
             size="compact"
             type="button"
             variant="secondary"
           >
-            <RotateCw aria-hidden="true" /> Refresh status
+            <RotateCw aria-hidden="true" /> Check now
           </Button>
         ) : null}
       </div>
@@ -148,11 +147,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
             onSubmit={(event) => {
               event.preventDefault();
               void run(async () => {
-                await change("PUT", "", {
-                  repository,
-                  attachment: useAttachment ? attachment : null,
-                  includePrereleases,
-                });
+                await change("PUT", "", releaseChoiceBody(choice));
                 setEditing(false);
               });
             }}
@@ -164,61 +159,11 @@ export function GitHubReleases({ workId }: { workId: string }) {
               </CardDescription>
             </CardHeader>
             <div className="grid gap-8 px-4 pt-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10">
-              <div className="flex flex-col gap-5">
-                <Field label="Repository URL">
-                  <Input
-                    onChange={(event) => setRepository(event.target.value)}
-                    placeholder="https://github.com/owner/repository"
-                    required
-                    type="url"
-                    value={repository}
-                  />
-                </Field>
-                <p className="max-w-sm text-meta text-mute">
-                  You need to prove the repository is yours before Illarin
-                  imports its releases.
-                </p>
-              </div>
-              <div className="flex flex-col gap-5">
-                <fieldset>
-                  <legend className="mb-2 text-meta font-medium text-ink">
-                    File to import
-                  </legend>
-                  <RadioGroup
-                    onValueChange={(next) =>
-                      setUseAttachment(next === "attachment")
-                    }
-                    options={[
-                      {
-                        value: "archive",
-                        label: "Source archive",
-                        hint: "GitHub's release archive",
-                      },
-                      {
-                        value: "attachment",
-                        label: "Named file",
-                        hint: "Same attachment on each release",
-                      },
-                    ]}
-                    value={useAttachment ? "attachment" : "archive"}
-                  />
-                  {useAttachment ? (
-                    <Input
-                      aria-label="Attachment file name"
-                      className="mt-3"
-                      onChange={(event) => setAttachment(event.target.value)}
-                      placeholder="extension.zip"
-                      required
-                      value={attachment}
-                    />
-                  ) : null}
-                </fieldset>
-                <CheckboxRow
-                  checked={includePrereleases}
-                  label="Include prereleases"
-                  onCheckedChange={setIncludePrereleases}
-                />
-              </div>
+              <ReleaseChoiceFields
+                choice={choice}
+                hint="You need to prove the repository is yours before Illarin imports its releases."
+                onChange={setChoice}
+              />
             </div>
             <CardFooter className="justify-end gap-2 pt-4">
               {source ? (
@@ -283,10 +228,12 @@ export function GitHubReleases({ workId }: { workId: string }) {
               <Button
                 disabled={busy}
                 onClick={() => {
-                  setRepository(`https://github.com/${source.repository}`);
-                  setAttachment(source.attachment ?? "");
-                  setUseAttachment(source.attachment !== null);
-                  setIncludePrereleases(source.includePrereleases);
+                  setChoice({
+                    repository: `https://github.com/${source.repository}`,
+                    attachment: source.attachment ?? "",
+                    useAttachment: source.attachment !== null,
+                    includePrereleases: source.includePrereleases,
+                  });
                   setEditing(true);
                 }}
                 size="compact"
@@ -356,7 +303,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                           {item.status === "published"
                             ? `Published as version ${item.versionNumber}`
                             : item.status === "held"
-                              ? "Waiting for your draft changes"
+                              ? "Waiting for your drafted changes"
                               : item.status === "queued"
                                 ? "Import queued"
                                 : "Import failed"}
@@ -377,7 +324,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                           type="button"
                           variant="secondary"
                         >
-                          {item.status === "held" ? "Resume" : "Retry"}
+                          {item.status === "held" ? "Resume" : "Try again"}
                         </Button>
                       ) : null}
                     </Item>

@@ -6,6 +6,7 @@ import { useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { spring } from "@/lib/springs";
+import { FromGitHub } from "./FromGitHub";
 
 const SHEETS = [
   { Icon: FileImage, name: ".png", rest: -11, fanned: -20, shift: -44 },
@@ -108,13 +109,12 @@ export function DropStage({
           ref={input}
           type="file"
         />
-        <Button
-          className="mt-6"
-          onClick={() => input.current?.click()}
-          variant="primary"
-        >
-          Choose a file
-        </Button>
+        <div className="mt-6 flex flex-wrap justify-center gap-2 sm:justify-start">
+          <Button onClick={() => input.current?.click()} variant="primary">
+            Choose a file
+          </Button>
+          <FromGitHub />
+        </div>
       </div>
     </section>
   );

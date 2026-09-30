@@ -146,10 +146,8 @@ export function UploadFlow() {
       <Gate
         action="Sign in"
         href="/sign-in?returnTo=%2Fupload"
-        heading="Sign in before you publish"
-      >
-        Sign in to import a file or create a draft.
-      </Gate>
+        heading="Sign in to publish"
+      />
     );
   }
 
@@ -158,9 +156,9 @@ export function UploadFlow() {
       <Gate
         action="Verify email"
         href="/verify-email?returnTo=%2Fupload"
-        heading="Verify your email before you publish"
+        heading="Verify your email to publish"
       >
-        Verify your email to import a file or create a draft.
+        Open the link Illarin emailed you.
       </Gate>
     );
   }
@@ -265,7 +263,7 @@ function Gate({
   href,
 }: {
   action: string;
-  children: string;
+  children?: string;
   heading: string;
   href: string;
 }) {
@@ -274,7 +272,7 @@ function Gate({
       <h2 className="font-display text-section font-medium text-ink">
         {heading}
       </h2>
-      <p className="mt-2 text-ui text-mute">{children}</p>
+      {children ? <p className="mt-2 text-ui text-mute">{children}</p> : null}
       <Button asChild className="mt-5" variant="primary">
         <Link href={href}>{action}</Link>
       </Button>

@@ -1,4 +1,4 @@
-import { Check, LockKeyhole, PencilLine, Upload } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import Image from "next/image";
 import { Shell } from "@/components/layout/Shell";
 import { fetchBuildChoices } from "@/lib/api/query";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = pageMetadata(
   "Upload",
-  "Import a file you already have, or start a new character, lorebook, preset, theme or pack.",
+  "Upload a file you already have, or start a new character, lorebook, preset, theme or pack.",
 );
 
 export default async function UploadPage() {
@@ -21,10 +21,10 @@ export default async function UploadPage() {
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-16">
         <div className="min-w-0">
           <h1 className="font-display text-[clamp(2rem,3vw,2.75rem)] leading-[1.1] font-medium tracking-[-0.035em] text-ink text-balance">
-            Share your work
+            Publish your work
           </h1>
           <p className="mt-3 max-w-[48ch] text-ui text-mute">
-            Import a file you already have, or start a new draft in the editor.
+            Upload a file you already have, or start an empty draft.
           </p>
           <UploadFlow />
         </div>
@@ -42,44 +42,9 @@ export default async function UploadPage() {
               <LockKeyhole aria-hidden="true" className="size-4 text-accent" />
               Private until you publish
             </p>
-            <ol className="mt-5 grid list-none gap-5 p-0">
-              <li className="flex items-start gap-3">
-                <Upload
-                  aria-hidden="true"
-                  className="mt-1 size-4 shrink-0 text-mute"
-                />
-                <p className="text-meta text-mute">
-                  <strong className="block font-medium text-ink">
-                    Start a draft
-                  </strong>
-                  Bring a file or choose a type.
-                </p>
-              </li>
-              <li className="flex items-start gap-3">
-                <PencilLine
-                  aria-hidden="true"
-                  className="mt-1 size-4 shrink-0 text-mute"
-                />
-                <p className="text-meta text-mute">
-                  <strong className="block font-medium text-ink">
-                    Make it yours
-                  </strong>
-                  Edit the details, add media and preview your page.
-                </p>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check
-                  aria-hidden="true"
-                  className="mt-1 size-4 shrink-0 text-mute"
-                />
-                <p className="text-meta text-mute">
-                  <strong className="block font-medium text-ink">
-                    Publish when ready
-                  </strong>
-                  You decide when the page becomes public.
-                </p>
-              </li>
-            </ol>
+            <p className="mt-2 text-meta text-mute">
+              Only you can see a draft.
+            </p>
           </div>
         </aside>
       </div>
