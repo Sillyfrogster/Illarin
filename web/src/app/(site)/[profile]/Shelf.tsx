@@ -314,7 +314,7 @@ function Featured({
               <motion.li
                 animate={{ opacity: 1 }}
                 aria-hidden="true"
-                className="grid aspect-5/6 place-items-center rounded-plate border border-dashed border-rule text-mute"
+                className="grid aspect-3/4 place-items-center rounded-plate border border-dashed border-rule text-mute"
                 exit={{ opacity: 0 }}
                 initial={{ opacity: 0 }}
                 key={`open-${featured.length + slot}`}
@@ -436,7 +436,7 @@ function Nothing({
         {[0, 1, 2, 3].map((slot) => (
           <li
             className={cn(
-              "aspect-5/6 rounded-plate border border-dashed border-rule",
+              "aspect-3/4 rounded-plate border border-dashed border-rule",
               slot > 1 && "max-sm:hidden",
               slot > 2 && "max-lg:hidden",
             )}

@@ -18,7 +18,7 @@ export function BrowseLoading() {
       <div className={GRID}>
         {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((slot) => (
           <div key={slot}>
-            <Skeleton className="aspect-5/6 rounded-plate" />
+            <Skeleton className="aspect-3/4 rounded-plate" />
             <Skeleton className="mt-4 h-4 w-3/4" />
             <Skeleton className="mt-2 h-3 w-1/2" />
           </div>

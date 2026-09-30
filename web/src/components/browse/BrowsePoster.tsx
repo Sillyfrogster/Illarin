@@ -101,11 +101,11 @@ export function BrowsePoster({
         <div className="absolute top-2.5 right-2.5 z-2">{action}</div>
       ) : null}
       {face === "art" ? (
-        <div className={cn(PLATE, "relative aspect-5/6 bg-inset")}>
+        <div className={cn(PLATE, "relative aspect-3/4 bg-inset")}>
           {work.cover ? (
             <Image
               alt=""
-              className="size-full object-contain transition-transform duration-240 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
+              className="size-full object-cover object-top transition-transform duration-240 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
               fill
               loading={eager ? "eager" : "lazy"}
               onError={() => setFailed(true)}
@@ -119,7 +119,7 @@ export function BrowsePoster({
         <div
           className={cn(
             PLATE,
-            "@container flex aspect-5/6 min-w-0 flex-col justify-between p-5",
+            "@container flex aspect-3/4 min-w-0 flex-col justify-between p-5",
             groundFor(work.id).plate,
           )}
         >
