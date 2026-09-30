@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn, focusRing } from "@/lib/cn";
@@ -93,7 +94,7 @@ export function DockTool({
                 : "absolute -top-1 -right-1",
             )}
           >
-            {count}
+            <NumberTicker value={count} />
           </span>
         ) : null}
       </button>

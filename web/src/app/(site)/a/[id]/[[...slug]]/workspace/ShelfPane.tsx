@@ -10,7 +10,7 @@ import { FilePlus2, FileText, Layers, Package, Rows3 } from "lucide-react";
 import { type DragEvent, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import { RollingNumber } from "@/components/ui/rolling-number";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { cn } from "@/lib/cn";
 import { PictureTile, SectionRow } from "./ShelfPiece";
 import { type ShownImport, useShelf } from "./shelf";
@@ -335,7 +335,7 @@ function Progress({ held }: { held: ShownImport }) {
       </div>
       <p className="text-label text-mute">
         <span className="font-medium text-ink">
-          <RollingNumber value={done} />
+          <NumberTicker value={done} />
         </span>{" "}
         of {held.pieces.length} placed
       </p>
