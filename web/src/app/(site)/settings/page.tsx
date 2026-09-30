@@ -1,6 +1,7 @@
-import { Compass, KeyRound, Plug, Send } from "lucide-react";
+import { Compass, Image, KeyRound, Plug, Send } from "lucide-react";
 import { AccountSettings } from "@/components/auth/AccountSettings";
 import { ConnectedApps } from "@/components/connect/ConnectedApps";
+import { ArtworkSwitch } from "@/components/layout/ArtworkSwitch";
 import { Shell } from "@/components/layout/Shell";
 import { BrowsePreferences } from "@/components/preferences/BrowsePreferences";
 import { PublicProfileCard } from "@/components/profile/PublicProfileCard";
@@ -58,6 +59,13 @@ export default async function SettingsPage({
             </a>
             <a
               className="flex min-h-control items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
+              href="#artwork"
+            >
+              <Image aria-hidden="true" className="size-4 text-accent" />
+              Artwork
+            </a>
+            <a
+              className="flex min-h-control items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep"
               href="#ways-in"
             >
               <KeyRound aria-hidden="true" className="size-4 text-accent" />
@@ -90,6 +98,20 @@ export default async function SettingsPage({
             </h2>
             <div className="mt-5">
               <BrowsePreferences />
+            </div>
+          </section>
+          <section
+            aria-labelledby="artwork"
+            className="mt-12 border-t border-rule pt-9"
+          >
+            <h2
+              className="scroll-mt-[calc(var(--header-height)+3rem)] font-display text-section font-medium tracking-tight text-ink"
+              id="artwork"
+            >
+              Artwork
+            </h2>
+            <div className="mt-5">
+              <ArtworkSwitch hint="Off removes every picture the site draws behind its pages. Your own work's pictures stay." />
             </div>
           </section>
           <section

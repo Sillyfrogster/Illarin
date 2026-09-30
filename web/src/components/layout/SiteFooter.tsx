@@ -2,16 +2,17 @@ import { SiDiscord, SiKofi } from "@icons-pack/react-simple-icons";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { shellClasses } from "@/components/layout/Shell";
+import { BLOG_HOME } from "@/lib/blog-paths";
 import { navLink } from "@/lib/cn";
 import { DISCORD_INVITE, KOFI_PAGE } from "@/lib/contact";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
-import { primaryDestinations } from "./destinations";
+import { AppearanceMenu } from "./AppearanceMenu";
+import { ArtworkSwitch } from "./ArtworkSwitch";
 
 export function SiteFooter() {
   const destinations = [
-    ...primaryDestinations(),
-    { label: "Publish", href: "/upload" },
-    { label: "Account settings", href: "/settings" },
+    { label: "Guide", href: "/docs" },
+    { label: "Blog", href: BLOG_HOME },
   ];
   return (
     <footer className="mt-chapter bg-field pb-16">
@@ -31,30 +32,6 @@ export function SiteFooter() {
             >
               Download the brand kit
             </a>
-            <ul className="mt-2 grid list-none">
-              <li>
-                <a
-                  className="flex min-h-control w-fit items-center gap-2 text-meta text-ink hover:text-accent"
-                  href={DISCORD_INVITE}
-                  rel="noopener"
-                  target="_blank"
-                >
-                  <SiDiscord aria-hidden="true" className="size-4" title="" />
-                  Join the Discord
-                </a>
-              </li>
-              <li>
-                <a
-                  className="flex min-h-control w-fit items-center gap-2 text-meta text-ink hover:text-accent"
-                  href={KOFI_PAGE}
-                  rel="noopener"
-                  target="_blank"
-                >
-                  <SiKofi aria-hidden="true" className="size-4" title="" />
-                  Support Illarin on Ko-fi
-                </a>
-              </li>
-            </ul>
             <p className="mt-8 text-meta text-mute">© 2026 Illarin</p>
           </div>
 
@@ -68,6 +45,28 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <a
+                  className="flex min-h-control w-fit items-center gap-2 text-ui font-medium text-ink decoration-accent underline-offset-4 hover:underline"
+                  href={DISCORD_INVITE}
+                  rel="noopener"
+                  target="_blank"
+                >
+                  <SiDiscord aria-hidden="true" className="size-4" title="" />
+                  Discord
+                </a>
+              </li>
+              <li>
+                <a
+                  className="flex min-h-control w-fit items-center gap-2 text-ui font-medium text-ink decoration-accent underline-offset-4 hover:underline"
+                  href={KOFI_PAGE}
+                  rel="noopener"
+                  target="_blank"
+                >
+                  <SiKofi aria-hidden="true" className="size-4" title="" />
+                  Ko-fi
+                </a>
+              </li>
             </ul>
           </nav>
 
@@ -83,6 +82,10 @@ export function SiteFooter() {
               ))}
             </ul>
           </nav>
+        </div>
+        <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 border-t border-edge pt-4">
+          <AppearanceMenu labelled />
+          <ArtworkSwitch />
         </div>
       </div>
     </footer>

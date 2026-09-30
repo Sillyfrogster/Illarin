@@ -3,6 +3,7 @@ import { ArtFilters } from "@/components/art/ArtFilters";
 import { AnalyticsScript } from "@/components/layout/AnalyticsScript";
 import { StoredTheme } from "@/components/layout/StoredTheme";
 import { Toaster } from "@/components/ui/sonner";
+import { ARTWORK_BOOTSTRAP_SCRIPT } from "@/lib/artwork";
 import { FONT_VARIABLES } from "@/lib/fonts";
 import { siteAddress } from "@/lib/site-address";
 import {
@@ -47,7 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={FONT_VARIABLES} suppressHydrationWarning>
       <head>
-        <script>{THEME_BOOTSTRAP_SCRIPT}</script>
+        <script>{THEME_BOOTSTRAP_SCRIPT + ARTWORK_BOOTSTRAP_SCRIPT}</script>
         <AnalyticsScript />
       </head>
       <body>

@@ -8,7 +8,6 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { Kbd } from "@/components/ui/kbd";
 
 export function BrowseSearch({
   hint,
@@ -29,21 +28,6 @@ export function BrowseSearch({
   const field = useRef<HTMLInputElement>(null);
 
   useEffect(() => setWritten(value), [value]);
-
-  useEffect(() => {
-    function focusOnSlash(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      if (
-        event.key !== "/" ||
-        target?.closest("input, textarea, select, [contenteditable]")
-      )
-        return;
-      event.preventDefault();
-      field.current?.focus();
-    }
-    window.addEventListener("keydown", focusOnSlash);
-    return () => window.removeEventListener("keydown", focusOnSlash);
-  }, []);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,11 +70,7 @@ export function BrowseSearch({
                 <X aria-hidden="true" />
                 <span className="sr-only">Clear the search</span>
               </Button>
-            ) : (
-              <Kbd className="group-focus-within/search:opacity-0 max-md:hidden">
-                /
-              </Kbd>
-            )}
+            ) : null}
           </InputGroupAddon>
         </InputGroup>
       </form>

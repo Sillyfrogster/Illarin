@@ -14,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
-import { AppearanceMenu } from "./AppearanceMenu";
 import { DestinationIcon } from "./DestinationIcon";
 import { accountDestinations, isCurrentPage } from "./destinations";
 import { SIGN_OUT_FAILURE, useSignOut } from "./use-sign-out";
@@ -88,9 +87,6 @@ export function AccountMenu() {
             </DropdownMenuItem>
           );
         })}
-
-        <DropdownMenuSeparator />
-        <AppearanceMenu embedded />
 
         {account ? (
           <>

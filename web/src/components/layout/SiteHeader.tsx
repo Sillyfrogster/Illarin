@@ -1,38 +1,26 @@
 "use client";
 
-import {
-  motion,
-  useMotionTemplate,
-  useMotionValueEvent,
-  useScroll,
-  useTransform,
-} from "framer-motion";
+import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { ShinyButton } from "@/components/ui/shiny-button";
-import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
 import { cn, navLink } from "@/lib/cn";
 import { spring } from "@/lib/springs";
 import { AccountMenu } from "./AccountMenu";
-import {
-  isCurrentPage,
-  primaryDestinations,
-  publishAction,
-} from "./destinations";
-import { MobileNav } from "./MobileNav";
-import { Notch } from "./Notch";
+import { BROWSE, isCurrentPage, PUBLISH } from "./destinations";
+import { HeaderSearch } from "./HeaderSearch";
+import { shellClasses } from "./Shell";
+
+const ROW =
+  "flex min-h-[var(--header-height)] flex-wrap items-center gap-x-3 gap-y-2 py-2 md:flex-nowrap sm:gap-x-5 md:gap-x-8 md:py-0";
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { account } = useAuth();
-  const publish = publishAction(account);
   const { scrollY } = useScroll();
-  const depth = useTransform(scrollY, [0, 40], [0.16, 0.36], { clamp: true });
-  const lift = useMotionTemplate`drop-shadow(0 6px 10px rgb(0 0 0 / ${depth}))`;
   const header = useRef<HTMLElement>(null);
   const scrollDirection = useRef({ direction: 0, anchor: 0 });
   const [hidden, setHidden] = useState(false);
@@ -58,108 +46,52 @@ export function SiteHeader() {
     if (pathname) setHidden(false);
   }, [pathname]);
 
-  const motionProps = {
-    animate: { y: hidden ? -120 : 0 },
-    initial: false,
-    transition: spring.slow,
-    onFocusCapture: () => setHidden(false),
-    ref: header,
-  };
-
-  if (pathname === "/")
-    return (
-      <motion.header
-        {...motionProps}
-        data-site-header-hidden={hidden}
-        data-theme="dark"
-        style={{ colorScheme: "dark" }}
-        className="fixed inset-x-0 top-0 z-80 flex h-22 items-center gap-6 bg-linear-to-b from-[#100e1699] to-transparent px-[clamp(24px,4.2vw,88px)] font-ui text-ink [--v-ink:#fbf8ff] [--v-mute:#cfc2d8] [--v-deep:#26202c] md:h-27 md:gap-14"
-      >
+  return (
+    <motion.header
+      animate={{ y: hidden ? -160 : 0 }}
+      className="sticky top-0 z-80 border-b border-rule bg-field"
+      data-site-header-hidden={hidden}
+      initial={false}
+      onFocusCapture={() => setHidden(false)}
+      ref={header}
+      transition={spring.slow}
+    >
+      <div className={cn(shellClasses, ROW)}>
         <Link
           href="/"
           aria-label="Illarin home"
           className="flex min-h-control items-center text-ink"
         >
-          <BrandLogo className="w-28 md:w-32" />
+          <BrandLogo className="w-20 sm:w-28" />
         </Link>
-        <nav
-          aria-label="Primary"
-          className="hidden items-center gap-8 text-meta sm:flex"
+        <Link
+          aria-current={
+            isCurrentPage(pathname, BROWSE.href) ? "page" : undefined
+          }
+          className={navLink}
+          href={BROWSE.href}
         >
-          {primaryDestinations().map((item) => (
+          {BROWSE.label}
+        </Link>
+        <div className="flex items-center gap-2 max-md:contents md:ml-auto">
+          <Suspense fallback={<div className="h-control md:w-64" />}>
+            <HeaderSearch />
+          </Suspense>
+        </div>
+        <div className="flex items-center gap-0.5 max-md:order-2 max-md:ml-auto">
+          <Button asChild className="mr-1" variant="primary">
             <Link
-              key={item.href}
-              href={item.href}
-              className="flex min-h-control items-center text-ink"
+              aria-current={pathname === PUBLISH.href ? "page" : undefined}
+              href={PUBLISH.href}
             >
-              {item.label}
+              <Plus aria-hidden="true" />
+              {PUBLISH.label}
             </Link>
-          ))}
-        </nav>
-        <div className="ml-auto flex items-center gap-1">
-          <MobileNav />
+          </Button>
           <NotificationBell />
           <AccountMenu />
         </div>
-      </motion.header>
-    );
-
-  return (
-    <motion.header
-      {...motionProps}
-      data-site-header-hidden={hidden}
-      style={{ filter: lift }}
-      className="sticky top-0 z-80 h-[var(--header-height)]"
-    >
-      <Notch
-        start={
-          <>
-            <MobileNav />
-            <nav
-              className="hidden items-center gap-2 md:flex"
-              aria-label="Primary"
-            >
-              {primaryDestinations().map((item) => (
-                <Link
-                  aria-current={
-                    isCurrentPage(pathname, item.href) ? "page" : undefined
-                  }
-                  className={cn(navLink, "px-3")}
-                  href={item.href}
-                  key={item.href}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </>
-        }
-        centre={
-          <Link
-            href="/"
-            aria-label="Illarin home"
-            className="flex min-h-control items-center gap-2 text-ink"
-          >
-            <BrandLogo className="sm:w-36" />
-          </Link>
-        }
-        end={
-          <>
-            <ShinyButton
-              aria-current={pathname === "/upload" ? "page" : undefined}
-              className="hidden md:inline-flex"
-              href={publish.href}
-            >
-              <Plus aria-hidden="true" />
-              {publish.label}
-            </ShinyButton>
-            <div className="flex items-center gap-1">
-              <NotificationBell />
-              <AccountMenu />
-            </div>
-          </>
-        }
-      />
+      </div>
     </motion.header>
   );
 }

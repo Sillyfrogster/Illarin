@@ -49,7 +49,7 @@ export function BrowseSurface({
   filters: BrowseFilters;
   heading: string;
   initialPage: BrowsePage | null;
-  search: { hint?: string; label: string; placeholder: string };
+  search?: { hint?: string; label: string; placeholder: string };
   showHeading?: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -166,18 +166,20 @@ export function BrowseSurface({
               {heading}
             </h2>
           )}
-          <div
-            className={cn("w-full md:max-w-md", showHeading && "md:ml-auto")}
-          >
-            <BrowseSearch
-              hint={search.hint}
-              id={`${panel}-search`}
-              label={search.label}
-              onSearch={(q) => navigate({ ...filters, q })}
-              placeholder={search.placeholder}
-              value={filters.q ?? ""}
-            />
-          </div>
+          {search ? (
+            <div
+              className={cn("w-full md:max-w-md", showHeading && "md:ml-auto")}
+            >
+              <BrowseSearch
+                hint={search.hint}
+                id={`${panel}-search`}
+                label={search.label}
+                onSearch={(q) => navigate({ ...filters, q })}
+                placeholder={search.placeholder}
+                value={filters.q ?? ""}
+              />
+            </div>
+          ) : null}
         </div>
 
         <TypeIndex

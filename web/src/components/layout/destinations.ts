@@ -1,17 +1,14 @@
 import type { SignedInAccount } from "@/lib/auth";
-import { BLOG_HOME } from "@/lib/blog-paths";
 
 const UPLOAD_RETURN = encodeURIComponent("/upload");
 
 export type Destination = { label: string; href: string };
 
-export function primaryDestinations(): Destination[] {
-  return [
-    { label: "Browse", href: "/browse" },
-    { label: "Blog", href: BLOG_HOME },
-    { label: "Docs", href: "/docs" },
-  ];
-}
+export const BROWSE: Destination = { label: "Browse", href: "/browse" };
+
+// Publish always reads "Publish"; the upload page asks for sign-in after the press.
+export const PUBLISH: Destination = { label: "Publish", href: "/upload" };
+
 export type AccountDestination = Destination & {
   id:
     | "profile"
@@ -24,23 +21,6 @@ export type AccountDestination = Destination & {
     | "sign-in"
     | "sign-up";
 };
-
-export function publishAction(
-  account: SignedInAccount | null | undefined,
-): Destination {
-  if (account === undefined) return { label: "Publish", href: "/upload" };
-  if (account === null)
-    return {
-      label: "Sign in to publish",
-      href: `/sign-in?returnTo=${UPLOAD_RETURN}`,
-    };
-  if (!account.emailVerified)
-    return {
-      label: "Verify email to publish",
-      href: `/verify-email?returnTo=${UPLOAD_RETURN}`,
-    };
-  return { label: "Publish", href: "/upload" };
-}
 
 export function accountDestinations(
   account: SignedInAccount | null | undefined,

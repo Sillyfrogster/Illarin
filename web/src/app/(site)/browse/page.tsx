@@ -37,6 +37,7 @@ export default async function BrowsePage({
     <div className="relative isolate">
       <div
         aria-hidden="true"
+        data-artwork
         className="pointer-events-none absolute inset-x-0 top-0 -z-1 h-[22rem] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_20%,transparent)]"
       >
         <Image
@@ -60,11 +61,6 @@ export default async function BrowsePage({
         filters={filters}
         heading="Browse"
         initialPage={initialPage}
-        search={{
-          hint: "Try tag:fantasy or author:handle",
-          label: "Search works",
-          placeholder: "Search works",
-        }}
         showHeading
       />
     </div>

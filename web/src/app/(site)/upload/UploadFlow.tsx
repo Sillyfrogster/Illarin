@@ -145,7 +145,7 @@ export function UploadFlow() {
     return (
       <Gate
         action="Sign in"
-        href="/sign-in"
+        href="/sign-in?returnTo=%2Fupload"
         heading="Sign in before you publish"
       >
         Sign in to import a file or create a draft.

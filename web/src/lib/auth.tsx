@@ -11,12 +11,15 @@ import {
 } from "react";
 import { api } from "@/lib/api/client";
 import type { Account, SessionState } from "@/lib/api/shapes";
+import { applyArtwork, readArtwork } from "@/lib/artwork";
 
 export type SignedInAccount = Account;
 
 type AuthContextValue = {
   account: SignedInAccount | null | undefined;
   writer: boolean;
+  artwork: boolean;
+  setArtwork: (on: boolean) => Promise<void>;
   refresh: () => Promise<void>;
   setAccount: (account: SignedInAccount | null) => void;
   signOut: () => Promise<void>;
@@ -29,6 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     undefined,
   );
   const [writer, setWriter] = useState(false);
+  const [artwork, setArtworkState] = useState(true);
+
+  useEffect(() => setArtworkState(readArtwork()), []);
 
   const refresh = useCallback(async () => {
     try {
@@ -44,6 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setAccount(state.user);
       setWriter(state.writer);
+      setArtworkState(state.artwork);
+      applyArtwork(state.artwork);
     } catch {
       setAccount(null);
       setWriter(false);
@@ -61,15 +69,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setWriter(false);
   }, []);
 
+  const setArtwork = useCallback(
+    async (on: boolean) => {
+      setArtworkState(on);
+      applyArtwork(on);
+      if (!account) return;
+      const { response } = await api<void>("PUT", "/v1/account/artwork", {
+        body: { on },
+      });
+      if (!response.ok) throw new Error("Could not save the artwork setting");
+    },
+    [account],
+  );
+
   const value = useMemo(
     () => ({
       account,
+      artwork,
+      setArtwork,
       refresh,
       setAccount,
       signOut,
       writer,
     }),
-    [account, refresh, signOut, writer],
+    [account, artwork, refresh, setArtwork, signOut, writer],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

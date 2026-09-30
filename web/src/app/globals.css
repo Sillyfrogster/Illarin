@@ -244,8 +244,7 @@
 
   --shell: 86rem;
   --gutter: 20px;
-  --header-height: 72px;
-  --header-bay-height: 96px;
+  --header-height: 56px;
 
   --rail-inset: calc(max(0px, (100% - var(--shell)) / 2) + var(--gutter));
 
@@ -333,6 +332,11 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   text-wrap: pretty;
+}
+
+/* Every piece of art carries data-artwork so the reader's switch can remove it. */
+html[data-artwork="off"] [data-artwork] {
+  display: none;
 }
 
 body:has([data-site-header-hidden="true"]) {
