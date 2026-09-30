@@ -16,6 +16,7 @@ function work(id: string, name: string): BrowseWork {
     cover: null,
     viewCount: 0,
     downloadCount: 0,
+    tags: [],
   };
 }
 

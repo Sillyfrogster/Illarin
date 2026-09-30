@@ -5,16 +5,19 @@ import { CircleHelp, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge, BadgeLink } from "@/components/ui/badge";
 import type { BrowseWork, NsfwPreference } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { posterFace, type TypeSetting, typeSetting } from "@/lib/poster-face";
 import { spring } from "@/lib/springs";
+import { tagSearchHref } from "@/lib/tag-search";
 import { workCounts } from "@/lib/work-counts";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
 import { TypeMark } from "./TypeMark";
+
+const CARD_TAGS = 3;
 
 const SETTING: Record<TypeSetting, string> = {
   grand: "text-[clamp(1.25rem,17cqi,2.6rem)] leading-[1.02]",
@@ -175,6 +178,22 @@ export function BrowsePoster({
             <span className="sr-only">Works in </span>
             {apps.join(" · ")}
           </p>
+        ) : null}
+
+        {work.tags.length ? (
+          <ul className="m-0 mt-2 flex list-none flex-wrap gap-1.5 p-0">
+            {work.tags.slice(0, CARD_TAGS).map((tag) => (
+              <li className="max-w-full" key={tag.value}>
+                <BadgeLink
+                  className="relative z-1"
+                  href={tagSearchHref(tag.value)}
+                  prefetch={false}
+                >
+                  {tag.label}
+                </BadgeLink>
+              </li>
+            ))}
+          </ul>
         ) : null}
 
         <div className="mt-2.5 flex flex-wrap gap-2 empty:hidden">

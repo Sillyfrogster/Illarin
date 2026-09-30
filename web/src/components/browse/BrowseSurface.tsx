@@ -27,7 +27,7 @@ import {
 import { BrowsePoster } from "./BrowsePoster";
 import { BrowseSearch } from "./BrowseSearch";
 import { BrowseLoading, GRID, Message } from "./BrowseStates";
-import { ActiveFilters, FilterMenu } from "./FilterMenu";
+import { FeatureRow } from "./FeatureRow";
 import { ReaderLine } from "./ReaderLine";
 import { SortMenu } from "./SortMenu";
 import { TypeIndex } from "./TypeIndex";
@@ -189,6 +189,14 @@ export function BrowseSurface({
           overview={overview}
         />
 
+        {overview ? (
+          <FeatureRow
+            facets={overview.facets}
+            filters={filters}
+            navigate={navigate}
+          />
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-2">
           <ReaderLine
             adultOpen={adultOpen}
@@ -207,26 +215,12 @@ export function BrowseSurface({
               filters={filters}
               navigate={navigate}
             />
-            {overview ? (
-              <FilterMenu
-                facets={overview.facets}
-                filters={filters}
-                navigate={navigate}
-              />
-            ) : null}
           </div>
         </div>
         {trouble ? (
           <p className="font-ui text-meta text-stop" role="alert">
             {trouble}
           </p>
-        ) : null}
-        {overview ? (
-          <ActiveFilters
-            facets={overview.facets}
-            filters={filters}
-            navigate={navigate}
-          />
         ) : null}
       </div>
 

@@ -4,6 +4,10 @@ import { Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
+  TagSuggestionList,
+  useTagSuggestions,
+} from "@/components/browse/TagSuggestions";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -40,17 +44,30 @@ export function HeaderSearch() {
     return () => window.removeEventListener("keydown", focusOnSlash);
   }, []);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const q = written.trim() || undefined;
+  function run(query: string) {
     const kept = onBrowse
       ? readBrowseFilters(Object.fromEntries(params.entries()))
       : {};
-    router.push(buildBrowseHref({ ...kept, q }), { scroll: false });
+    router.push(buildBrowseHref({ ...kept, q: query.trim() || undefined }), {
+      scroll: false,
+    });
+  }
+
+  const suggestions = useTagSuggestions({
+    onChoose: (query) => {
+      setWritten(query);
+      run(query);
+    },
+    written,
+  });
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    run(written);
   }
 
   return (
-    <search className="group/search min-w-0 max-md:order-last max-md:w-full md:w-64 lg:w-72">
+    <search className="group/search relative min-w-0 max-md:order-last max-md:w-full md:w-64 lg:w-72">
       <form onSubmit={submit}>
         <label className="sr-only" htmlFor={SEARCH_ID}>
           Search works
@@ -60,6 +77,7 @@ export function HeaderSearch() {
             <Search aria-hidden="true" />
           </InputGroupAddon>
           <InputGroupInput
+            {...suggestions.inputProps}
             autoComplete="off"
             className="[&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
             enterKeyHint="search"
@@ -77,6 +95,7 @@ export function HeaderSearch() {
           </InputGroupAddon>
         </InputGroup>
       </form>
+      <TagSuggestionList state={suggestions.list} />
     </search>
   );
 }

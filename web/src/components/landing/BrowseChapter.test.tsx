@@ -16,6 +16,7 @@ test("the landing gallery keeps public work links and respects adult cover prefe
         cover: { url: "/test-cover.webp", width: 600, height: 900 },
         viewCount: 0,
         downloadCount: 0,
+        tags: [],
       },
     ],
     facets: [],

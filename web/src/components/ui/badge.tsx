@@ -38,6 +38,20 @@ function Badge({ className, tone, size, ...props }: BadgeProps) {
   );
 }
 
+/** BadgeLink is a badge that goes somewhere, washing violet under the pointer. */
+function BadgeLink({ className, ...props }: ComponentProps<typeof Link>) {
+  return (
+    <Link
+      className={cn(
+        badgeVariants(),
+        "transition-colors duration-80 hover:bg-accent-wash hover:text-accent motion-reduce:transition-none",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 export type BadgeItem = {
   id: string;
   label: string;
@@ -65,15 +79,7 @@ function BadgeList({
         {shown.map((item) => (
           <li className="max-w-full" key={item.id}>
             {item.href ? (
-              <Link
-                className={cn(
-                  badgeVariants(),
-                  "transition-colors duration-80 hover:bg-accent-wash hover:text-accent motion-reduce:transition-none",
-                )}
-                href={item.href}
-              >
-                {item.label}
-              </Link>
+              <BadgeLink href={item.href}>{item.label}</BadgeLink>
             ) : (
               <Badge>{item.label}</Badge>
             )}
@@ -93,4 +99,4 @@ function BadgeList({
   );
 }
 
-export { Badge, BadgeList, badgeVariants };
+export { Badge, BadgeLink, BadgeList, badgeVariants };

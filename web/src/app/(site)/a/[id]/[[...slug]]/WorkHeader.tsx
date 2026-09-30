@@ -15,6 +15,7 @@ import type { WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { formattingWasRemoved } from "@/lib/rich-text";
 import { spring } from "@/lib/springs";
+import { tagSearchHref } from "@/lib/tag-search";
 import { workDisplayName } from "@/lib/work-name";
 import { canSendWork } from "@/lib/work-send";
 import { FollowControl } from "./follow/FollowControl";
@@ -53,11 +54,6 @@ function nameSize(name: string): string {
   if (length > 60) return "max-w-[26ch] text-title leading-tight";
   if (length > 24) return "max-w-[20ch] text-display leading-[1.05]";
   return "max-w-[15ch] text-hero";
-}
-
-function browseTagHref(value: string): string {
-  const quoted = value.includes(" ") ? `"${value}"` : value;
-  return `/browse?q=${encodeURIComponent(`tag:${quoted}`)}`;
 }
 
 export function WorkHeader({
@@ -362,7 +358,7 @@ export function WorkHeader({
                     (work.isOwner &&
                       (workspace.unpublishedChanges || workspace.dirty))
                       ? undefined
-                      : browseTagHref(tag.trim().toLowerCase()),
+                      : tagSearchHref(tag.trim().toLowerCase()),
                   id: tag,
                   label: tag,
                 }))}

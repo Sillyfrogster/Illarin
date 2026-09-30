@@ -83,6 +83,7 @@ import type {
   WorkImage,
   WorkList,
   WorkTag,
+  WorkTagSuggestionList,
   WorkVersion,
   WorkVersionNotesRequest,
   WorkVersionRequest,
@@ -269,6 +270,20 @@ export async function fetchWorks(
   });
   if (error || !data) throw new Error("Could not load works");
   return data;
+}
+
+/** fetchTagSuggestions lists listed tags containing what the reader typed. */
+export async function fetchTagSuggestions(
+  typed: string,
+  nsfw: NsfwPreference | undefined,
+  signal?: AbortSignal,
+) {
+  const { data, error } = await api<WorkTagSuggestionList>("GET", "/v1/tags", {
+    query: { q: typed, nsfw },
+    signal,
+  });
+  if (error || !data) throw new Error("Could not load tag suggestions");
+  return data.tags;
 }
 
 export async function fetchDeletedWorks(
