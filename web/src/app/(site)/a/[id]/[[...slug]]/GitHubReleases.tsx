@@ -13,9 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CheckboxRow } from "@/components/ui/checkbox";
-import { CopyButton } from "@/components/ui/copy-button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InputCopy } from "@/components/ui/input-copy";
 import { RadioGroup } from "@/components/ui/radio-group";
 import {
   Timeline,
@@ -119,7 +119,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
     >
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="mb-2 flex items-center gap-2 text-label font-medium tracking-[0.08em] text-mute uppercase">
+          <p className="mb-2 flex items-center gap-2 text-meta text-mute">
             <GitBranch aria-hidden="true" className="size-4" />
             Extension updates
           </p>
@@ -331,15 +331,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                     <code className="font-mono text-meta">.illarin-proof</code>{" "}
                     to the repository root with this code inside:
                   </p>
-                  <div className="flex min-w-0 items-center gap-2 rounded-control bg-inset p-2 pl-4 inset-ring inset-ring-edge">
-                    <code className="min-w-0 flex-1 select-all break-all font-mono text-meta text-ink">
-                      {source.proof}
-                    </code>
-                    <CopyButton
-                      text={source.proof ?? ""}
-                      label="Copy proof code"
-                    />
-                  </div>
+                  <InputCopy value={source.proof ?? ""} />
                   <Button
                     className="self-start"
                     disabled={busy}

@@ -4,10 +4,11 @@ import { Check, Copy } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Button } from "./button";
+import { Tooltip } from "./tooltip";
 
 const CONFIRMATION_MS = 2000;
 
-/** Copies text on a click and shows a check while it confirms */
+/** CopyButton copies text on a click and shows a check while it confirms; the icon form is named by a tooltip. */
 export function CopyButton({
   children,
   text,
@@ -29,7 +30,7 @@ export function CopyButton({
   }, [copied]);
 
   const Icon = copied ? Check : Copy;
-  return (
+  const button = (
     <Button
       className={className}
       size={children ? "default" : "icon"}
@@ -53,4 +54,5 @@ export function CopyButton({
       ) : null}
     </Button>
   );
+  return children ? button : <Tooltip content={label}>{button}</Tooltip>;
 }
