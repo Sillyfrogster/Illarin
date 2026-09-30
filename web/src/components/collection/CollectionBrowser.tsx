@@ -17,6 +17,11 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { cn } from "@/lib/cn";
 import {
   type CollectionItem,
@@ -249,13 +254,14 @@ function Controls({
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
-      <div className="flex min-w-0 flex-[1_1_240px] items-center gap-2.5 rounded-control bg-deep px-3 text-mute sm:flex-[0_1_340px]">
-        <Search aria-hidden="true" size={16} />
-        <label className="sr-only" htmlFor={searchField}>
-          Search the {noun}
-        </label>
-        <input
-          className="min-h-11 min-w-0 flex-auto border-0 bg-transparent font-ui text-ui text-ink outline-offset-3"
+      <label className="sr-only" htmlFor={searchField}>
+        Search the {noun}
+      </label>
+      <InputGroup className="flex-[1_1_240px] sm:flex-[0_1_340px]">
+        <InputGroupAddon>
+          <Search aria-hidden="true" />
+        </InputGroupAddon>
+        <InputGroupInput
           id={searchField}
           onChange={(event) => onSearch(event.target.value)}
           placeholder={`Search ${noun}`}
@@ -263,7 +269,7 @@ function Controls({
           type="search"
           value={search}
         />
-      </div>
+      </InputGroup>
       <div className="flex items-center gap-2">
         <label className="font-ui text-label text-mute" htmlFor={orderField}>
           Order

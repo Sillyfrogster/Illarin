@@ -4,8 +4,10 @@ import { Check, KeyRound, Mail } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { type FormEvent, type ReactNode, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, TextInput, Trouble } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { readRefusal, refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 
@@ -111,7 +113,7 @@ export function PasswordResetRequestPanel() {
         htmlFor="reset-email"
         label="Verified email address"
       >
-        <TextInput
+        <Input
           aria-describedby="reset-email-hint"
           autoCapitalize="none"
           autoComplete="email"
@@ -123,7 +125,7 @@ export function PasswordResetRequestPanel() {
         />
       </Field>
 
-      {trouble ? <Trouble>{trouble}</Trouble> : null}
+      {trouble ? <Alert tone="stop">{trouble}</Alert> : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <Button loading={pending} type="submit" variant="primary">
@@ -206,7 +208,7 @@ export function PasswordResetCompletionPanel() {
         htmlFor="reset-password"
         label="New password"
       >
-        <TextInput
+        <Input
           aria-describedby="reset-password-hint"
           autoComplete="new-password"
           id="reset-password"
@@ -216,7 +218,7 @@ export function PasswordResetCompletionPanel() {
         />
       </Field>
 
-      {trouble ? <Trouble>{trouble}</Trouble> : null}
+      {trouble ? <Alert tone="stop">{trouble}</Alert> : null}
 
       <Button loading={pending} type="submit" variant="primary">
         {pending ? "Setting your password" : "Set password"}

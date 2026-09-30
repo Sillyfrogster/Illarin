@@ -2,6 +2,8 @@
 
 import { FilePlus2 } from "lucide-react";
 import { useRef, useState } from "react";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import type {
   ColorSetContent,
   StylesheetSetContent,
@@ -15,14 +17,11 @@ import { pickerColor } from "@/lib/theme-colors";
 import { moveItem, replaceAt, without } from "./workspace/collection";
 import {
   AddAction,
-  Field,
   FieldGroup,
   ItemMoveActions,
   Note,
   RemoveAction,
   Switch,
-  TextAreaField,
-  TextField,
 } from "./workspace/fields";
 
 export function ColorSetEditor({
@@ -46,7 +45,7 @@ export function ColorSetEditor({
           legend={mode.name?.trim() || "Default mode"}
         >
           <Field hint="what the app calls this set of colors" label="Mode name">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) =>
                 changeMode(modeIndex, {
@@ -125,7 +124,7 @@ function ColorRows({
               value={pickerColor(color.value)}
             />
           </label>
-          <TextField
+          <Input
             aria-label={`Name for color ${index + 1}`}
             className="min-w-28 flex-1"
             disabled={pending}
@@ -135,7 +134,7 @@ function ColorRows({
             placeholder="Name"
             value={color.name}
           />
-          <TextField
+          <Input
             aria-label={`Value for ${color.name || `color ${index + 1}`}`}
             className="min-w-36 flex-1 font-mono"
             disabled={pending}
@@ -197,7 +196,7 @@ export function StylesheetSetEditor({
   return (
     <div className="flex flex-col gap-8">
       <Field label="Main stylesheet">
-        <TextAreaField
+        <Textarea
           className="font-mono text-meta"
           disabled={pending}
           onChange={(event) =>
@@ -337,14 +336,14 @@ function ComponentSheet({
   return (
     <div className={cn("flex flex-col gap-3", !sheet.enabled && "opacity-70")}>
       <Field label={`Component ${position + 1}`}>
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) => onChange({ name: event.target.value })}
           value={sheet.name}
         />
       </Field>
       <Field label={`${sheet.name || `Component ${position + 1}`} CSS`}>
-        <TextAreaField
+        <Textarea
           className="font-mono text-meta"
           disabled={pending}
           onChange={(event) => onChange({ css: event.target.value })}

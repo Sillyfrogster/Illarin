@@ -3,8 +3,8 @@
 import type { LucideIcon } from "lucide-react";
 import { CalendarClock, Eye, EyeOff, Send, Undo2 } from "lucide-react";
 import { useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Trouble } from "@/components/ui/field";
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import type { Post } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
@@ -103,7 +103,7 @@ export function PublishRail({
   return (
     <div className="flex flex-col gap-5">
       <RailBack onClick={leave}>Publishing</RailBack>
-      {refusal ? <Trouble>{refusal}</Trouble> : null}
+      {refusal ? <Alert tone="stop">{refusal}</Alert> : null}
       {step === "publish" ? <PublishStep {...shared} door="now" /> : null}
       {step === "schedule" ? <PublishStep {...shared} door="later" /> : null}
       {step === "unpublish" ? <UnpublishStep {...shared} /> : null}
@@ -134,7 +134,7 @@ function Home({
 
   return (
     <div className="flex flex-col gap-7">
-      {refusal ? <Trouble>{refusal}</Trouble> : null}
+      {refusal ? <Alert tone="stop">{refusal}</Alert> : null}
 
       <section className="flex flex-col gap-1">
         <p className="font-ui text-ui font-medium text-ink">

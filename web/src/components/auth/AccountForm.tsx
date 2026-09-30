@@ -9,13 +9,15 @@ import {
   AppChoice,
   adultNote,
 } from "@/components/preferences/PreferenceChoices";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
-  controlClasses,
-  Field,
-  TextInput,
-  Trouble,
-} from "@/components/ui/field";
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { type Refusal, readRefusal } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 import type { AppName, NsfwPreference } from "@/lib/api/query";
@@ -196,7 +198,7 @@ export function AccountForm({
           </a>
         </Button>
 
-        {discordError ? <Trouble>{discordError}</Trouble> : null}
+        {discordError ? <Alert tone="stop">{discordError}</Alert> : null}
 
         {signUp ? null : (
           <p className="-mt-2 font-ui text-meta text-mute">
@@ -232,7 +234,7 @@ export function AccountForm({
           label="Email"
           trouble={failed("email") ? refused?.error : undefined}
         >
-          <TextInput
+          <Input
             aria-invalid={failed("email") || undefined}
             autoCapitalize="none"
             autoComplete="email"
@@ -259,7 +261,7 @@ export function AccountForm({
           }
           trouble={failed("password") ? refused?.error : undefined}
         >
-          <TextInput
+          <Input
             aria-invalid={failed("password") || undefined}
             autoComplete={signUp ? "new-password" : "current-password"}
             id="account-password"
@@ -270,7 +272,7 @@ export function AccountForm({
         </Field>
 
         {refused?.error && !refused.field ? (
-          <Trouble>{refused.error}</Trouble>
+          <Alert tone="stop">{refused.error}</Alert>
         ) : null}
 
         <Button
@@ -300,25 +302,11 @@ function HandleField({ trouble }: { trouble?: string }) {
       label="Handle"
       trouble={trouble}
     >
-      <div
-        className={cn(
-          controlClasses,
-          "flex items-center gap-0.5 px-0 py-0",
-          trouble && "inset-ring-2 inset-ring-stop",
-        )}
-      >
-        <span
-          aria-hidden="true"
-          className="pl-3.5 font-display text-lede text-mute"
-        >
-          @
-        </span>
-        <input
-          aria-describedby="account-handle-hint"
-          aria-invalid={trouble ? true : undefined}
+      <InputGroup>
+        <InputGroupAddon>@</InputGroupAddon>
+        <InputGroupInput
           autoCapitalize="none"
           autoComplete="username"
-          className="min-h-11 w-full min-w-0 rounded-control bg-transparent pr-3.5 font-ui text-ui text-ink outline-offset-2"
           id="account-handle"
           maxLength={32}
           minLength={3}
@@ -327,7 +315,7 @@ function HandleField({ trouble }: { trouble?: string }) {
           spellCheck={false}
           type="text"
         />
-      </div>
+      </InputGroup>
     </Field>
   );
 }

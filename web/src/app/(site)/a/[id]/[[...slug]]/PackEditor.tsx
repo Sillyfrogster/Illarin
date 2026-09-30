@@ -3,6 +3,8 @@
 import { ImagePlus, UserRound, X } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import {
   addWorkImage,
   type LumiaRecord,
@@ -12,14 +14,7 @@ import {
 import { useDraftedChanges } from "@/lib/drafted-changes";
 import { CollectionStep } from "./workspace/CollectionStep";
 import { moveItem, replaceAt, without } from "./workspace/collection";
-import {
-  ChoiceField,
-  Field,
-  FieldGroup,
-  FieldPair,
-  TextAreaField,
-  TextField,
-} from "./workspace/fields";
+import { ChoiceField, FieldGroup, FieldPair } from "./workspace/fields";
 
 const PRONOUNS: Array<{
   value: LumiaRecord["genderIdentity"];
@@ -141,7 +136,7 @@ function CharacterFields({
       />
 
       <Field label="Name">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) => onChange({ lumiaName: event.target.value })}
           value={record.lumiaName}
@@ -151,14 +146,14 @@ function CharacterFields({
       <FieldGroup legend="Credit">
         <FieldPair>
           <Field label="Author">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) => onChange({ authorName: event.target.value })}
               value={record.authorName}
             />
           </Field>
           <Field label="Version">
-            <TextField
+            <Input
               disabled={pending}
               min={1}
               onChange={(event) =>
@@ -192,7 +187,7 @@ function CharacterFields({
       </FieldGroup>
 
       <Field label="Definition">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) =>
             onChange({ lumiaDefinition: event.target.value })
@@ -202,7 +197,7 @@ function CharacterFields({
         />
       </Field>
       <Field label="Personality">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) =>
             onChange({ lumiaPersonality: event.target.value })
@@ -212,7 +207,7 @@ function CharacterFields({
         />
       </Field>
       <Field label="Behavior">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) => onChange({ lumiaBehavior: event.target.value })}
           rows={7}

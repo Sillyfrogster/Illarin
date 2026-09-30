@@ -5,7 +5,8 @@ import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Field, TextInput } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { startPost } from "@/lib/api/posts";
 import type { BlogWorkspace } from "@/lib/api/query";
@@ -70,8 +71,7 @@ export function StartPost({
       </p>
       <div className="mt-5 grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
         <Field htmlFor="new-post-title" label="Title">
-          <TextInput
-            className="bg-field"
+          <Input
             id="new-post-title"
             maxLength={160}
             onChange={(event) => setTitle(event.target.value)}

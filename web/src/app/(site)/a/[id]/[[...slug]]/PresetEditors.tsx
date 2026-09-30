@@ -2,6 +2,8 @@
 
 import { X } from "lucide-react";
 import { useState } from "react";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import type {
   PresetSetting,
@@ -25,14 +27,11 @@ import {
 import {
   AddAction,
   ChoiceField,
-  Field,
   FieldGroup,
   FieldPair,
   Note,
   RemoveAction,
   Switch,
-  TextAreaField,
-  TextField,
 } from "./workspace/fields";
 
 const PROMPT_ROLES: {
@@ -226,7 +225,7 @@ function GroupEditor({
           <ul className="flex flex-col gap-2">
             {groups.map((group, index) => (
               <li className="flex items-center gap-1" key={group.id ?? index}>
-                <TextField
+                <Input
                   aria-label={`Heading ${index + 1}`}
                   disabled={pending}
                   onChange={(event) =>
@@ -253,7 +252,7 @@ function GroupEditor({
           </ul>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <TextField
+          <Input
             aria-label="A new heading"
             className="min-w-40 flex-1"
             disabled={pending}
@@ -293,7 +292,7 @@ function FragmentFields({
   return (
     <div className="flex flex-col gap-6">
       <Field hint="optional, and never sent to a model" label="Name">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) =>
             onChange({ name: event.target.value || undefined })
@@ -320,7 +319,7 @@ function FragmentFields({
         </Note>
       ) : (
         <Field label="Fragment text">
-          <TextAreaField
+          <Textarea
             disabled={pending}
             onChange={(event) => onChange({ text: event.target.value })}
             rows={12}
@@ -399,7 +398,7 @@ function FragmentFields({
           </ChoiceField>
         </Field>
         <Field hint="messages back from the most recent" label="Depth">
-          <TextField
+          <Input
             disabled={pending}
             onChange={(event) =>
               onChange({
@@ -524,7 +523,7 @@ function NewSetting({
   const [type, setType] = useState<PresetSetting["type"]>("number");
   return (
     <div className="flex flex-wrap items-center gap-2 pt-2">
-      <TextField
+      <Input
         aria-label="A new setting's name"
         className="max-w-64 flex-1"
         disabled={pending}
@@ -605,7 +604,7 @@ function ValueField({
   }
   if (type === "number") {
     return (
-      <TextField
+      <Input
         aria-label={label}
         disabled={pending}
         onChange={(event) =>
@@ -620,7 +619,7 @@ function ValueField({
   }
   if (type === "string_list") {
     return (
-      <TextAreaField
+      <Textarea
         aria-label={`${label}, one per line`}
         disabled={pending}
         onChange={(event) =>
@@ -648,7 +647,7 @@ function ValueField({
     );
   }
   return (
-    <TextField
+    <Input
       aria-label={label}
       disabled={pending}
       onChange={(event) => onChange({ text: event.target.value })}
@@ -730,7 +729,7 @@ function VariableFields({
   return (
     <div className="flex flex-col gap-6">
       <Field hint="what the fragments refer to it by" label="Name">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) => onChange({ name: event.target.value })}
           value={variable.name}
@@ -754,7 +753,7 @@ function VariableFields({
       </Field>
 
       <Field hint="what a reader sees above the field" label="Label">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) =>
             onChange({ label: event.target.value || undefined })
@@ -764,7 +763,7 @@ function VariableFields({
       </Field>
 
       <Field hint="the line under it" label="Description">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) =>
             onChange({ description: event.target.value || undefined })
@@ -779,7 +778,7 @@ function VariableFields({
           {options.map((option, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: Choices stay ordered and hold no local state.
             <div className="flex flex-wrap items-center gap-2" key={index}>
-              <TextField
+              <Input
                 aria-label={`Wording for choice ${index + 1}`}
                 className="min-w-32 flex-1"
                 disabled={pending}
@@ -793,7 +792,7 @@ function VariableFields({
                 placeholder="Wording"
                 value={option.label}
               />
-              <TextField
+              <Input
                 aria-label={`Value for choice ${index + 1}`}
                 className="min-w-32 flex-1"
                 disabled={pending}
@@ -827,7 +826,7 @@ function VariableFields({
               hint="what joins the chosen values in the prompt"
               label="Separator"
             >
-              <TextField
+              <Input
                 disabled={pending}
                 onChange={(event) =>
                   onChange({ separator: event.target.value || undefined })
@@ -843,7 +842,7 @@ function VariableFields({
         <FieldGroup legend="Allowed values">
           <FieldPair>
             <Field label="Minimum">
-              <TextField
+              <Input
                 disabled={pending}
                 onChange={(event) =>
                   onChange({
@@ -861,7 +860,7 @@ function VariableFields({
               />
             </Field>
             <Field label="Maximum">
-              <TextField
+              <Input
                 disabled={pending}
                 onChange={(event) =>
                   onChange({
@@ -880,7 +879,7 @@ function VariableFields({
             </Field>
           </FieldPair>
           <Field label="Step">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) =>
                 onChange({
@@ -969,7 +968,7 @@ function ScriptFields({
   return (
     <div className="flex flex-col gap-6">
       <Field hint="optional" label="Name">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) =>
             onChange({ name: event.target.value || undefined })
@@ -980,7 +979,7 @@ function ScriptFields({
 
       <FieldPair>
         <Field label="Find">
-          <TextField
+          <Input
             className="font-mono"
             disabled={pending}
             onChange={(event) => onChange({ find: event.target.value })}
@@ -988,7 +987,7 @@ function ScriptFields({
           />
         </Field>
         <Field hint="g for every match, i to ignore case" label="Flags">
-          <TextField
+          <Input
             className="font-mono"
             disabled={pending}
             onChange={(event) =>
@@ -1000,7 +999,7 @@ function ScriptFields({
       </FieldPair>
 
       <Field label="Replacement text">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) => onChange({ replace: event.target.value })}
           rows={4}
@@ -1039,7 +1038,7 @@ function ScriptFields({
       <FieldGroup legend="Message range">
         <FieldPair>
           <Field hint="counted from the most recent" label="Nearest message">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) =>
                 onChange({
@@ -1054,7 +1053,7 @@ function ScriptFields({
             />
           </Field>
           <Field label="Furthest message">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) =>
                 onChange({
@@ -1085,7 +1084,7 @@ function ScriptFields({
       </FieldGroup>
 
       <Field hint="text cut out of the match, one per line" label="Trim">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) =>
             onChange({ trim: readLines(event.target.value) })

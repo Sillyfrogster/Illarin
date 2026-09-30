@@ -4,7 +4,8 @@ import { ImageUp, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Field, TextInput } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import type { PostMedia, PostMediaPurpose } from "@/lib/api/query";
 import { POST_PICTURE_TEXT_LIMIT } from "@/lib/post-body";
 
@@ -113,7 +114,7 @@ export function PicturePicker({
             htmlFor={`${field}-alt`}
             label="Description"
           >
-            <TextInput
+            <Input
               aria-invalid={chosen.alt.trim() ? undefined : true}
               id={`${field}-alt`}
               maxLength={POST_PICTURE_TEXT_LIMIT}
@@ -128,7 +129,7 @@ export function PicturePicker({
             htmlFor={`${field}-caption`}
             label="Caption"
           >
-            <TextInput
+            <Input
               id={`${field}-caption`}
               maxLength={POST_PICTURE_TEXT_LIMIT}
               onChange={(event) =>

@@ -3,6 +3,8 @@
 import { CircleSlash2, PencilLine, RotateCcw } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
   correctWorkVersionNotes,
@@ -261,24 +263,20 @@ function VersionManagement({
 
       {mode === "correct" ? (
         <div className="grid gap-4 pt-4 pb-1">
-          <label className="grid gap-1 text-meta text-mute">
-            Summary
-            <input
-              className="min-h-11 rounded-control bg-field px-3 text-ui text-ink"
+          <Field label="Summary">
+            <Input
               maxLength={200}
               onChange={(event) => setSummary(event.target.value)}
               value={summary}
             />
-          </label>
-          <label className="grid gap-1 text-meta text-mute">
-            Notes
-            <textarea
-              className="min-h-28 rounded-control bg-field p-3 text-ui text-ink"
+          </Field>
+          <Field label="Notes">
+            <Textarea
               maxLength={4000}
               onChange={(event) => setNotes(event.target.value)}
               value={notes}
             />
-          </label>
+          </Field>
           <ActionRow
             busy={busy}
             confirm="Save notes"
@@ -306,15 +304,13 @@ function VersionManagement({
             Readers see the version number, the date and this reason. Nobody can
             read or download it.
           </p>
-          <label className="grid gap-1 text-meta text-mute">
-            Reason readers see
-            <textarea
-              className="min-h-24 rounded-control bg-field p-3 text-ui text-ink"
+          <Field label="Reason readers see">
+            <Textarea
               maxLength={1000}
               onChange={(event) => setExplanation(event.target.value)}
               value={explanation}
             />
-          </label>
+          </Field>
           <ActionRow
             busy={busy}
             confirm="Withdraw version"

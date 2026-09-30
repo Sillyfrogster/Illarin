@@ -2,8 +2,8 @@
 
 import { ShieldAlert } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Trouble } from "@/components/ui/field";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
 import {
   type PendingConnection,
@@ -109,7 +109,7 @@ export function ConnectionDecision({
         them. Approve only if you started this request.
       </p>
 
-      {trouble ? <Trouble>{trouble}</Trouble> : null}
+      {trouble ? <Alert tone="stop">{trouble}</Alert> : null}
 
       <div
         aria-describedby="unverified-connect-details"

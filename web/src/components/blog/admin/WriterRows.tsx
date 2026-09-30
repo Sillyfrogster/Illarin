@@ -12,7 +12,8 @@ import {
   StartAction,
 } from "@/components/register/RowParts";
 import { Consequence, StepForm } from "@/components/register/StepParts";
-import { Field, TextInput } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { switchWriterOff, switchWriterOn } from "@/lib/api/blog";
 import type { WriterResponse } from "@/lib/api/query";
 import { nothingIn } from "@/lib/blog-admin";
@@ -143,7 +144,7 @@ export function WriterStep({
         htmlFor="writer-handle"
         label="Handle"
       >
-        <TextInput
+        <Input
           autoComplete="off"
           id="writer-handle"
           onChange={(event) => setHandle(event.target.value)}

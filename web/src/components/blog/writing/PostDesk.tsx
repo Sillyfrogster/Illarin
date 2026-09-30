@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Shell } from "@/components/layout/Shell";
-import { Trouble } from "@/components/ui/field";
+import { Alert } from "@/components/ui/alert";
 import { Gate } from "@/components/ui/gate";
 import { readWorkspace } from "@/lib/api/blog";
 import { readDeletedPosts, readPosts } from "@/lib/api/posts";
@@ -169,7 +169,7 @@ function Inside({
 
         {failure ? (
           <div className="mt-5">
-            <Trouble>{failure}</Trouble>
+            <Alert tone="stop">{failure}</Alert>
           </div>
         ) : null}
 

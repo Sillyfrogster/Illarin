@@ -10,7 +10,8 @@ import {
   Rows,
 } from "@/components/register/RowParts";
 import { Consequence, StepForm } from "@/components/register/StepParts";
-import { Field, TextInput } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Sortable, SortableItemHandle } from "@/components/ui/sortable";
 import { orderCategories, updateCategory } from "@/lib/api/blog";
 import type { BlogCategory } from "@/lib/api/query";
@@ -172,7 +173,7 @@ export function CategoryStep({
         htmlFor="category-label"
         label="Name"
       >
-        <TextInput
+        <Input
           id="category-label"
           maxLength={48}
           onChange={(event) => setLabel(event.target.value)}

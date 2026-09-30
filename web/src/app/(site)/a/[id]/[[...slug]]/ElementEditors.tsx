@@ -3,6 +3,8 @@
 import { ImagePlus } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Sortable,
   SortableItem,
@@ -24,7 +26,7 @@ import {
 } from "./PresetEditors";
 import { ColorSetEditor, StylesheetSetEditor } from "./ThemeEditors";
 import { moveItem, replaceAt, without } from "./workspace/collection";
-import { Field, InlineItem, Note, Switch, TextField } from "./workspace/fields";
+import { InlineItem, Note, Switch } from "./workspace/fields";
 
 type ImageItem = {
   mediaId: string;
@@ -336,7 +338,7 @@ function ImageEditor({
                       </div>
                       <div className="flex min-w-0 flex-1 flex-col gap-4">
                         <Field hint="optional" label="Name">
-                          <TextField
+                          <Input
                             disabled={pending}
                             onChange={(event) =>
                               onChange(

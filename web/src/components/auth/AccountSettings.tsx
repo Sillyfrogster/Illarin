@@ -3,9 +3,10 @@
 import { Check, KeyRound, Mail, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, type ReactNode, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Said, TextInput } from "@/components/ui/field";
 import { Gate } from "@/components/ui/gate";
+import { Input } from "@/components/ui/input";
 import { type WayIn, type WayInId, waysIn } from "@/lib/account-access";
 import { readRefusal, refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
@@ -127,7 +128,7 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
             : `${settled} sign-in methods are available.`}
       </p>
 
-      {said ? <Said>{said}</Said> : null}
+      {said ? <Alert tone="done">{said}</Alert> : null}
 
       <ul className="m-0 grid list-none gap-px overflow-hidden rounded-plate bg-rule p-0">
         {ways.map((way) => (
@@ -169,7 +170,7 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
                 <label className="sr-only" htmlFor="settings-password">
                   New password
                 </label>
-                <TextInput
+                <Input
                   autoComplete="new-password"
                   className="min-w-0 flex-1 basis-56"
                   id="settings-password"

@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Trouble } from "@/components/ui/field";
 import { Slab } from "@/components/ui/slab";
 import { readReport, staffKeys } from "@/lib/api/staff";
 import { ActivityMatrix } from "./ActivityMatrix";
@@ -20,7 +20,7 @@ export function StaffReport() {
   if (query.isError) {
     return (
       <Slab className="max-w-[40rem] gap-4 p-5">
-        <Trouble>{query.error.message}</Trouble>
+        <Alert tone="stop">{query.error.message}</Alert>
         <Button
           className="self-start"
           loading={query.isFetching}

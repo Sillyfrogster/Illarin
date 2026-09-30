@@ -15,6 +15,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
 import { LANGUAGE_LABELS } from "@/lib/code-highlight";
 import {
   isPostCalloutKind,
@@ -24,7 +25,7 @@ import {
   type PostLanguage,
 } from "@/lib/post-body";
 import { isSafeAddress } from "@/lib/post-link";
-import { Choice, Row, RowInput, RowNote, RowSelect } from "./RowParts";
+import { Choice, Row, RowNote, RowSelect } from "./RowParts";
 import type { Controls } from "./use-controls";
 
 const CALLOUT_LABELS: Record<string, string> = {
@@ -318,7 +319,7 @@ export function LinkRow({
         Address
       </label>
       <span className="min-w-0 flex-[1_1_15rem]">
-        <RowInput
+        <Input
           aria-describedby={refusal ? `${field}-refusal` : undefined}
           aria-invalid={refusal ? true : undefined}
           id={field}

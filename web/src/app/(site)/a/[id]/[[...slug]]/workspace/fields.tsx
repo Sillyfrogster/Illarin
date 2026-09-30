@@ -8,30 +8,6 @@ import { cn } from "@/lib/cn";
 const MOVE =
   "inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink disabled:opacity-40 disabled:hover:bg-transparent";
 
-const CONTROL =
-  "w-full rounded-control border-0 bg-deep px-3 text-ui text-ink outline-offset-3 placeholder:text-mute disabled:opacity-60";
-
-export function Field({
-  children,
-  hint,
-  label,
-}: {
-  children: ReactNode;
-  hint?: string;
-  label: string;
-}) {
-  return (
-    // biome-ignore lint/a11y/noLabelWithoutControl: The control is the child, and the rule cannot see through the boundary.
-    <label className="block">
-      <span className="mb-2 block text-label font-medium text-mute">
-        {label}
-        {hint ? <span className="font-normal"> · {hint}</span> : null}
-      </span>
-      {children}
-    </label>
-  );
-}
-
 export function FieldGroup({
   children,
   legend,
@@ -51,24 +27,6 @@ export function FieldGroup({
 
 export function FieldPair({ children }: { children: ReactNode }) {
   return <div className="grid gap-4 @sm:grid-cols-2">{children}</div>;
-}
-
-export function TextField(props: ComponentProps<"input">) {
-  return (
-    <input
-      {...props}
-      className={cn(CONTROL, "min-h-11 py-2", props.className)}
-    />
-  );
-}
-
-export function TextAreaField(props: ComponentProps<"textarea">) {
-  return (
-    <textarea
-      {...props}
-      className={cn(CONTROL, "resize-y py-3 leading-relaxed", props.className)}
-    />
-  );
 }
 
 export function ChoiceField(props: ComponentProps<"select">) {

@@ -4,8 +4,10 @@ import { Check, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, Said, TextInput, Trouble } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { readRefusal } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
@@ -144,7 +146,7 @@ export function VerificationPanel() {
             Email verification failed
           </h2>
         </div>
-        <Trouble>{said}</Trouble>
+        <Alert tone="stop">{said}</Alert>
         <div>
           <Button asChild variant="primary">
             <Link href="/sign-in">Return to sign in</Link>
@@ -174,7 +176,7 @@ export function VerificationPanel() {
         <form className="grid gap-3" onSubmit={changeEmail}>
           <Field htmlFor="corrected-email" label="Mistyped the address?">
             <div className="flex flex-wrap items-center gap-3">
-              <TextInput
+              <Input
                 autoComplete="email"
                 className="min-w-0 flex-1 basis-56"
                 id="corrected-email"
@@ -191,7 +193,7 @@ export function VerificationPanel() {
         </form>
       ) : null}
 
-      {said ? <Said>{said}</Said> : null}
+      {said ? <Alert tone="done">{said}</Alert> : null}
 
       <div>
         <Button asChild variant="ghost">

@@ -1,5 +1,7 @@
 "use client";
 
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import type { LorebookEntry } from "@/lib/api/query";
 import { CollectionStep } from "./workspace/CollectionStep";
 import {
@@ -9,15 +11,7 @@ import {
   without,
   writeLines,
 } from "./workspace/collection";
-import {
-  ChoiceField,
-  Field,
-  FieldGroup,
-  FieldPair,
-  Switch,
-  TextAreaField,
-  TextField,
-} from "./workspace/fields";
+import { ChoiceField, FieldGroup, FieldPair, Switch } from "./workspace/fields";
 
 export function entryName(entry: LorebookEntry, position: number): string {
   if (entry.name?.trim()) return entry.name;
@@ -88,7 +82,7 @@ function EntryFields({
   return (
     <div className="flex flex-col gap-6">
       <Field hint="optional, and never sent to a model" label="Name">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) =>
             onChange({ name: event.target.value || undefined })
@@ -98,7 +92,7 @@ function EntryFields({
       </Field>
 
       <Field label="Entry text">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) => onChange({ text: event.target.value })}
           rows={10}
@@ -108,7 +102,7 @@ function EntryFields({
 
       <FieldGroup legend="Activation">
         <Field hint="one per line" label="Keys">
-          <TextAreaField
+          <Textarea
             disabled={pending}
             onChange={(event) =>
               onChange({ keys: readLines(event.target.value) })
@@ -139,7 +133,7 @@ function EntryFields({
           pending={pending}
         />
         <Field hint="one per line" label="Second keys">
-          <TextAreaField
+          <Textarea
             disabled={pending}
             onChange={(event) =>
               onChange({ secondaryKeys: readLines(event.target.value) })
@@ -160,7 +154,7 @@ function EntryFields({
       <FieldGroup legend="Placement">
         <FieldPair>
           <Field hint="among the entries that fired with it" label="Order">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) =>
                 onChange({ order: Number(event.target.value) || 0 })

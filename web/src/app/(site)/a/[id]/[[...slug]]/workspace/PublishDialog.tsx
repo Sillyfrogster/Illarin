@@ -12,6 +12,8 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import { LineLink } from "@/components/ui/line-link";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { readDiscordChannel } from "@/lib/api/integrations";
@@ -30,7 +32,7 @@ import {
   useDraftedChanges,
 } from "@/lib/drafted-changes";
 import type { ReadinessTarget } from "@/lib/readiness";
-import { Field, Note, TextAreaField, TextField } from "./fields";
+import { Note } from "./fields";
 import { Hearer, HearerCheck, PublishSubject } from "./PublishParts";
 import { ReadinessList } from "./ReadinessList";
 import { useWorkspace } from "./state";
@@ -228,7 +230,7 @@ export function PublishDialog({
                       hint="readers see this in the history"
                       label="Summary of what changed"
                     >
-                      <TextField
+                      <Input
                         autoComplete="off"
                         maxLength={200}
                         onChange={(event) => setSummary(event.target.value)}
@@ -239,7 +241,7 @@ export function PublishDialog({
 
                     <div className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_10rem]">
                       <Field hint="optional" label="Notes">
-                        <TextAreaField
+                        <Textarea
                           maxLength={4000}
                           onChange={(event) => setNotes(event.target.value)}
                           rows={3}
@@ -247,7 +249,7 @@ export function PublishDialog({
                         />
                       </Field>
                       <Field hint="optional" label="Version">
-                        <TextField
+                        <Input
                           autoComplete="off"
                           maxLength={60}
                           onChange={(event) => setLabel(event.target.value)}

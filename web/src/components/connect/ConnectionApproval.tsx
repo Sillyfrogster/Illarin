@@ -11,8 +11,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Trouble } from "@/components/ui/field";
+import { inputClasses } from "@/components/ui/input";
 import { refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
@@ -310,7 +311,10 @@ export function ConnectionApproval() {
           }
           autoCapitalize="characters"
           autoComplete="off"
-          className="mt-5 block min-h-[4.5rem] w-full max-w-[26rem] rounded-plate border-0 bg-deep px-6 text-center font-mono text-[clamp(1.6rem,4.5vw,2.5rem)] tracking-[0.22em] text-ink uppercase outline-offset-2 placeholder:text-mute/45"
+          className={cn(
+            inputClasses,
+            "mt-5 block h-auto min-h-[4.5rem] max-w-[26rem] rounded-plate px-6 text-center font-mono text-[clamp(1.6rem,4.5vw,2.5rem)] tracking-[0.22em] uppercase placeholder:text-mute/45",
+          )}
           enterKeyHint="go"
           id="connect-code"
           maxLength={12}
@@ -323,7 +327,7 @@ export function ConnectionApproval() {
         />
         {trouble ? (
           <div className="mt-4" id="connect-entry-trouble">
-            <Trouble>{trouble}</Trouble>
+            <Alert tone="stop">{trouble}</Alert>
           </div>
         ) : null}
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">

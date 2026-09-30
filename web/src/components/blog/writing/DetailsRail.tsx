@@ -1,6 +1,7 @@
 "use client";
 
-import { Field, TextInput } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type {
   BlogCategory,
@@ -63,7 +64,7 @@ export function DetailsRail({
           htmlFor="post-slug"
           label="Address"
         >
-          <TextInput
+          <Input
             id="post-slug"
             maxLength={80}
             onChange={(event) => onChange({ slug: event.target.value })}

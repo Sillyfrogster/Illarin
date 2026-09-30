@@ -9,6 +9,7 @@ import {
 import { FilePlus2, FileText, Layers, Package, Rows3 } from "lucide-react";
 import { type DragEvent, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/input";
 import { RollingNumber } from "@/components/ui/rolling-number";
 import { cn } from "@/lib/cn";
 import { PictureTile, SectionRow } from "./ShelfPiece";
@@ -161,8 +162,8 @@ function AddMarkdown({
               <label className="sr-only" htmlFor={field}>
                 Markdown
               </label>
-              <textarea
-                className="min-h-48 w-full resize-y rounded-control bg-plane p-4 font-mono text-meta leading-relaxed text-ink outline-offset-2 placeholder:text-mute"
+              <Textarea
+                className="min-h-48 p-4 font-mono text-meta"
                 disabled={busy}
                 id={field}
                 onChange={(event) => {

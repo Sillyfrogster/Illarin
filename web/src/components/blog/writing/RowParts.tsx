@@ -91,18 +91,6 @@ export function Choice({
   );
 }
 
-export function RowInput({ className, ...props }: ComponentProps<"input">) {
-  return (
-    <input
-      className={cn(
-        "min-h-11 w-full min-w-0 rounded-control border-0 bg-plane px-3 font-ui text-meta text-ink outline-offset-3 placeholder:text-mute aria-invalid:inset-ring-2 aria-invalid:inset-ring-stop",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 export function RowSelect({ className, ...props }: ComponentProps<"select">) {
   return <Select className={cn("bg-plane text-meta", className)} {...props} />;
 }

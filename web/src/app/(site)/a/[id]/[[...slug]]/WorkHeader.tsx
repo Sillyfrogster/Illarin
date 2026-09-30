@@ -5,7 +5,8 @@ import { ArrowLeft, PencilLine, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { ChipSet } from "@/components/ui/Chip";
-import { Field, TextArea, TextInput } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import { FormattingNotice, RichText } from "@/components/ui/RichText";
 import { WorkOwnerMenu } from "@/components/work/WorkOwnerMenu";
 import type { WorkDetail } from "@/lib/api/query";
@@ -285,7 +286,7 @@ export function WorkHeader({
                 }
                 trouble={blurbTrouble || undefined}
               >
-                <TextArea
+                <Textarea
                   aria-describedby={
                     blurbTrouble
                       ? "work-blurb-trouble work-blurb-hint"
@@ -351,7 +352,7 @@ export function WorkHeader({
                       setTagTrouble("");
                     }}
                   >
-                    <TextInput
+                    <Input
                       aria-describedby={
                         tagTrouble
                           ? "work-tag-trouble work-tag-hint"

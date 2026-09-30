@@ -4,6 +4,8 @@ import { ArrowUpRight, GitBranch, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Slab,
   SlabFoot,
@@ -166,17 +168,15 @@ export function GitHubReleases({ workId }: { workId: string }) {
             </SlabHead>
             <div className="grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10">
               <div className="flex flex-col gap-5">
-                <label className="flex flex-col gap-2 text-meta font-medium text-ink">
-                  Repository URL
-                  <input
-                    className="min-h-12 w-full rounded-control bg-field px-4 font-normal text-ui text-ink inset-ring inset-ring-edge outline-offset-2 placeholder:text-mute"
+                <Field label="Repository URL">
+                  <Input
                     onChange={(event) => setRepository(event.target.value)}
                     placeholder="https://github.com/owner/repository"
                     required
                     type="url"
                     value={repository}
                   />
-                </label>
+                </Field>
                 <p className="max-w-sm text-meta text-mute">
                   You need to prove the repository is yours before Illarin
                   imports its releases.
@@ -224,9 +224,9 @@ export function GitHubReleases({ workId }: { workId: string }) {
                     </label>
                   </div>
                   {useAttachment ? (
-                    <input
+                    <Input
                       aria-label="Attachment file name"
-                      className="mt-3 min-h-12 w-full rounded-control bg-field px-4 text-ui text-ink inset-ring inset-ring-edge outline-offset-2 placeholder:text-mute"
+                      className="mt-3"
                       onChange={(event) => setAttachment(event.target.value)}
                       placeholder="extension.zip"
                       required

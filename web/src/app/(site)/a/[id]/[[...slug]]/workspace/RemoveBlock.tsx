@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Field } from "@/components/ui/field";
 import type { WorkBlock } from "@/lib/api/query";
 import { contentItemCount, LAYOUTS } from "@/lib/page-arrangement";
-import { ChoiceField, Field, Note } from "./fields";
+import { ChoiceField, Note } from "./fields";
 import { useWorkspace } from "./state";
 
 const KEEP =

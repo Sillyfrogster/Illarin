@@ -27,15 +27,11 @@ import {
 import Image from "next/image";
 import { type ComponentType, useRef, useState } from "react";
 import { CropPicture, cropsCleanly } from "@/components/media/CropPicture";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
-import {
-  Field,
-  Said,
-  TextArea,
-  TextInput,
-  Trouble,
-} from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import {
   arrayMove,
   Sortable,
@@ -235,10 +231,14 @@ export function IdentityCard({
         )}
         {trouble ? (
           <div className="mt-3">
-            <Trouble>{trouble}</Trouble>
+            <Alert tone="stop">{trouble}</Alert>
           </div>
         ) : null}
-        {said ? <Said className="mt-3">{said}</Said> : null}
+        {said ? (
+          <Alert tone="done" className="mt-3">
+            {said}
+          </Alert>
+        ) : null}
       </div>
     </div>
   );
@@ -415,7 +415,7 @@ function EditableWords({ editing }: { editing: Editing }) {
         }
         trouble={failed("biography")}
       >
-        <TextArea
+        <Textarea
           aria-invalid={Boolean(failed("biography")) || undefined}
           className="min-h-24 font-prose field-sizing-content"
           id="profile-bio"
@@ -435,7 +435,7 @@ function EditableWords({ editing }: { editing: Editing }) {
         label="Contact email"
         trouble={failed("contactEmail")}
       >
-        <TextInput
+        <Input
           aria-describedby="profile-contact-hint"
           aria-invalid={Boolean(failed("contactEmail")) || undefined}
           autoComplete="off"
@@ -507,7 +507,7 @@ function LinkEditor({
     >
       <SortableItemHandle disabled={links.length < 2} label={`Move ${name}`} />
       <div className="grid gap-1.5">
-        <TextInput
+        <Input
           aria-label={`Link ${index + 1} label`}
           maxLength={32}
           onChange={(event) =>
@@ -517,7 +517,7 @@ function LinkEditor({
           type="text"
           value={link.label}
         />
-        <TextInput
+        <Input
           aria-label={`Link ${index + 1} address`}
           maxLength={300}
           onChange={(event) =>

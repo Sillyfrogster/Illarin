@@ -3,8 +3,8 @@
 import { Plug, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Said, Trouble } from "@/components/ui/field";
 import { refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
@@ -177,9 +177,9 @@ export function ConnectedApps() {
       {notice ? (
         <div className="mt-5">
           {notice.kind === "trouble" ? (
-            <Trouble>{notice.message}</Trouble>
+            <Alert tone="stop">{notice.message}</Alert>
           ) : (
-            <Said>{notice.message}</Said>
+            <Alert tone="done">{notice.message}</Alert>
           )}
         </div>
       ) : null}
