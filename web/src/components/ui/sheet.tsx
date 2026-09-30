@@ -1,50 +1,64 @@
 "use client";
 
-import * as SheetPrimitive from "@radix-ui/react-dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { motion } from "framer-motion";
 import type { ComponentProps } from "react";
+import {
+  DIALOG_OFFSET,
+  Dialog,
+  DialogClose,
+  DialogDescription,
+  DialogTitle,
+  fade,
+  OVERLAY,
+  useDialogOpen,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/cn";
+import { spring } from "@/lib/springs";
+import { surfaceClasses } from "@/lib/surface-classes";
+import { SurfaceProvider, useSurface } from "@/lib/surface-context";
+import { usePresence } from "@/lib/use-presence";
 
-const Sheet = SheetPrimitive.Root;
-const SheetTrigger = SheetPrimitive.Trigger;
-const SheetClose = SheetPrimitive.Close;
-const SheetTitle = SheetPrimitive.Title;
-const SheetDescription = SheetPrimitive.Description;
-
-const SIDES = {
-  top: "inset-x-0 top-0 max-h-dvh pb-6 motion-safe:data-[state=closed]:animate-slide-out motion-safe:data-[state=open]:animate-slide-in",
-  left: "inset-y-0 left-0 h-dvh w-[18rem] max-w-[85vw] motion-safe:data-[state=closed]:animate-slide-left-out motion-safe:data-[state=open]:animate-slide-left-in",
-};
-
+/** SheetContent is shadcn's sheet from the bottom edge, a dialog's form on a phone, sliding on the moderate spring. */
 function SheetContent({
   className,
   children,
-  side = "top",
   ...props
-}: ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: keyof typeof SIDES;
-}) {
+}: ComponentProps<typeof DialogPrimitive.Content>) {
+  const open = useDialogOpen();
+  const level = Math.min(useSurface() + DIALOG_OFFSET, 8);
+  const { mounted, onExitComplete } = usePresence(open, spring.moderate);
+
+  if (!mounted) return null;
+
   return (
-    <SheetPrimitive.Portal>
-      <SheetPrimitive.Overlay className="fixed inset-0 z-90 bg-ink/35 data-[state=closed]:opacity-0 motion-safe:transition-opacity motion-safe:duration-200" />
-      <SheetPrimitive.Content
-        className={cn(
-          "fixed z-90 overflow-y-auto bg-plane font-ui text-ink shadow-popover outline-none inset-ring inset-ring-edge/60",
-          SIDES[side],
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </SheetPrimitive.Content>
-    </SheetPrimitive.Portal>
+    <DialogPrimitive.Portal forceMount>
+      <DialogPrimitive.Overlay asChild forceMount>
+        <motion.div className={OVERLAY} {...fade(open)} />
+      </DialogPrimitive.Overlay>
+      <DialogPrimitive.Content asChild forceMount {...props}>
+        <motion.div
+          animate={{ y: open ? 0 : "100%" }}
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-90 flex max-h-[92dvh] flex-col overflow-hidden rounded-t-plate font-ui text-ink outline-none",
+            surfaceClasses(level),
+            className,
+          )}
+          initial={{ y: "100%" }}
+          onAnimationComplete={onExitComplete}
+          transition={open ? spring.moderate : spring.moderate.exit}
+        >
+          <SurfaceProvider value={level}>{children}</SurfaceProvider>
+        </motion.div>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
   );
 }
 
 export {
-  Sheet,
-  SheetClose,
+  Dialog as Sheet,
+  DialogClose as SheetClose,
   SheetContent,
-  SheetDescription,
-  SheetTitle,
-  SheetTrigger,
+  DialogDescription as SheetDescription,
+  DialogTitle as SheetTitle,
 };

@@ -45,6 +45,11 @@ function rise(open: boolean, y: number | string) {
 
 const DialogOpenContext = createContext(false);
 
+/** useDialogOpen lets a panel inside a Dialog play its exit before it unmounts. */
+function useDialogOpen() {
+  return useContext(DialogOpenContext);
+}
+
 /** Dialog keeps its open state so the panel can play its exit before it unmounts. */
 function Dialog({
   children,
@@ -89,7 +94,7 @@ function DialogContent({
   position?: "center" | "top";
   showCloseButton?: boolean;
 }) {
-  const open = useContext(DialogOpenContext);
+  const open = useDialogOpen();
   const level = Math.min(useSurface() + DIALOG_OFFSET, 8);
   const { mounted, onExitComplete } = usePresence(open, spring.slow);
   const y = position === "top" ? 0 : "-50%";
@@ -154,4 +159,5 @@ export {
   DialogDescription,
   DialogTitle,
   DialogTrigger,
+  useDialogOpen,
 };

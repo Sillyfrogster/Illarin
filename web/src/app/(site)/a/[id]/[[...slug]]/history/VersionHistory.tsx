@@ -1,24 +1,26 @@
 "use client";
 
-import { ArrowLeft, History } from "lucide-react";
+import { ArrowLeft, History, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
 import { Button } from "@/components/ui/button";
 import {
-  ExpandingPanel,
-  ExpandingPanelClose,
-  ExpandingPanelContent,
-  ExpandingPanelTitle,
-  ExpandingPanelTrigger,
-} from "@/components/ui/expanding-panel";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchWorkUpdates,
   type RecordedVersion,
   type WorkDetail,
 } from "@/lib/api/query";
+import { cn, focusRing } from "@/lib/cn";
 import { PHONE_WIDTH, useMediaQuery } from "@/lib/use-media-query";
 import { workHref } from "@/lib/work-url";
 import { versionDate, versionSummary, versionTitle } from "@/lib/work-versions";
@@ -101,9 +103,15 @@ export function VersionHistory({
   const published = work.lifecycle !== "draft";
 
   return (
-    <ExpandingPanel onOpenChange={change} open={open}>
-      <ExpandingPanelTrigger className="mt-8 max-w-[42ch]">
-        <span className="flex items-center gap-4 py-4 pr-4 pl-5">
+    <Dialog onOpenChange={change} open={open}>
+      <DialogTrigger asChild>
+        <button
+          className={cn(
+            "group mt-8 flex w-full max-w-[42ch] cursor-pointer items-center gap-4 rounded-plate bg-inset py-4 pr-4 pl-5 text-left transition-colors duration-80 hover:bg-deep",
+            focusRing,
+          )}
+          type="button"
+        >
           <span className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-ui text-meta text-mute">
               <span className="font-medium text-ink">
@@ -116,14 +124,14 @@ export function VersionHistory({
               {versionSummary(latest, typeName)}
             </span>
           </span>
-          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-plane text-accent transition-colors duration-200 group-hover:bg-action group-hover:text-on-accent motion-reduce:transition-none">
+          <span className="grid size-control shrink-0 place-items-center rounded-control text-accent transition-colors duration-80 group-hover:bg-accent-wash">
             <History aria-hidden="true" className="size-5" />
             <span className="sr-only">Open the version history</span>
           </span>
-        </span>
-      </ExpandingPanelTrigger>
+        </button>
+      </DialogTrigger>
 
-      <ExpandingPanelContent>
+      <Panel phone={phone}>
         <header className="flex items-center gap-4 border-b border-rule px-4 py-3 sm:px-6">
           <span className="relative size-11 shrink-0 overflow-hidden rounded-control bg-deep">
             {work.media.find((image) => image.isCover) ? (
@@ -140,14 +148,22 @@ export function VersionHistory({
             )}
           </span>
           <div className="min-w-0 flex-1">
-            <ExpandingPanelTitle className="font-display text-section font-medium text-ink">
+            <DialogTitle className="font-display text-section font-medium text-ink">
               Version history
-            </ExpandingPanelTitle>
+            </DialogTitle>
             <p className="truncate font-ui text-meta text-mute">
               {work.name} · {typeLabel} by {work.creator}
             </p>
           </div>
-          <ExpandingPanelClose label="Close the version history" />
+          <DialogClose asChild>
+            <Button
+              aria-label="Close the version history"
+              size="icon"
+              variant="ghost"
+            >
+              <X aria-hidden="true" />
+            </Button>
+          </DialogClose>
         </header>
 
         <div className="grid min-h-0 flex-1 md:grid-cols-[18rem_minmax(0,1fr)]">
@@ -219,8 +235,28 @@ export function VersionHistory({
             ) : null}
           </section>
         </div>
-      </ExpandingPanelContent>
-    </ExpandingPanel>
+      </Panel>
+    </Dialog>
+  );
+}
+
+/** Panel is the history's open surface: a wide dialog on a desktop, a sheet from the bottom on a phone. */
+function Panel({ children, phone }: { children: ReactNode; phone: boolean }) {
+  if (phone) {
+    return (
+      <SheetContent aria-describedby={undefined} className="h-[92dvh]">
+        {children}
+      </SheetContent>
+    );
+  }
+  return (
+    <DialogContent
+      aria-describedby={undefined}
+      className="h-[min(88dvh,54rem)] w-[min(100%-3rem,64rem)] max-w-none"
+      showCloseButton={false}
+    >
+      {children}
+    </DialogContent>
   );
 }
 
