@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast } from "sonner";
 import {
   addMarkdownToShelf,
   addWorkImage,
@@ -27,7 +28,6 @@ import { useDraftedChanges } from "@/lib/drafted-changes";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { type Flight, ShelfFlight } from "./ShelfFlight";
 import { LiftedSection, sectionName } from "./ShelfPiece";
-import { ShelfToast, type Toast } from "./ShelfToast";
 import { type ShelfTarget, useShelfDrag } from "./shelf-drag";
 import { importCounts } from "./shelf-places";
 import { useWorkspace } from "./state";
@@ -69,6 +69,7 @@ const DRAG_QUERY = "(min-width: 1024px) and (pointer: fine)";
 const SAVING_FIRST = "Your last edit is still saving. Try again in a moment.";
 const GLOW_MS = 1800;
 const SETTLE_WAIT_MS = 6000;
+const UNDO_MS = 10_000;
 
 const ShelfContext = createContext<Shelf | null>(null);
 
@@ -97,7 +98,6 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<Shelf["pending"]>(null);
   const [glowing, setGlowing] = useState<string | null>(null);
   const [flight, setFlight] = useState<Flight | null>(null);
-  const [toast, setToast] = useState<Toast | null>(null);
   const quiet = useRef(false);
   const latest = useRef(workspace);
   useEffect(() => {
@@ -160,11 +160,7 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refuse = (error: unknown, fallback: string) =>
-    setToast({
-      kind: "said",
-      tone: "stop",
-      text: error instanceof Error ? error.message : fallback,
-    });
+    toast.error(error instanceof Error ? error.message : fallback);
 
   function goTo(blockId: string) {
     document
@@ -187,7 +183,7 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
     setBusy(piece.id);
     try {
       if (!(await settled())) {
-        setToast({ kind: "said", tone: "stop", text: SAVING_FIRST });
+        toast.error(SAVING_FIRST);
         return false;
       }
       const before = new Set(latest.current.blocks.map((block) => block.id));
@@ -204,11 +200,7 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
       const landed = made ?? placement?.blockId ?? piece.blockId ?? null;
       markPlaced([[piece.id, landed]]);
       if (landed) setGlowing(landed);
-      setToast({
-        kind: "placed",
-        pieceIds: [piece.id],
-        name: pieceName(piece),
-      });
+      offerUndo([piece.id], pieceName(piece));
       void reload();
       if (placement?.file) router.refresh();
       return true;
@@ -227,7 +219,7 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
     setBusy(held.id);
     try {
       if (!(await settled())) {
-        setToast({ kind: "said", tone: "stop", text: SAVING_FIRST });
+        toast.error(SAVING_FIRST);
         return;
       }
       const before = new Set(latest.current.blocks.map((block) => block.id));
@@ -245,11 +237,10 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
       );
       if (made[0]) setGlowing(made[0]);
       const count = result.pieceIds.length;
-      setToast({
-        kind: "placed",
-        pieceIds: result.pieceIds,
-        name: `${count} ${count === 1 ? "piece" : "pieces"}`,
-      });
+      offerUndo(
+        result.pieceIds,
+        `${count} ${count === 1 ? "piece" : "pieces"}`,
+      );
       void reload();
     } catch (error) {
       refuse(error, "Illarin could not place the import. Try again.");
@@ -258,9 +249,16 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function offerUndo(pieceIds: string[], name: string) {
+    toast(pieceIds.length === 1 ? `Placed “${name}”` : `Placed ${name}`, {
+      action: { label: "Undo", onClick: () => void undo(pieceIds, name) },
+      duration: UNDO_MS,
+    });
+  }
+
   async function undo(pieceIds: string[], name: string) {
     if (!(await settled())) {
-      setToast({ kind: "said", tone: "stop", text: SAVING_FIRST });
+      toast.error(SAVING_FIRST);
       return;
     }
     try {
@@ -272,13 +270,11 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
         ),
       );
       await reload();
-      setToast({
-        kind: "said",
-        text:
-          pieceIds.length === 1
-            ? `“${name}” is back on the shelf.`
-            : `${name} are back on the shelf.`,
-      });
+      toast(
+        pieceIds.length === 1
+          ? `“${name}” is back on the shelf.`
+          : `${name} are back on the shelf.`,
+      );
     } catch (error) {
       refuse(error, "Illarin could not undo that. Try again.");
     }
@@ -380,7 +376,6 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
         </DragOverlay>
       </DndContext>
       <ShelfFlight flight={flight} onLanded={() => setFlight(null)} />
-      <ShelfToast onClose={() => setToast(null)} onUndo={undo} toast={toast} />
     </ShelfContext.Provider>
   );
 }

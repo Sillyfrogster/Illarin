@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { ArtFilters } from "@/components/art/ArtFilters";
 import { AnalyticsScript } from "@/components/layout/AnalyticsScript";
 import { StoredTheme } from "@/components/layout/StoredTheme";
+import { Toaster } from "@/components/ui/sonner";
 import { FONT_VARIABLES } from "@/lib/fonts";
 import { siteAddress } from "@/lib/site-address";
 import {
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <StoredTheme />
         <ArtFilters />
         <Providers origins={{ site: siteAddress("/") }}>{children}</Providers>
+        <Toaster />
       </body>
     </html>
   );
