@@ -183,7 +183,7 @@ func compareVersions(earlier, later work.FullVersion) []ChangeGroup {
 	groups = append(groups, compareContent(earlier.Blocks, later.Blocks)...)
 	groups = AddGroup(groups, PresentationSubject, "Page",
 		ComparePresentation(later.Type, earlier.Blocks, later.Blocks))
-	groups = AddGroup(groups, PreservedSubject, "Preserved data",
+	groups = AddGroup(groups, PreservedSubject, "File extras",
 		ComparePreserved(earlier.Preserved, later.Preserved))
 	return groups
 }

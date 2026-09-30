@@ -13,7 +13,7 @@ import { cn } from "@/lib/cn";
 import { CONTROL } from "./BrowseStates";
 
 const SORTS: Record<BrowseSort, string> = {
-  recent: "Recent",
+  recent: "Newest",
   downloads: "Most downloaded · 30 days",
   views: "Most viewed · 30 days",
 };

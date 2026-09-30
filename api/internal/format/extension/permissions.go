@@ -20,7 +20,7 @@ var permissionWords = map[string]string{
 	"context_handler":            "Add to what the model is given before the prompt is built.",
 	"characters":                 "Read, create, change and delete your characters.",
 	"chats":                      "Read, change and delete your chats.",
-	"world_books":                "Read, create, change and delete your world books.",
+	"world_books":                "Read, create, change and delete your lorebooks.",
 	"presets":                    "Read, create, change and delete your presets.",
 	"regex_scripts":              "Read your regex scripts and manage the ones it made.",
 	"regex_scripts_unrestricted": "Change or delete any of your regex scripts.",

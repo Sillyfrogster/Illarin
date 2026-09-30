@@ -127,7 +127,7 @@ func (s *Service) replacementPreview(ctx context.Context, tx pgx.Tx, workID uuid
 	groups := version.CompareContentKeyed(working, arriving, names)
 	groups = version.AddGroup(groups, version.PresentationSubject, "Page",
 		version.ComparePresentation(prepared.Type, working, arriving))
-	groups = version.AddGroup(groups, version.PreservedSubject, "Preserved data",
+	groups = version.AddGroup(groups, version.PreservedSubject, "File extras",
 		version.ComparePreserved(asVersionPreserved(currentRemainder), asVersionPreserved(prepared.Remainder)))
 	groups = version.AddGroup(groups, version.PicturesSubject, "Pictures",
 		comparePictureSets(currentImages, incomingImages))

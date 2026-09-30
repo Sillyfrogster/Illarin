@@ -65,12 +65,11 @@ export function MakePublicConfirmation({
         </h2>
         <p id="make-public-description" className="mt-3 text-ui text-mute">
           {replacement ? "Applying this file" : "Saving"} makes{" "}
-          {namePrompts(prompts)} public. Text in published and recorded versions
-          can become readable immediately. New draft writing stays private until
-          you publish.
+          {namePrompts(prompts)} public. Readers can read them at once, in this
+          version and earlier ones.
           {keepsAPrivatePrompt
             ? ""
-            : " If no private prompts remain, file downloads become available again."}
+            : " With no private prompts left, this preset downloads as a file again."}
         </p>
       </div>
       <footer className="flex flex-wrap justify-end gap-2 border-rule border-t p-4">

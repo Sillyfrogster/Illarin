@@ -1,7 +1,7 @@
 import type { RecordedVersion } from "@/lib/api/query";
 
 export function versionTitle(version: RecordedVersion): string {
-  if (version.initial) return "Initial recording";
+  if (version.initial) return "First recorded";
   if (version.number === 1) return "First published";
   return `Version ${version.number}`;
 }
@@ -18,7 +18,7 @@ export function versionSummary(
 }
 
 export function versionDate(version: RecordedVersion): string {
-  return new Date(version.recordedAt).toLocaleDateString("en-GB", {
+  return new Date(version.recordedAt).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",

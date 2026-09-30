@@ -485,7 +485,7 @@ var labels = map[Role]string{
 
 	RoleSystemPrompt:            "System prompt",
 	RolePostHistoryInstructions: "Post-history instructions",
-	RoleCreatorNotes:            "Author’s notes",
+	RoleCreatorNotes:            "Creator’s notes",
 	RoleExpressions:             "Expressions",
 	RoleLorebookEntries:         "Entries",
 

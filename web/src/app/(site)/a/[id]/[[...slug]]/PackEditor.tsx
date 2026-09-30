@@ -58,7 +58,7 @@ export function PackEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="This pack has no characters yet."
+      emptyMessage="No characters yet"
       noun="Character"
       onAdd={() =>
         onChange({
@@ -148,7 +148,7 @@ function CharacterFields({
         />
       </Field>
 
-      <FieldGroup legend="Credit and identity">
+      <FieldGroup legend="Credit">
         <FieldPair>
           <Field label="Author">
             <TextField
@@ -211,7 +211,7 @@ function CharacterFields({
           value={record.lumiaPersonality}
         />
       </Field>
-      <Field label="Behaviour">
+      <Field label="Behavior">
         <TextAreaField
           disabled={pending}
           onChange={(event) => onChange({ lumiaBehavior: event.target.value })}

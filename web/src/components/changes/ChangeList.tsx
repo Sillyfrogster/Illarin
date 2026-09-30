@@ -78,7 +78,7 @@ function ChangeRow({
         <details className="group mt-1 sm:ml-[5.75rem]">
           <summary className="inline-flex min-h-9 cursor-pointer list-none items-center text-meta text-mute outline-offset-3 hover:text-ink">
             <span className="underline decoration-rule underline-offset-4 group-open:decoration-accent">
-              {hasImage ? "Show the pictures" : "Show the wording"}
+              {hasImage ? "Show the images" : "Show the wording"}
             </span>
           </summary>
           {hasImage ? (

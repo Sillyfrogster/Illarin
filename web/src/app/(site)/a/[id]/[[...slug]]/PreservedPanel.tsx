@@ -70,8 +70,8 @@ export function PreservedPanel({ workId }: { workId: string }) {
             "grid gap-1 [&>span]:text-meta [&>span]:text-mute [&>strong]:text-ui [&>strong]:font-medium"
           }
         >
-          <strong>Manage file extras</strong>
-          <span>Review extra file data included in compatible downloads</span>
+          <strong>File extras</strong>
+          <span>Data from your file that the page doesn't show</span>
         </span>
         <ChevronRight
           className={cn(
@@ -86,18 +86,15 @@ export function PreservedPanel({ workId }: { workId: string }) {
       {open ? (
         <div className={"pb-3.5"} id="preserved-menu">
           <p className={"text-meta text-mute"}>
-            These details came with the original file but are not part of the
-            editable page. Removing one stops it travelling in downloads for
-            that format.
+            These came with your file but aren't on the page. Removing one takes
+            it out of downloads in that format.
           </p>
           {namespaces === null ? (
             <p className={"mt-3 text-meta text-mute italic"}>
               Loading file extras…
             </p>
           ) : namespaces.length === 0 ? (
-            <p className={"mt-3 text-meta text-mute italic"}>
-              No extra file data was found.
-            </p>
+            <p className={"mt-3 text-meta text-mute italic"}>No file extras</p>
           ) : (
             <ul
               className={
@@ -194,8 +191,8 @@ function DeleteNamespaceDialog({
         <p className={"text-meta text-mute"}>Remove file extras</p>
         <h2>Remove {description}?</h2>
         <p>
-          This detail came with your original file. Removing it means it will
-          stop travelling in downloads made for that format.
+          This detail came with your original file. Downloads in that format
+          stop carrying it.
         </p>
         <p className={"mt-2 text-meta text-mute"}>
           This cannot be undone here. Re-upload the original file if you need it

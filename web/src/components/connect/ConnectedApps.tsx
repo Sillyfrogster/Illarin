@@ -18,8 +18,7 @@ import { ConnectedAppRow } from "./ConnectedAppRow";
 
 type Notice = { kind: "said" | "trouble"; message: string };
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 export function ConnectedApps() {
   const { account } = useAuth();
@@ -43,7 +42,7 @@ export function ConnectedApps() {
       const answer = response.ok ? data : error;
       if (!response.ok) {
         setLoadTrouble(
-          refusalMessage(answer, "We could not read your connected apps."),
+          refusalMessage(answer, "Illarin could not read your connected apps."),
         );
         setApps(null);
         return;

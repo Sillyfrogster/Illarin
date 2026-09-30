@@ -22,9 +22,7 @@ export function BlockAudience({ block }: { block: WorkBlock }) {
   if (audience === "hidden") {
     return (
       <div className={PANEL}>
-        <span>
-          Hidden from readers. This content is still included in downloads.
-        </span>
+        <span>Hidden from readers. Downloads still include it.</span>
         <button
           className={SHOW}
           onClick={() => workspace.arrangement.setHidden(block.id, false)}
@@ -45,10 +43,5 @@ export function BlockAudience({ block }: { block: WorkBlock }) {
     );
   }
 
-  return (
-    <p className={NOTE}>
-      Empty. The block stays on your page, and readers see it as soon as you
-      write in it.
-    </p>
-  );
+  return <p className={NOTE}>Empty. Readers see it once you write in it.</p>;
 }

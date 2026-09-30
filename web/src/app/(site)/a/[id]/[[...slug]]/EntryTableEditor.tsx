@@ -41,7 +41,7 @@ export function EntryTableEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="This book has no entries yet."
+      emptyMessage="No entries yet"
       noun="entry"
       onAdd={() =>
         onChange([...entries, { enabled: true, keys: [], text: "" }])
@@ -150,7 +150,7 @@ function EntryFields({
         </Field>
         <Switch
           checked={entry.caseSensitive ?? false}
-          hint="When disabled, keys match regardless of letter case."
+          hint='Off: "Dragon" matches "dragon".'
           label="Match the case of a key"
           onChange={(caseSensitive) => onChange({ caseSensitive })}
           pending={pending}
@@ -193,7 +193,7 @@ function EntryFields({
       <FieldGroup legend="Recursive activation">
         <Switch
           checked={recursion.exclude ?? false}
-          label="Do not let this entry switch others on"
+          label="Don't let this entry switch others on"
           onChange={(exclude) =>
             onChange({ recursion: { ...recursion, exclude } })
           }
@@ -201,7 +201,7 @@ function EntryFields({
         />
         <Switch
           checked={recursion.prevent ?? false}
-          label="Do not let other entries switch this one on"
+          label="Don't let other entries switch this one on"
           onChange={(prevent) =>
             onChange({ recursion: { ...recursion, prevent } })
           }

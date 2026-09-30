@@ -23,8 +23,7 @@ import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 const TERMS_REFUSAL = "Agree to the Terms to create an account.";
 

@@ -283,7 +283,7 @@ function ImageEditor({
   return (
     <div className="flex flex-col gap-6">
       {items.length === 0 ? (
-        <Note>No images are in this block yet.</Note>
+        <Note>No images yet</Note>
       ) : (
         <Sortable
           disabled={pending}
@@ -351,7 +351,7 @@ function ImageEditor({
                         {isGallery ? (
                           <Switch
                             checked={item.omitFromDownloads !== true}
-                            hint="Readers can change this for their own copy."
+                            hint="Off leaves it out of downloads by default."
                             label="Include in downloads"
                             onChange={(included) =>
                               onChange(
@@ -416,7 +416,7 @@ export function elementHint(type: WorkElement["type"]): string {
     case "setting_group":
       return "The names are your app's own, and a setting you leave out stays out of the file.";
     case "color_set":
-      return "These are the colours readers see first. Keep the app's names so the theme still knows where each colour belongs.";
+      return "These are the colors readers see first. Keep the app's names so the theme still knows where each color belongs.";
     case "stylesheet_set":
       return "The main sheet, component sheets, and their fonts travel together with the theme.";
     case "variable_schema":

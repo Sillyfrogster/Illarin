@@ -11,8 +11,7 @@ import { api } from "@/lib/api/client";
 
 type Result = { ok: true } | { ok: false; error: string };
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 async function post(
   endpoint: string,

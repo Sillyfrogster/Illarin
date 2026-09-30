@@ -43,7 +43,7 @@ export function DraftPreview({
       <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] items-center gap-5 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)]">
         <div className="min-w-0">
           <p className="font-display text-[1.6rem] leading-[1.05] font-medium tracking-[-0.03em] text-mute/70 italic">
-            Name this page
+            Name this {label}
           </p>
           <p className="mt-2 flex flex-wrap items-center gap-1.5 text-label text-mute">
             <span className="size-1.5 rounded-full bg-accent" />

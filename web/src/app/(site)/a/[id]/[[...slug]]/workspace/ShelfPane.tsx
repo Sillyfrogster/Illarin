@@ -446,9 +446,7 @@ function LetGoOfAll({ held }: { held: ShownImport }) {
     <AnimatePresence initial={false} mode="popLayout">
       {asking ? (
         <motion.div className="flex items-center gap-1" key="ask" {...swap}>
-          <span className="pr-1 pl-2 text-meta text-ink">
-            Let go of {count}?
-          </span>
+          <span className="pr-1 pl-2 text-meta text-ink">Delete {count}?</span>
           <Button
             disabled={shelf.busy !== null}
             loading={shelf.busy === held.id}
@@ -456,7 +454,7 @@ function LetGoOfAll({ held }: { held: ShownImport }) {
             size="compact"
             variant="stop"
           >
-            Let go
+            Delete
           </Button>
           <Button
             onClick={() => setAsking(false)}
@@ -475,7 +473,7 @@ function LetGoOfAll({ held }: { held: ShownImport }) {
             size="compact"
             variant="ghost"
           >
-            Let go of all
+            Delete all
           </Button>
         </motion.div>
       )}

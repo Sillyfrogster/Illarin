@@ -300,7 +300,7 @@ function LetGo({ piece }: { piece: ShelfPiece }) {
       size="compact"
       variant="ghost"
     >
-      Let go
+      Delete
     </Button>
   );
 }
@@ -409,7 +409,7 @@ export function PictureTile({
             className="text-stop data-[highlighted]:bg-stop-wash data-[highlighted]:text-stop"
             onSelect={() => shelf.letGo(piece)}
           >
-            Let go
+            Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -67,7 +67,7 @@ function Refusal({ children }: { children: string }) {
 function ComparisonSkeleton() {
   return (
     <div className="mt-4" aria-live="polite">
-      <span className="sr-only">Reading the comparison</span>
+      <span className="sr-only">Loading the comparison</span>
       <div aria-hidden="true" className="grid gap-2">
         <div className="h-3 w-24 animate-pulse rounded-control bg-deep" />
         <div className="h-10 animate-pulse rounded-control bg-deep" />

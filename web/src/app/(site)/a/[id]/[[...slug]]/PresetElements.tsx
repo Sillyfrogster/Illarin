@@ -276,7 +276,7 @@ function SettingValue({
 export function writeValue(value: TypedValue | undefined): string {
   if (!value) return "";
   if (value.number != null) {
-    return value.number.toLocaleString("en-GB", { maximumFractionDigits: 20 });
+    return value.number.toLocaleString("en-US", { maximumFractionDigits: 20 });
   }
   if (value.boolean != null) return value.boolean ? "Yes" : "No";
   if (value.strings) {

@@ -81,5 +81,5 @@ test("a CharX scan lists the card data first and reads each picture's size", asy
     ["assets/icon/image/main.png", "picture"],
   ]);
   expect(parts[0].lines).toContain("alternate_greetings: 2");
-  expect(parts[1].note).toBe("400 × 600 picture");
+  expect(parts[1].note).toBe("400 × 600 image");
 });

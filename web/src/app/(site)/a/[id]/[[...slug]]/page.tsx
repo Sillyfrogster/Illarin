@@ -48,7 +48,7 @@ export default async function WorkPage({
 
   const typeLabel = TYPE_LABELS[work.type];
   const isDraft = work.lifecycle === "draft";
-  const sharedDate = new Date(work.createdAt).toLocaleDateString("en-GB", {
+  const sharedDate = new Date(work.createdAt).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",

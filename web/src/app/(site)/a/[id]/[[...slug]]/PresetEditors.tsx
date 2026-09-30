@@ -123,7 +123,7 @@ export function PromptListEditor({
         />
       }
       chosen={chosen}
-      emptyMessage="This preset has no prompt fragments yet."
+      emptyMessage="No prompt fragments yet"
       noun="fragment"
       onAdd={() =>
         onChange({
@@ -544,7 +544,7 @@ function NewSetting({
         <option value="number">A number</option>
         <option value="boolean">Yes or no</option>
         <option value="text">Text</option>
-        <option value="string_list">A list of strings</option>
+        <option value="string_list">A list of text</option>
       </ChoiceField>
       <AddAction
         disabled={pending || name.trim() === ""}
@@ -682,7 +682,7 @@ export function VariableSchemaEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="No variables yet. Add a variable to let readers customise prompt values."
+      emptyMessage="No variables yet"
       noun="variable"
       onAdd={() => onChange([...variables, { name: "", widget: "switch" }])}
       onChoose={onChoose}
@@ -753,7 +753,7 @@ function VariableFields({
         </ChoiceField>
       </Field>
 
-      <Field hint="what a reader sees above the control" label="Label">
+      <Field hint="what a reader sees above the field" label="Label">
         <TextField
           disabled={pending}
           onChange={(event) =>
@@ -925,7 +925,7 @@ export function ScriptListEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="No scripts yet. Add a script to find and replace text."
+      emptyMessage="No scripts yet"
       noun="script"
       onAdd={() =>
         onChange([...scripts, { enabled: true, find: "", replace: "" }])
@@ -1008,7 +1008,7 @@ function ScriptFields({
         />
       </Field>
 
-      <FieldGroup legend="Input sources">
+      <FieldGroup legend="Runs on">
         {SCRIPT_TARGETS.map((target) => (
           <Switch
             checked={targets.includes(target.value)}
@@ -1022,7 +1022,7 @@ function ScriptFields({
         ))}
       </FieldGroup>
 
-      <FieldGroup legend="Output targets">
+      <FieldGroup legend="Changes">
         {SCRIPT_EFFECTS.map((effect) => (
           <Switch
             checked={affects.includes(effect.value)}

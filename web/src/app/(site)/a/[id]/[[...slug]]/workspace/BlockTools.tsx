@@ -28,7 +28,6 @@ import {
   LAYOUT_LABELS,
   LAYOUTS,
   layoutChoiceIssue,
-  WIDTH_FLOORS_PX,
   WIDTH_LABELS,
   widthChoiceIssue,
 } from "@/lib/page-arrangement";
@@ -40,10 +39,10 @@ const TOOL =
   "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-control px-2 text-meta font-medium text-mute outline-offset-3 hover:bg-plane hover:text-ink data-[state=open]:bg-plane data-[state=open]:text-ink";
 
 const WIDTH_HINTS: Record<BlockWidth, string> = {
-  full: "All twelve columns.",
-  half: `Six columns, or Full under ${WIDTH_FLOORS_PX.half}px.`,
-  third: `Four columns, then Half or Full under ${WIDTH_FLOORS_PX.third}px.`,
-  two_thirds: `Eight columns, or Full under ${WIDTH_FLOORS_PX.two_thirds}px.`,
+  full: "The whole row.",
+  half: "Half the row.",
+  third: "A third of the row.",
+  two_thirds: "Two thirds of the row.",
 };
 
 const LAYOUT_HINTS: Record<BlockLayout, string> = {
@@ -135,9 +134,6 @@ export function BlockTools({
             <strong className="block text-ui font-medium text-ink">
               Block width
             </strong>
-            <span className="mt-1 block text-meta text-mute">
-              Choose how much of the page this block occupies.
-            </span>
           </DropdownMenuLabel>
           <DropdownMenuRadioGroup
             onValueChange={(width) =>
@@ -182,9 +178,6 @@ export function BlockTools({
               <strong className="block text-ui font-medium text-ink">
                 Content layout
               </strong>
-              <span className="mt-1 block text-meta text-mute">
-                Arrange the content areas inside this block.
-              </span>
             </DropdownMenuLabel>
             <DropdownMenuRadioGroup
               onValueChange={(layout) =>
@@ -246,7 +239,7 @@ export function BlockTools({
                 onSelect={() => arrangement.setHidden(block.id, !block.hidden)}
               >
                 <EyeOff />
-                {block.hidden ? "Show on the public page" : "Hide from readers"}
+                {block.hidden ? "Show to readers" : "Hide from readers"}
               </DropdownMenuItem>
             </>
           ) : null}
@@ -260,7 +253,7 @@ export function BlockTools({
                 }
               >
                 <Trash2 />
-                Remove this block
+                Remove block
               </DropdownMenuItem>
             </>
           )}

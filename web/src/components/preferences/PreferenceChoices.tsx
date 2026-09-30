@@ -12,8 +12,8 @@ export const ADULT_CHOICES: {
   note: string;
 }[] = [
   { value: "hidden", label: "Hide", note: "Adult work stays out of results." },
-  { value: "blurred", label: "Blur", note: "Blur adult cover images." },
-  { value: "shown", label: "Show", note: "Show adult cover images." },
+  { value: "blurred", label: "Blur", note: "Blur adult covers." },
+  { value: "shown", label: "Show", note: "Show adult covers." },
 ];
 
 const tile =

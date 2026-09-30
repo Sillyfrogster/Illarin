@@ -6,7 +6,7 @@ export function TakedownNotice({
 }: {
   takedown: NonNullable<WorkDetail["takedown"]>;
 }) {
-  const recorded = new Date(takedown.at).toLocaleString("en-GB", {
+  const recorded = new Date(takedown.at).toLocaleString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -26,7 +26,7 @@ export function TakedownNotice({
         </h2>
         <p className="mt-1 text-meta text-ink">{takedown.reason}</p>
         <p className="mt-1 text-meta text-mute">
-          Recorded by Illarin staff on {recorded}
+          Illarin staff took this down on {recorded}.
         </p>
       </div>
     </section>

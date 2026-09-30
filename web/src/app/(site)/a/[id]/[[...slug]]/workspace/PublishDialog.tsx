@@ -272,7 +272,7 @@ export function PublishDialog({
                       <Hearer
                         control="publish-notify"
                         icon={<Bell aria-hidden="true" />}
-                        line="Followers and linked apps with it installed get a notification."
+                        line="Followers and connected apps that have it installed get a notification."
                         title="Notify followers"
                       >
                         <HearerCheck

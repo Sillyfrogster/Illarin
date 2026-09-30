@@ -526,7 +526,7 @@ func TestALayoutTheDefinitionDoesNotOfferNamesTheAvailableChoices(t *testing.T) 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("unoffered layout status = %d, want 400: %s", response.Code, response.Body.String())
 	}
-	for _, want := range []string{"Messages", "stack-2", "stack-3"} {
+	for _, want := range []string{"Greetings and examples", "stack-2", "stack-3"} {
 		if !strings.Contains(response.Body.String(), want) {
 			t.Errorf("refusal %q does not name %q", response.Body.String(), want)
 		}

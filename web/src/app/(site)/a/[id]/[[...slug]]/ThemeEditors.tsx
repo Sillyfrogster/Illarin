@@ -45,10 +45,7 @@ export function ColorSetEditor({
           key={mode.name || modeIndex}
           legend={mode.name?.trim() || "Default mode"}
         >
-          <Field
-            hint="what the app calls this set of colours"
-            label="Mode name"
-          >
+          <Field hint="what the app calls this set of colors" label="Mode name">
             <TextField
               disabled={pending}
               onChange={(event) =>
@@ -106,7 +103,7 @@ function ColorRows({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      {colors.length === 0 ? <Note>No colours in this mode yet.</Note> : null}
+      {colors.length === 0 ? <Note>No colors in this mode yet.</Note> : null}
       {colors.map((color, index) => (
         <div className="flex flex-wrap items-end gap-2" key={color.id ?? index}>
           <label
@@ -114,7 +111,7 @@ function ColorRows({
             style={{ backgroundColor: color.value }}
           >
             <span className="sr-only">
-              Choose {color.name || `colour ${index + 1}`}
+              Choose {color.name || `color ${index + 1}`}
             </span>
             <input
               className="size-11 cursor-pointer opacity-0"
@@ -129,7 +126,7 @@ function ColorRows({
             />
           </label>
           <TextField
-            aria-label={`Name for colour ${index + 1}`}
+            aria-label={`Name for color ${index + 1}`}
             className="min-w-28 flex-1"
             disabled={pending}
             onChange={(event) =>
@@ -139,7 +136,7 @@ function ColorRows({
             value={color.name}
           />
           <TextField
-            aria-label={`Value for ${color.name || `colour ${index + 1}`}`}
+            aria-label={`Value for ${color.name || `color ${index + 1}`}`}
             className="min-w-36 flex-1 font-mono"
             disabled={pending}
             onChange={(event) =>
@@ -150,7 +147,7 @@ function ColorRows({
           />
           <RemoveAction
             disabled={pending}
-            label={`Remove ${color.name || `colour ${index + 1}`}`}
+            label={`Remove ${color.name || `color ${index + 1}`}`}
             onClick={() => onChange(without(colors, index))}
           />
         </div>
@@ -160,11 +157,11 @@ function ColorRows({
         onClick={() =>
           onChange([
             ...colors,
-            { id: crypto.randomUUID(), name: "colour", value: "#7c5cff" },
+            { id: crypto.randomUUID(), name: "color", value: "#7c5cff" },
           ])
         }
       >
-        Add colour
+        Add color
       </AddAction>
     </div>
   );
@@ -366,7 +363,7 @@ function ComponentSheet({
       <div className="flex flex-wrap items-center gap-1">
         <ItemMoveActions moves={moves} pending={pending} />
         <RemoveAction disabled={pending} onClick={onRemove}>
-          Remove sheet
+          Remove stylesheet
         </RemoveAction>
       </div>
     </div>

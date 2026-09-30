@@ -40,9 +40,7 @@ export function RemoveBlock({ block }: { block: WorkBlock }) {
       <section className="flex flex-col gap-3">
         {holdsContent ? (
           <>
-            <p className="text-ui text-ink">
-              This takes the following with it:
-            </p>
+            <p className="text-ui text-ink">Removing it deletes:</p>
             <ul className="flex list-none flex-col gap-2">
               {losses.map(({ count, element }) => (
                 <li key={element.id}>
@@ -94,7 +92,7 @@ export function RemoveBlock({ block }: { block: WorkBlock }) {
               <p className="text-ui text-ink">
                 Move the content somewhere else
               </p>
-              <Field label="Destination block">
+              <Field label="Move to">
                 <ChoiceField
                   disabled={arrangement.busy}
                   onChange={(event) => setDestination(event.target.value)}
@@ -120,7 +118,7 @@ export function RemoveBlock({ block }: { block: WorkBlock }) {
               </button>
             </div>
           ) : canMove ? (
-            <Note>No other block has room for these elements yet.</Note>
+            <Note>No other block can hold this content.</Note>
           ) : null}
         </section>
       ) : null}

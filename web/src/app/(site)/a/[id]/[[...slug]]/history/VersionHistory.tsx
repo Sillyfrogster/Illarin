@@ -109,9 +109,7 @@ export function VersionHistory({
                 {versionTitle(latest)}
               </span>
               <time dateTime={latest.recordedAt}>{versionDate(latest)}</time>
-              {latest.versionLabel ? (
-                <span>Creator’s version {latest.versionLabel}</span>
-              ) : null}
+              {latest.versionLabel ? <span>v{latest.versionLabel}</span> : null}
             </span>
             <span className="line-clamp-2 font-ui text-meta text-mute">
               {versionSummary(latest, typeName)}
@@ -241,7 +239,7 @@ function HistoryVersions({
     return (
       <div className="grid justify-items-start gap-3 px-3 py-2">
         <p className="font-ui text-meta text-mute" role="alert">
-          Illarin could not read the versions of this {typeName}.
+          Illarin could not load the versions of this {typeName}.
         </p>
         <Button onClick={onRetry} size="compact">
           Try again
@@ -250,7 +248,7 @@ function HistoryVersions({
     );
   }
   return (
-    <output aria-label="Reading the versions" className="grid gap-4 px-3 py-2">
+    <output aria-label="Loading versions" className="grid gap-4 px-3 py-2">
       {[0, 1, 2].map((slot) => (
         <span className="grid gap-2" key={slot}>
           <span className="h-3.5 w-28 animate-pulse rounded-control bg-deep motion-reduce:animate-none" />

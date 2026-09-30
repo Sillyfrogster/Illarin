@@ -147,7 +147,7 @@ export function WorkMedia({
             <li key={image.id}>
               <button
                 aria-current={index === here}
-                aria-label={`Picture ${index + 1} of ${presentationMedia.length}`}
+                aria-label={`Image ${index + 1} of ${presentationMedia.length}`}
                 className={cn(
                   "block aspect-square w-full overflow-hidden rounded-control bg-media outline-offset-3 transition-transform duration-200 motion-reduce:transition-none",
                   index === here

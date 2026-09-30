@@ -120,8 +120,8 @@ export function ScanView({
           <p className="mt-2 max-w-[60ch] text-ui text-ink">{upload.message}</p>
         ) : upload.at === "lost" ? (
           <p className="mt-2 text-ui text-mute">
-            The connection dropped. Your file is safe. Check again to see where
-            it got to.
+            The connection dropped. Check again to see whether your file
+            arrived.
           </p>
         ) : null}
 
@@ -204,7 +204,7 @@ function PartList({
         <span className="tabular-nums">
           {parts.length} {parts.length === 1 ? "part" : "parts"}
           {pictures > 0
-            ? ` · ${pictures} ${pictures === 1 ? "picture" : "pictures"}`
+            ? ` · ${pictures} ${pictures === 1 ? "image" : "images"}`
             : ""}
         </span>
       </p>

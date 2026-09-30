@@ -57,12 +57,12 @@ export const LAYOUTS = {
 export type BlockLayout = keyof typeof LAYOUTS;
 
 export const LAYOUT_LABELS: Record<BlockLayout, string> = {
-  single: "Single",
-  duo: "Duo",
-  "main-aside": "Main and aside",
-  trio: "Trio",
-  "stack-2": "Stack 2",
-  "stack-3": "Stack 3",
+  single: "One column",
+  duo: "Two columns",
+  "main-aside": "Wide and narrow",
+  trio: "Three columns",
+  "stack-2": "Two stacked",
+  "stack-3": "Three stacked",
 };
 
 const ONE_COLUMN = "minmax(0, 1fr)";

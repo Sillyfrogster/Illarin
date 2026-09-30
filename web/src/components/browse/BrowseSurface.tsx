@@ -389,7 +389,7 @@ function Nothing({
       <Message
         action={
           <Button onClick={everything} variant="primary">
-            Show everything
+            Show every app
           </Button>
         }
         title={`Nothing for ${app} yet`}

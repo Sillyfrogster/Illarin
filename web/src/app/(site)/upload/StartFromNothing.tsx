@@ -38,7 +38,7 @@ export function StartFromNothing({
         Start an empty draft
       </h2>
       <p className="mt-1.5 text-ui text-mute">
-        This is the page your draft opens with. Fill it in the editor.
+        Your draft opens with this page.
       </p>
       {buildable.length > 0 ? (
         <Builder choices={buildable} />
@@ -134,7 +134,7 @@ function Builder({ choices }: { choices: BuildChoice[] }) {
           <fieldset>
             <legend className="text-meta font-medium text-ink">App</legend>
             <p className="mt-0.5 text-label text-mute">
-              Each app has its own settings.
+              Presets and themes are made for one app.
             </p>
             <div className="mt-2.5 grid gap-1.5">
               {chosen.apps.map((named) => {

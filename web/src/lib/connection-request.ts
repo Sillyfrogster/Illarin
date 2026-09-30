@@ -70,7 +70,7 @@ export function isSafeLoopbackRedirect(value: string) {
 export function readableExpiry(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return value;
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);

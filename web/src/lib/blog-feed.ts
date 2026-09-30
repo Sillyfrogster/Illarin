@@ -29,7 +29,7 @@ export function blogFeed(scope: FeedScope, posts: PostSummary[]): string {
     <title>${escaped(channelName(scope))}</title>
     <link>${escaped(blogAddress(scope.archive))}</link>
     <description>${escaped(scope.description)}</description>
-    <language>en-GB</language>
+    <language>en-US</language>
     <atom:link href="${escaped(blogAddress(feedAddresses(scope.archive).rss))}" rel="self" type="application/rss+xml"/>
 ${items}
   </channel>
@@ -43,7 +43,7 @@ export function blogJsonFeed(scope: FeedScope, posts: PostSummary[]): string {
       version: "https://jsonfeed.org/version/1.1",
       title: channelName(scope),
       description: scope.description,
-      language: "en-GB",
+      language: "en-US",
       home_page_url: blogAddress(scope.archive),
       feed_url: blogAddress(feedAddresses(scope.archive).json),
       items: listed(posts).map((post) => jsonItem(post)),

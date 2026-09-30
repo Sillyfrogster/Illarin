@@ -350,7 +350,7 @@ export async function saveNsfwPreference(preference: NsfwPreference) {
   const { error } = await api<void>("PUT", "/v1/account/nsfw-preference", {
     body: { preference },
   });
-  if (error) throw new Error("Could not save the content preference");
+  if (error) throw new Error("Could not save your adult content setting");
 }
 
 export async function saveWorkVisibility(
@@ -560,7 +560,7 @@ export async function letGoOfShelfPiece(
     { candidate },
   );
   if (error) {
-    throw writeRefusal(error, "Illarin could not let that go. Try again.");
+    throw writeRefusal(error, "Illarin could not delete that. Try again.");
   }
 }
 
@@ -575,7 +575,7 @@ export async function letGoOfShelfImport(
     { candidate },
   );
   if (error) {
-    throw writeRefusal(error, "Illarin could not let that go. Try again.");
+    throw writeRefusal(error, "Illarin could not delete that. Try again.");
   }
 }
 
@@ -905,7 +905,7 @@ export async function compareWorkVersions(
     return {
       compared: null,
       refusal:
-        "This is the first version Illarin recorded, so there is nothing before it to compare.",
+        "This is the first recorded version, so there is no earlier version to compare it with.",
     };
   }
   if (response.status === 404) {

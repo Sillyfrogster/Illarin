@@ -77,9 +77,7 @@ export function VersionDetail({
           </h3>
           <p className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-meta text-mute">
             <time dateTime={version.recordedAt}>{versionDate(version)}</time>
-            {version.versionLabel ? (
-              <span>Creator’s version {version.versionLabel}</span>
-            ) : null}
+            {version.versionLabel ? <span>v{version.versionLabel}</span> : null}
             {version.notesEditedAt ? <span>Notes edited</span> : null}
           </p>
         </div>
@@ -236,10 +234,8 @@ function VersionManagement({
       {mode === "restore" ? (
         <div className="grid gap-4 pt-4 pb-1">
           <p className="text-meta text-mute">
-            This replaces your drafted changes with this version, including its
-            pictures and page arrangement. Access, private prompts and allowed
-            apps stay current. Publishing it later needs fresh version notes and
-            a fresh check.
+            Your drafted changes become this version, images and layout
+            included. Private prompts and allowed apps stay as they are.
           </p>
           <ActionRow
             busy={busy}
@@ -285,7 +281,7 @@ function VersionManagement({
           </label>
           <ActionRow
             busy={busy}
-            confirm="Save correction"
+            confirm="Save notes"
             onCancel={() => setMode("")}
             onConfirm={() =>
               runMutation(
@@ -307,11 +303,11 @@ function VersionManagement({
       {mode === "withdraw" ? (
         <div className="grid gap-4 pt-4 pb-1">
           <p className="text-meta text-mute">
-            Readers will see the version number, date and this explanation. Its
-            content, comparisons and downloads will be blocked.
+            Readers see the version number, the date and this reason. Nobody can
+            read or download it.
           </p>
           <label className="grid gap-1 text-meta text-mute">
-            Public explanation
+            Reason readers see
             <textarea
               className="min-h-24 rounded-control bg-field p-3 text-ui text-ink"
               maxLength={1000}

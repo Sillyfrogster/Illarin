@@ -132,8 +132,7 @@ export function WorkBlocks({
       >
         {writing ? (
           <p className="mb-8 rounded-control bg-deep p-3 text-meta text-mute md:hidden">
-            Block widths arrange the desktop page. On this screen every block
-            fills the width, and no content is lost.
+            On a phone, every block is full width.
           </p>
         ) : null}
         {invited ? (
@@ -296,7 +295,7 @@ export function WorkBlocks({
             summary="Model instructions"
             trailing={
               <span className="font-ui text-meta text-mute">
-                Instructions the creator includes for the model
+                Sent to the model with every chat.
               </span>
             }
           >

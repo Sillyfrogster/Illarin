@@ -175,11 +175,11 @@ function NotificationPanel({
                   loading={inbox.isFetchingNextPage}
                   onClick={() => void inbox.fetchNextPage()}
                 >
-                  Show older notifications
+                  Show older
                 </Button>
               ) : (
                 <p className="px-3 pt-4 pb-3 text-center text-label text-mute">
-                  Notifications are kept for 90 days.
+                  Illarin keeps notifications for 90 days.
                 </p>
               )}
               {inbox.isFetchNextPageError ? (
@@ -195,8 +195,7 @@ function NotificationPanel({
             <div className="px-6 pt-5 pb-8 text-center">
               <p className="text-ui text-ink">No notifications</p>
               <p className="mx-auto mt-1 max-w-[30ch] text-meta text-mute">
-                Updates to work you follow, and anything Illarin staff do with
-                your work, arrive here.
+                Follow a work to hear when it updates.
               </p>
             </div>
           )

@@ -116,7 +116,7 @@ var character = []Definition{
 	},
 	{
 		ID:       Messages,
-		Title:    "Messages",
+		Title:    "Greetings and examples",
 		Required: true,
 		Hideable: false,
 		Elements: []DefinedElement{
@@ -130,7 +130,7 @@ var character = []Definition{
 	{
 		ID:      Expressions,
 		Title:   "Expressions",
-		Summary: "A picture per expression, each named as the source named it.",
+		Summary: "An image per expression, named as the file named it.",
 		Group:   GroupFile,
 		Elements: []DefinedElement{
 			{Role: RoleExpressions, Type: TypeImageSet, Options: Options{ItemSize: ItemSmall}},
@@ -212,7 +212,7 @@ var preset = []Definition{
 	{
 		ID:      PresetSettings,
 		Title:   "Settings",
-		Summary: "Samplers, completion behaviour, and the advanced settings.",
+		Summary: "Samplers, completion behavior, and the advanced settings.",
 		Group:   GroupFile,
 		Elements: []DefinedElement{
 			{Role: RoleSamplerSettings, Type: TypeSettingGroup},
@@ -282,7 +282,7 @@ var theme = []Definition{
 var pack = []Definition{
 	{
 		ID:       PackCore,
-		Title:    "Pack items",
+		Title:    "In this pack",
 		Required: true,
 		Hideable: false,
 		Elements: []DefinedElement{
@@ -381,7 +381,7 @@ var shared = []Definition{
 	},
 	{
 		ID:      AuthorNotes,
-		Title:   "Author’s notes",
+		Title:   "Creator’s notes",
 		Summary: "What you want to say about making it.",
 		Group:   GroupWork,
 		Elements: []DefinedElement{

@@ -44,8 +44,7 @@ type Stage =
   | { kind: "approved"; connection: PendingConnection }
   | { kind: "denied"; connection: PendingConnection };
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 export function ConnectionApproval() {
   const search = useSearchParams();

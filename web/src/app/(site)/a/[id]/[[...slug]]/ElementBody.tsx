@@ -191,7 +191,7 @@ function BrowsedElementContent({
 
   return (
     <RunOpenContext.Provider value={openAt}>
-      <Browse label={`Browse all ${total}`} onOpen={() => openAt(null)}>
+      <Browse label={`Show all ${total}`} onOpen={() => openAt(null)}>
         <ElementContent
           element={element}
           images={images}
@@ -344,7 +344,7 @@ function excerptNoun(element: WorkElement): string {
     case "setting_group":
       return "settings";
     case "color_set":
-      return "colours";
+      return "colors";
     case "stylesheet_set":
       return "stylesheets";
     case "script_list":

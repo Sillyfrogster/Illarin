@@ -7,7 +7,7 @@ export const LEGAL_DOCUMENTS = [
 
 export type LegalHref = (typeof LEGAL_DOCUMENTS)[number]["href"];
 
-export const LEGAL_EFFECTIVE_DATE = "22 September 2026";
+export const LEGAL_EFFECTIVE_DATE = "September 22, 2026";
 
 export type LegalDocument = (typeof LEGAL_DOCUMENTS)[number];
 

@@ -49,7 +49,7 @@ export function changeOf(total: number, previous: number): Change {
 
 /** A report day as a person reads it, on the UTC day the totals were counted in. */
 export function reportDate(day: string, year = false): string {
-  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", {
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
@@ -85,13 +85,13 @@ export function shapeOf(series: Series, days: string[]) {
 }
 
 export function weekday(day: string): string {
-  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", {
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {
     weekday: "short",
     timeZone: "UTC",
   });
 }
 
-export const count = new Intl.NumberFormat("en-GB");
+export const count = new Intl.NumberFormat("en-US");
 
 /** Five steps of one hue, from nothing to four shares of the series' own busiest day. */
 export const LEVELS = 4;

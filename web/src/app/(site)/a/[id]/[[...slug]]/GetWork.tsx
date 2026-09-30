@@ -136,9 +136,7 @@ export function GetWork({
       await read();
       return true;
     } catch {
-      setFailure(
-        "We could not reach Illarin. Check your connection and try again.",
-      );
+      setFailure("Can't reach Illarin. Check your connection and try again.");
       return false;
     } finally {
       setBusy(false);

@@ -216,7 +216,7 @@ function TakenDown({
       <p className="mt-1 font-ui text-label text-mute">
         Illarin staff ·{" "}
         <time dateTime={takedown.at}>
-          {new Date(takedown.at).toLocaleString("en-GB", {
+          {new Date(takedown.at).toLocaleString("en-US", {
             dateStyle: "medium",
             timeStyle: "short",
           })}

@@ -76,7 +76,7 @@ export function FormattingBar({
           onMouseDown={(event) => event.preventDefault()}
           type="button"
         >
-          Page markdown works here
+          Markdown works here
           <ChevronDown
             aria-hidden="true"
             className={cn(

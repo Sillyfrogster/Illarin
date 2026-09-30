@@ -192,8 +192,8 @@ test("arrival reads in words for the last week and as a date after that", () => 
   expect(arrivedAgo(before(3 * 3_600_000), NOW)).toBe("3 hours ago");
   expect(arrivedAgo(before(26 * 3_600_000), NOW)).toBe("yesterday");
   expect(arrivedAgo(before(3 * 86_400_000), NOW)).toBe("3 days ago");
-  expect(arrivedAgo(before(10 * 86_400_000), NOW)).toBe("4 September");
-  expect(arrivedAgo("2025-11-02T12:00:00Z", NOW)).toBe("2 November 2025");
+  expect(arrivedAgo(before(10 * 86_400_000), NOW)).toBe("September 4");
+  expect(arrivedAgo("2025-11-02T12:00:00Z", NOW)).toBe("November 2, 2025");
 });
 
 test("an arrival stamped a moment ahead of this clock still reads as just now", () => {

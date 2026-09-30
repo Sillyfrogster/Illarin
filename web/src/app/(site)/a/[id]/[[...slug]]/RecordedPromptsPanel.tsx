@@ -95,7 +95,7 @@ export function RecordedPromptsPanel({ workId }: { workId: string }) {
           </p>
           {versions === null ? (
             <p className={"mt-3 text-meta text-mute italic"}>
-              Loading historical versions…
+              Loading older versions…
             </p>
           ) : versions.length === 0 ? (
             <p className={"mt-3 text-meta text-mute italic"}>

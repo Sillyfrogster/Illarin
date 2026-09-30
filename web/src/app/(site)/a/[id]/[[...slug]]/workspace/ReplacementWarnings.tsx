@@ -24,14 +24,14 @@ export function ReplacementWarnings({
       {missingWording.length > 0 ? (
         <p className="rounded-control bg-stop-wash p-3 text-meta text-ink">
           This file does not include the wording for:{" "}
-          {missingWording.join(", ")}. Illarin will keep{" "}
+          {missingWording.join(", ")}. Illarin keeps{" "}
           {missingWording.length === 1 ? "that prompt" : "those prompts"}{" "}
           private and empty.
         </p>
       ) : null}
       {conflicts.length > 0 ? (
         <p className="rounded-control bg-stop-wash p-3 text-meta text-ink">
-          This file overwrites edits you have not published yet:{" "}
+          This file replaces drafted changes you haven't published:{" "}
           {conflicts.map(replacementSubjectLabel).join(", ")}.
         </p>
       ) : null}

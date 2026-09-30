@@ -13,8 +13,7 @@ import { safeInternalReturnPath } from "@/lib/internal-return";
 
 type Standing = "checking" | "waiting" | "verified" | "refused";
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 export function VerificationPanel() {
   const search = useSearchParams();
@@ -60,7 +59,7 @@ export function VerificationPanel() {
         );
       } catch {
         setSaid(
-          "We could not reach Illarin. Check your connection and try the link again.",
+          "Can't reach Illarin. Check your connection and try the link again.",
         );
         setStanding("refused");
       }

@@ -206,12 +206,14 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 
         {pane?.kind === "replacement" ? (
           <WorkspaceRail
-            description={`Edited this ${props.typeName} in another app? Upload the file here and review what changed before you publish.`}
+            description={
+              "Upload the file you changed in your app. You see what changed before you publish."
+            }
             key="replacement"
             title="Upload a new version"
             onClose={workspace.closePane}
           >
-            <Replacement />
+            <Replacement typeName={props.typeName} />
             {props.hasOriginal ? (
               <PreservedPanel workId={workspace.workId} />
             ) : null}
@@ -404,7 +406,7 @@ function detail(isDraft: boolean, state: string): string {
   return "All changes are published.";
 }
 
-function Replacement() {
+function Replacement({ typeName }: { typeName: string }) {
   const workspace = useWorkspace();
   const router = useRouter();
   const [waiting, setWaiting] = useState<UploadOperation | null>(null);
@@ -439,6 +441,7 @@ function Replacement() {
     </p>
   ) : loaded ? (
     <ReplacementStep
+      typeName={typeName}
       onApplied={settled}
       onDiscarded={settled}
       waiting={waiting}

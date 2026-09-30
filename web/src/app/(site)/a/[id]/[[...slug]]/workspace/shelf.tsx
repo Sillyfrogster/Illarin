@@ -292,7 +292,7 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
       setSeen((known) => without(known, (id) => id === piece.id));
       setServer((known) => without(known, (id) => id === piece.id));
     } catch (error) {
-      refuse(error, "Illarin could not let that go. Try again.");
+      refuse(error, "Illarin could not delete that. Try again.");
     } finally {
       setBusy(null);
     }
@@ -306,7 +306,7 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
       setSeen((known) => known.filter((one) => one.id !== held.id));
       setServer((known) => known.filter((one) => one.id !== held.id));
     } catch (error) {
-      refuse(error, "Illarin could not let that go. Try again.");
+      refuse(error, "Illarin could not delete that. Try again.");
     } finally {
       setBusy(null);
     }
@@ -387,5 +387,5 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
 
 export function pieceName(piece: ShelfPiece): string {
   if (piece.kind === "section") return sectionName(piece);
-  return piece.name?.trim() || "Picture";
+  return piece.name?.trim() || "Image";
 }
