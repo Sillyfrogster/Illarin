@@ -16,14 +16,8 @@ import { CheckboxRow } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputCopy } from "@/components/ui/input-copy";
+import { Item, ItemGroup } from "@/components/ui/item";
 import { RadioGroup } from "@/components/ui/radio-group";
-import {
-  Timeline,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot,
-  TimelineItem,
-} from "@/components/ui/timeline";
 import { api } from "@/lib/api/client";
 
 type ReleaseSource = {
@@ -343,58 +337,52 @@ export function GitHubReleases({ workId }: { workId: string }) {
                   </Button>
                 </div>
               ) : source.imports.length > 0 ? (
-                <Timeline className="gap-0">
+                <ItemGroup
+                  as="ol"
+                  className="-mx-4 rounded-none bg-transparent"
+                >
                   {source.imports.map((item) => (
-                    <TimelineItem className="pb-5" key={item.id}>
-                      <TimelineDot
-                        className={
-                          item.status === "published"
-                            ? "border-accent bg-accent"
-                            : item.status === "failed"
-                              ? "border-stop bg-stop"
-                              : "border-edge bg-plane"
-                        }
-                      />
-                      <TimelineConnector />
-                      <TimelineContent className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="break-all text-ui font-medium text-ink">
-                            {item.tag}
+                    <Item
+                      className="flex-row flex-wrap items-start justify-between gap-3"
+                      key={item.id}
+                    >
+                      <div className="min-w-0">
+                        <p className="break-all text-ui font-medium text-ink">
+                          {item.tag}
+                        </p>
+                        <p
+                          className={`mt-0.5 text-meta ${item.status === "failed" ? "text-stop" : "text-mute"}`}
+                        >
+                          {item.status === "published"
+                            ? `Published as version ${item.versionNumber}`
+                            : item.status === "held"
+                              ? "Waiting for your draft changes"
+                              : item.status === "queued"
+                                ? "Import queued"
+                                : "Import failed"}
+                        </p>
+                        {item.failure ? (
+                          <p className="mt-2 text-meta text-stop">
+                            {item.failure}
                           </p>
-                          <p className="mt-0.5 text-meta text-mute">
-                            {item.status === "published"
-                              ? `Published as version ${item.versionNumber}`
-                              : item.status === "held"
-                                ? "Waiting for your draft changes"
-                                : item.status === "queued"
-                                  ? "Import queued"
-                                  : "Import failed"}
-                          </p>
-                          {item.failure ? (
-                            <p className="mt-2 text-meta text-stop">
-                              {item.failure}
-                            </p>
-                          ) : null}
-                        </div>
-                        {item.status === "held" || item.status === "failed" ? (
-                          <Button
-                            disabled={busy}
-                            onClick={() =>
-                              void run(() =>
-                                change("POST", `/${item.id}/retry`),
-                              )
-                            }
-                            size="compact"
-                            type="button"
-                            variant="secondary"
-                          >
-                            {item.status === "held" ? "Resume" : "Retry"}
-                          </Button>
                         ) : null}
-                      </TimelineContent>
-                    </TimelineItem>
+                      </div>
+                      {item.status === "held" || item.status === "failed" ? (
+                        <Button
+                          disabled={busy}
+                          onClick={() =>
+                            void run(() => change("POST", `/${item.id}/retry`))
+                          }
+                          size="compact"
+                          type="button"
+                          variant="secondary"
+                        >
+                          {item.status === "held" ? "Resume" : "Retry"}
+                        </Button>
+                      ) : null}
+                    </Item>
                   ))}
-                </Timeline>
+                </ItemGroup>
               ) : (
                 <p className="text-ui text-mute">
                   No releases imported yet. Illarin checks GitHub each hour.

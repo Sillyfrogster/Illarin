@@ -1,14 +1,9 @@
 "use client";
 
-import {
-  Timeline,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot,
-  TimelineItem,
-} from "@/components/ui/timeline";
+import { Badge } from "@/components/ui/badge";
+import { Item, ItemGroup } from "@/components/ui/item";
 import type { RecordedVersion } from "@/lib/api/query";
-import { cn } from "@/lib/cn";
+import { cn, focusRing } from "@/lib/cn";
 import { versionDate, versionTitle } from "@/lib/work-versions";
 
 /** VersionList runs every recorded version down one line, newest first. */
@@ -22,9 +17,10 @@ export function VersionList({
   versions: RecordedVersion[];
 }) {
   return (
-    <Timeline
-      aria-label="Recorded versions"
-      className="[--timeline-dot-offset:0.9375rem]"
+    <ItemGroup
+      as="ol"
+      className="-mx-3 bg-transparent"
+      label="Recorded versions"
     >
       {versions.map((version, index) => {
         const withdrawn = Boolean(
@@ -32,48 +28,45 @@ export function VersionList({
         );
         const here = version.number === chosen;
         return (
-          <TimelineItem key={version.id}>
-            <TimelineDot
+          <Item className="p-0 not-first:border-t-0" key={version.id}>
+            <button
+              aria-current={here ? "true" : undefined}
               className={cn(
-                index === 0 && "border-accent bg-accent",
-                withdrawn && "border-stop",
+                "flex min-h-control w-full cursor-pointer flex-col items-start rounded-control px-3 py-2 text-left",
+                focusRing,
+                here && "bg-accent-wash",
               )}
-            />
-            <TimelineConnector />
-            <TimelineContent asChild>
-              <button
-                aria-current={here ? "true" : undefined}
+              onClick={() => onChoose(version.number)}
+              type="button"
+            >
+              <span
                 className={cn(
-                  "flex min-h-11 w-full flex-col items-start rounded-control px-3 py-2 text-left outline-offset-2 transition-colors duration-150 motion-reduce:transition-none",
-                  here ? "bg-accent-wash" : "hover:bg-deep",
+                  "flex flex-wrap items-center gap-x-2 font-ui text-ui font-medium",
+                  here ? "text-accent" : "text-ink",
                 )}
-                onClick={() => onChoose(version.number)}
-                type="button"
               >
-                <span className="flex flex-wrap items-baseline gap-x-2 font-ui text-ui font-medium text-ink">
-                  {versionTitle(version)}
-                  {index === 0 ? (
-                    <span className="text-label font-medium text-accent">
-                      Published
-                    </span>
-                  ) : null}
-                  {withdrawn ? (
-                    <span className="text-label font-medium text-stop">
-                      Withdrawn
-                    </span>
-                  ) : null}
-                </span>
-                <span className="font-ui text-meta text-mute">
-                  <time dateTime={version.recordedAt}>
-                    {versionDate(version)}
-                  </time>
-                  {version.versionLabel ? ` · v${version.versionLabel}` : null}
-                </span>
-              </button>
-            </TimelineContent>
-          </TimelineItem>
+                {versionTitle(version)}
+                {index === 0 ? (
+                  <Badge size="compact" tone="accent">
+                    Published
+                  </Badge>
+                ) : null}
+                {withdrawn ? (
+                  <Badge size="compact" tone="stop">
+                    Withdrawn
+                  </Badge>
+                ) : null}
+              </span>
+              <span className="font-ui text-meta text-mute">
+                <time dateTime={version.recordedAt}>
+                  {versionDate(version)}
+                </time>
+                {version.versionLabel ? ` · v${version.versionLabel}` : null}
+              </span>
+            </button>
+          </Item>
         );
       })}
-    </Timeline>
+    </ItemGroup>
   );
 }

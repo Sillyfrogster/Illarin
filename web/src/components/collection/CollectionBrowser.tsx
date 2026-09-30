@@ -32,7 +32,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/cn";
+import { cn, focusRing } from "@/lib/cn";
 import {
   type CollectionItem,
   type CollectionOrder,
@@ -189,7 +189,7 @@ function Browser({
           )}
         >
           <button
-            className="mb-4 inline-flex min-h-11 items-center gap-2 font-ui text-meta text-mute outline-offset-3 hover:text-ink sm:hidden"
+            className="mb-4 inline-flex min-h-control items-center gap-2 font-ui text-meta text-mute hover:text-ink sm:hidden"
             onClick={() => setPane("index")}
             type="button"
           >
@@ -396,7 +396,7 @@ function Index({
           if (row.kind === "heading") {
             return (
               <div
-                className="flex items-end px-3 pb-1.5 font-ui text-label font-semibold tracking-[0.08em] text-mute uppercase"
+                className="flex items-end px-3 pb-1.5 font-ui text-meta text-mute"
                 data-index={slot.index}
                 key={row.key}
                 ref={virtual.measureElement}
@@ -418,7 +418,8 @@ function Index({
               <button
                 aria-selected={selected}
                 className={cn(
-                  "flex w-full cursor-pointer items-baseline gap-2.5 rounded-control px-3 py-2.5 text-left outline-offset-[-1px] hover:bg-deep/60 aria-selected:bg-deep aria-selected:shadow-[inset_2px_0_0_var(--v-action)]",
+                  "group/row flex min-h-control w-full cursor-pointer items-baseline gap-2.5 rounded-control px-3 py-2.5 text-left transition-colors duration-80 hover:bg-hover aria-selected:bg-accent-wash",
+                  focusRing,
                   item.off && "opacity-60",
                 )}
                 data-row={item.key}
@@ -431,7 +432,7 @@ function Index({
                 type="button"
               >
                 <span
-                  className="min-w-0 flex-1 truncate font-ui text-ui font-medium text-ink"
+                  className="min-w-0 flex-1 truncate font-ui text-ui font-medium text-ink group-aria-selected/row:text-accent"
                   title={item.name}
                 >
                   {item.name}

@@ -1,6 +1,6 @@
 import { BadgeList } from "@/components/ui/badge";
+import { Item, ItemGroup } from "@/components/ui/item";
 import { RichText } from "@/components/ui/RichText";
-import { Run, RunItem } from "@/components/ui/run";
 import type { LorebookEntry } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { type EntryPresentation, readEntries } from "@/lib/lorebook-entry";
@@ -16,19 +16,19 @@ export function LorebookEntries({
   itemLimit?: number;
 }) {
   return (
-    <Run as="ol">
+    <ItemGroup as="ol">
       {readEntries(entries)
         .slice(0, itemLimit)
         .map((entry) => (
-          <RunItem
+          <Item
             className={cn(entry.isOff && OFF)}
             itemKey={entry.id}
             key={entry.id}
           >
             <EntryBody entry={entry} />
-          </RunItem>
+          </Item>
         ))}
-    </Run>
+    </ItemGroup>
   );
 }
 
