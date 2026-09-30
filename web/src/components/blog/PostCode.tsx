@@ -26,7 +26,7 @@ export function PostCode({
           {label}
         </span>
       )}
-      <section
+      <figure
         aria-label={`${label} code`}
         className="overflow-x-auto px-5"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: A region that scrolls has to be reachable by keyboard.
@@ -45,7 +45,7 @@ export function PostCode({
             ))}
           </code>
         </pre>
-      </section>
+      </figure>
     </div>
   );
 }

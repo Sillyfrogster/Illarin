@@ -30,7 +30,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
   return (
     <Shell className="pt-8 pb-chapter lg:pt-12">
       <div className="grid min-w-0 gap-10 lg:grid-cols-[13.5rem_minmax(0,1fr)_12rem] lg:gap-10">
-        <aside className="lg:sticky lg:top-28 lg:self-start">
+        <div className="lg:sticky lg:top-28 lg:self-start">
           <Link
             className="flex min-h-control items-center font-ui text-meta text-mute hover:text-accent"
             href="/docs"
@@ -53,7 +53,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
               </Link>
             ))}
           </nav>
-        </aside>
+        </div>
         <article className="min-w-0 max-w-[75ch]">
           <Accordion className="mb-8 lg:hidden" collapsible type="single">
             <AccordionItem value="contents">
@@ -75,7 +75,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
           </Accordion>
           <DocMarkdown source={source} />
         </article>
-        <aside className="hidden lg:sticky lg:top-28 lg:block lg:max-h-[calc(100vh-8rem)] lg:self-start lg:overflow-y-auto">
+        <div className="hidden lg:sticky lg:top-28 lg:block lg:max-h-[calc(100vh-8rem)] lg:self-start lg:overflow-y-auto">
           <nav aria-label="On this page">
             <p className="font-ui text-label font-medium text-mute">
               On this page
@@ -93,7 +93,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
               ))}
             </ul>
           </nav>
-        </aside>
+        </div>
       </div>
     </Shell>
   );

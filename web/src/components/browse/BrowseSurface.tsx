@@ -293,6 +293,9 @@ export function BrowseSurface({
           />
         ) : null}
 
+        {showHeading && works.length ? (
+          <h2 className="sr-only">Works</h2>
+        ) : null}
         {works.length ? (
           <ul className={GRID}>
             {works.map((work, index) => (

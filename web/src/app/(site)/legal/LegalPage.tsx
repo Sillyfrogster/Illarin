@@ -44,8 +44,11 @@ export function LegalPage({
     <Shell className="pt-10 pb-chapter lg:pt-14">
       <div className="grid items-start gap-x-14 gap-y-8 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside className="grid gap-6 lg:sticky lg:top-[calc(var(--header-height)+2rem)]">
-          <nav aria-label="Legal documents">
-            <h2 className="font-ui text-meta font-medium text-mute">
+          <nav aria-labelledby="legal-pages">
+            <h2
+              className="font-ui text-meta font-medium text-mute"
+              id="legal-pages"
+            >
               Illarin&rsquo;s terms
             </h2>
             <ul className="mt-2 grid list-none">
