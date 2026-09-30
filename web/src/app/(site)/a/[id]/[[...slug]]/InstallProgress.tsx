@@ -1,7 +1,9 @@
 "use client";
 
-import { CircleAlert } from "lucide-react";
+import { Circle, CircleAlert, CircleCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Item, ItemGroup, ItemTitle } from "@/components/ui/item";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/cn";
 import type { InstallStep, InstallTrack } from "@/lib/install-track";
 
@@ -22,15 +24,11 @@ export function InstallProgress({
     <section aria-label={name} aria-live="polite" className="max-w-[42ch]">
       <p className="text-meta font-medium text-ink">{name}</p>
       {track.steps.length > 0 ? (
-        <ol className="mt-3 flex list-none items-start">
-          {track.steps.map((step, index) => (
-            <Step
-              key={step.id}
-              last={index === track.steps.length - 1}
-              step={step}
-            />
+        <ItemGroup as="ol" className="mt-3">
+          {track.steps.map((step) => (
+            <Step key={step.id} step={step} />
           ))}
-        </ol>
+        </ItemGroup>
       ) : null}
       {track.stopped ? (
         <p className="mt-3 flex items-start gap-2 text-meta text-stop">
@@ -60,45 +58,26 @@ export function InstallProgress({
   );
 }
 
-function Step({ step, last }: { step: InstallStep; last: boolean }) {
+function Step({ step }: { step: InstallStep }) {
   const done = step.standing === "done";
   const now = step.standing === "now";
   return (
-    <li
-      aria-current={now ? "step" : undefined}
-      className={cn("min-w-0", last ? "flex-none" : "flex-1")}
-    >
-      <span className="flex items-center">
-        <span
+    <Item className="flex-row items-center gap-3 py-2.5">
+      {done ? (
+        <CircleCheck
           aria-hidden="true"
-          className={cn(
-            "size-3 shrink-0 rounded-full border-2",
-            done && "border-accent bg-accent",
-            now &&
-              "animate-pulse border-accent bg-accent-wash motion-reduce:animate-none",
-            !done && !now && "border-edge bg-plane",
-          )}
+          className="size-4 shrink-0 text-accent"
         />
-        {last ? null : (
-          <span
-            aria-hidden="true"
-            className={cn(
-              "mx-1.5 h-0.5 flex-1 rounded-full",
-              done ? "bg-accent" : "bg-rule",
-            )}
-          />
-        )}
-      </span>
-      <span
-        className={cn(
-          "mt-1.5 block pr-2 text-meta",
-          done || now ? "font-medium text-ink" : "text-mute",
-        )}
-      >
+      ) : now ? (
+        <Spinner className="text-accent" />
+      ) : (
+        <Circle aria-hidden="true" className="size-4 shrink-0 text-edge" />
+      )}
+      <ItemTitle className={cn(!done && !now && "font-normal text-mute")}>
         {step.label}
         {now ? <span className="sr-only"> (now)</span> : null}
         {done ? <span className="sr-only"> (done)</span> : null}
-      </span>
-    </li>
+      </ItemTitle>
+    </Item>
   );
 }
