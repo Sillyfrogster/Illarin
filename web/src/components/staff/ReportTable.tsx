@@ -42,7 +42,7 @@ export function ReportTable({ report }: { report: Report }) {
         <CollapsibleContent className="pt-3">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
+              <TableRow>
                 <TableHead scope="col">Day</TableHead>
                 {SERIES.map((one) => (
                   <TableHead className="text-right" key={one.id} scope="col">
@@ -52,9 +52,10 @@ export function ReportTable({ report }: { report: Report }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {report.days.map((day) => (
+              {report.days.map((day, index) => (
                 <TableRow
                   className={isWeekend(day.day) ? "bg-inset/60" : ""}
+                  index={index}
                   key={day.day}
                 >
                   <TableHead

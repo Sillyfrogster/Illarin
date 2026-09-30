@@ -94,13 +94,14 @@ function ComparisonTable({
 }) {
   const formats = table.formats.filter((column) => column.type === type);
   const fields = formats.find((column) => !column.keepsUpload)?.fields ?? [];
+  const keepsUpload = formats.some((column) => column.keepsUpload);
   const appLabel = (id: string) =>
     table.apps.find((app) => app.id === id)?.label ?? id;
 
   return (
     <Table className="text-ui">
       <TableHeader>
-        <TableRow className="hover:bg-transparent">
+        <TableRow>
           <TableHead className={ROW_HEAD}>
             <span className="sr-only">Field</span>
           </TableHead>
@@ -116,7 +117,7 @@ function ComparisonTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow className="hover:bg-transparent">
+        <TableRow index={0}>
           <TableHead className={ROW_HEAD} scope="row">
             Read by
           </TableHead>
@@ -126,8 +127,8 @@ function ComparisonTable({
             </TableCell>
           ))}
         </TableRow>
-        {formats.some((column) => column.keepsUpload) ? (
-          <TableRow className="hover:bg-transparent">
+        {keepsUpload ? (
+          <TableRow index={1}>
             <TableHead className={ROW_HEAD} scope="row">
               File
             </TableHead>
@@ -145,7 +146,7 @@ function ComparisonTable({
             formats.map((column) => column.fields[row]),
           );
           return (
-            <TableRow className="hover:bg-transparent" key={field.field}>
+            <TableRow index={row + (keepsUpload ? 2 : 1)} key={field.field}>
               <TableHead className={ROW_HEAD} scope="row">
                 {field.label}
                 {shared ? (

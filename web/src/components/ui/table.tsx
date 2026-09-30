@@ -1,52 +1,112 @@
-import type { ComponentProps } from "react";
+"use client";
+
+import {
+  type ComponentProps,
+  createContext,
+  useContext,
+  useMemo,
+  useRef,
+} from "react";
+import { FluidHoverHighlight } from "@/components/ui/fluid-hover-highlight";
 import { cn } from "@/lib/cn";
+import { fontWeights } from "@/lib/font-weight";
+import { useSize } from "@/lib/size-context";
+import {
+  useFluidHover,
+  useRegisterFluidHoverItem,
+} from "@/lib/use-fluid-hover";
 
-export function Table({ className, ...props }: ComponentProps<"table">) {
+type TableContextValue = {
+  registerItem: (index: number, element: HTMLElement | null) => void;
+  activeIndex: number | null;
+};
+
+const TableContext = createContext<TableContextValue | null>(null);
+
+/** Table is Fluid Functionalism's table: a hover plate follows the pointer down the body rows, which each need an index. */
+function Table({ className, ...props }: ComponentProps<"table">) {
+  const container = useRef<HTMLDivElement>(null);
+  const hover = useFluidHover(container);
+  const { registerItem, activeIndex } = hover;
+  const context = useMemo(
+    () => ({ registerItem, activeIndex }),
+    [registerItem, activeIndex],
+  );
+
   return (
-    <div className="relative w-full overflow-x-auto">
-      <table
-        className={cn(
-          "w-full caption-bottom border-collapse font-ui text-meta",
-          className,
-        )}
-        {...props}
-      />
-    </div>
+    <TableContext.Provider value={context}>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: the pointer only moves the hover plate */}
+      <div
+        className="relative w-full overflow-x-auto"
+        onMouseEnter={hover.handlers.onMouseEnter}
+        onMouseLeave={hover.handlers.onMouseLeave}
+        onMouseMove={hover.handlers.onMouseMove}
+        ref={container}
+      >
+        <FluidHoverHighlight hover={hover} />
+        <table
+          className={cn("w-full border-collapse font-ui text-meta", className)}
+          {...props}
+        />
+      </div>
+    </TableContext.Provider>
   );
 }
 
-export function TableHeader({ className, ...props }: ComponentProps<"thead">) {
-  return (
-    <thead
-      className={cn("[&_tr]:border-b [&_tr]:border-rule", className)}
-      {...props}
-    />
-  );
+function TableHeader(props: ComponentProps<"thead">) {
+  return <thead {...props} />;
 }
 
-export function TableBody({ className, ...props }: ComponentProps<"tbody">) {
-  return (
-    <tbody className={cn("[&_tr:last-child]:border-0", className)} {...props} />
-  );
+function TableBody(props: ComponentProps<"tbody">) {
+  return <tbody {...props} />;
 }
 
-export function TableRow({ className, ...props }: ComponentProps<"tr">) {
+/** TableRow joins the hover plate when given its index among the body rows; its rule hides beside the lit row. */
+function TableRow({
+  index,
+  className,
+  style,
+  ...props
+}: ComponentProps<"tr"> & { index?: number }) {
+  const row = useRef<HTMLTableRowElement>(null);
+  const context = useContext(TableContext);
+  useRegisterFluidHoverItem(context?.registerItem, index, row);
+
+  const isBodyRow = index !== undefined;
+  const active = context?.activeIndex ?? null;
+  const hideRule =
+    active !== null &&
+    ((isBodyRow && (index === active || index === active - 1)) ||
+      (!isBodyRow && active === 0));
+
   return (
     <tr
       className={cn(
-        "border-b border-rule transition-colors duration-150 hover:bg-deep/60 motion-reduce:transition-none",
+        "group/row relative z-10 border-b transition-[border-color] duration-80 last:border-b-0",
+        hideRule ? "border-transparent" : "border-rule",
+        isBodyRow && active === index && "is-active",
         className,
       )}
+      data-fluid-hover-index={index}
+      ref={row}
+      style={{
+        ...style,
+        fontVariationSettings: isBodyRow
+          ? fontWeights.normal
+          : fontWeights.semibold,
+      }}
       {...props}
     />
   );
 }
 
-export function TableHead({ className, ...props }: ComponentProps<"th">) {
+function TableHead({ className, ...props }: ComponentProps<"th">) {
+  const compact = useSize().variant === "compact";
   return (
     <th
       className={cn(
-        "h-10 px-3 text-left align-middle font-medium whitespace-nowrap text-mute",
+        "text-left align-middle whitespace-nowrap text-ink",
+        compact ? "px-2.5 py-[5px]" : "px-3 py-2",
         className,
       )}
       {...props}
@@ -54,11 +114,18 @@ export function TableHead({ className, ...props }: ComponentProps<"th">) {
   );
 }
 
-export function TableCell({ className, ...props }: ComponentProps<"td">) {
+function TableCell({ className, ...props }: ComponentProps<"td">) {
+  const compact = useSize().variant === "compact";
   return (
     <td
-      className={cn("px-3 py-2 align-middle whitespace-nowrap", className)}
+      className={cn(
+        "align-middle whitespace-nowrap text-mute transition-colors duration-80 group-[.is-active]/row:text-ink",
+        compact ? "px-2.5 py-[5px]" : "px-3 py-2",
+        className,
+      )}
       {...props}
     />
   );
 }
+
+export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow };
