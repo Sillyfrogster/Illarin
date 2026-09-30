@@ -82,7 +82,7 @@ function ShinyButton({
   if (href) {
     const { "aria-current": current } = props;
     return (
-      <MotionLink aria-current={current} href={href} {...shared}>
+      <MotionLink aria-current={current} href={href} tabIndex={0} {...shared}>
         {inside}
       </MotionLink>
     );

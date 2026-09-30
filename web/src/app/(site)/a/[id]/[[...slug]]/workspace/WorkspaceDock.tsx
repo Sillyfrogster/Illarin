@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ChevronDown,
   EyeOff,
@@ -26,6 +26,7 @@ import {
 } from "@/components/workspace/Dock";
 import type { WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
+import { spring } from "@/lib/springs";
 import type { SaveState } from "./state";
 import { useWorkspace } from "./state";
 
@@ -174,16 +175,15 @@ function VisibilityMenu({
 /** EditToggle sits where the dock opens and turns into it. */
 export function EditToggle({ typeName }: { typeName: string }) {
   const workspace = useWorkspace();
-  const reduced = useReducedMotion();
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-4 md:pb-7">
       <motion.button
         className="pointer-events-auto inline-flex min-h-13 items-center gap-2.5 rounded-plate bg-ink py-2 pr-6 pl-5 text-ui font-medium text-field shadow-popover outline-offset-3 hover:bg-ink/90"
-        initial={reduced ? false : { opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        layoutId={reduced ? undefined : EDIT_CONTROL}
+        layoutId={EDIT_CONTROL}
         onClick={workspace.startEditing}
-        transition={{ duration: reduced ? 0 : 0.45, ease: [0.22, 1, 0.36, 1] }}
+        transition={spring.slow}
         type="button"
       >
         <PencilLine aria-hidden="true" size={17} />
