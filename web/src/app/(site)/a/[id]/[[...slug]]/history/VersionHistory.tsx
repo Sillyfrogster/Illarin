@@ -13,6 +13,7 @@ import {
   ExpandingPanelTitle,
   ExpandingPanelTrigger,
 } from "@/components/ui/expanding-panel";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchWorkUpdates,
   type RecordedVersion,
@@ -251,8 +252,8 @@ function HistoryVersions({
     <output aria-label="Loading versions" className="grid gap-4 px-3 py-2">
       {[0, 1, 2].map((slot) => (
         <span className="grid gap-2" key={slot}>
-          <span className="h-3.5 w-28 animate-pulse rounded-control bg-deep motion-reduce:animate-none" />
-          <span className="h-3 w-40 animate-pulse rounded-control bg-deep motion-reduce:animate-none" />
+          <Skeleton className="h-3.5 w-28" />
+          <Skeleton className="h-3 w-40" />
         </span>
       ))}
     </output>

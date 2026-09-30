@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { Notification } from "@/lib/api/notifications";
 import { cn } from "@/lib/cn";
@@ -135,11 +136,11 @@ export function NotificationEntry({
 export function NotificationEntrySkeleton() {
   return (
     <li aria-hidden="true" className="flex gap-3.5 px-3 py-3">
-      <span className="size-9 shrink-0 animate-pulse rounded-control bg-deep" />
+      <Skeleton className="size-9 shrink-0" />
       <span className="flex-1">
-        <span className="block h-3.5 w-3/4 animate-pulse rounded-full bg-deep" />
-        <span className="mt-2.5 block h-3 w-1/2 animate-pulse rounded-full bg-deep" />
-        <span className="mt-2.5 block h-2.5 w-16 animate-pulse rounded-full bg-deep" />
+        <Skeleton className="h-3.5 w-3/4 rounded-full" />
+        <Skeleton className="mt-2.5 h-3 w-1/2 rounded-full" />
+        <Skeleton className="mt-2.5 h-2.5 w-16 rounded-full" />
       </span>
     </li>
   );

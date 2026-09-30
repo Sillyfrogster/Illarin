@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { readReport, staffKeys } from "@/lib/api/staff";
 import { ActivityMatrix } from "./ActivityMatrix";
 import { DayShape } from "./DayShape";
@@ -53,10 +54,10 @@ export function StaffReport() {
 function ReportSkeleton() {
   return (
     <div aria-hidden="true" className="flex flex-col gap-3">
-      <div className="h-[19rem] rounded-plate bg-deep motion-safe:animate-pulse" />
+      <Skeleton className="h-[19rem] rounded-plate" />
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div className="h-72 rounded-plate bg-deep motion-safe:animate-pulse" />
-        <div className="h-72 rounded-plate bg-deep motion-safe:animate-pulse" />
+        <Skeleton className="h-72 rounded-plate" />
+        <Skeleton className="h-72 rounded-plate" />
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const GRID =
   "m-0 grid list-none grid-cols-2 items-start gap-x-4 gap-y-9 p-0 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-5";
@@ -20,9 +21,9 @@ export function BrowseLoading() {
       <div className={GRID}>
         {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((slot) => (
           <div key={slot}>
-            <div className="aspect-5/6 animate-pulse rounded-plate bg-deep motion-reduce:animate-none" />
-            <div className="mt-4 h-4 w-3/4 animate-pulse rounded-control bg-deep motion-reduce:animate-none" />
-            <div className="mt-2 h-3 w-1/2 animate-pulse rounded-control bg-deep motion-reduce:animate-none" />
+            <Skeleton className="aspect-5/6 rounded-plate" />
+            <Skeleton className="mt-4 h-4 w-3/4" />
+            <Skeleton className="mt-2 h-3 w-1/2" />
           </div>
         ))}
       </div>

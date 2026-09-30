@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
+import { Skeleton } from "@/components/ui/skeleton";
 import { compareWorkVersions, type VersionComparison } from "@/lib/api/query";
 
 export function VersionChanges({
@@ -69,9 +70,9 @@ function ComparisonSkeleton() {
     <div className="mt-4" aria-live="polite">
       <span className="sr-only">Loading the comparison</span>
       <div aria-hidden="true" className="grid gap-2">
-        <div className="h-3 w-24 animate-pulse rounded-control bg-deep" />
-        <div className="h-10 animate-pulse rounded-control bg-deep" />
-        <div className="h-10 w-3/4 animate-pulse rounded-control bg-deep" />
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-10" />
+        <Skeleton className="h-10 w-3/4" />
       </div>
     </div>
   );
