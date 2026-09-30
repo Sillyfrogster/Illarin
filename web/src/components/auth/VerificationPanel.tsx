@@ -125,7 +125,7 @@ export function VerificationPanel() {
           You can now publish your work and link applications.
         </p>
         <div className="mt-7">
-          <Button asChild size="large" variant="primary">
+          <Button asChild variant="primary">
             <Link href={returnTo}>{returnLabel}</Link>
           </Button>
         </div>
@@ -146,7 +146,7 @@ export function VerificationPanel() {
         </div>
         <Trouble>{said}</Trouble>
         <div>
-          <Button asChild size="large" variant="primary">
+          <Button asChild variant="primary">
             <Link href="/sign-in">Return to sign in</Link>
           </Button>
         </div>

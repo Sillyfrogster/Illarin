@@ -130,7 +130,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
             onClick={() => void run(refresh)}
             size="compact"
             type="button"
-            variant="outline"
+            variant="secondary"
           >
             <RotateCw aria-hidden="true" /> Refresh status
           </Button>
@@ -415,7 +415,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                             }
                             size="compact"
                             type="button"
-                            variant="outline"
+                            variant="secondary"
                           >
                             {item.status === "held" ? "Resume" : "Retry"}
                           </Button>

@@ -158,12 +158,12 @@ export function HostedLanding({ children }: { children: ReactNode }) {
                 with.
               </p>
               <div className="actions">
-                <Button asChild variant="primary" size="large">
+                <Button asChild variant="primary">
                   <Link href="/upload">
                     Start creating <ArrowUpRight aria-hidden="true" />
                   </Link>
                 </Button>
-                <Button asChild variant="ghost" size="large">
+                <Button asChild variant="ghost">
                   <Link href="/browse">
                     Browse creations <ArrowRight aria-hidden="true" />
                   </Link>

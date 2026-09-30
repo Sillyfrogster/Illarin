@@ -1,32 +1,54 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { LoaderCircle } from "lucide-react";
-import type { ComponentProps } from "react";
-import { cn } from "@/lib/cn";
+import {
+  type ComponentProps,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+import { Spinner } from "@/components/ui/spinner";
+import { cn, focusRing } from "@/lib/cn";
 
 const buttonVariants = cva(
-  "relative inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-control font-ui text-ui font-medium tracking-tight transition duration-200 outline-offset-3 disabled:pointer-events-none disabled:opacity-45 motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0",
+  `group relative isolate inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control font-ui text-ui font-medium transition-colors duration-80 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:stroke-[1.75] [&_svg]:transition-[stroke-width] [&_svg]:duration-80 hover:[&_svg]:stroke-2 ${focusRing}`,
   {
     variants: {
       variant: {
-        primary:
-          "bg-action text-on-accent shadow-[0_4px_14px_-5px_var(--v-action),inset_0_1px_0_rgb(255_255_255/0.18)] hover:bg-action/90 hover:text-on-accent motion-safe:hover:-translate-y-px active:translate-y-0",
-        secondary: "bg-deep text-ink hover:bg-rule/45",
-        outline: "text-ink inset-ring inset-ring-edge hover:bg-deep",
-        ghost: "text-mute hover:bg-deep hover:text-ink",
-        stop: "bg-stop text-on-stop hover:-translate-y-px active:translate-y-0",
-        link: "px-0 text-accent underline-offset-4 hover:underline",
+        primary: "text-on-accent hover:text-on-accent",
+        secondary: "text-ink hover:text-accent data-[state=open]:text-accent",
+        ghost: "text-mute hover:text-ink data-[state=open]:text-ink",
+        stop: "text-on-stop hover:text-on-stop",
+        link: "text-accent underline-offset-4 hover:text-accent hover:underline",
       },
       size: {
-        default: "min-h-11 px-5",
-        large: "min-h-12 px-7 text-base",
-        compact: "min-h-11 px-3",
-        icon: "size-11 px-0",
+        default: "h-control px-4 has-[>span>svg:first-child]:pl-3",
+        compact:
+          "h-control-compact gap-1.5 px-3 text-meta has-[>span>svg:first-child]:pl-2",
+        icon: "size-control px-0",
+        "icon-compact": "size-control-compact px-0 [&_svg]:size-3.5",
       },
     },
+    compoundVariants: [{ variant: "link", className: "h-auto px-0" }],
     defaultVariants: { variant: "secondary", size: "default" },
   },
 );
+
+type ButtonVariant = NonNullable<
+  VariantProps<typeof buttonVariants>["variant"]
+>;
+
+// The fill sits 1px inside the button and a same-colour spread fills it back out, so a press shrinks it by exactly 1px a side
+const SURFACES: Record<ButtonVariant, string> = {
+  primary:
+    "[--fill:var(--v-action)] group-hover:[--fill:color-mix(in_oklab,var(--v-action)_88%,var(--v-field))] group-active:[--fill:color-mix(in_oklab,var(--v-action)_78%,var(--v-field))] bg-(--fill) shadow-[0_0_0_1px_var(--fill)] group-active:shadow-[0_0_0_0px_var(--fill)]",
+  secondary:
+    "[--ring:var(--v-edge)] group-hover:[--ring:color-mix(in_oklab,var(--v-accent)_60%,transparent)] group-data-[state=open]:[--ring:color-mix(in_oklab,var(--v-accent)_60%,transparent)] shadow-[0_0_0_1px_var(--ring),inset_0_0_0_0px_var(--ring)] group-hover:bg-hover group-active:bg-active group-data-[state=open]:bg-active group-active:shadow-[0_0_0_0px_var(--ring),inset_0_0_0_1px_var(--ring)]",
+  ghost:
+    "shadow-[0_0_0_1px_transparent] group-hover:bg-hover group-hover:shadow-[0_0_0_1px_var(--v-hover)] group-active:bg-active group-data-[state=open]:bg-active group-active:shadow-[0_0_0_0px_var(--v-active)]",
+  stop: "[--fill:var(--v-stop)] group-hover:[--fill:color-mix(in_oklab,var(--v-stop)_88%,var(--v-field))] group-active:[--fill:color-mix(in_oklab,var(--v-stop)_78%,var(--v-field))] bg-(--fill) shadow-[0_0_0_1px_var(--fill)] group-active:shadow-[0_0_0_0px_var(--fill)]",
+  link: "hidden",
+};
 
 type ButtonProps = ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -34,7 +56,8 @@ type ButtonProps = ComponentProps<"button"> &
     loading?: boolean;
   };
 
-export function Button({
+/** Button is Fluid Functionalism's button in the site's colours: a fill that presses in by a pixel, outlined and neutral at rest for the default variant. */
+function Button({
   className,
   variant,
   size,
@@ -44,12 +67,32 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
+  const child =
+    asChild && isValidElement(children)
+      ? (children as ReactElement<{ children?: ReactNode }>)
+      : null;
+  const label = child ? child.props.children : children;
+  const internals = (
+    <>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-px -z-10 rounded-[inherit] transition-[box-shadow,background-color] duration-160 group-active:duration-80",
+          SURFACES[variant ?? "secondary"],
+        )}
+      />
+      <span className="flex min-w-0 flex-1 items-center justify-[inherit] gap-[inherit]">
+        {loading ? <Spinner /> : null}
+        {label}
+      </span>
+    </>
+  );
   const classes = cn(buttonVariants({ variant, size }), className);
 
-  if (asChild) {
+  if (child) {
     return (
       <Slot className={classes} {...props}>
-        {children}
+        {cloneElement(child, undefined, internals)}
       </Slot>
     );
   }
@@ -62,15 +105,9 @@ export function Button({
       className={classes}
       {...props}
     >
-      {loading ? (
-        <LoaderCircle
-          aria-hidden="true"
-          className="animate-spin motion-reduce:animate-none"
-        />
-      ) : null}
-      {children}
+      {internals}
     </button>
   );
 }
 
-export { buttonVariants };
+export { Button, buttonVariants };

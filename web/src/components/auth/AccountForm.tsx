@@ -189,7 +189,7 @@ export function AccountForm({
           </div>
         ) : null}
 
-        <Button asChild size="large" variant="outline">
+        <Button asChild variant="secondary">
           <a href={discordHref} onClick={continueWithDiscord}>
             <SiDiscord aria-hidden="true" color="default" title="" />
             Continue with Discord
@@ -276,7 +276,6 @@ export function AccountForm({
         <Button
           className="mt-1 shadow-none"
           loading={pending}
-          size="large"
           type="submit"
           variant="primary"
         >

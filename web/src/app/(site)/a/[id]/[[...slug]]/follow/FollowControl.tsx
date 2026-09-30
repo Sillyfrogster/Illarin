@@ -29,7 +29,6 @@ export function FollowControl() {
         <Button
           aria-label={words.name}
           className={cn(
-            "data-[state=open]:bg-deep",
             words.following &&
               "bg-accent-wash text-accent hover:bg-accent-wash/70 hover:text-accent",
           )}

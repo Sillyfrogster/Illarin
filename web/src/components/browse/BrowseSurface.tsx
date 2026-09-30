@@ -326,8 +326,7 @@ export function BrowseSurface({
             <Button
               loading={query.isFetchingNextPage}
               onClick={() => void query.fetchNextPage()}
-              size="large"
-              variant="outline"
+              variant="secondary"
             >
               {query.isFetchingNextPage ? "Loading" : "Show more"}
             </Button>

@@ -17,7 +17,7 @@ export function Unpublished({ explanation }: { explanation: string }) {
           {explanation}
         </p>
       ) : null}
-      <Button asChild className="mt-10" size="large" variant="primary">
+      <Button asChild className="mt-10" variant="primary">
         <Link href={BLOG_HOME}>All posts</Link>
       </Button>
     </section>

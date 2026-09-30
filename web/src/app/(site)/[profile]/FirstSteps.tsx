@@ -28,7 +28,7 @@ export function FirstSteps({
             <Button
               onClick={() => onEdit("profile-banner-pick")}
               size="compact"
-              variant="outline"
+              variant="secondary"
             >
               <ImageUp aria-hidden="true" />
               Add banner
@@ -43,7 +43,7 @@ export function FirstSteps({
             <Button
               onClick={() => onEdit("profile-bio")}
               size="compact"
-              variant="outline"
+              variant="secondary"
             >
               <PencilLine aria-hidden="true" />
               Write biography

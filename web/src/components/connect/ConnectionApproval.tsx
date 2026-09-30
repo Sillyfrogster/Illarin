@@ -151,7 +151,7 @@ export function ConnectionApproval() {
         <Panel capture={capturePanel}>
           <Gate
             action={
-              <Button asChild size="large" variant="primary">
+              <Button asChild variant="primary">
                 <Link
                   href={`/sign-in?returnTo=${encodeURIComponent(returnTo)}`}
                 >
@@ -174,7 +174,7 @@ export function ConnectionApproval() {
         <Panel capture={capturePanel}>
           <Gate
             action={
-              <Button asChild size="large" variant="primary">
+              <Button asChild variant="primary">
                 <Link
                   href={`/verify-email?returnTo=${encodeURIComponent(returnTo)}`}
                 >
@@ -197,7 +197,7 @@ export function ConnectionApproval() {
         <Panel capture={capturePanel}>
           <Landing
             action={
-              <Button asChild size="large" variant="primary">
+              <Button asChild variant="primary">
                 <Link href="/settings">See connected apps</Link>
               </Button>
             }
@@ -220,7 +220,7 @@ export function ConnectionApproval() {
         <Panel capture={capturePanel}>
           <Landing
             action={
-              <Button onClick={startOver} size="large" variant="secondary">
+              <Button onClick={startOver} variant="secondary">
                 Enter another code
               </Button>
             }
@@ -327,7 +327,7 @@ export function ConnectionApproval() {
           </div>
         ) : null}
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
-          <Button size="large" type="submit" variant="primary">
+          <Button type="submit" variant="primary">
             Review request
           </Button>
           <p

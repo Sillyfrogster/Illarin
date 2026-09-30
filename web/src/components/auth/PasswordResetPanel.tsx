@@ -88,7 +88,7 @@ export function PasswordResetRequestPanel() {
     return (
       <Landing
         action={
-          <Button asChild size="large" variant="primary">
+          <Button asChild variant="primary">
             <Link href="/sign-in">Return to sign in</Link>
           </Button>
         }
@@ -126,7 +126,7 @@ export function PasswordResetRequestPanel() {
       {trouble ? <Trouble>{trouble}</Trouble> : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button loading={pending} size="large" type="submit" variant="primary">
+        <Button loading={pending} type="submit" variant="primary">
           {pending ? "Sending a reset link" : "Send reset link"}
         </Button>
         <Button asChild variant="ghost">
@@ -164,7 +164,7 @@ export function PasswordResetCompletionPanel() {
     return (
       <Landing
         action={
-          <Button asChild size="large" variant="primary">
+          <Button asChild variant="primary">
             <Link href="/sign-in">Sign in with email</Link>
           </Button>
         }
@@ -184,7 +184,7 @@ export function PasswordResetCompletionPanel() {
     return (
       <Landing
         action={
-          <Button asChild size="large" variant="primary">
+          <Button asChild variant="primary">
             <Link href="/forgot-password">Request another link</Link>
           </Button>
         }
@@ -218,7 +218,7 @@ export function PasswordResetCompletionPanel() {
 
       {trouble ? <Trouble>{trouble}</Trouble> : null}
 
-      <Button loading={pending} size="large" type="submit" variant="primary">
+      <Button loading={pending} type="submit" variant="primary">
         {pending ? "Setting your password" : "Set password"}
       </Button>
     </form>

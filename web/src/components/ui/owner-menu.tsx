@@ -61,8 +61,9 @@ export function OwnerMenu({
         <DropdownMenuTrigger asChild>
           <Button
             aria-label={`Actions for ${name}`}
-            variant="outline"
-            className="size-11 bg-plane/95 p-0"
+            variant="secondary"
+            className="bg-plane/95"
+            size="icon"
           >
             <MoreHorizontal aria-hidden="true" />
           </Button>

@@ -196,7 +196,7 @@ export function IdentityCard({
               className="flex-1"
               disabled={editing.saving}
               onClick={editing.cancel}
-              variant="outline"
+              variant="secondary"
             >
               Cancel
             </Button>

@@ -119,7 +119,6 @@ export function ConnectionDecision({
           disabled={busy}
           loading={deciding === "approve"}
           onClick={() => onDecide("approve", granted)}
-          size="large"
           variant="primary"
         >
           {deciding === "approve" ? "Approving" : "Approve"}
@@ -128,8 +127,7 @@ export function ConnectionDecision({
           disabled={busy}
           loading={deciding === "deny"}
           onClick={() => onDecide("deny", [])}
-          size="large"
-          variant="outline"
+          variant="secondary"
         >
           {deciding === "deny" ? "Declining" : "Decline"}
         </Button>

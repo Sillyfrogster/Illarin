@@ -3,7 +3,7 @@
 import { Check, Copy } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
-import { buttonVariants } from "./button";
+import { Button } from "./button";
 
 const CONFIRMATION_MS = 2000;
 
@@ -30,13 +30,10 @@ export function CopyButton({
 
   const Icon = copied ? Check : Copy;
   return (
-    <button
-      className={cn(
-        children
-          ? buttonVariants({ variant: "outline" })
-          : "flex size-11 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-ink",
-        className,
-      )}
+    <Button
+      className={className}
+      size={children ? "default" : "icon"}
+      variant={children ? "secondary" : "ghost"}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);
@@ -46,18 +43,14 @@ export function CopyButton({
           setFailed(true);
         }
       }}
-      type="button"
     >
       <span className="sr-only">
         {failed ? `${label} could not be copied` : copied ? "Copied" : label}
       </span>
-      <Icon
-        aria-hidden="true"
-        className={cn("size-4", copied && "text-accent")}
-      />
+      <Icon aria-hidden="true" className={cn(copied && "text-accent")} />
       {children ? (
         <span aria-hidden="true">{copied ? "Copied" : children}</span>
       ) : null}
-    </button>
+    </Button>
   );
 }

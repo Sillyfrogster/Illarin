@@ -149,7 +149,7 @@ export function RestrictedControl({
             <Button
               disabled={pending}
               onClick={() => setConfirmingRestore(true)}
-              variant="outline"
+              variant="secondary"
             >
               Restore profile
             </Button>

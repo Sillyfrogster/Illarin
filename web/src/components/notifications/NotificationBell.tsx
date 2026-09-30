@@ -43,11 +43,7 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-ink data-[state=open]:bg-deep"
-        >
+        <Button variant="ghost" size="icon" className="text-ink">
           <Bell aria-hidden="true" />
           <AnimatePresence initial={false}>
             {badge ? (
