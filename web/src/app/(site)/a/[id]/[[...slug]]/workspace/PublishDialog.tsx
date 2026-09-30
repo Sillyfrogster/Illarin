@@ -2,6 +2,7 @@
 
 import { SiDiscord } from "@icons-pack/react-simple-icons";
 import { Bell } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
-import { LineLink } from "@/components/ui/line-link";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { readDiscordChannel } from "@/lib/api/integrations";
 import {
@@ -307,12 +307,12 @@ export function PublishDialog({
                             onChange={setDiscord}
                           />
                         ) : (
-                          <LineLink
-                            className="text-accent hover:text-accent"
+                          <Link
+                            className="text-ui font-medium text-accent underline-offset-4 hover:underline"
                             href="/settings#discord-channel"
                           >
                             Connect
-                          </LineLink>
+                          </Link>
                         )}
                       </Hearer>
                     )}

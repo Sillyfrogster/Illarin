@@ -13,9 +13,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { LineLink } from "@/components/ui/line-link";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { useAuth } from "@/lib/auth";
+import { cn, navLink } from "@/lib/cn";
 import { spring } from "@/lib/springs";
 import { AccountMenu } from "./AccountMenu";
 import {
@@ -120,14 +120,16 @@ export function SiteHeader() {
               aria-label="Primary"
             >
               {primaryDestinations().map((item) => (
-                <LineLink
-                  key={item.href}
+                <Link
+                  aria-current={
+                    isCurrentPage(pathname, item.href) ? "page" : undefined
+                  }
+                  className={cn(navLink, "px-3")}
                   href={item.href}
-                  current={isCurrentPage(pathname, item.href)}
-                  className="rounded-control px-3 text-ink hover:bg-deep aria-[current=page]:bg-deep"
+                  key={item.href}
                 >
                   {item.label}
-                </LineLink>
+                </Link>
               ))}
             </nav>
           </>

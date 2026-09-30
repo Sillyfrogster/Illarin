@@ -8,9 +8,9 @@ import {
 } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LineLink } from "@/components/ui/line-link";
 import type { BlogCategory } from "@/lib/api/query";
 import { archivePath, BLOG_HOME } from "@/lib/blog-paths";
+import { navLink } from "@/lib/cn";
 
 export function BlogMasthead({ categories }: { categories: BlogCategory[] }) {
   const pathname = usePathname();
@@ -40,21 +40,28 @@ export function BlogMasthead({ categories }: { categories: BlogCategory[] }) {
             aria-label="Blog categories"
             className="-mx-1 flex min-w-0 items-center gap-x-4 overflow-x-auto px-1 [scrollbar-width:none] max-sm:w-full [&::-webkit-scrollbar]:hidden"
           >
-            <LineLink current={onArchive} href={BLOG_HOME}>
+            <Link
+              aria-current={onArchive ? "page" : undefined}
+              className={navLink}
+              href={BLOG_HOME}
+            >
               All posts
-            </LineLink>
+            </Link>
             {categories.map((category) => {
               const address = archivePath("category", category.slug);
               return (
-                <LineLink
-                  current={
+                <Link
+                  aria-current={
                     pathname === address || pathname.startsWith(`${address}/`)
+                      ? "page"
+                      : undefined
                   }
+                  className={navLink}
                   href={address}
                   key={category.id}
                 >
                   {category.label}
-                </LineLink>
+                </Link>
               );
             })}
           </nav>

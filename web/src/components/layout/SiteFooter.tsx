@@ -1,7 +1,8 @@
 import { SiDiscord, SiKofi } from "@icons-pack/react-simple-icons";
+import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { shellClasses } from "@/components/layout/Shell";
-import { LineLink } from "@/components/ui/line-link";
+import { navLink } from "@/lib/cn";
 import { DISCORD_INVITE, KOFI_PAGE } from "@/lib/contact";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
 import { primaryDestinations } from "./destinations";
@@ -62,9 +63,9 @@ export function SiteFooter() {
             <ul className="mt-1 grid list-none">
               {destinations.map((item) => (
                 <li key={item.href}>
-                  <LineLink href={item.href} className="text-ink">
+                  <Link className={navLink} href={item.href}>
                     {item.label}
-                  </LineLink>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -75,9 +76,9 @@ export function SiteFooter() {
             <ul className="mt-1 grid list-none">
               {LEGAL_DOCUMENTS.map((document) => (
                 <li key={document.href}>
-                  <LineLink href={document.href} className="text-ink">
+                  <Link className={navLink} href={document.href}>
                     {document.title}
-                  </LineLink>
+                  </Link>
                 </li>
               ))}
             </ul>

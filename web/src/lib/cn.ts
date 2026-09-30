@@ -46,3 +46,7 @@ export function cn(...values: ClassValue[]) {
 /** focusRing is the one keyboard focus ring every control draws in place of the global outline. */
 export const focusRing =
   "outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";
+
+/** navLink is a plain link in a run of navigation: ink at rest, a violet underline on hover, violet for the page you are on. */
+export const navLink =
+  "flex min-h-control items-center whitespace-nowrap text-ui font-medium text-ink decoration-accent underline-offset-4 hover:underline aria-[current=page]:text-accent";
