@@ -24,10 +24,14 @@ import {
   ShieldOff,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import { type ComponentType, useRef, useState } from "react";
 import { CropPicture, cropsCleanly } from "@/components/media/CropPicture";
 import { Alert } from "@/components/ui/alert";
+import {
+  AvatarFallback,
+  AvatarImage,
+  Avatar as UiAvatar,
+} from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Field } from "@/components/ui/field";
@@ -259,30 +263,24 @@ function Avatar({
 
   return (
     <div className="relative -mt-18 w-fit">
-      {picture ? (
-        <span className={cn(frame, "block overflow-hidden bg-deep")}>
-          <Image
+      <UiAvatar className={frame}>
+        {picture ? (
+          <AvatarImage
             alt=""
-            className="size-full object-cover"
+            fetchPriority="high"
             height={picture.height}
-            priority
             src={picture.url}
-            unoptimized
             width={picture.width}
           />
-        </span>
-      ) : (
-        <span
+        ) : null}
+        <AvatarFallback
           aria-hidden="true"
-          className={cn(
-            frame,
-            "grid place-items-center font-display text-[2.5rem] font-medium",
-            portraitGround(profile.handle),
-          )}
+          className={cn("text-[2.5rem]", portraitGround(profile.handle))}
+          delayMs={picture ? 600 : 0}
         >
           {profile.handle.slice(0, 1).toUpperCase()}
-        </span>
-      )}
+        </AvatarFallback>
+      </UiAvatar>
       {editing ? (
         <>
           <button
