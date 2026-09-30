@@ -26,18 +26,6 @@ export function WorkspaceRail({
     heading.current?.focus({ preventScroll: true });
   }, []);
 
-  useEffect(() => {
-    if (!onClose) return;
-    function leave(event: KeyboardEvent) {
-      const inField =
-        event.target instanceof HTMLElement &&
-        ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName);
-      if (event.key === "Escape" && !inField) onClose?.();
-    }
-    document.addEventListener("keydown", leave);
-    return () => document.removeEventListener("keydown", leave);
-  }, [onClose]);
-
   return (
     <motion.aside
       animate={reduced ? { opacity: 1 } : { x: 0 }}
