@@ -2,12 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { TypeMark } from "@/components/browse/TypeMark";
 import {
-  Slab,
-  SlabFoot,
-  SlabHead,
-  SlabNote,
-  SlabTitle,
-} from "@/components/ui/slab";
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { BrowseType } from "@/lib/api/query";
 import type { ReportWork } from "@/lib/api/staff";
 import { count } from "@/lib/report";
@@ -20,17 +20,17 @@ export function TopWorks({ works }: { works: ReportWork[] }) {
   const between = works.reduce((sum, work) => sum + work.downloads, 0);
 
   return (
-    <Slab>
-      <SlabHead>
-        <SlabTitle>Most downloaded</SlabTitle>
-        <SlabNote>Every format counted together</SlabNote>
-      </SlabHead>
+    <Card>
+      <CardHeader>
+        <CardTitle>Most downloaded</CardTitle>
+        <CardDescription>Every format counted together</CardDescription>
+      </CardHeader>
       {works.length === 0 ? (
         <p className="px-4 py-8 font-ui text-meta text-mute">
           Nothing has been downloaded in the last 30 days.
         </p>
       ) : (
-        <ol className="flex list-none flex-col">
+        <ol className="flex list-none flex-col pt-2">
           {works.map((work, index) => (
             <li
               className="group relative flex items-center gap-3 border-b border-rule/70 px-4 py-2.5 last:border-b-0 hover:bg-inset/70"
@@ -66,14 +66,14 @@ export function TopWorks({ works }: { works: ReportWork[] }) {
           ))}
         </ol>
       )}
-      <SlabFoot>
+      <CardFooter>
         <span>
           {works.length === 0
             ? "The list fills as works are handed over."
             : `${count.format(between)} downloads between them`}
         </span>
-      </SlabFoot>
-    </Slab>
+      </CardFooter>
+    </Card>
   );
 }
 

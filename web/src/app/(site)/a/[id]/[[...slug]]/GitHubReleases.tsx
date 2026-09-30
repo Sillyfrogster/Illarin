@@ -2,19 +2,21 @@
 
 import { ArrowUpRight, GitBranch, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { CheckboxRow } from "@/components/ui/checkbox";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { RadioGroup } from "@/components/ui/radio-group";
-import {
-  Slab,
-  SlabFoot,
-  SlabHead,
-  SlabNote,
-  SlabTitle,
-} from "@/components/ui/slab";
 import {
   Timeline,
   TimelineConnector,
@@ -141,16 +143,13 @@ export function GitHubReleases({ workId }: { workId: string }) {
         ) : null}
       </div>
       {message ? (
-        <p
-          className="mb-5 rounded-control bg-stop-wash px-4 py-3 text-ui text-stop"
-          role="alert"
-        >
+        <Alert className="mb-5" tone="stop">
           {message}
-        </p>
+        </Alert>
       ) : null}
 
       {!source || editing ? (
-        <Slab>
+        <Card>
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -164,11 +163,13 @@ export function GitHubReleases({ workId }: { workId: string }) {
               });
             }}
           >
-            <SlabHead>
-              <SlabTitle>Connect a repository</SlabTitle>
-              <SlabNote>New releases become extension versions</SlabNote>
-            </SlabHead>
-            <div className="grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10">
+            <CardHeader>
+              <CardTitle>Connect a repository</CardTitle>
+              <CardDescription>
+                New releases become extension versions
+              </CardDescription>
+            </CardHeader>
+            <div className="grid gap-8 px-4 pt-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10">
               <div className="flex flex-col gap-5">
                 <Field label="Repository URL">
                   <Input
@@ -225,7 +226,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                 />
               </div>
             </div>
-            <SlabFoot className="justify-end gap-2 py-3">
+            <CardFooter className="justify-end gap-2 pt-4">
               {source ? (
                 <Button
                   disabled={busy}
@@ -239,21 +240,21 @@ export function GitHubReleases({ workId }: { workId: string }) {
               <Button disabled={busy} type="submit" variant="primary">
                 Connect repository
               </Button>
-            </SlabFoot>
+            </CardFooter>
           </form>
-        </Slab>
+        </Card>
       ) : (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <Slab>
-            <SlabHead>
-              <SlabTitle>Repository</SlabTitle>
-              <span
+          <Card>
+            <CardHeader>
+              <CardTitle>Repository</CardTitle>
+              <CardAction
                 className={`text-meta font-medium ${source.verified ? "text-accent" : "text-mute"}`}
               >
                 {source.verified ? "Connected" : "Waiting for proof"}
-              </span>
-            </SlabHead>
-            <div className="flex flex-col gap-5 p-5 sm:p-6">
+              </CardAction>
+            </CardHeader>
+            <div className="flex flex-col gap-5 px-4 pt-4">
               <a
                 className="group flex w-fit max-w-full items-start gap-2 text-section font-medium text-ink hover:text-accent"
                 href={`https://github.com/${source.repository}`}
@@ -284,7 +285,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                 </div>
               </dl>
             </div>
-            <SlabFoot className="gap-1">
+            <CardFooter className="gap-1">
               <Button
                 disabled={busy}
                 onClick={() => {
@@ -309,20 +310,20 @@ export function GitHubReleases({ workId }: { workId: string }) {
               >
                 Disconnect
               </Button>
-            </SlabFoot>
-          </Slab>
-          <Slab>
-            <SlabHead>
-              <SlabTitle>
+            </CardFooter>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>
                 {source.verified ? "Release history" : "Prove ownership"}
-              </SlabTitle>
-              <SlabNote>
+              </CardTitle>
+              <CardDescription>
                 {source.verified
                   ? "Checks hourly"
                   : "One file in your repository"}
-              </SlabNote>
-            </SlabHead>
-            <div className="p-5 sm:p-6">
+              </CardDescription>
+            </CardHeader>
+            <div className="px-4 pt-4">
               {!source.verified ? (
                 <div className="flex flex-col gap-4">
                   <p className="text-ui text-ink">
@@ -416,7 +417,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                 </p>
               ) : null}
             </div>
-          </Slab>
+          </Card>
         </div>
       )}
     </section>

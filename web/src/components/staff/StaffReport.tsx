@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Slab } from "@/components/ui/slab";
+import { Card } from "@/components/ui/card";
 import { readReport, staffKeys } from "@/lib/api/staff";
 import { ActivityMatrix } from "./ActivityMatrix";
 import { DayShape } from "./DayShape";
@@ -19,7 +19,7 @@ export function StaffReport() {
 
   if (query.isError) {
     return (
-      <Slab className="max-w-[40rem] gap-4 p-5">
+      <Card className="max-w-[40rem] gap-4 p-5">
         <Alert tone="stop">{query.error.message}</Alert>
         <Button
           className="self-start"
@@ -29,7 +29,7 @@ export function StaffReport() {
         >
           Try again
         </Button>
-      </Slab>
+      </Card>
     );
   }
   if (!report) return <ReportSkeleton />;

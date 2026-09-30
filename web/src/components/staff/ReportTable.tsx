@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Slab, SlabHead, SlabTitle } from "@/components/ui/slab";
 import {
   Table,
   TableBody,
@@ -24,16 +24,22 @@ export function ReportTable({ report }: { report: Report }) {
 
   return (
     <Collapsible asChild onOpenChange={setShown} open={shown}>
-      <Slab>
-        <SlabHead className="items-center">
-          <SlabTitle>Day by day</SlabTitle>
-          <CollapsibleTrigger asChild>
-            <Button className="-my-1 text-mute" size="compact" variant="ghost">
-              {shown ? "Hide the numbers" : "Show the numbers"}
-            </Button>
-          </CollapsibleTrigger>
-        </SlabHead>
-        <CollapsibleContent>
+      <Card>
+        <CardHeader className="items-center">
+          <CardTitle>Day by day</CardTitle>
+          <CardAction>
+            <CollapsibleTrigger asChild>
+              <Button
+                className="-my-1 text-mute"
+                size="compact"
+                variant="ghost"
+              >
+                {shown ? "Hide the numbers" : "Show the numbers"}
+              </Button>
+            </CollapsibleTrigger>
+          </CardAction>
+        </CardHeader>
+        <CollapsibleContent className="pt-3">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -74,7 +80,7 @@ export function ReportTable({ report }: { report: Report }) {
             </TableBody>
           </Table>
         </CollapsibleContent>
-      </Slab>
+      </Card>
     </Collapsible>
   );
 }
