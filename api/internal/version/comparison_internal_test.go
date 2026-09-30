@@ -121,7 +121,7 @@ func TestComparisonGroupsEachTypesContentByWhatItMeans(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			groups := compareVersions(
 				recordedVersionOf(test.workType, test.earlier),
-				recordedVersionOf(test.workType, test.later),
+				recordedVersionOf(test.workType, test.later), nil,
 			)
 			changes := changesUnder(t, groups, test.subject)
 			if got := changeTypes(changes); len(got) != len(test.want) || got[0] != test.want[0] {
@@ -150,7 +150,7 @@ func TestReorderedAndReimportedItemsAreNotChanges(t *testing.T) {
 		block.TextItem{ID: uuid.New(), Text: "Hello there"},
 		block.TextItem{ID: uuid.New(), Text: "Well met"})
 	for _, later := range []work.FullVersion{reordered, reimported} {
-		if groups := compareVersions(earlier, later); len(groups) != 0 {
+		if groups := compareVersions(earlier, later, nil); len(groups) != 0 {
 			t.Fatalf("groups = %+v, want none", groups)
 		}
 	}
@@ -169,12 +169,12 @@ func TestRenamesReadAsEditsOnlyWithIdentity(t *testing.T) {
 		recordedBlock(page, block.CharacterCore, recordedElement("", block.TypeFieldList,
 			block.FieldList{Fields: []block.FieldItem{{ID: uuid.New(), Name: "Stature", Value: "Towering"}}})))
 
-	edited := changesUnder(t, compareVersions(earlier, renamed), string(block.TypeFieldList))
+	edited := changesUnder(t, compareVersions(earlier, renamed, nil), string(block.TypeFieldList))
 	if len(edited) != 1 || edited[0].Type != ChangeEdited ||
 		edited[0].PreviousName != "Height" || edited[0].Name != "Stature" {
 		t.Fatalf("renamed with identity = %+v", edited)
 	}
-	guessed := changesUnder(t, compareVersions(earlier, replaced), string(block.TypeFieldList))
+	guessed := changesUnder(t, compareVersions(earlier, replaced, nil), string(block.TypeFieldList))
 	if got := changeTypes(guessed); len(got) != 2 || got[0] != ChangeAdded || got[1] != ChangeRemoved {
 		t.Fatalf("renamed without identity = %+v", guessed)
 	}
@@ -189,7 +189,7 @@ func TestRemovedTextKeepsTheWordsItTookAway(t *testing.T) {
 	later := recordedVersionOf("character",
 		recordedBlock(page, block.CharacterCore, recordedElement(block.RoleScenario, block.TypeProse,
 			block.Prose{Text: ""})))
-	changes := changesUnder(t, compareVersions(earlier, later), string(block.RoleScenario))
+	changes := changesUnder(t, compareVersions(earlier, later, nil), string(block.RoleScenario))
 	if len(changes) != 1 || changes[0].Type != ChangeRemoved ||
 		changes[0].Before != "They meet at the harbour." || changes[0].After != "" {
 		t.Fatalf("changes = %+v", changes)
@@ -206,7 +206,7 @@ func TestChangedPicturesNameTheOldAndNewMedia(t *testing.T) {
 	later := recordedVersionOf("character",
 		recordedBlock(page, block.CharacterCore, recordedElement(block.RoleGallery, block.TypeImageSet,
 			block.ImageSet{Images: []block.ImageItem{{ID: image, MediaID: now}}})))
-	changes := changesUnder(t, compareVersions(earlier, later), string(block.RoleGallery))
+	changes := changesUnder(t, compareVersions(earlier, later, nil), string(block.RoleGallery))
 	if len(changes) != 1 || changes[0].BeforeMedia == nil || *changes[0].BeforeMedia != was ||
 		changes[0].AfterMedia == nil || *changes[0].AfterMedia != now {
 		t.Fatalf("changes = %+v", changes)
@@ -224,7 +224,7 @@ func TestPreservedDataReportsItsNamespaceAndNothingElse(t *testing.T) {
 	later.Preserved = []work.VersionPreserved{
 		{Owner: "asset", OwnerID: owner, Namespace: "test", Payload: `{"secret":"after"}`},
 	}
-	changes := changesUnder(t, compareVersions(earlier, later), PreservedSubject)
+	changes := changesUnder(t, compareVersions(earlier, later, nil), PreservedSubject)
 	if len(changes) != 1 || changes[0].Type != ChangeEdited || changes[0].Name != "test" {
 		t.Fatalf("changes = %+v", changes)
 	}
@@ -245,7 +245,7 @@ func TestAPresentationOnlyVersionExplainsThePage(t *testing.T) {
 	restyled.Width = block.Width("half")
 	later := recordedVersionOf("character", moved, restyled)
 
-	groups := compareVersions(earlier, later)
+	groups := compareVersions(earlier, later, nil)
 	if got := subjectsOf(groups); len(got) != 1 || got[0] != PresentationSubject {
 		t.Fatalf("subjects = %v, want only the page", got)
 	}
@@ -255,5 +255,16 @@ func TestAPresentationOnlyVersionExplainsThePage(t *testing.T) {
 	}
 	if changes[0].Name != "The character width" || changes[0].After != "half" {
 		t.Fatalf("width change = %+v", changes[0])
+	}
+}
+
+func TestAVersionComparisonLeavesOutPageEdits(t *testing.T) {
+	t.Parallel()
+	before, after := uuid.New(), uuid.New()
+	earlier := work.VersionMetadata{Name: "Night shift", Tags: []string{"noir"}, Cover: &before}
+	later := work.VersionMetadata{Name: "Day shift", Tags: []string{"noir", "slow"}, Cover: &after}
+	changes := compareMetadata(earlier, later, []string{"blurb", "name"})
+	if len(changes) != 1 || changes[0].Name != "Name" {
+		t.Fatalf("changes = %+v, want only the name the preset's file carries", changes)
 	}
 }
