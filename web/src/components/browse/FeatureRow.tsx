@@ -76,7 +76,9 @@ export function FeatureRow({
               pressed={option.selected}
             >
               {nameOf(facet, option)}
-              <span className="count border-l border-edge pl-2">{option.count}</span>
+              <span className="count border-l border-edge pl-2">
+                {option.count}
+              </span>
             </Toggle>
           ))}
         </fieldset>
