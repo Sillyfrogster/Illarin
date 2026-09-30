@@ -27,6 +27,7 @@ type GitHubReleases struct {
 	uploads  *Service
 	versions *version.Service
 	github   githubClient
+	proofKey []byte
 }
 
 type releaseSourceError string
@@ -35,12 +36,12 @@ func (e releaseSourceError) Error() string { return string(e) }
 
 var errGitHubImportHeld = errors.New("unpublished edits exist")
 
-func NewGitHubReleases(uploads *Service, versions *version.Service, clients ...*http.Client) *GitHubReleases {
+func NewGitHubReleases(uploads *Service, versions *version.Service, proofKey []byte, clients ...*http.Client) *GitHubReleases {
 	client := newGitHubClient()
 	if len(clients) > 0 && clients[0] != nil {
 		client.http = clients[0]
 	}
-	return &GitHubReleases{pool: uploads.pool, uploads: uploads, versions: versions, github: client}
+	return &GitHubReleases{pool: uploads.pool, uploads: uploads, versions: versions, github: client, proofKey: proofKey}
 }
 
 type releaseSource struct {
@@ -107,8 +108,8 @@ func (s *GitHubReleases) Configure(ctx context.Context, ownerID, workID uuid.UUI
 	if err != nil {
 		return releaseSourceError(err.Error())
 	}
-	if attachment != nil && (len(*attachment) < 1 || len(*attachment) > 255 || strings.ContainsAny(*attachment, "/\\")) {
-		return releaseSourceError("Enter one attachment file name.")
+	if err := checkAttachment(attachment); err != nil {
+		return err
 	}
 	proofBytes := make([]byte, 32)
 	if _, err := rand.Read(proofBytes); err != nil {
@@ -142,6 +143,13 @@ func (s *GitHubReleases) Configure(ctx context.Context, ownerID, workID uuid.UUI
 		return err
 	}
 	return tx.Commit(ctx)
+}
+
+func checkAttachment(attachment *string) error {
+	if attachment != nil && (len(*attachment) < 1 || len(*attachment) > 255 || strings.ContainsAny(*attachment, "/\\")) {
+		return releaseSourceError("Enter one attachment file name.")
+	}
+	return nil
 }
 
 func (s *GitHubReleases) Verify(ctx context.Context, ownerID, workID uuid.UUID) error {
@@ -190,6 +198,17 @@ func (s *GitHubReleases) Disconnect(ctx context.Context, ownerID, workID uuid.UU
 	return tx.Commit(ctx)
 }
 
+// CheckSoon moves a verified source's next GitHub check to now, at most once a minute
+func (s *GitHubReleases) CheckSoon(ctx context.Context, ownerID, workID uuid.UUID) error {
+	_, err := s.pool.Exec(ctx, `
+		update extension_release_sources source set next_check_at = now()
+		  from works work
+		 where source.work_id = $1 and work.id = source.work_id and work.owner_id = $2
+		   and source.verified_at is not null and source.next_check_at < now() + interval '59 minutes'
+	`, workID, ownerID)
+	return err
+}
+
 func (s *GitHubReleases) Retry(ctx context.Context, ownerID, workID uuid.UUID, releaseID int64) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -217,14 +236,8 @@ func (s *GitHubReleases) Retry(ctx context.Context, ownerID, workID uuid.UUID, r
 			return releaseSourceError("Illarin could not check the attachment on GitHub. Try again.")
 		}
 		for _, release := range releases {
-			if release.ID == releaseID {
-				for _, asset := range release.Assets {
-					if asset.Name == *attachment {
-						assetID = &asset.ID
-						break
-					}
-				}
-				break
+			if id, found := release.asset(*attachment); release.ID == releaseID && found {
+				assetID = &id
 			}
 		}
 		if assetID == nil {
@@ -273,19 +286,15 @@ func (s *GitHubReleases) CheckNext(ctx context.Context) (bool, error) {
 	releases, checkErr := s.github.releases(ctx, repository)
 	if checkErr == nil {
 		for _, release := range releases {
-			if release.ID == 0 || release.Tag == "" || release.Draft || release.PublishedAt.IsZero() || !release.PublishedAt.After(verifiedAt) || (release.Prerelease && !includePrereleases) {
+			if !release.eligible(includePrereleases) || !release.PublishedAt.After(verifiedAt) {
 				continue
 			}
 			var assetID *int64
 			var failure *string
 			if attachment != nil {
-				for _, asset := range release.Assets {
-					if asset.Name == *attachment {
-						assetID = &asset.ID
-						break
-					}
-				}
-				if assetID == nil {
+				if id, found := release.asset(*attachment); found {
+					assetID = &id
+				} else {
 					message := "This release has no attachment named " + *attachment + "."
 					failure = &message
 				}
@@ -319,10 +328,10 @@ func (s *GitHubReleases) ProcessNext(ctx context.Context) (bool, error) {
 	defer tx.Rollback(ctx)
 	var workID, ownerID uuid.UUID
 	var releaseID, assetID int64
-	var tag, repository, filename, workName string
+	var tag, repository, filename, workName, lifecycle string
 	var attachment *string
 	err = tx.QueryRow(ctx, `
-		select item.work_id, work.owner_id, work.name, item.release_id, item.tag, source.repository,
+		select item.work_id, work.owner_id, work.name, work.lifecycle, item.release_id, item.tag, source.repository,
 		       coalesce(item.asset_id, 0), source.attachment
 		  from extension_release_imports item
 		  join extension_release_sources source on source.work_id = item.work_id
@@ -335,7 +344,7 @@ func (s *GitHubReleases) ProcessNext(ctx context.Context) (bool, error) {
 		   )
 		 order by item.published_at, item.release_id
 		 for update of work, item skip locked limit 1
-	`).Scan(&workID, &ownerID, &workName, &releaseID, &tag, &repository, &assetID, &attachment)
+	`).Scan(&workID, &ownerID, &workName, &lifecycle, &releaseID, &tag, &repository, &assetID, &attachment)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -354,7 +363,7 @@ func (s *GitHubReleases) ProcessNext(ctx context.Context) (bool, error) {
 	if importErr == nil {
 		var drafted bool
 		drafted, importErr = s.uploads.works.UnpublishedChanges(ctx, tx, workID)
-		if drafted {
+		if drafted || work.Lifecycle(lifecycle) == work.LifecycleDraft {
 			importErr = errGitHubImportHeld
 		}
 	}
@@ -390,6 +399,9 @@ func (s *GitHubReleases) ProcessNext(ctx context.Context) (bool, error) {
 	if errors.Is(importErr, errGitHubImportHeld) {
 		status = "held"
 		message = "Unpublished edits are waiting. Publish or discard them, then resume this release."
+		if work.Lifecycle(lifecycle) == work.LifecycleDraft {
+			message = "This extension is still a draft. Publish it, then resume this release."
+		}
 		if err := notify.Record(ctx, tx, notify.Event{Type: notify.GitHubReleaseHeld, Account: &ownerID, Work: &workID,
 			Words: notify.Words{WorkName: workName}}); err != nil {
 			return true, err
@@ -435,6 +447,9 @@ func RegisterGitHubReleases(routes api.Routes, s *GitHubReleases) {
 	routes.Handle(http.MethodPost, "/v1/works/:id/github-releases/verify", d.JSON, s.verifySource)
 	routes.Handle(http.MethodDelete, "/v1/works/:id/github-releases", d.JSON, s.disconnectSource)
 	routes.Handle(http.MethodPost, "/v1/works/:id/github-releases/:releaseId/retry", d.JSON, s.retryRelease)
+	routes.Handle(http.MethodPost, "/v1/works/:id/github-releases/check", d.JSON, s.checkSource)
+	routes.Handle(http.MethodPost, "/v1/github-starts/proof", d.JSON, s.startProof)
+	routes.Handle(http.MethodPost, "/v1/github-starts", d.Upload, s.start)
 }
 
 func sourceIDs(c *gin.Context) (uuid.UUID, uuid.UUID, bool) {
@@ -531,6 +546,18 @@ func (s *GitHubReleases) disconnectSource(c *gin.Context) {
 		return
 	}
 	c.Status(204)
+}
+
+func (s *GitHubReleases) checkSource(c *gin.Context) {
+	owner, id, ok := sourceIDs(c)
+	if !ok {
+		return
+	}
+	if err := s.CheckSoon(c.Request.Context(), owner, id); err != nil {
+		api.Refuse(c, 500, "Illarin could not check GitHub. Try again.")
+		return
+	}
+	s.getSource(c)
 }
 
 func (s *GitHubReleases) retryRelease(c *gin.Context) {

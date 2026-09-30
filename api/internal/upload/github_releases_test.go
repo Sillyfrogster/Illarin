@@ -65,7 +65,7 @@ func githubFixture(t *testing.T, attachment string, archive []byte, proofOverrid
 			return githubAnswer([]byte(`[]`)), nil
 		}
 	})}
-	service := upload.NewGitHubReleases(upload.NewService(pool, works), version.NewService(pool, works), client)
+	service := upload.NewGitHubReleases(upload.NewService(pool, works), version.NewService(pool, works), apitest.ProofKey, client)
 	return service, workID, owner, pool, router, session
 }
 

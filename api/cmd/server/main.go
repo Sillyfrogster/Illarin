@@ -156,7 +156,7 @@ func run() error {
 	posts := blog.NewService(pool, images, integrations, cfg.SiteURL)
 	versions := version.NewService(pool, svc)
 	versions.OnPublished(integrations.Announce, version.TellFollowers)
-	githubReleases := upload.NewGitHubReleases(uploads, versions)
+	githubReleases := upload.NewGitHubReleases(uploads, versions, cfg.LinkingHMACKey)
 	background.Add(1)
 	go func() {
 		defer background.Done()

@@ -48,6 +48,20 @@ type githubRelease struct {
 	} `json:"assets"`
 }
 
+// eligible says whether a release is published and allowed by the prerelease choice
+func (r githubRelease) eligible(includePrereleases bool) bool {
+	return r.ID != 0 && r.Tag != "" && !r.Draft && !r.PublishedAt.IsZero() && (includePrereleases || !r.Prerelease)
+}
+
+func (r githubRelease) asset(name string) (int64, bool) {
+	for _, asset := range r.Assets {
+		if asset.Name == name {
+			return asset.ID, true
+		}
+	}
+	return 0, false
+}
+
 type githubClient struct{ http *http.Client }
 
 func newGitHubClient() githubClient {
