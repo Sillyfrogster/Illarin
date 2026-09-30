@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   addWorkImage,
   type LumiaRecord,
@@ -14,7 +15,7 @@ import {
 import { useDraftedChanges } from "@/lib/drafted-changes";
 import { CollectionStep } from "./workspace/CollectionStep";
 import { moveItem, replaceAt, without } from "./workspace/collection";
-import { ChoiceField, FieldGroup, FieldPair } from "./workspace/fields";
+import { FieldGroup, FieldPair } from "./workspace/fields";
 
 const PRONOUNS: Array<{
   value: LumiaRecord["genderIdentity"];
@@ -166,23 +167,21 @@ function CharacterFields({
           </Field>
         </FieldPair>
         <Field label="Pronouns">
-          <ChoiceField
+          <Select
             disabled={pending}
-            onChange={(event) =>
+            onValueChange={(identity) =>
               onChange({
                 genderIdentity: Number(
-                  event.target.value,
+                  identity,
                 ) as LumiaRecord["genderIdentity"],
               })
             }
-            value={record.genderIdentity}
-          >
-            {PRONOUNS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </ChoiceField>
+            options={PRONOUNS.map((option) => ({
+              value: String(option.value),
+              label: option.label,
+            }))}
+            value={String(record.genderIdentity)}
+          />
         </Field>
       </FieldGroup>
 

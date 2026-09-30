@@ -380,17 +380,15 @@ function Baseline({
     <p className="flex flex-wrap items-center gap-2 text-meta text-mute">
       <label htmlFor={field}>Since</label>
       <Select
-        className="text-meta"
+        className="h-control-compact w-auto text-meta"
         id={field}
-        onChange={(event) => onChoose(Number(event.target.value))}
-        value={chosen}
-      >
-        {earlier.map((one) => (
-          <option key={one.id} value={one.number}>
-            {versionTitle(one)} · {versionDate(one)}
-          </option>
-        ))}
-      </Select>
+        onValueChange={(number) => onChoose(Number(number))}
+        options={earlier.map((one) => ({
+          value: String(one.number),
+          label: `${versionTitle(one)} · ${versionDate(one)}`,
+        }))}
+        value={String(chosen)}
+      />
     </p>
   );
 }

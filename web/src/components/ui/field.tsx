@@ -55,7 +55,7 @@ export function Field({
   return (
     <FieldContext.Provider value={{ id, describedBy, invalid: !!trouble }}>
       <div
-        className={cn("grid min-w-0 gap-2", className)}
+        className={cn("grid min-w-0 content-start gap-2", className)}
         data-invalid={trouble ? "" : undefined}
       >
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

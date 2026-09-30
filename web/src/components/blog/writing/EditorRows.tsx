@@ -16,16 +16,16 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { LANGUAGE_LABELS } from "@/lib/code-highlight";
 import {
-  isPostCalloutKind,
   POST_CALLOUT_KINDS,
   POST_LANGUAGES,
   type PostCalloutKind,
   type PostLanguage,
 } from "@/lib/post-body";
 import { isSafeAddress } from "@/lib/post-link";
-import { Choice, Row, RowNote, RowSelect } from "./RowParts";
+import { Choice, Row, RowNote } from "./RowParts";
 import type { Controls } from "./use-controls";
 
 const CALLOUT_LABELS: Record<string, string> = {
@@ -150,23 +150,22 @@ function CodeRow({ chosen, editor }: { chosen: PostLanguage; editor: Editor }) {
       <label className="shrink-0 font-ui text-meta text-mute" htmlFor={field}>
         Language
       </label>
-      <RowSelect
+      <Select
+        className="h-control-compact w-auto text-meta"
         id={field}
-        onChange={(event) =>
+        onValueChange={(language) =>
           editor
             .chain()
             .focus()
-            .updateAttributes("codeBlock", { language: event.target.value })
+            .updateAttributes("codeBlock", { language })
             .run()
         }
+        options={POST_LANGUAGES.map((name) => ({
+          value: name,
+          label: LANGUAGE_LABELS[name],
+        }))}
         value={chosen}
-      >
-        {POST_LANGUAGES.map((name) => (
-          <option key={name} value={name}>
-            {LANGUAGE_LABELS[name]}
-          </option>
-        ))}
-      </RowSelect>
+      />
       <Choice
         label="Remove code block"
         press={() => editor.chain().focus().toggleCodeBlock().run()}
@@ -188,22 +187,18 @@ function CalloutRow({
       <label className="shrink-0 font-ui text-meta text-mute" htmlFor={field}>
         Kind
       </label>
-      <RowSelect
+      <Select
+        className="h-control-compact w-auto text-meta"
         id={field}
-        onChange={(event) => {
-          const kind = event.target.value;
-          if (isPostCalloutKind(kind)) {
-            editor.chain().focus().setCalloutKind(kind).run();
-          }
-        }}
+        onValueChange={(kind) =>
+          editor.chain().focus().setCalloutKind(kind).run()
+        }
+        options={POST_CALLOUT_KINDS.map((kind) => ({
+          value: kind,
+          label: CALLOUT_LABELS[kind],
+        }))}
         value={chosen}
-      >
-        {POST_CALLOUT_KINDS.map((kind) => (
-          <option key={kind} value={kind}>
-            {CALLOUT_LABELS[kind]}
-          </option>
-        ))}
-      </RowSelect>
+      />
       <Choice
         label="Remove callout"
         press={() => editor.chain().focus().lift("callout").run()}

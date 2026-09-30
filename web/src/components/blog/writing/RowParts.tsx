@@ -1,7 +1,6 @@
 "use client";
 
-import type { ComponentProps, ReactNode } from "react";
-import { Select } from "@/components/ui/select";
+import type { ReactNode } from "react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 
@@ -89,10 +88,6 @@ export function Choice({
   ) : (
     button
   );
-}
-
-export function RowSelect({ className, ...props }: ComponentProps<"select">) {
-  return <Select className={cn("bg-plane text-meta", className)} {...props} />;
 }
 
 export function RowNote({

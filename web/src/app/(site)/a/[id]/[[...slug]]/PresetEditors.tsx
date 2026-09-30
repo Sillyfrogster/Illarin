@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
+import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type {
   PresetSetting,
@@ -27,7 +28,6 @@ import {
 } from "./workspace/collection";
 import {
   AddAction,
-  ChoiceField,
   FieldGroup,
   FieldPair,
   Note,
@@ -55,6 +55,13 @@ const PLACEMENTS: {
   { value: "pre_history", label: "Before the conversation" },
   { value: "in_history", label: "Inside the conversation" },
   { value: "post_history", label: "After the conversation" },
+];
+
+const SETTING_TYPES: { value: PresetSetting["type"]; label: string }[] = [
+  { value: "number", label: "A number" },
+  { value: "boolean", label: "Yes or no" },
+  { value: "text", label: "Text" },
+  { value: "string_list", label: "A list of text" },
 ];
 
 const WIDGETS: { value: PresetVariable["widget"]; label: string }[] = [
@@ -330,41 +337,27 @@ function FragmentFields({
 
       <FieldGroup legend="How it is sent">
         <Field label="Message role">
-          <ChoiceField
+          <Select
             disabled={pending}
-            onChange={(event) =>
-              onChange({
-                role:
-                  event.target.value === ""
-                    ? undefined
-                    : (event.target.value as PromptFragment["role"]),
-              })
-            }
+            onValueChange={(role) => onChange({ role: role || undefined })}
+            options={[{ value: "", label: "Use app default" }, ...PROMPT_ROLES]}
             value={fragment.role ?? ""}
-          >
-            <option value="">Use app default</option>
-            {PROMPT_ROLES.map((role) => (
-              <option key={role.value} value={role.value}>
-                {role.label}
-              </option>
-            ))}
-          </ChoiceField>
+          />
         </Field>
         <Field label="Heading">
-          <ChoiceField
+          <Select
             disabled={pending}
-            onChange={(event) =>
-              onChange({ groupId: event.target.value || undefined })
+            onValueChange={(groupId) =>
+              onChange({ groupId: groupId || undefined })
             }
+            options={[
+              { value: "", label: "No heading" },
+              ...groups.flatMap((group) =>
+                group.id ? [{ value: group.id, label: group.name }] : [],
+              ),
+            ]}
             value={fragment.groupId ?? ""}
-          >
-            <option value="">No heading</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </ChoiceField>
+          />
         </Field>
         <Switch
           checked={fragment.enabled}
@@ -377,25 +370,14 @@ function FragmentFields({
 
       <FieldGroup legend="Placement">
         <Field label="Placement">
-          <ChoiceField
+          <Select
             disabled={pending}
-            onChange={(event) =>
-              onChange({
-                placement:
-                  event.target.value === ""
-                    ? undefined
-                    : (event.target.value as PromptFragment["placement"]),
-              })
+            onValueChange={(placement) =>
+              onChange({ placement: placement || undefined })
             }
+            options={[{ value: "", label: "Use app default" }, ...PLACEMENTS]}
             value={fragment.placement ?? ""}
-          >
-            <option value="">Use app default</option>
-            {PLACEMENTS.map((placement) => (
-              <option key={placement.value} value={placement.value}>
-                {placement.label}
-              </option>
-            ))}
-          </ChoiceField>
+          />
         </Field>
         <Field hint="messages back from the most recent" label="Depth">
           <Input
@@ -531,20 +513,14 @@ function NewSetting({
         placeholder="The name your app reads"
         value={name}
       />
-      <ChoiceField
+      <Select
         aria-label="What the new setting holds"
         className="max-w-44 flex-1"
         disabled={pending}
-        onChange={(event) =>
-          setType(event.target.value as PresetSetting["type"])
-        }
+        onValueChange={setType}
+        options={SETTING_TYPES}
         value={type}
-      >
-        <option value="number">A number</option>
-        <option value="boolean">Yes or no</option>
-        <option value="text">Text</option>
-        <option value="string_list">A list of text</option>
-      </ChoiceField>
+      />
       <AddAction
         disabled={pending || name.trim() === ""}
         onClick={() => {
@@ -632,18 +608,13 @@ function ValueField({
   }
   if (choices && choices.length > 0) {
     return (
-      <ChoiceField
+      <Select
         aria-label={label}
         disabled={pending}
-        onChange={(event) => onChange({ text: event.target.value })}
+        onValueChange={(text) => onChange({ text })}
+        options={choices.map((choice) => ({ value: choice, label: choice }))}
         value={value.text ?? ""}
-      >
-        {choices.map((choice) => (
-          <option key={choice} value={choice}>
-            {choice}
-          </option>
-        ))}
-      </ChoiceField>
+      />
     );
   }
   return (
@@ -737,19 +708,12 @@ function VariableFields({
       </Field>
 
       <Field label="Input type">
-        <ChoiceField
+        <Select
           disabled={pending}
-          onChange={(event) =>
-            onChange({ widget: event.target.value as PresetVariable["widget"] })
-          }
+          onValueChange={(widget) => onChange({ widget })}
+          options={WIDGETS}
           value={variable.widget}
-        >
-          {WIDGETS.map((widget) => (
-            <option key={widget.value} value={widget.value}>
-              {widget.label}
-            </option>
-          ))}
-        </ChoiceField>
+        />
       </Field>
 
       <Field hint="what a reader sees above the field" label="Label">

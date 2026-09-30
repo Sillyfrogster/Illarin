@@ -2,6 +2,8 @@
 
 import { ChevronRight, RotateCcw } from "lucide-react";
 import { useState } from "react";
+import { Field } from "@/components/ui/field";
+import { Select } from "@/components/ui/select";
 import {
   fetchPrivatePromptMismatches,
   type PrivatePromptMismatch,
@@ -116,33 +118,27 @@ export function RecordedPromptsPanel({ workId }: { workId: string }) {
                       : ""}
                   </h3>
                   {version.unmatched.map((prompt) => (
-                    <label
-                      key={prompt.id}
-                      className={
-                        "mt-2 grid gap-1 text-meta text-mute [&_select]:h-11 [&_select]:rounded-control [&_select]:bg-deep [&_select]:px-3 [&_select]:text-ui [&_select]:text-ink"
-                      }
-                    >
-                      <span>{prompt.name}</span>
-                      <select
-                        value={answerKey(answers, version, prompt.id)}
-                        onChange={(event) =>
+                    <Field className="mt-2" key={prompt.id} label={prompt.name}>
+                      <Select
+                        onValueChange={(answer) =>
                           setAnswers((current) => ({
                             ...current,
-                            [`${version.version.id}:${prompt.id}`]:
-                              event.target.value,
+                            [`${version.version.id}:${prompt.id}`]: answer,
                           }))
                         }
-                      >
-                        <option value={ABSENT}>
-                          This version did not carry it
-                        </option>
-                        {version.recorded.map((choice) => (
-                          <option key={choice.id} value={choice.id}>
-                            {choice.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                        options={[
+                          {
+                            value: ABSENT,
+                            label: "This version did not carry it",
+                          },
+                          ...version.recorded.map((choice) => ({
+                            value: choice.id,
+                            label: choice.name,
+                          })),
+                        ]}
+                        value={answerKey(answers, version, prompt.id)}
+                      />
+                    </Field>
                   ))}
                   <button
                     className={

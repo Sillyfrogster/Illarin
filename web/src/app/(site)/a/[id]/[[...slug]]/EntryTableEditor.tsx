@@ -2,6 +2,7 @@
 
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { LorebookEntry } from "@/lib/api/query";
 import { CollectionStep } from "./workspace/CollectionStep";
@@ -12,7 +13,16 @@ import {
   without,
   writeLines,
 } from "./workspace/collection";
-import { ChoiceField, FieldGroup, FieldPair } from "./workspace/fields";
+import { FieldGroup, FieldPair } from "./workspace/fields";
+
+const POSITIONS: {
+  value: NonNullable<LorebookEntry["position"]> | "";
+  label: string;
+}[] = [
+  { value: "", label: "Use app default" },
+  { value: "before_character", label: "Before the character" },
+  { value: "after_character", label: "After the character" },
+];
 
 export function entryName(entry: LorebookEntry, position: number): string {
   if (entry.name?.trim()) return entry.name;
@@ -165,22 +175,14 @@ function EntryFields({
             />
           </Field>
           <Field label="Position">
-            <ChoiceField
+            <Select
               disabled={pending}
-              onChange={(event) =>
-                onChange({
-                  position:
-                    event.target.value === ""
-                      ? undefined
-                      : (event.target.value as LorebookEntry["position"]),
-                })
+              onValueChange={(position) =>
+                onChange({ position: position || undefined })
               }
+              options={POSITIONS}
               value={entry.position ?? ""}
-            >
-              <option value="">Use app default</option>
-              <option value="before_character">Before the character</option>
-              <option value="after_character">After the character</option>
-            </ChoiceField>
+            />
           </Field>
         </FieldPair>
       </FieldGroup>

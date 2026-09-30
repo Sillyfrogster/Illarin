@@ -1,12 +1,9 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
-import { Select } from "@/components/ui/select";
-import { cn } from "@/lib/cn";
-
-const MOVE =
-  "inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink disabled:opacity-40 disabled:hover:bg-transparent";
+import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export function FieldGroup({
   children,
@@ -29,10 +26,6 @@ export function FieldPair({ children }: { children: ReactNode }) {
   return <div className="grid gap-4 @sm:grid-cols-2">{children}</div>;
 }
 
-export function ChoiceField(props: ComponentProps<"select">) {
-  return <Select {...props} className={cn("w-full", props.className)} />;
-}
-
 export function AddAction({
   children,
   disabled,
@@ -43,15 +36,10 @@ export function AddAction({
   onClick: () => void;
 }) {
   return (
-    <button
-      className="inline-flex min-h-11 items-center gap-2 self-start rounded-control bg-deep px-4 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45"
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-    >
-      <Plus aria-hidden="true" size={16} />
+    <Button className="self-start" disabled={disabled} onClick={onClick}>
+      <Plus aria-hidden="true" />
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -66,20 +54,23 @@ export function RemoveAction({
   label?: string;
   onClick: () => void;
 }) {
-  return (
-    <button
+  const button = (
+    <Button
       aria-label={label}
-      className={cn(
-        "inline-flex min-h-11 items-center gap-2 rounded-control text-meta font-medium text-stop outline-offset-3 hover:bg-stop-wash disabled:opacity-45",
-        children ? "px-3" : "size-11 justify-center",
-      )}
+      className="text-stop hover:text-stop"
       disabled={disabled}
       onClick={onClick}
-      type="button"
+      size={children ? "default" : "icon"}
+      variant="ghost"
     >
-      <Trash2 aria-hidden="true" size={15} />
+      <Trash2 aria-hidden="true" />
       {children}
-    </button>
+    </Button>
+  );
+  return label && !children ? (
+    <Tooltip content={label}>{button}</Tooltip>
+  ) : (
+    button
   );
 }
 
@@ -134,24 +125,22 @@ export function ItemMoveActions({
 }) {
   return (
     <>
-      <button
-        className={MOVE}
+      <Button
         disabled={pending || moves.position === 0}
         onClick={moves.onEarlier}
-        type="button"
+        variant="ghost"
       >
-        <ArrowUp aria-hidden="true" size={14} />
+        <ArrowUp aria-hidden="true" />
         Earlier
-      </button>
-      <button
-        className={MOVE}
+      </Button>
+      <Button
         disabled={pending || moves.position === moves.total - 1}
         onClick={moves.onLater}
-        type="button"
+        variant="ghost"
       >
-        <ArrowDown aria-hidden="true" size={14} />
+        <ArrowDown aria-hidden="true" />
         Later
-      </button>
+      </Button>
     </>
   );
 }

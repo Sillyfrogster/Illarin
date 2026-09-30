@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, PencilLine, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { ChipSet } from "@/components/ui/Chip";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
@@ -365,12 +366,9 @@ export function WorkHeader({
                       }}
                       value={tagInput}
                     />
-                    <button
-                      className="min-h-11 shrink-0 rounded-control bg-deep px-4 text-ui text-ink outline-offset-3 hover:bg-rule/40"
-                      type="submit"
-                    >
+                    <Button className="shrink-0" type="submit">
                       Add
-                    </button>
+                    </Button>
                   </form>
                 </Field>
                 {workspace.details.tags.length > 0 ? (

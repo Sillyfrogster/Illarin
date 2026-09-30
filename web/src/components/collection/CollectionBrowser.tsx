@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowDownUp, ArrowLeft, ChevronDown, Search } from "lucide-react";
 import {
   type KeyboardEvent,
   type ReactNode,
@@ -11,12 +11,21 @@ import {
   useRef,
   useState,
 } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   InputGroup,
   InputGroupAddon,
@@ -28,6 +37,11 @@ import {
   type CollectionOrder,
   viewCollection,
 } from "@/lib/collection";
+
+const ORDERS: Record<CollectionOrder, string> = {
+  given: "Original order",
+  name: "By name, A to Z",
+};
 
 type Row =
   | { kind: "heading"; group: string; key: string }
@@ -244,7 +258,6 @@ function Controls({
   total: number;
 }) {
   const searchField = useId();
-  const orderField = useId();
   const box = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -270,20 +283,28 @@ function Controls({
           value={search}
         />
       </InputGroup>
-      <div className="flex items-center gap-2">
-        <label className="font-ui text-label text-mute" htmlFor={orderField}>
-          Order
-        </label>
-        <select
-          className="min-h-11 rounded-control bg-deep px-3 font-ui text-meta text-ink outline-offset-3"
-          id={orderField}
-          onChange={(event) => onOrder(event.target.value as CollectionOrder)}
-          value={order}
-        >
-          <option value="given">Original order</option>
-          <option value="name">By name, A to Z</option>
-        </select>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost">
+            <ArrowDownUp aria-hidden="true" />
+            {ORDERS[order]}
+            <ChevronDown aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Order</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            onValueChange={(next) => onOrder(next as CollectionOrder)}
+            value={order}
+          >
+            {(Object.keys(ORDERS) as CollectionOrder[]).map((one) => (
+              <DropdownMenuRadioItem key={one} value={one}>
+                {ORDERS[one]}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
       {off > 0 ? (
         <label className="inline-flex min-h-11 items-center gap-2 font-ui text-label text-mute">
           <input

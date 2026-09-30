@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { Field } from "@/components/ui/field";
+import { Select } from "@/components/ui/select";
 import type { WorkBlock } from "@/lib/api/query";
 import { contentItemCount, LAYOUTS } from "@/lib/page-arrangement";
-import { ChoiceField, Note } from "./fields";
+import { Note } from "./fields";
 import { useWorkspace } from "./state";
 
 const KEEP =
@@ -94,17 +95,15 @@ export function RemoveBlock({ block }: { block: WorkBlock }) {
                 Move the content somewhere else
               </p>
               <Field label="Move to">
-                <ChoiceField
+                <Select
                   disabled={arrangement.busy}
-                  onChange={(event) => setDestination(event.target.value)}
+                  onValueChange={setDestination}
+                  options={destinations.map((candidate) => ({
+                    value: candidate.id,
+                    label: candidate.title,
+                  }))}
                   value={destination}
-                >
-                  {destinations.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.title}
-                    </option>
-                  ))}
-                </ChoiceField>
+                />
               </Field>
               <button
                 className={KEEP}

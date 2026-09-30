@@ -81,17 +81,14 @@ export function StartPost({
         </Field>
         <Field className="sm:w-56" htmlFor="new-post-category" label="Category">
           <Select
-            className="bg-field"
             id="new-post-category"
-            onChange={(event) => setCategoryId(event.target.value)}
+            onValueChange={setCategoryId}
+            options={workspace.categories.map((category) => ({
+              value: category.id,
+              label: category.label,
+            }))}
             value={categoryId}
-          >
-            {workspace.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.label}
-              </option>
-            ))}
-          </Select>
+          />
         </Field>
       </div>
       <div className="mt-6 flex flex-wrap items-center gap-2">
