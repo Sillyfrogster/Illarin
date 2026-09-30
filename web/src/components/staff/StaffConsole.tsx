@@ -8,6 +8,14 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { AppearanceMenu } from "@/components/layout/AppearanceMenu";
 import { NothingHere } from "@/components/layout/NothingHere";
 import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import {
@@ -135,15 +143,19 @@ function Workbench({
       <SidebarInset>
         <header className="sticky top-0 z-20 flex h-13 shrink-0 items-center gap-2 border-b border-rule bg-field/85 px-2 backdrop-blur-sm sm:px-4">
           <SidebarTrigger />
-          <p className="flex min-w-0 items-baseline gap-2 truncate font-ui text-meta">
-            <span className="hidden text-mute sm:inline">Staff</span>
-            <span aria-hidden="true" className="hidden text-rule sm:inline">
-              /
-            </span>
-            <span className="truncate font-medium text-ink">
-              {current?.label ?? "Console"}
-            </span>
-          </p>
+          <Breadcrumb className="min-w-0">
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden sm:inline-flex">
+                <BreadcrumbLink asChild>
+                  <Link href="/staff">Staff</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden sm:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{current?.label ?? "Console"}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
           <div className="ml-auto flex items-center gap-1">
             <Button
               className="gap-2 text-mute sm:pr-2"
