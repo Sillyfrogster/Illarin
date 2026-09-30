@@ -14,8 +14,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { Button } from "@/components/ui/button";
 import { LineLink } from "@/components/ui/line-link";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { useAuth } from "@/lib/auth";
 import { AccountMenu } from "./AccountMenu";
 import {
@@ -147,15 +147,14 @@ export function SiteHeader() {
         }
         end={
           <>
-            <Button asChild variant="primary" className="hidden md:inline-flex">
-              <Link
-                href={publish.href}
-                aria-current={pathname === "/upload" ? "page" : undefined}
-              >
-                <Plus aria-hidden="true" />
-                {publish.label}
-              </Link>
-            </Button>
+            <ShinyButton
+              aria-current={pathname === "/upload" ? "page" : undefined}
+              className="hidden md:inline-flex"
+              href={publish.href}
+            >
+              <Plus aria-hidden="true" />
+              {publish.label}
+            </ShinyButton>
             <div className="flex items-center gap-1">
               <NotificationBell />
               <AccountMenu />

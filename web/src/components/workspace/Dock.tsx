@@ -3,7 +3,8 @@
 import { motion, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { cn } from "@/lib/cn";
+import { ShinyButton } from "@/components/ui/shiny-button";
+import { cn, focusRing } from "@/lib/cn";
 
 export type DockState =
   | "failed"
@@ -12,14 +13,9 @@ export type DockState =
   | "private"
   | "published";
 
-export const TOOL =
-  "relative inline-flex size-11 shrink-0 items-center justify-center rounded-control text-field opacity-70 outline-offset-3 hover:bg-field/15 hover:opacity-100 focus-visible:opacity-100 aria-pressed:bg-field/15 aria-pressed:opacity-100";
+export const TOOL = `relative inline-flex size-control shrink-0 items-center justify-center rounded-control text-field opacity-70 transition-[opacity,background-color] duration-80 hover:bg-field/15 hover:opacity-100 focus-visible:opacity-100 aria-pressed:bg-field/15 aria-pressed:opacity-100 ${focusRing}`;
 
-const QUIET_ACTION =
-  "inline-flex min-h-11 items-center rounded-control px-3.5 text-ui font-medium text-field opacity-75 outline-offset-3 hover:bg-field/15 hover:opacity-100 disabled:opacity-35";
-
-const STRONG_ACTION =
-  "inline-flex min-h-11 shrink-0 items-center rounded-control bg-field px-5 text-ui font-medium text-ink outline-offset-3 hover:opacity-90 disabled:opacity-35";
+const QUIET_ACTION = `inline-flex h-control items-center rounded-control px-3.5 font-ui text-ui font-medium text-field opacity-75 transition-[opacity,background-color] duration-80 hover:bg-field/15 hover:opacity-100 disabled:opacity-35 ${focusRing}`;
 
 export function StatusLight({ state }: { state: DockState }) {
   const reduced = useReducedMotion();
@@ -114,9 +110,15 @@ export function DockAction({
   onClick: () => void;
   strong?: boolean;
 }) {
+  if (strong)
+    return (
+      <ShinyButton disabled={disabled} onClick={onClick}>
+        {children}
+      </ShinyButton>
+    );
   return (
     <button
-      className={strong ? STRONG_ACTION : QUIET_ACTION}
+      className={QUIET_ACTION}
       disabled={disabled}
       onClick={onClick}
       type="button"

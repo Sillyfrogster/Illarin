@@ -2,6 +2,7 @@ import { Check, ImageUp, PencilLine, Upload } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { cn } from "@/lib/cn";
 
 /** What an owner with nothing published yet can do to fill their page, each ticked off once done. */
@@ -55,12 +56,10 @@ export function FirstSteps({
         />
         <Step
           action={
-            <Button asChild size="compact" variant="primary">
-              <Link href="/upload">
-                <Upload aria-hidden="true" />
-                Publish
-              </Link>
-            </Button>
+            <ShinyButton href="/upload" size="compact">
+              <Upload aria-hidden="true" />
+              Publish
+            </ShinyButton>
           }
           detail="It shows up here and in Browse."
           done={false}

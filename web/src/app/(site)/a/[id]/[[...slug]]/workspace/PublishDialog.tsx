@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { LineLink } from "@/components/ui/line-link";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { readDiscordChannel } from "@/lib/api/integrations";
 import {
   compareDraftedChanges,
@@ -348,7 +349,7 @@ export function PublishDialog({
               >
                 Keep editing
               </Button>
-              <Button
+              <ShinyButton
                 disabled={
                   !loaded ||
                   waiting ||
@@ -360,14 +361,13 @@ export function PublishDialog({
                 }
                 loading={busy}
                 onClick={publish}
-                variant="primary"
               >
                 {busy
                   ? "Publishing…"
                   : workspace.isDraft
                     ? `Publish ${typeName}`
                     : `Publish version ${next}`}
-              </Button>
+              </ShinyButton>
             </div>
           </div>
         </div>

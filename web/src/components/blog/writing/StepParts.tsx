@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import type { Post, PostRevision } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
@@ -27,9 +28,20 @@ export function Commit({
   busy: boolean;
   onCommit: () => void;
   ready: boolean;
-  tone?: "stop";
+  tone?: "stop" | "publish";
   word: string;
 }) {
+  if (tone === "publish")
+    return (
+      <ShinyButton
+        className="self-start"
+        disabled={!ready}
+        loading={busy}
+        onClick={onCommit}
+      >
+        {word}
+      </ShinyButton>
+    );
   return (
     <Button
       className="self-start"
