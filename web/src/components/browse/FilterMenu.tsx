@@ -51,7 +51,7 @@ export function FilterMenu({
   const inUse = chosen(facets).length;
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu>
       <DropdownMenuTrigger className={cn(CONTROL, className)}>
         <SlidersHorizontal aria-hidden="true" className="size-4 text-mute" />
         Filters

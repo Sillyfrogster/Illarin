@@ -41,7 +41,7 @@ export function FormatMenu({
   onDownload?: () => void;
 }) {
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         {downloads.map((offered) => (

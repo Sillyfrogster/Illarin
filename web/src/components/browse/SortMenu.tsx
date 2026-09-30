@@ -31,7 +31,7 @@ export function SortMenu({
   const sort = filters.sort ?? "recent";
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu>
       <DropdownMenuTrigger className={cn(CONTROL, className)}>
         <ArrowDownWideNarrow
           aria-hidden="true"

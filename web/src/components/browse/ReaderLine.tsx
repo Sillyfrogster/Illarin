@@ -137,7 +137,7 @@ function Choice({
   value: string;
 }) {
   return (
-    <DropdownMenu modal={false} onOpenChange={onOpenChange} open={open}>
+    <DropdownMenu onOpenChange={onOpenChange} open={open}>
       <DropdownMenuTrigger className={CONTROL} disabled={locked}>
         {label}
         <ChevronDown aria-hidden="true" className="size-4 text-mute" />
