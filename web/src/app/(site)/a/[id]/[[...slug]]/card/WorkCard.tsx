@@ -180,13 +180,10 @@ function useShuffle(
   card: RefObject<HTMLDivElement | null>,
   number: number | null,
 ) {
-  const first = useRef(true);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: moving to another version is what asks for the shuffle.
+  const shown = useRef(number);
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
+    if (shown.current === number) return;
+    shown.current = number;
     if (!card.current) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     card.current.animate(

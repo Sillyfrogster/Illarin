@@ -59,7 +59,11 @@ export function VersionTimeline({
   }
 
   const rail = versions.slice(0, RAIL_LENGTH).reverse();
-  const earlier = versions.length - rail.length;
+  const earlier = count - Math.min(count, RAIL_LENGTH);
+  const waiting = Array.from(
+    { length: Math.min(count, RAIL_LENGTH) },
+    (_, at) => latest.number - Math.min(count, RAIL_LENGTH) + 1 + at,
+  );
 
   return (
     <section aria-labelledby="versions-heading">
@@ -80,14 +84,27 @@ export function VersionTimeline({
           aria-label="Versions, oldest first"
           className="relative flex min-h-8 min-w-0 flex-1 list-none items-center justify-between before:absolute before:inset-x-4 before:top-1/2 before:h-px before:bg-rule"
         >
-          {rail.map((version) => (
-            <Point
-              here={version.number === shown.number}
-              key={version.id}
-              latest={version.number === newest.number}
-              version={version}
-            />
-          ))}
+          {rail.length > 0
+            ? rail.map((version) => (
+                <Point
+                  here={version.number === shown.number}
+                  key={version.number}
+                  latest={version.number === newest.number}
+                  version={version}
+                />
+              ))
+            : waiting.map((number) => (
+                <li className="grid size-8 place-items-center" key={number}>
+                  <span
+                    className={cn(
+                      "block rounded-full",
+                      number === latest.number
+                        ? "size-3 bg-accent ring-4 ring-accent/20"
+                        : "size-2 bg-mute",
+                    )}
+                  />
+                </li>
+              ))}
         </ol>
       </div>
 
