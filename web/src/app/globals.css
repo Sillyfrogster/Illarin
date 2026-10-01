@@ -49,10 +49,12 @@
   --color-over-mute: var(--v-over-mute);
   --color-media: var(--v-media);
   --color-on-media: var(--v-on-media);
+  --color-fill: var(--v-fill);
+  --color-fill-hover: var(--v-fill-hover);
 
-  --font-display: var(--font-outfit), system-ui, sans-serif;
-  --font-ui: var(--font-outfit), system-ui, sans-serif;
-  --font-prose: var(--font-dm-sans), system-ui, sans-serif;
+  --font-display: var(--font-onest), system-ui, sans-serif;
+  --font-ui: var(--font-onest), system-ui, sans-serif;
+  --font-prose: var(--font-onest), system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --text-hero: clamp(2.5rem, 4.5vw, 4.75rem);
@@ -77,6 +79,12 @@
   --text-meta--line-height: 1.5;
   --text-label: 0.75rem;
   --text-label--line-height: 1.5;
+  --text-name-l: 1.75rem;
+  --text-name-l--line-height: 1.15;
+  --text-name-m: 1.5rem;
+  --text-name-m--line-height: 1.2;
+  --text-name-s: 1.25rem;
+  --text-name-s--line-height: 1.25;
 
   --spacing-flow: 1.25rem;
   --spacing-group: 2rem;
@@ -87,8 +95,11 @@
   --spacing-segment: calc(var(--control) - 0.5rem);
   --spacing-segment-compact: calc(var(--control-compact) - 0.25rem);
 
-  --radius-control: 10px;
+  --radius-chip: 6px;
+  --radius-control: 8px;
+  --radius-art: 12px;
   --radius-plate: 14px;
+  --radius-card: 20px;
 
   --color-hover: var(--v-hover);
   --color-active: var(--v-active);
@@ -112,8 +123,11 @@
   --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-sweep: sweep 1.4s var(--ease-wipe) infinite;
   --animate-cell-in: cell-in 240ms var(--ease-wipe) both;
+  --animate-trace: trace 1.4s linear infinite;
 
   --shadow-cover: 0 20px 45px -20px rgb(0 0 0 / 0.5);
+  --shadow-card:
+    inset 0 1px 0 var(--v-card-light), 0 22px 44px -17px var(--v-card-drop);
   --shadow-popover: 0 16px 60px -12px rgb(0 0 0 / 0.35);
   --shadow-contents: 0 8px 15px -15px rgb(0 0 0 / 0.5);
 
@@ -128,6 +142,11 @@
     }
     to {
       transform: translateX(360%);
+    }
+  }
+  @keyframes trace {
+    to {
+      stroke-dashoffset: -100;
     }
   }
   @keyframes cell-in {
@@ -158,6 +177,11 @@
   --v-stop-wash: light-dark(#ffeaf0, #3a1b24);
   --v-over: #ffffff;
   --v-over-mute: #d5dbe2;
+
+  --v-fill: light-dark(#efefef, #1c1c1c);
+  --v-fill-hover: light-dark(#e5e5e5, #262626);
+  --v-card-light: light-dark(transparent, rgb(255 255 255 / 0.06));
+  --v-card-drop: light-dark(rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.6));
 
   --v-media: #050505;
   --v-on-media: #f5f5f2;
@@ -325,7 +349,7 @@ body {
   background: var(--v-field);
   color: var(--v-ink);
   caret-color: var(--v-action);
-  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-family: var(--font-onest), system-ui, sans-serif;
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.8;

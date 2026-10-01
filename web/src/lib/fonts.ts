@@ -1,14 +1,8 @@
-import { DM_Sans, Outfit } from "next/font/google";
+import { Onest } from "next/font/google";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const onest = Onest({
+  variable: "--font-onest",
   subsets: ["latin"],
 });
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-});
-
-export const FONT_VARIABLES = `${outfit.variable} ${dmSans.variable}`;
+export const FONT_VARIABLES = onest.variable;

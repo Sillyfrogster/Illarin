@@ -8,11 +8,11 @@ import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/cn";
 
 const badgeVariants = cva(
-  "inline-flex max-w-full items-center gap-1.5 rounded-control font-ui font-medium [overflow-wrap:anywhere]",
+  "inline-flex max-w-full items-center gap-1.5 rounded-chip font-ui font-medium [overflow-wrap:anywhere]",
   {
     variants: {
       tone: {
-        quiet: "bg-deep text-ink",
+        quiet: "bg-fill text-ink",
         accent: "bg-accent-wash text-accent",
         stop: "bg-stop-wash text-stop",
       },
@@ -27,7 +27,7 @@ const badgeVariants = cva(
 
 type BadgeProps = ComponentProps<"span"> & VariantProps<typeof badgeVariants>;
 
-/** Badge is Fluid Functionalism's badge in the site's tones: a tag, a status or a small label. */
+/** Badge is a filled chip in the site's tones: a tag, a status or a small label. */
 function Badge({ className, tone, size, ...props }: BadgeProps) {
   return (
     <span
@@ -44,7 +44,7 @@ function BadgeLink({ className, ...props }: ComponentProps<typeof Link>) {
     <Link
       className={cn(
         badgeVariants(),
-        "transition-colors duration-80 hover:bg-accent-wash hover:text-accent motion-reduce:transition-none",
+        "min-h-6.5 font-normal text-mute transition-colors duration-80 hover:bg-accent-wash hover:text-accent motion-reduce:transition-none",
         className,
       )}
       {...props}
