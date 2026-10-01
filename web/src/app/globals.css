@@ -308,6 +308,49 @@ html[data-artwork="off"] [data-artwork] {
   display: none;
 }
 
+/* Publish catches the light once each time the pointer arrives, and its plus spins */
+.publish {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    background-color 80ms,
+    scale 120ms var(--ease-wipe);
+}
+
+.publish::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    105deg,
+    transparent 25%,
+    rgb(255 255 255 / 0.38) 50%,
+    transparent 75%
+  );
+  translate: -100% 0;
+}
+
+.publish svg {
+  transition: rotate 360ms var(--ease-wipe);
+}
+
+.publish:active {
+  scale: 0.97;
+}
+
+@media (hover: hover) {
+  .publish:hover::before {
+    translate: 100% 0;
+    transition: translate 650ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .publish:hover svg {
+    rotate: 180deg;
+  }
+}
+
 body:has([data-site-header-hidden="true"]) {
   --site-header-offset: 0px;
 }
@@ -316,15 +359,18 @@ main {
   min-height: calc(100svh - var(--header-height));
 }
 
-a {
-  color: var(--v-mute);
-  text-decoration: none;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.22em;
-}
+/* Link colours sit in the base layer so a link's own colour class wins */
+@layer base {
+  a {
+    color: var(--v-mute);
+    text-decoration: none;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+  }
 
-a:hover {
-  color: var(--v-ink);
+  a:hover {
+    color: var(--v-ink);
+  }
 }
 
 button {

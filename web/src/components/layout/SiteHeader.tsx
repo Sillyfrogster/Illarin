@@ -4,7 +4,7 @@ import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,10 @@ import { cn, navLink } from "@/lib/cn";
 import { timing } from "@/lib/timing";
 import { AccountMenu } from "./AccountMenu";
 import { BROWSE, isCurrentPage, PUBLISH } from "./destinations";
-import { HeaderSearch } from "./HeaderSearch";
 import { shellClasses } from "./Shell";
 
 const ROW =
-  "flex min-h-[var(--header-height)] flex-wrap items-center gap-x-3 gap-y-2 py-2 md:flex-nowrap sm:gap-x-5 md:gap-x-8 md:py-0";
+  "flex h-[var(--header-height)] items-center gap-x-3 sm:gap-x-4 md:gap-x-8";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -24,10 +23,12 @@ export function SiteHeader() {
   const header = useRef<HTMLElement>(null);
   const scrollDirection = useRef({ direction: 0, anchor: 0 });
   const [hidden, setHidden] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useMotionValueEvent(scrollY, "change", (current) => {
     const previous = scrollY.getPrevious() ?? 0;
     const direction = Math.sign(current - previous);
+    setScrolled(current > 0);
     if (current < 120) {
       setHidden(false);
       scrollDirection.current = { direction, anchor: current };
@@ -49,7 +50,8 @@ export function SiteHeader() {
   return (
     <motion.header
       animate={{ y: hidden ? -160 : 0 }}
-      className="sticky top-0 z-80 border-b border-rule bg-field"
+      className="sticky top-0 z-80 border-b border-transparent bg-field transition-colors duration-240 data-[scrolled=true]:border-rule"
+      data-scrolled={scrolled}
       data-site-header-hidden={hidden}
       initial={false}
       onFocusCapture={() => setHidden(false)}
@@ -62,7 +64,7 @@ export function SiteHeader() {
           aria-label="Illarin home"
           className="flex min-h-control items-center text-ink"
         >
-          <BrandLogo className="w-20 sm:w-28" />
+          <BrandLogo className="w-20 sm:w-28" tone="accent" />
         </Link>
         <Link
           aria-current={
@@ -73,13 +75,12 @@ export function SiteHeader() {
         >
           {BROWSE.label}
         </Link>
-        <div className="flex items-center gap-2 max-md:contents md:ml-auto">
-          <Suspense fallback={<div className="h-control md:w-64" />}>
-            <HeaderSearch />
-          </Suspense>
-        </div>
-        <div className="flex items-center gap-0.5 max-md:order-2 max-md:ml-auto">
-          <Button asChild className="mr-1" variant="primary">
+        <div className="ml-auto flex items-center sm:gap-1">
+          <Button
+            asChild
+            className="publish max-sm:px-3 sm:mr-1 max-sm:[&_svg]:hidden"
+            variant="primary"
+          >
             <Link
               aria-current={pathname === PUBLISH.href ? "page" : undefined}
               href={PUBLISH.href}

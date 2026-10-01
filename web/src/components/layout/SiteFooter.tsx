@@ -6,7 +6,6 @@ import { BLOG_HOME } from "@/lib/blog-paths";
 import { navLink } from "@/lib/cn";
 import { DISCORD_INVITE, KOFI_PAGE } from "@/lib/contact";
 import { LEGAL_DOCUMENTS } from "@/lib/legal-documents";
-import { AppearanceMenu } from "./AppearanceMenu";
 import { ArtworkSwitch } from "./ArtworkSwitch";
 
 export function SiteFooter() {
@@ -84,7 +83,6 @@ export function SiteFooter() {
           </nav>
         </div>
         <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-2 border-t border-edge pt-4">
-          <AppearanceMenu labelled />
           <ArtworkSwitch />
         </div>
       </div>

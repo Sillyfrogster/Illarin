@@ -47,7 +47,7 @@ export function ProfilePage({
   initial: Profile;
   initialPage: BrowsePage | null;
 }) {
-  const { account } = useAuth();
+  const { account, refresh } = useAuth();
   const [profile, setProfile] = useState(initial);
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -121,6 +121,7 @@ export function ProfilePage({
           ? "Your picture is updated."
           : "Your picture is removed.",
     );
+    if (kind === "avatar") void refresh();
   }
 
   async function pin(work: BrowseWork) {

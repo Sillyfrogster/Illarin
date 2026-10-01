@@ -35,7 +35,7 @@ export function accountDestinations(
   return [
     { id: "work", label: "Your work", href: "/work" },
     { id: "profile", label: "Your profile", href: `/@${account.handle}` },
-    { id: "settings", label: "Account settings", href: "/settings" },
+    { id: "settings", label: "Settings", href: "/settings" },
     ...(writer
       ? [{ id: "posts" as const, label: "Your posts", href: "/posts" }]
       : []),
@@ -43,7 +43,7 @@ export function accountDestinations(
       ? [
           {
             id: "blog-admin" as const,
-            label: "Blog administration",
+            label: "Blog admin",
             href: "/admin/blog",
           },
         ]
@@ -56,7 +56,7 @@ export function accountDestinations(
       : [
           {
             id: "verify" as const,
-            label: "Verify email",
+            label: "Verify your email",
             href: `/verify-email?returnTo=${UPLOAD_RETURN}`,
           },
         ]),

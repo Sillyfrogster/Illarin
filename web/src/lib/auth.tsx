@@ -18,6 +18,7 @@ export type SignedInAccount = Account;
 type AuthContextValue = {
   account: SignedInAccount | null | undefined;
   writer: boolean;
+  avatar: string | undefined;
   artwork: boolean;
   setArtwork: (on: boolean) => Promise<void>;
   refresh: () => Promise<void>;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     undefined,
   );
   const [writer, setWriter] = useState(false);
+  const [avatar, setAvatar] = useState<string>();
   const [artwork, setArtworkState] = useState(true);
 
   useEffect(() => setArtworkState(readArtwork()), []);
@@ -46,15 +48,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!state) {
         setAccount(null);
         setWriter(false);
+        setAvatar(undefined);
         return;
       }
       setAccount(state.user);
       setWriter(state.writer);
+      setAvatar(state.avatarUrl);
       setArtworkState(state.artwork);
       applyArtwork(state.artwork);
     } catch {
       setAccount(null);
       setWriter(false);
+      setAvatar(undefined);
     }
   }, []);
 
@@ -67,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!response.ok) throw new Error("Could not sign out");
     setAccount(null);
     setWriter(false);
+    setAvatar(undefined);
   }, []);
 
   const setArtwork = useCallback(
@@ -86,13 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       account,
       artwork,
+      avatar,
       setArtwork,
       refresh,
       setAccount,
       signOut,
       writer,
     }),
-    [account, artwork, refresh, setArtwork, signOut, writer],
+    [account, artwork, avatar, refresh, setArtwork, signOut, writer],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

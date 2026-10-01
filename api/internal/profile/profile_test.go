@@ -292,3 +292,34 @@ func readProfile(t *testing.T, r http.Handler, handle string) apitest.PublicProf
 	}
 	return profile
 }
+
+func TestSessionCarriesItsOwnersAvatar(t *testing.T) {
+	t.Parallel()
+	r, session, _, _ := harness.NewVerifiedUploadRouterWithPool(t, apitest.Registry(t))
+
+	if before := sessionAvatar(t, r, session); before != "" {
+		t.Fatalf("avatar before upload = %q, want none", before)
+	}
+	uploaded := apitest.Send(t, r, apitest.Authorized(apitest.AvatarUploadRequest(t, apitest.PNG(t, 200, 200)), session))
+	var profile apitest.PublicProfile
+	if err := json.Unmarshal(uploaded.Body.Bytes(), &profile); err != nil || profile.Avatar == nil {
+		t.Fatalf("upload avatar: %d %s", uploaded.Code, uploaded.Body.String())
+	}
+	if after := sessionAvatar(t, r, session); after != profile.Avatar.URL {
+		t.Fatalf("session avatar = %q, want %q", after, profile.Avatar.URL)
+	}
+}
+
+func sessionAvatar(t *testing.T, r http.Handler, session *http.Cookie) string {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/v1/auth/session", nil)
+	req.AddCookie(session)
+	rec := apitest.Send(t, r, req)
+	var state struct {
+		AvatarURL string `json:"avatarUrl"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &state); err != nil {
+		t.Fatalf("decode session: %d %s", rec.Code, rec.Body.String())
+	}
+	return state.AvatarURL
+}

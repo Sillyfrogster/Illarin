@@ -60,4 +60,4 @@ export const popupSurface =
 
 /** popupRow is one choosable row in a popup, lit grey while the pointer or the arrow keys are on it. */
 export const popupRow =
-  "flex min-h-control cursor-pointer items-center gap-2 rounded-control px-2 text-ui outline-none select-none focus-visible:outline-none data-highlighted:bg-fill-hover data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0";
+  "flex min-h-control cursor-pointer items-center gap-2 rounded-control px-2 text-ui text-ink outline-none select-none focus-visible:outline-none data-highlighted:bg-fill-hover data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0";

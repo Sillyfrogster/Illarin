@@ -214,8 +214,17 @@ func (h *Handlers) GetSession(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
 		return
 	}
+	avatar, err := h.accounts.OwnAvatar(c.Request.Context(), current.ID)
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
+		return
+	}
 	user := toAPIAccount(*current)
-	c.JSON(http.StatusOK, SessionState{User: &user, Writer: writer, Artwork: preferences.Artwork})
+	state := SessionState{User: &user, Writer: writer, Artwork: preferences.Artwork}
+	if avatar != nil {
+		state.AvatarUrl = PictureURL(Avatar, avatar.MediaID, avatar.ImageSizeVersion)
+	}
+	c.JSON(http.StatusOK, state)
 }
 
 func (h *Handlers) VerifyEmail(c *gin.Context) {

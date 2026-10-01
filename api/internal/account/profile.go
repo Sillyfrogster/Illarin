@@ -151,6 +151,25 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 	return found, nil
 }
 
+// OwnAvatar is an account's own avatar for the header, or nil when it has none.
+func (s *Service) OwnAvatar(ctx context.Context, ownerID uuid.UUID) (*ProfilePicture, error) {
+	var avatar storedPicture
+	err := s.pool.QueryRow(ctx, `
+		select avatar.id, avatar.width, avatar.height
+		  from public_profiles profile
+		  join profile_media avatar
+		    on avatar.id = profile.avatar_media_id and avatar.blob_id is not null
+		 where profile.user_id = $1
+	`, ownerID).Scan(&avatar.id, &avatar.width, &avatar.height)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read own avatar: %w", err)
+	}
+	return avatar.picture(), nil
+}
+
 func (s *Service) SaveProfile(ctx context.Context, owner api.Account, in ProfileEdit) (PublicProfile, error) {
 	edit, err := validateProfileEdit(in)
 	if err != nil {

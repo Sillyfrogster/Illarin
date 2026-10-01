@@ -49,7 +49,12 @@ export function BrowseSurface({
   filters: BrowseFilters;
   heading: string;
   initialPage: BrowsePage | null;
-  search?: { hint?: string; label: string; placeholder: string };
+  search?: {
+    hint?: string;
+    label: string;
+    placeholder: string;
+    tags?: boolean;
+  };
   showHeading?: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -176,6 +181,7 @@ export function BrowseSurface({
                 label={search.label}
                 onSearch={(q) => navigate({ ...filters, q })}
                 placeholder={search.placeholder}
+                tags={search.tags}
                 value={filters.q ?? ""}
               />
             </div>

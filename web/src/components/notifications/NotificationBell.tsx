@@ -39,6 +39,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const count = useUnreadCount();
   useUnreadRefreshOnNavigation();
+  if (account === undefined) return <span className="block size-control" />;
   if (!account) return null;
   const badge = unreadBadge(count);
 

@@ -61,6 +61,11 @@ export default async function BrowsePage({
         filters={filters}
         heading="Browse"
         initialPage={initialPage}
+        search={{
+          label: "Search works",
+          placeholder: "Search works, or tag:fantasy",
+          tags: true,
+        }}
         showHeading
       />
     </div>

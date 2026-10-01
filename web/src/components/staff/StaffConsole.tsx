@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import { BrandMark } from "@/components/brand/BrandMark";
-import { AppearanceMenu } from "@/components/layout/AppearanceMenu";
+import { AccountMenu } from "@/components/layout/AccountMenu";
 import { NothingHere } from "@/components/layout/NothingHere";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -167,7 +167,7 @@ function Workbench({
               <span className="sr-only sm:not-sr-only">Search</span>
               <Kbd className="hidden sm:inline-flex">Ctrl K</Kbd>
             </Button>
-            <AppearanceMenu />
+            <AccountMenu />
           </div>
         </header>
         <div className="min-w-0 flex-1 px-3 py-4 sm:px-4 sm:py-5 2xl:px-8">
