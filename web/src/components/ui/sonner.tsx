@@ -32,7 +32,7 @@ function useSiteTheme(): Theme {
   return theme;
 }
 
-/** Toaster is shadcn's Sonner in the site's colours, sitting above the bars pinned to the bottom of a page. */
+/** Toaster shows results with Undo on the menu plane, sitting above the bars pinned to the bottom of a page. */
 export function Toaster(props: ToasterProps) {
   return (
     <Sonner
@@ -51,19 +51,19 @@ export function Toaster(props: ToasterProps) {
         {
           "--normal-bg": "var(--v-plane)",
           "--normal-text": "var(--v-ink)",
-          "--normal-border": "var(--v-rule)",
+          "--normal-border": "transparent",
           "--error-bg": "var(--v-plane)",
           "--error-text": "var(--v-stop)",
-          "--error-border": "var(--v-rule)",
-          "--border-radius": "14px",
+          "--error-border": "transparent",
+          "--border-radius": "12px",
         } as CSSProperties
       }
       theme={useSiteTheme()}
       toastOptions={{
         classNames: {
-          toast: "font-ui text-meta shadow-popover",
+          toast: "font-ui text-ui shadow-popover ring-1 ring-ink/8",
           actionButton:
-            "!h-control !rounded-control !bg-accent-wash !px-3 !font-ui !text-meta !font-medium !text-accent hover:!bg-accent-wash/70",
+            "!h-control-compact !rounded-control !bg-action !px-3 !font-ui !text-meta !font-medium !text-on-accent hover:!bg-action-hover",
         },
       }}
       {...props}

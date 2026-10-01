@@ -55,6 +55,7 @@
   --color-stop-hover: var(--v-stop-hover);
   --color-off: var(--v-off);
   --color-off-hover: var(--v-off-hover);
+  --color-scrim: var(--v-scrim);
 
   --font-display: var(--font-onest), system-ui, sans-serif;
   --font-ui: var(--font-onest), system-ui, sans-serif;
@@ -129,6 +130,10 @@
   --animate-cell-in: cell-in 240ms var(--ease-wipe) both;
   --animate-trace: trace 1.4s linear infinite;
   --animate-pop: pop 120ms var(--ease-wipe);
+  --animate-fade: fade 120ms var(--ease-wipe);
+  --animate-leave: leave 80ms ease-in forwards;
+  --animate-slide-in: slide 200ms var(--ease-wipe);
+  --animate-slide-out: slide-out 120ms ease-in forwards;
 
   --shadow-cover: 0 20px 45px -20px rgb(0 0 0 / 0.5);
   --shadow-card:
@@ -152,7 +157,27 @@
   @keyframes pop {
     from {
       opacity: 0;
-      transform: translateY(-4px);
+      transform: translateY(var(--pop-y, -4px));
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes leave {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes slide {
+    from {
+      translate: var(--slide-from);
+    }
+  }
+  @keyframes slide-out {
+    to {
+      translate: var(--slide-from);
     }
   }
   @keyframes trace {
@@ -195,6 +220,7 @@
   --v-stop-hover: light-dark(#8c1f3b, #ffbccc);
   --v-off: light-dark(#c4c4c4, #444444);
   --v-off-hover: light-dark(#adadad, #555555);
+  --v-scrim: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.7));
   --v-card-light: light-dark(transparent, rgb(255 255 255 / 0.06));
   --v-card-drop: light-dark(rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.6));
 
@@ -377,6 +403,16 @@ body {
 .bg-plane {
   --v-fill: light-dark(#efefef, #262626);
   --v-fill-hover: light-dark(#e5e5e5, #303030);
+}
+
+/* A popup that opened above or beside its trigger pops toward it instead of down */
+[data-side="top"] {
+  --pop-y: 4px;
+}
+
+[data-side="left"],
+[data-side="right"] {
+  --pop-y: 0px;
 }
 
 /* Every piece of art carries data-artwork so the reader's switch can remove it. */

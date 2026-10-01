@@ -7,14 +7,10 @@ import {
   type ReactNode,
   useEffect,
   useId,
-  useMemo,
-  useRef,
   useState,
 } from "react";
-import { FluidHoverHighlight } from "@/components/ui/fluid-hover-highlight";
 import { Kbd } from "@/components/ui/kbd";
-import { cn } from "@/lib/cn";
-import { useFluidHover } from "@/lib/use-fluid-hover";
+import { cn, popupRow } from "@/lib/cn";
 
 type CommandItem = {
   value: string;
@@ -26,7 +22,7 @@ type CommandItem = {
   disabled?: boolean;
 };
 
-/** CommandMenu is Fluid Functionalism's command menu: type to narrow, arrows and Enter to choose, with one plate that follows the keys and the pointer. The caller filters the items. */
+/** CommandMenu is type to narrow, arrows and Enter to choose, with the chosen row lit grey under the keys and the pointer. The caller filters the items. */
 export function CommandMenu({
   items,
   query,
@@ -51,27 +47,14 @@ export function CommandMenu({
   listClassName?: string;
 }) {
   const listId = useId();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hover = useFluidHover(containerRef);
-  const { registerItem, itemRects, isMeasured, remeasure } = hover;
   const firstEnabled = items.findIndex((item) => !item.disabled);
   const [active, setActive] = useState(firstEnabled);
   const count = items.length;
-  const itemRefs = useMemo(
-    () =>
-      Array.from(
-        { length: count },
-        (_, index) => (element: HTMLElement | null) =>
-          registerItem(index, element),
-      ),
-    [count, registerItem],
-  );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new query is what moves the highlight back to the top
   useEffect(() => {
     setActive(firstEnabled);
-    remeasure();
-  }, [query, firstEnabled, remeasure]);
+  }, [query, firstEnabled]);
 
   function move(step: 1 | -1) {
     if (firstEnabled < 0) return;
@@ -99,12 +82,11 @@ export function CommandMenu({
     }
   }
 
-  const rect = isMeasured && active >= 0 ? itemRects[active] : undefined;
   let group: string | undefined;
 
   return (
     <div className={cn("flex min-h-0 flex-col font-ui", className)}>
-      <div className="group/command flex h-12 shrink-0 items-center gap-2.5 border-b border-rule/60 px-4">
+      <div className="group/command flex h-12 shrink-0 items-center gap-2.5 border-b border-rule px-4">
         <Search
           aria-hidden="true"
           className="size-4 shrink-0 text-mute transition-colors duration-80 group-focus-within/command:text-ink"
@@ -136,14 +118,7 @@ export function CommandMenu({
         role="listbox"
         aria-label={label}
       >
-        <div className="relative flex flex-col" ref={containerRef}>
-          {rect ? (
-            <FluidHoverHighlight
-              className="rounded-control"
-              rect={rect}
-              session={0}
-            />
-          ) : null}
+        <div className="flex flex-col">
           {items.length === 0 ? (
             <p
               aria-live="polite"
@@ -171,11 +146,10 @@ export function CommandMenu({
                   aria-disabled={item.disabled || undefined}
                   aria-selected={index === active}
                   className={cn(
-                    "relative z-10 flex min-h-control shrink-0 cursor-pointer items-center gap-2.5 rounded-control px-3 py-1.5 text-ui transition-colors duration-80 select-none",
-                    index === active ? "text-ink" : "text-mute",
+                    popupRow,
+                    "shrink-0 gap-2.5 px-3 py-1.5 aria-selected:bg-fill-hover",
                     item.disabled && "cursor-default opacity-50",
                   )}
-                  data-fluid-hover-index={index}
                   id={`${listId}-${index}`}
                   onClick={() => {
                     if (!item.disabled) onSelect(item);
@@ -184,7 +158,6 @@ export function CommandMenu({
                   onMouseMove={() => {
                     if (!item.disabled && index !== active) setActive(index);
                   }}
-                  ref={itemRefs[index]}
                   role="option"
                   tabIndex={-1}
                 >
@@ -210,7 +183,7 @@ export function CommandMenu({
           })}
         </div>
       </div>
-      <div className="flex h-10 shrink-0 items-center gap-4 border-t border-rule/60 px-4 text-label text-mute pointer-coarse:hidden">
+      <div className="flex h-10 shrink-0 items-center gap-4 border-t border-rule px-4 text-label text-mute pointer-coarse:hidden">
         <span className="flex items-center gap-1.5">
           Move
           <Kbd>

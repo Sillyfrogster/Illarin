@@ -5,7 +5,7 @@ import { Check, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useFieldControl } from "@/components/ui/field";
 import { inputClasses } from "@/components/ui/input";
-import { cn } from "@/lib/cn";
+import { cn, popupRow, popupSurface } from "@/lib/cn";
 
 /** EMPTY carries an empty option through Radix, which reserves the empty string for "no value". */
 const EMPTY = "\u0000empty";
@@ -61,7 +61,10 @@ export function Select<T extends string>({
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           align="start"
-          className="z-90 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) max-w-[calc(100vw-2rem)] origin-(--radix-select-content-transform-origin) animate-pop overflow-hidden rounded-art bg-plane font-ui text-ink shadow-popover ring-1 ring-ink/8 select-none"
+          className={cn(
+            popupSurface,
+            "max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) max-w-[calc(100vw-2rem)] overflow-hidden select-none",
+          )}
           collisionPadding={16}
           position="popper"
           sideOffset={6}
@@ -69,7 +72,7 @@ export function Select<T extends string>({
           <SelectPrimitive.Viewport className="max-h-80 p-1">
             {options.map((option) => (
               <SelectPrimitive.Item
-                className="flex min-h-control cursor-pointer items-center gap-2 rounded-control px-2 text-ui outline-none focus-visible:outline-none data-highlighted:bg-fill-hover data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-accent"
+                className={cn(popupRow, "data-[state=checked]:text-accent")}
                 key={option.value}
                 value={option.value === "" ? EMPTY : option.value}
               >
@@ -79,7 +82,7 @@ export function Select<T extends string>({
                   </SelectPrimitive.ItemText>
                 </span>
                 <SelectPrimitive.ItemIndicator>
-                  <Check aria-hidden="true" className="size-4" />
+                  <Check aria-hidden="true" />
                 </SelectPrimitive.ItemIndicator>
               </SelectPrimitive.Item>
             ))}

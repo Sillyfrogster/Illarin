@@ -53,3 +53,11 @@ export const focusRing =
 /** navLink is a plain link in a run of navigation: ink at rest, a violet underline on hover, violet for the page you are on. */
 export const navLink =
   "flex min-h-control items-center whitespace-nowrap text-ui font-medium text-ink decoration-accent underline-offset-4 hover:underline aria-[current=page]:text-accent";
+
+/** popupSurface is the raised plane every menu, list and anchored panel opens on, popping in toward its trigger. */
+export const popupSurface =
+  "z-90 rounded-art bg-plane font-ui text-ink shadow-popover ring-1 ring-ink/8 outline-none animate-pop data-[state=closed]:animate-leave";
+
+/** popupRow is one choosable row in a popup, lit grey while the pointer or the arrow keys are on it. */
+export const popupRow =
+  "flex min-h-control cursor-pointer items-center gap-2 rounded-control px-2 text-ui outline-none select-none focus-visible:outline-none data-highlighted:bg-fill-hover data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0";

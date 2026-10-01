@@ -19,7 +19,3 @@ export const spring = {
     exit: { duration: 0.16 },
   },
 } as const;
-
-/** exitFallbackMs unmounts a popup whose exit animation stalled in a background tab. */
-export const exitFallbackMs = (tier: { exit: { duration: number } }) =>
-  Math.round(tier.exit.duration * 1000) + 100;

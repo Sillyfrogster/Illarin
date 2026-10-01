@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { Input } from "./input";
 
 export function OwnerMenu({
   name,
@@ -129,7 +130,7 @@ export function OwnerMenu({
           if (!open && !pending) setDialog(null);
         }}
       >
-        <DialogContent className="max-w-lg p-6 sm:p-8 overflow-y-auto">
+        <DialogContent className="max-w-[32rem] overflow-y-auto p-6 sm:p-8">
           <DialogTitle className="pr-10 text-section font-medium">
             {dialog === "delete"
               ? `Delete this ${noun}?`
@@ -161,9 +162,9 @@ export function OwnerMenu({
           ) : dialog === "visibility" ? (
             <div className="mt-6">{visibility}</div>
           ) : dialog === "copy" && href ? (
-            <input
+            <Input
               aria-label="Link"
-              className="mt-4 min-h-control w-full rounded-control bg-deep px-3 text-ui"
+              className="mt-4"
               readOnly
               value={new URL(href, location.origin).href}
               onFocus={(event) => event.target.select()}

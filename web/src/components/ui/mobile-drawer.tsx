@@ -1,14 +1,12 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { motion } from "framer-motion";
+import { X } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
-import { spring } from "@/lib/springs";
-import { surfaceClasses } from "@/lib/surface-classes";
-import { SurfaceProvider, useSurface } from "@/lib/surface-context";
-import { usePresence } from "@/lib/use-presence";
+import { Button } from "@/components/ui/button";
+import { SCRIM } from "@/components/ui/dialog";
 
-/** MobileDrawer is Fluid Functionalism's navigation panel for a phone: it slides in from the left on the moderate spring and hands focus back to its trigger. */
+/** MobileDrawer is the phone navigation panel, sliding in from the left and handing focus back to its trigger. */
 export function MobileDrawer({
   open,
   onClose,
@@ -22,9 +20,6 @@ export function MobileDrawer({
   children: ReactNode;
   triggerRef?: RefObject<HTMLElement | null>;
 }) {
-  const level = Math.min(useSurface() + 2, 8);
-  const { mounted, onExitComplete } = usePresence(open, spring.moderate);
-
   return (
     <DialogPrimitive.Root
       onOpenChange={(next) => {
@@ -32,41 +27,33 @@ export function MobileDrawer({
       }}
       open={open}
     >
-      {mounted ? (
-        <DialogPrimitive.Portal forceMount>
-          <DialogPrimitive.Overlay asChild forceMount>
-            <motion.div
-              animate={{ opacity: open ? 1 : 0 }}
-              className="fixed inset-0 z-90 bg-[rgb(0_0_0/0.4)] dark:bg-[rgb(0_0_0/0.7)]"
-              initial={{ opacity: 0 }}
-              transition={open ? spring.moderate : spring.moderate.exit}
-            />
-          </DialogPrimitive.Overlay>
-          <DialogPrimitive.Content
-            aria-describedby={undefined}
-            asChild
-            forceMount
-            onCloseAutoFocus={(event) => {
-              if (!triggerRef?.current) return;
-              event.preventDefault();
-              triggerRef.current.focus();
-            }}
-          >
-            <motion.div
-              animate={{ x: open ? 0 : "-100%" }}
-              className={`fixed inset-y-0 left-0 z-90 flex w-72 max-w-[85vw] flex-col overflow-y-auto font-ui text-ink outline-none ${surfaceClasses(level, 3)}`}
-              initial={{ x: "-100%" }}
-              onAnimationComplete={onExitComplete}
-              transition={open ? spring.moderate : spring.moderate.exit}
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className={SCRIM} />
+        <DialogPrimitive.Content
+          aria-describedby={undefined}
+          className="fixed inset-y-0 left-0 z-90 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-plane font-ui text-ink outline-none [--slide-from:-100%_0] animate-slide-in data-[state=closed]:animate-slide-out"
+          onCloseAutoFocus={(event) => {
+            if (!triggerRef?.current) return;
+            event.preventDefault();
+            triggerRef.current.focus();
+          }}
+        >
+          <DialogPrimitive.Title className="sr-only">
+            {title}
+          </DialogPrimitive.Title>
+          {children}
+          <DialogPrimitive.Close asChild>
+            <Button
+              aria-label="Close"
+              className="absolute top-3 right-3"
+              size="icon-compact"
+              variant="ghost"
             >
-              <DialogPrimitive.Title className="sr-only">
-                {title}
-              </DialogPrimitive.Title>
-              <SurfaceProvider value={level}>{children}</SurfaceProvider>
-            </motion.div>
-          </DialogPrimitive.Content>
-        </DialogPrimitive.Portal>
-      ) : null}
+              <X aria-hidden="true" />
+            </Button>
+          </DialogPrimitive.Close>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
 }

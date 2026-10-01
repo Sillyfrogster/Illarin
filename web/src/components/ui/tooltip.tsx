@@ -1,17 +1,12 @@
 "use client";
 
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
-import { motion } from "framer-motion";
 import {
   createContext,
   type ReactElement,
   type ReactNode,
   useContext,
-  useState,
 } from "react";
-import { fontWeights } from "@/lib/font-weight";
-import { spring } from "@/lib/springs";
-import { usePresence } from "@/lib/use-presence";
 
 const DEFAULT_DELAY = 200;
 
@@ -31,16 +26,7 @@ function TooltipProvider({ children }: { children: ReactNode }) {
   );
 }
 
-type TooltipSide = "top" | "right" | "bottom" | "left";
-
-const SLIDE: Record<TooltipSide, { x?: number; y?: number }> = {
-  top: { y: 4 },
-  bottom: { y: -4 },
-  left: { x: 4 },
-  right: { x: -4 },
-};
-
-/** Tooltip names an icon button on hover and keyboard focus, sliding in on the fast spring. */
+/** Tooltip names an icon button on hover and keyboard focus, flipping to the other side near a screen edge. */
 function Tooltip({
   content,
   children,
@@ -49,41 +35,26 @@ function Tooltip({
 }: {
   content: ReactNode;
   children: ReactElement;
-  side?: TooltipSide;
+  side?: "top" | "right" | "bottom" | "left";
   sideOffset?: number;
 }) {
-  const [open, setOpen] = useState(false);
-  const { mounted, onExitComplete } = usePresence(open, spring.fast);
-  const grouped = useContext(TooltipGroupContext);
-
   const tooltip = (
-    <TooltipPrimitive.Root onOpenChange={setOpen} open={open}>
+    <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
-      {mounted ? (
-        <TooltipPrimitive.Portal forceMount>
-          <TooltipPrimitive.Content
-            className="z-100"
-            forceMount
-            side={side}
-            sideOffset={sideOffset}
-          >
-            <motion.div
-              animate={{ opacity: open ? 1 : 0, x: 0, y: 0 }}
-              className="max-w-64 rounded-control bg-ink px-2 py-1 font-ui text-label text-field"
-              initial={{ opacity: 0, ...SLIDE[side] }}
-              onAnimationComplete={onExitComplete}
-              style={{ fontVariationSettings: fontWeights.medium }}
-              transition={open ? spring.fast : spring.fast.exit}
-            >
-              {content}
-            </motion.div>
-          </TooltipPrimitive.Content>
-        </TooltipPrimitive.Portal>
-      ) : null}
+      <TooltipPrimitive.Portal>
+        <TooltipPrimitive.Content
+          className="z-100 max-w-64 animate-pop rounded-chip bg-ink px-2 py-1 font-ui text-label font-medium text-field data-[state=closed]:animate-leave"
+          collisionPadding={8}
+          side={side}
+          sideOffset={sideOffset}
+        >
+          {content}
+        </TooltipPrimitive.Content>
+      </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>
   );
 
-  if (grouped) return tooltip;
+  if (useContext(TooltipGroupContext)) return tooltip;
   return (
     <TooltipPrimitive.Provider delayDuration={DEFAULT_DELAY}>
       {tooltip}
