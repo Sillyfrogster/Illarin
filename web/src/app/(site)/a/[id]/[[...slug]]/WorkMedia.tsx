@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -15,7 +14,6 @@ import {
   readWorkReveal,
   writeWorkReveal,
 } from "@/lib/nsfw-preference";
-import { spring } from "@/lib/springs";
 import { CoverControl } from "./CoverControl";
 
 interface WorkMediaProps {
@@ -51,7 +49,6 @@ export function WorkMedia({
   writing,
 }: WorkMediaProps) {
   const { account } = useAuth();
-  const reduced = useReducedMotion();
   const presentationMedia = coverMedia(media);
   const recorded = presentationMedia.findIndex((image) => image.isCover);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -87,31 +84,26 @@ export function WorkMedia({
     : "";
 
   return (
-    <div className="mx-auto w-full max-w-[350px]">
-      <motion.div
-        className="relative"
-        initial={false}
-        transition={spring.slow}
-        whileHover={reduced || useFallback ? undefined : { rotate: -1, y: -5 }}
-      >
+    <div className="w-full">
+      <div className="relative">
         {useFallback ? (
-          <div className="relative aspect-3/4 w-full overflow-hidden rounded-plate shadow-cover">
+          <div className="relative aspect-3/4 w-full overflow-hidden rounded-art">
             <DefaultCover type={type} />
           </div>
         ) : (
           <ImageZoom
             alt={name}
-            className="rounded-plate"
+            className="rounded-art"
             detailSrc={source}
             revealOnHover
           >
             <Image
               alt={name}
-              className="h-auto w-full rounded-plate bg-media shadow-cover"
+              className="h-auto w-full rounded-art bg-media"
               height={shown.height}
               onError={() => setFailed(true)}
               priority
-              sizes="(max-width: 900px) 88vw, 350px"
+              sizes="(max-width: 767px) 88vw, 520px"
               src={source}
               unoptimized
               width={shown.width}
@@ -140,17 +132,17 @@ export function WorkMedia({
             Show images
           </Button>
         ) : null}
-      </motion.div>
+      </div>
 
       {presentationMedia.length > 1 ? (
-        <ul className="mt-3 grid list-none grid-cols-5 gap-2">
+        <ul className="mt-2 grid list-none grid-cols-5 gap-1.5">
           {presentationMedia.map((image, index) => (
             <li key={image.id}>
               <button
                 aria-current={index === here}
                 aria-label={`Image ${index + 1} of ${presentationMedia.length}`}
                 className={cn(
-                  "block aspect-square w-full overflow-hidden rounded-control bg-media outline-offset-3 transition-transform duration-160 motion-reduce:transition-none",
+                  "block aspect-square w-full overflow-hidden rounded-chip bg-media outline-offset-3 transition-transform duration-160 motion-reduce:transition-none",
                   index === here
                     ? "inset-ring-2 inset-ring-accent"
                     : "opacity-70 hover:-translate-y-0.5 hover:opacity-100",

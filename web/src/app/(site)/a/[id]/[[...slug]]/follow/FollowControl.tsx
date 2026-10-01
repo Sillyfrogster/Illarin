@@ -7,12 +7,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 import { followWords } from "@/lib/work-follow";
 import { useWorkFollowing } from "./state";
 
-/** The small bell beside the download button that shows and changes whether the reader follows the work. */
+/** The Follow button beside the download button, which shows and changes whether the reader follows the work. */
 export function FollowControl() {
   const following = useWorkFollowing();
   if (!following) return null;
@@ -26,21 +25,15 @@ export function FollowControl() {
 
   return (
     <Popover>
-      <Tooltip content={words.name}>
-        <PopoverTrigger asChild>
-          <Button
-            aria-label={words.name}
-            className={cn(
-              words.following &&
-                "bg-accent-wash text-accent hover:bg-accent-wash/70 hover:text-accent",
-            )}
-            size="icon"
-            variant="ghost"
-          >
-            <Icon aria-hidden="true" />
-          </Button>
-        </PopoverTrigger>
-      </Tooltip>
+      <PopoverTrigger asChild>
+        <Button
+          aria-label={words.name}
+          className={cn(words.following && "text-accent hover:text-accent")}
+        >
+          <Icon aria-hidden="true" />
+          {words.following ? "Following" : "Follow"}
+        </Button>
+      </PopoverTrigger>
       <PopoverContent
         align="start"
         aria-label={`Updates to this ${following.typeName}`}

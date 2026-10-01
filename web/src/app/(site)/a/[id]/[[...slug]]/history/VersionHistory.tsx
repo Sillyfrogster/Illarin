@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft, History, X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,40 +15,32 @@ import {
 } from "@/components/ui/dialog";
 import { SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchWorkUpdates,
-  type RecordedVersion,
-  type WorkDetail,
-} from "@/lib/api/query";
-import { cn, focusRing } from "@/lib/cn";
+import type { WorkDetail } from "@/lib/api/query";
 import { PHONE_WIDTH, useMediaQuery } from "@/lib/use-media-query";
-import { versionTag } from "@/lib/version-label";
 import { workHref } from "@/lib/work-url";
-import { versionDate, versionSummary, versionTitle } from "@/lib/work-versions";
+import { useCardStage, type Versions } from "../card/stage";
 import { type HistoryOwner, VersionDetail } from "./VersionDetail";
 import { VersionDownload } from "./VersionDownload";
 import { VersionList } from "./VersionList";
 
 const HISTORY_QUERY = "history";
 
-type Versions =
-  | { state: "unread" }
-  | { state: "reading" }
-  | { state: "read"; versions: RecordedVersion[] }
-  | { state: "refused" };
-
 function versionInAddress(): number | null {
   const found = /^#version-(\d+)$/.exec(window.location.hash);
   return found ? Number(found[1]) : null;
 }
 
-/** Opens the latest version into the full version history. */
+/** VersionHistory opens the full version history from its trigger, starting at the version the reader is on. */
 export function VersionHistory({
+  children,
+  focus,
   work,
   download,
   typeName,
   typeLabel,
 }: {
+  children: ReactNode;
+  focus: number | null;
   work: WorkDetail;
   download: ReactNode;
   typeName: string;
@@ -56,18 +48,10 @@ export function VersionHistory({
 }) {
   const router = useRouter();
   const phone = useMediaQuery(PHONE_WIDTH);
+  const { versions, readVersions: read } = useCardStage();
   const latest = work.latestVersion;
   const [open, setOpen] = useState(false);
   const [chosen, setChosen] = useState<number | null>(null);
-  const [versions, setVersions] = useState<Versions>({ state: "unread" });
-
-  const read = useCallback(async () => {
-    setVersions({ state: "reading" });
-    const items = await fetchWorkUpdates(work.id);
-    setVersions(
-      items ? { state: "read", versions: items } : { state: "refused" },
-    );
-  }, [work.id]);
 
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has(HISTORY_QUERY)) return;
@@ -75,13 +59,12 @@ export function VersionHistory({
     setOpen(true);
   }, []);
 
-  useEffect(() => {
-    if (open && versions.state === "unread") void read();
-  }, [open, read, versions.state]);
-
   function change(next: boolean) {
     setOpen(next);
-    if (next) return;
+    if (next) {
+      setChosen(focus);
+      return;
+    }
     setChosen(null);
     if (new URLSearchParams(window.location.search).has(HISTORY_QUERY)) {
       router.replace(workHref(work.id, work.name), { scroll: false });
@@ -105,34 +88,7 @@ export function VersionHistory({
 
   return (
     <Dialog onOpenChange={change} open={open}>
-      <DialogTrigger asChild>
-        <button
-          className={cn(
-            "group mt-8 flex w-full max-w-[42ch] cursor-pointer items-center gap-4 rounded-plate bg-inset py-4 pr-4 pl-5 text-left transition-colors duration-80 hover:bg-deep",
-            focusRing,
-          )}
-          type="button"
-        >
-          <span className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-ui text-meta text-mute">
-              <span className="font-medium text-ink">
-                {versionTitle(latest)}
-              </span>
-              <time dateTime={latest.recordedAt}>{versionDate(latest)}</time>
-              {latest.versionLabel ? (
-                <span>{versionTag(latest.versionLabel)}</span>
-              ) : null}
-            </span>
-            <span className="line-clamp-2 font-ui text-meta text-mute">
-              {versionSummary(latest, typeName)}
-            </span>
-          </span>
-          <span className="grid size-control shrink-0 place-items-center rounded-control text-accent transition-colors duration-80 group-hover:bg-accent-wash">
-            <History aria-hidden="true" className="size-5" />
-            <span className="sr-only">Open the version history</span>
-          </span>
-        </button>
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
 
       <Panel phone={phone}>
         <header className="flex items-center gap-4 border-b border-rule px-4 py-3 sm:px-6">

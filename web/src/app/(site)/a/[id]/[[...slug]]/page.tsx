@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { shellClasses } from "@/components/layout/Shell";
 import {
+  fetchProfile,
   fetchWork,
   fetchWorkConnectedApps,
   type WorkDetail,
@@ -51,9 +52,11 @@ export default async function WorkPage({
     : published;
   if (!work) notFound();
 
-  const connectedApps = canSendWork(work)
-    ? await fetchWorkConnectedApps(work.id, (await cookies()).toString())
-    : [];
+  const cookie = (await cookies()).toString();
+  const [connectedApps, creator] = await Promise.all([
+    canSendWork(work) ? fetchWorkConnectedApps(work.id, cookie) : [],
+    fetchProfile(work.creator, cookie),
+  ]);
   const typeLabel = TYPE_LABELS[work.type];
   const isDraft = work.lifecycle === "draft";
   const sharedDate = new Date(work.createdAt).toLocaleDateString("en-US", {
@@ -94,6 +97,7 @@ export default async function WorkPage({
                 <article>
                   <WorkHeader
                     connectedApps={connectedApps}
+                    creator={creator}
                     work={work}
                     typeLabel={typeLabel}
                     sharedDate={sharedDate}
