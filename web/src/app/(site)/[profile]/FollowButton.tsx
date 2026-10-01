@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { followCreator, stopFollowingCreator } from "@/lib/api/profile";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 
 /** Follow collapses into a circle while it saves, shows a check, and settles as Following. */
 export function FollowButton({
@@ -72,7 +72,7 @@ export function FollowButton({
         disabled={account === undefined}
         initial={false}
         onClick={change}
-        transition={still ? { duration: 0 } : spring.moderate}
+        transition={still ? { duration: 0 } : timing.quick}
         type="button"
       >
         <AnimatePresence initial={false} mode="popLayout">

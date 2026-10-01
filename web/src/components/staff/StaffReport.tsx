@@ -54,10 +54,10 @@ export function StaffReport() {
 function ReportSkeleton() {
   return (
     <div aria-hidden="true" className="flex flex-col gap-3">
-      <Skeleton className="h-[19rem] rounded-plate" />
+      <Skeleton className="h-[19rem] rounded-card" />
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <Skeleton className="h-72 rounded-plate" />
-        <Skeleton className="h-72 rounded-plate" />
+        <Skeleton className="h-72 rounded-card" />
+        <Skeleton className="h-72 rounded-card" />
       </div>
     </div>
   );

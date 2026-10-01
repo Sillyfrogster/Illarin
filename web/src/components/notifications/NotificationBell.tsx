@@ -18,7 +18,7 @@ import {
 } from "@/lib/api/notifications";
 import { useAuth } from "@/lib/auth";
 import { unreadBadge, unreadLabel } from "@/lib/notification-inbox";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import {
   NotificationEntry,
   NotificationEntrySkeleton,
@@ -55,7 +55,7 @@ export function NotificationBell() {
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.5, opacity: 0 }}
-                transition={spring.fast}
+                transition={timing.quick}
                 className="absolute top-1.5 right-1 grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-action px-1 text-label leading-none font-semibold text-on-accent tabular-nums ring-2 ring-plane"
               >
                 {badge}

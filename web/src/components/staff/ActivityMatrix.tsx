@@ -85,7 +85,7 @@ export function ActivityMatrix({
         </CardAction>
       </CardHeader>
 
-      <div className="flex flex-col gap-4 px-4 pt-4 lg:flex-row lg:gap-6">
+      <div className="flex flex-col gap-4 px-5 pt-4 lg:flex-row lg:gap-6">
         <DayReadout day={days[shown]} series={series} shown={shown} />
         <div className="min-w-0 flex-1">
           <Scroller>
@@ -182,7 +182,7 @@ function DayReadout({
   return (
     <div className="shrink-0 lg:w-[13rem]">
       <p className="font-ui text-meta text-mute">{weekday(day)}</p>
-      <p className="font-display text-[1.5rem] leading-tight font-medium tracking-[-0.03em] text-ink">
+      <p className="font-display text-name-m font-medium tracking-[-0.03em] text-ink">
         {reportDate(day, true)}
       </p>
       <dl

@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { RichText } from "@/components/ui/RichText";
 import type { ShelfPiece } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import { sectionName } from "./ShelfPiece";
 import { useShelf } from "./shelf";
 import { useWorkspace } from "./state";
@@ -39,7 +39,7 @@ export function GhostBlock({ piece }: { piece: ShelfPiece }) {
       className="relative flex min-h-40 flex-col gap-3 overflow-hidden rounded-plate border-2 border-accent/70 border-dashed bg-accent-wash/40 px-6 py-5"
       data-shelf-ghost
       initial={still ? false : { opacity: 0, scale: 0.97, filter: "blur(4px)" }}
-      transition={spring.moderate}
+      transition={timing.quick}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="font-display text-title font-medium tracking-tight text-ink wrap-anywhere">

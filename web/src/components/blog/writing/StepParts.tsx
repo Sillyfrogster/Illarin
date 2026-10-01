@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { RadioGroup } from "@/components/ui/radio-group";
-import { ShinyButton } from "@/components/ui/shiny-button";
 import type { PostRevision } from "@/lib/api/query";
 import { readableMoment } from "@/lib/dates";
 import { revisionWords } from "@/lib/post-history";
@@ -28,20 +27,9 @@ export function Commit({
   busy: boolean;
   onCommit: () => void;
   ready: boolean;
-  tone?: "stop" | "publish";
+  tone?: "stop";
   word: string;
 }) {
-  if (tone === "publish")
-    return (
-      <ShinyButton
-        className="self-start"
-        disabled={!ready}
-        loading={busy}
-        onClick={onCommit}
-      >
-        {word}
-      </ShinyButton>
-    );
   return (
     <Button
       className="self-start"

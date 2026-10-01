@@ -10,7 +10,7 @@ import { RadioGroup } from "@/components/ui/radio-group";
 import { type BrowseType, startWork } from "@/lib/api/query";
 import type { BuildChoice, BuildChoices } from "@/lib/api/shapes";
 import { useAuth } from "@/lib/auth";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
 import { DraftPreview } from "./DraftPreview";
@@ -98,11 +98,11 @@ function Builder({ choices }: { choices: BuildChoice[] }) {
       <AnimatePresence initial={false} mode="wait">
         <motion.div
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6, transition: spring.moderate.exit }}
+          exit={{ opacity: 0, y: -6, transition: timing.quick }}
           className="min-w-0 max-lg:order-3"
           initial={{ opacity: 0, y: 10 }}
           key={chosen.type}
-          transition={spring.moderate}
+          transition={timing.quick}
         >
           {draft ? <DraftPreview blocks={draft.blocks} type={type} /> : null}
         </motion.div>

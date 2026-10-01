@@ -3,11 +3,10 @@
 import { motion, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { NumberTicker } from "@/components/ui/number-ticker";
-import { ShinyButton } from "@/components/ui/shiny-button";
+import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn, focusRing } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 
 export type DockState =
   | "failed"
@@ -95,7 +94,7 @@ export function DockTool({
                 : "absolute -top-1 -right-1",
             )}
           >
-            <NumberTicker value={count} />
+            {count}
           </span>
         ) : null}
       </button>
@@ -116,9 +115,9 @@ export function DockAction({
 }) {
   if (strong)
     return (
-      <ShinyButton disabled={disabled} onClick={onClick}>
+      <Button disabled={disabled} onClick={onClick} variant="primary">
         {children}
-      </ShinyButton>
+      </Button>
     );
   return (
     <button
@@ -169,7 +168,7 @@ export function Dock({
               : { opacity: 0, y: 96 }
         }
         layoutId={reduced ? undefined : layoutId}
-        transition={reduced ? { duration: 0 } : spring.slow}
+        transition={reduced ? { duration: 0 } : timing.settle}
       >
         <div
           aria-live="polite"

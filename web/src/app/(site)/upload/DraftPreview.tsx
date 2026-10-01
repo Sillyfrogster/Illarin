@@ -13,8 +13,8 @@ import type {
 } from "@/lib/api/shapes";
 import { cn } from "@/lib/cn";
 import { nameSlot } from "@/lib/preset-slots";
-import { spring } from "@/lib/springs";
 import { themeColorName } from "@/lib/theme-colors";
+import { timing } from "@/lib/timing";
 import { TYPE_LABELS } from "@/lib/work-types";
 
 const SPANS: Record<string, string> = {
@@ -80,7 +80,7 @@ export function DraftPreview({
             className={cn("min-w-0", SPANS[block.width] ?? "col-span-12")}
             initial={{ opacity: 0, y: 10 }}
             key={block.id}
-            transition={{ ...spring.slow, delay: 0.06 * index }}
+            transition={{ ...timing.settle, delay: 0.06 * index }}
           >
             <h4 className="font-display text-ui font-medium text-ink">
               {block.title}
@@ -183,7 +183,7 @@ function Items({
             initial={still ? false : { opacity: 0, x: -8 }}
             key={`${index}-${name}`}
             layout={!still}
-            transition={spring.slow}
+            transition={timing.settle}
           >
             {shape === "color" ? (
               <span className="size-3 shrink-0 rounded-full bg-[repeating-linear-gradient(45deg,var(--v-rule)_0_2px,transparent_2px_4px)] ring-1 ring-rule" />

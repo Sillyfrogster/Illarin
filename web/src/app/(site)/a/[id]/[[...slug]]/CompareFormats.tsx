@@ -117,7 +117,7 @@ function ComparisonTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow index={0}>
+        <TableRow>
           <TableHead className={ROW_HEAD} scope="row">
             Read by
           </TableHead>
@@ -128,7 +128,7 @@ function ComparisonTable({
           ))}
         </TableRow>
         {keepsUpload ? (
-          <TableRow index={1}>
+          <TableRow>
             <TableHead className={ROW_HEAD} scope="row">
               File
             </TableHead>
@@ -146,7 +146,7 @@ function ComparisonTable({
             formats.map((column) => column.fields[row]),
           );
           return (
-            <TableRow index={row + (keepsUpload ? 2 : 1)} key={field.field}>
+            <TableRow key={field.field}>
               <TableHead className={ROW_HEAD} scope="row">
                 {field.label}
                 {shared ? (

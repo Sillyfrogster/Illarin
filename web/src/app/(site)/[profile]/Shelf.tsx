@@ -26,7 +26,7 @@ import {
 import { buildBrowseHref } from "@/lib/browse-url";
 import { cn, focusRing } from "@/lib/cn";
 import { FEATURED_LIMIT } from "@/lib/profile-portfolio";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_PLURALS, WORK_TYPES } from "@/lib/work-types";
 
@@ -368,7 +368,7 @@ function PinToggle({ pinning, work }: { pinning: Pinning; work: BrowseWork }) {
           className="flex"
           initial={still ? false : { scale: 0.5, rotate: pinned ? -30 : 30 }}
           key={pinned ? "pinned" : "loose"}
-          transition={spring.slow}
+          transition={timing.settle}
         >
           <Pin
             aria-hidden="true"

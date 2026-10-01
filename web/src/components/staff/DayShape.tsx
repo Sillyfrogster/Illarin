@@ -39,7 +39,7 @@ export function DayShape({ report }: { report: Report }) {
       <dl className="flex flex-col pt-2">
         {lines.map((line) => (
           <div
-            className="flex items-baseline justify-between gap-4 border-b border-rule/70 px-4 py-3 last:border-b-0"
+            className="flex items-baseline justify-between gap-4 border-b border-rule/70 px-5 py-3 last:border-b-0"
             key={line.label}
           >
             <dt className="font-ui text-meta text-mute">{line.label}</dt>

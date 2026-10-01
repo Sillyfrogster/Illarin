@@ -158,7 +158,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                 New releases become extension versions
               </CardDescription>
             </CardHeader>
-            <div className="grid gap-8 px-4 pt-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10">
+            <div className="grid gap-8 px-5 pt-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10">
               <ReleaseChoiceFields
                 choice={choice}
                 hint="You need to prove the repository is yours before Illarin imports its releases."
@@ -193,7 +193,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                 {source.verified ? "Connected" : "Waiting for proof"}
               </CardAction>
             </CardHeader>
-            <div className="flex flex-col gap-5 px-4 pt-4">
+            <div className="flex flex-col gap-5 px-5 pt-4">
               <a
                 className="group flex w-fit max-w-full items-start gap-2 text-section font-medium text-ink hover:text-accent"
                 href={`https://github.com/${source.repository}`}
@@ -264,7 +264,7 @@ export function GitHubReleases({ workId }: { workId: string }) {
                   : "One file in your repository"}
               </CardDescription>
             </CardHeader>
-            <div className="px-4 pt-4">
+            <div className="px-5 pt-4">
               {!source.verified ? (
                 <div className="flex flex-col gap-4">
                   <p className="text-ui text-ink">
@@ -286,11 +286,11 @@ export function GitHubReleases({ workId }: { workId: string }) {
               ) : source.imports.length > 0 ? (
                 <ItemGroup
                   as="ol"
-                  className="-mx-4 rounded-none bg-transparent"
+                  className="-mx-5 rounded-none bg-transparent"
                 >
                   {source.imports.map((item) => (
                     <Item
-                      className="flex-row flex-wrap items-start justify-between gap-3"
+                      className="flex-row flex-wrap items-start justify-between gap-3 px-5"
                       key={item.id}
                     >
                       <div className="min-w-0">

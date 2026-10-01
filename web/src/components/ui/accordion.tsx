@@ -17,7 +17,7 @@ function AccordionItem({
   );
 }
 
-/** AccordionTrigger is Fluid Functionalism's accordion row: the whole row presses, the chevron turns and the title firms up while open. */
+/** AccordionTrigger is the whole row: it lights grey under the pointer and its chevron turns while open. */
 function AccordionTrigger({
   children,
   trailing,
@@ -30,7 +30,7 @@ function AccordionTrigger({
     <AccordionPrimitive.Header className="flex font-normal">
       <AccordionPrimitive.Trigger
         className={cn(
-          "group/accordion -mx-3 flex min-h-control w-[calc(100%+1.5rem)] min-w-0 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 rounded-control px-3 py-1.5 text-left font-ui text-ui text-ink transition-colors duration-80 hover:bg-hover",
+          "group/accordion -mx-3 flex min-h-control w-[calc(100%+1.5rem)] min-w-0 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 rounded-control px-3 py-1.5 text-left font-ui text-ui text-ink transition-colors duration-80 hover:bg-fill",
           focusRing,
           className,
         )}
@@ -41,9 +41,7 @@ function AccordionTrigger({
             aria-hidden="true"
             className="size-4 shrink-0 text-mute transition-transform duration-80 group-hover/accordion:text-ink group-data-[state=open]/accordion:rotate-90 motion-reduce:transition-none"
           />
-          <span className="[font-variation-settings:'wght'_400] transition-[font-variation-settings] duration-80 group-data-[state=open]/accordion:[font-variation-settings:'wght'_600]">
-            {children}
-          </span>
+          <span>{children}</span>
         </span>
         {trailing ? (
           <span className="font-ui text-meta text-mute">{trailing}</span>

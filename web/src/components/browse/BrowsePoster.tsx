@@ -9,8 +9,8 @@ import { Badge, BadgeLink } from "@/components/ui/badge";
 import type { BrowseWork, NsfwPreference } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { posterFace, type TypeSetting, typeSetting } from "@/lib/poster-face";
-import { spring } from "@/lib/springs";
 import { tagSearchHref } from "@/lib/tag-search";
+import { timing } from "@/lib/timing";
 import { workCounts } from "@/lib/work-counts";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_LABELS } from "@/lib/work-types";
@@ -89,7 +89,7 @@ export function BrowsePoster({
           initial: { opacity: 0, scale: 0.92 },
           animate: { opacity: 1, scale: 1 },
           exit: { opacity: 0, scale: 0.92 },
-          transition: spring.slow,
+          transition: timing.settle,
         }
       : {};
   return (

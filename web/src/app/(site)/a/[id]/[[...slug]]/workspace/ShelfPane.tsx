@@ -10,9 +10,8 @@ import { FilePlus2, FileText, Layers, Package, Rows3 } from "lucide-react";
 import { type DragEvent, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import { NumberTicker } from "@/components/ui/number-ticker";
 import { cn } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import { PictureTile, SectionRow } from "./ShelfPiece";
 import { type ShownImport, useShelf } from "./shelf";
 import { importCounts, importLabel } from "./shelf-places";
@@ -136,7 +135,7 @@ function AddMarkdown({
       void read(event.dataTransfer.files[0]);
     },
   };
-  const morph = still ? { duration: 0 } : spring.moderate;
+  const morph = still ? { duration: 0 } : timing.quick;
 
   return (
     <div className="flex flex-col gap-3">
@@ -157,7 +156,7 @@ function AddMarkdown({
               animate={{ opacity: 1 }}
               className="flex flex-col gap-3"
               initial={{ opacity: 0 }}
-              transition={{ ...spring.moderate, delay: still ? 0 : 0.08 }}
+              transition={{ ...timing.quick, delay: still ? 0 : 0.08 }}
             >
               <label className="sr-only" htmlFor={field}>
                 Markdown
@@ -325,7 +324,7 @@ function Progress({ held }: { held: ShownImport }) {
               animate={{ scaleX: piece.id in held.placed ? 1 : 0 }}
               className="absolute inset-0 origin-left rounded-full bg-action"
               initial={false}
-              transition={spring.slow}
+              transition={timing.settle}
             />
             {shelf.busy === piece.id || shelf.busy === held.id ? (
               <span className="absolute inset-0 animate-pulse bg-accent/60 motion-reduce:animate-none" />
@@ -334,10 +333,8 @@ function Progress({ held }: { held: ShownImport }) {
         ))}
       </div>
       <p className="text-label text-mute">
-        <span className="font-medium text-ink">
-          <NumberTicker value={done} />
-        </span>{" "}
-        of {held.pieces.length} placed
+        <span className="font-medium text-ink tabular-nums">{done}</span> of{" "}
+        {held.pieces.length} placed
       </p>
     </motion.div>
   );
@@ -366,7 +363,7 @@ function ImportCard({ held }: { held: ShownImport }) {
       <motion.header
         className="flex flex-col gap-4"
         layoutId={still ? undefined : `import-${held.id}`}
-        transition={spring.moderate}
+        transition={timing.quick}
       >
         <ImportHead held={held} />
         <Progress held={held} />
@@ -524,7 +521,7 @@ function OlderImports({ imports }: { imports: ShownImport[] }) {
           key={held.id}
           layoutId={still ? undefined : `import-${held.id}`}
           style={{ zIndex: STACKED - index, originY: 1 }}
-          transition={spring.moderate}
+          transition={timing.quick}
         >
           {index === 0 ? (
             <>

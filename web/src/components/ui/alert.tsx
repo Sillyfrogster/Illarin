@@ -16,7 +16,7 @@ const alertVariants = cva(
   },
 );
 
-/** Alert is shadcn's notice on a page: a failure is announced at once, a finished step politely. */
+/** Alert is a notice on a page: a failure is announced at once, a finished step politely. */
 export function Alert({
   className,
   tone,

@@ -104,7 +104,6 @@ export function PublishStep({
         busy={busy}
         onCommit={() => void commit()}
         ready={ready}
-        tone={door === "later" ? undefined : "publish"}
         word={
           door === "later" ? "Schedule" : live ? "Publish changes" : "Publish"
         }

@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 
 export function WorkspaceRail({
   children,
@@ -41,7 +41,7 @@ export function WorkspaceRail({
       )}
       exit={reduced ? { opacity: 0 } : { x: "100%" }}
       initial={reduced ? { opacity: 0 } : { x: "100%" }}
-      transition={spring.slow}
+      transition={timing.settle}
     >
       <div className="flex items-start justify-between gap-4 px-6 pt-7 pb-4 md:px-8">
         <div className="min-w-0">

@@ -3,28 +3,19 @@
 import { PanelLeft } from "lucide-react";
 import Link from "next/link";
 import {
-  Children,
   type ComponentProps,
   createContext,
-  isValidElement,
   type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
-import { FluidHoverHighlight } from "@/components/ui/fluid-hover-highlight";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
-import { fontWeights } from "@/lib/font-weight";
-import {
-  useFluidHover,
-  useRegisterFluidHoverItem,
-} from "@/lib/use-fluid-hover";
 
 const PHONE_WIDTH = 768;
 const REMEMBERED = "illarin.sidebar";
@@ -115,7 +106,7 @@ export function SidebarProvider({
   );
 }
 
-/** Sidebar is Fluid Functionalism's sidebar: a fixed column that slides fully away when closed, and a drawer on a phone. */
+/** Sidebar is a fixed column that slides fully away when closed, and a drawer on a phone. */
 export function Sidebar({
   children,
   label,
@@ -206,11 +197,7 @@ export function SidebarFooter({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-const GroupContext = createContext<
-  ((index: number, element: HTMLElement | null) => void) | undefined
->(undefined);
-
-/** SidebarGroup names a run of items; the hover plate follows the pointer between them. */
+/** SidebarGroup names a run of items. */
 export function SidebarGroup({
   label,
   children,
@@ -218,39 +205,15 @@ export function SidebarGroup({
   label: string;
   children: ReactNode;
 }) {
-  const list = useRef<HTMLUListElement>(null);
-  const hover = useFluidHover(list);
-  let index = 0;
-  const items = Children.map(children, (child) =>
-    isValidElement(child) ? (
-      <IndexContext value={index++}>{child}</IndexContext>
-    ) : (
-      child
-    ),
-  );
-
   return (
     <div className="px-3">
       <p className="px-2 pb-1 font-ui text-meta text-mute">{label}</p>
-      <GroupContext value={hover.registerItem}>
-        <ul
-          className="relative flex list-none flex-col"
-          onMouseEnter={hover.handlers.onMouseEnter}
-          onMouseLeave={hover.handlers.onMouseLeave}
-          onMouseMove={hover.handlers.onMouseMove}
-          ref={list}
-        >
-          <FluidHoverHighlight className="rounded-control" hover={hover} />
-          {items}
-        </ul>
-      </GroupContext>
+      <ul className="flex list-none flex-col">{children}</ul>
     </div>
   );
 }
 
-const IndexContext = createContext<number | undefined>(undefined);
-
-/** SidebarItem is one section: the current one sits on the violet wash in violet at the heavier weight. */
+/** SidebarItem is one section: grey under the pointer, violet on the violet wash while current. */
 export function SidebarItem({
   current = false,
   icon,
@@ -263,25 +226,16 @@ export function SidebarItem({
   icon: ReactNode;
   badge?: ReactNode;
 }) {
-  const row = useRef<HTMLLIElement>(null);
-  const index = useContext(IndexContext);
-  useRegisterFluidHoverItem(useContext(GroupContext), index, row);
-
   return (
-    <li className="relative z-10" data-fluid-hover-index={index} ref={row}>
+    <li>
       <Link
         aria-current={current ? "page" : undefined}
         className={cn(
-          "flex min-h-control w-full items-center gap-2.5 rounded-control px-2 font-ui text-ui whitespace-nowrap text-mute transition-colors duration-80 hover:text-ink",
+          "flex min-h-control w-full items-center gap-2.5 rounded-control px-2 font-ui text-ui whitespace-nowrap text-mute transition-colors duration-80 hover:bg-fill-hover hover:text-ink",
           "aria-[current=page]:bg-accent-wash aria-[current=page]:text-accent",
           "[&_svg]:size-4 [&_svg]:shrink-0",
           className,
         )}
-        style={{
-          fontVariationSettings: current
-            ? fontWeights.semibold
-            : fontWeights.normal,
-        }}
         {...props}
       >
         {icon}

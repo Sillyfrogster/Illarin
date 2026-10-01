@@ -9,7 +9,7 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { cn, navLink } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import { AccountMenu } from "./AccountMenu";
 import { BROWSE, isCurrentPage, PUBLISH } from "./destinations";
 import { HeaderSearch } from "./HeaderSearch";
@@ -54,7 +54,7 @@ export function SiteHeader() {
       initial={false}
       onFocusCapture={() => setHidden(false)}
       ref={header}
-      transition={spring.slow}
+      transition={timing.settle}
     >
       <div className={cn(shellClasses, ROW)}>
         <Link

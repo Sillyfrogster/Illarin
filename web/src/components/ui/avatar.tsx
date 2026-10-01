@@ -4,7 +4,7 @@ import * as AvatarPrimitive from "@radix-ui/react-avatar";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/** Avatar is shadcn's avatar on the site's rounded square: the picture once it loads, the fallback until then or if it fails. */
+/** Avatar is a rounded square: the picture once it loads, the fallback until then or if it fails. */
 function Avatar({
   className,
   ...props
@@ -12,7 +12,7 @@ function Avatar({
   return (
     <AvatarPrimitive.Root
       className={cn(
-        "relative flex size-9 shrink-0 overflow-hidden rounded-plate bg-deep select-none",
+        "relative flex size-9 shrink-0 overflow-hidden rounded-art bg-deep select-none",
         className,
       )}
       data-slot="avatar"

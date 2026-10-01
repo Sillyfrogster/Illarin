@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { cn } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 
 const STAGGER_MS = 70;
 
@@ -70,7 +70,7 @@ export function Arrive({
       layout={layout && !still ? "position" : false}
       ref={node}
       style={{ transitionDelay: `${place * STAGGER_MS}ms`, ...style }}
-      transition={spring.slow}
+      transition={timing.settle}
     >
       {children}
     </motion.div>

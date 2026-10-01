@@ -5,7 +5,7 @@ import { FileArchive, FileImage, FileJson } from "lucide-react";
 import { useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import { FromGitHub } from "./FromGitHub";
 
 const SHEETS = [
@@ -45,7 +45,7 @@ export function FannedSheets({
           )}
           initial={false}
           key={name}
-          transition={spring.slow}
+          transition={timing.settle}
         >
           <Icon
             className={cn(index === 1 ? "text-accent" : "text-mute")}

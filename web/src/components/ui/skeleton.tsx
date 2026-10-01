@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/** Skeleton is shadcn's placeholder for content whose shape is known while it loads. */
+/** Skeleton holds the place of content whose shape is known while it loads. */
 export function Skeleton({ className, ...props }: ComponentProps<"span">) {
   return (
     <span

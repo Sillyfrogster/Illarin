@@ -6,7 +6,7 @@ import Zoom from "react-medium-image-zoom";
 import { cn } from "@/lib/cn";
 
 const ZOOM_BUTTON =
-  "[&_[data-rmiz-btn-zoom]]:absolute [&_[data-rmiz-btn-zoom]]:right-3 [&_[data-rmiz-btn-zoom]]:bottom-3 [&_[data-rmiz-btn-zoom]]:flex [&_[data-rmiz-btn-zoom]]:size-control [&_[data-rmiz-btn-zoom]]:cursor-zoom-in [&_[data-rmiz-btn-zoom]]:items-center [&_[data-rmiz-btn-zoom]]:justify-center [&_[data-rmiz-btn-zoom]]:rounded-full [&_[data-rmiz-btn-zoom]]:border-0 [&_[data-rmiz-btn-zoom]]:bg-field [&_[data-rmiz-btn-zoom]]:p-0 [&_[data-rmiz-btn-zoom]]:text-ink [&_[data-rmiz-btn-zoom]]:shadow-cover [&_[data-rmiz-btn-zoom]]:outline-offset-3 [&_[data-rmiz-btn-zoom]]:transition-opacity [&_[data-rmiz-btn-zoom]]:duration-160 motion-reduce:[&_[data-rmiz-btn-zoom]]:transition-none";
+  "[&_[data-rmiz-btn-zoom]]:absolute [&_[data-rmiz-btn-zoom]]:right-3 [&_[data-rmiz-btn-zoom]]:bottom-3 [&_[data-rmiz-btn-zoom]]:flex [&_[data-rmiz-btn-zoom]]:size-control [&_[data-rmiz-btn-zoom]]:cursor-zoom-in [&_[data-rmiz-btn-zoom]]:items-center [&_[data-rmiz-btn-zoom]]:justify-center [&_[data-rmiz-btn-zoom]]:rounded-control [&_[data-rmiz-btn-zoom]]:border-0 [&_[data-rmiz-btn-zoom]]:bg-fill [&_[data-rmiz-btn-zoom]]:p-0 [&_[data-rmiz-btn-zoom]]:text-ink [&_[data-rmiz-btn-zoom]:hover]:bg-fill-hover [&_[data-rmiz-btn-zoom]]:outline-offset-3 [&_[data-rmiz-btn-zoom]]:transition-opacity [&_[data-rmiz-btn-zoom]]:duration-160 motion-reduce:[&_[data-rmiz-btn-zoom]]:transition-none";
 
 const ZOOM_BUTTON_REVEAL =
   "lg:[&_[data-rmiz-btn-zoom]]:opacity-0 lg:[&:hover_[data-rmiz-btn-zoom]]:opacity-100 lg:[&_[data-rmiz-btn-zoom]:focus-visible]:opacity-100";

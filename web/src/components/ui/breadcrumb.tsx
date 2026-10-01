@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/** Breadcrumb is shadcn's breadcrumb: the trail from a section down to the page you are on. */
+/** Breadcrumb is the trail from a section down to the page you are on. */
 function Breadcrumb(props: ComponentProps<"nav">) {
   return <nav aria-label="Breadcrumb" data-slot="breadcrumb" {...props} />;
 }

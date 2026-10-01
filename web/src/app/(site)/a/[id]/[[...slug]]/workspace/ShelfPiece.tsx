@@ -25,7 +25,7 @@ import {
 import { RichText } from "@/components/ui/RichText";
 import type { ShelfPiece } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import { useShelf } from "./shelf";
 import { placeChoices } from "./shelf-places";
 import { useWorkspace } from "./state";
@@ -68,7 +68,7 @@ export function SectionRow({
       className="relative grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-2"
       exit={{ opacity: 0, height: 0 }}
       layout={still ? false : "position"}
-      transition={spring.moderate}
+      transition={timing.quick}
     >
       <Spine done={placed} last={last} working={busy} />
       <div
@@ -151,7 +151,7 @@ export function SectionRow({
               exit={{ height: 0, opacity: 0 }}
               id={preview}
               initial={{ height: 0, opacity: 0 }}
-              transition={still ? { duration: 0 } : spring.moderate}
+              transition={still ? { duration: 0 } : timing.quick}
             >
               <div className="flex flex-col gap-3 px-3 pt-1 pb-3">
                 <RichText
@@ -193,7 +193,7 @@ function Spine({
             ? "bg-action text-on-accent"
             : "bg-plane inset-ring-2 inset-ring-edge",
         )}
-        transition={spring.slow}
+        transition={timing.settle}
       >
         {working ? (
           <LoaderCircle className="size-3 animate-spin text-accent motion-reduce:animate-none" />
@@ -213,7 +213,7 @@ export function LiftedSection({ piece }: { piece: ShelfPiece }) {
       animate={still ? {} : { scale: 1.04, rotate: -2 }}
       className="flex w-72 cursor-grabbing items-center gap-3 rounded-plate bg-plane py-3 pr-4 pl-3 shadow-popover inset-ring-2 inset-ring-accent"
       initial={still ? false : { scale: 1, rotate: 0 }}
-      transition={spring.moderate}
+      transition={timing.quick}
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-action text-on-accent">
         <Plus aria-hidden="true" className="size-4.5" />
@@ -338,7 +338,7 @@ export function PictureTile({
       className="w-28 shrink-0"
       exit={{ opacity: 0, scale: 0.9 }}
       layout={still ? false : "position"}
-      transition={spring.moderate}
+      transition={timing.quick}
     >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

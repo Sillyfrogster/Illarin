@@ -418,7 +418,7 @@ function Index({
               <button
                 aria-selected={selected}
                 className={cn(
-                  "group/row flex min-h-control w-full cursor-pointer items-baseline gap-2.5 rounded-control px-3 py-2.5 text-left transition-colors duration-80 hover:bg-hover aria-selected:bg-accent-wash",
+                  "group/row flex min-h-control w-full cursor-pointer items-baseline gap-2.5 rounded-control px-3 py-2.5 text-left transition-colors duration-80 hover:bg-fill-hover aria-selected:bg-accent-wash",
                   focusRing,
                   item.off && "opacity-60",
                 )}

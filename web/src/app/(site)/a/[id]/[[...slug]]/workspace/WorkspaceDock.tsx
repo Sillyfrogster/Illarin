@@ -26,7 +26,7 @@ import {
 } from "@/components/workspace/Dock";
 import type { WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import type { SaveState } from "./state";
 import { useWorkspace } from "./state";
 
@@ -191,7 +191,7 @@ export function EditToggle({ typeName }: { typeName: string }) {
         animate={{ opacity: 1, y: 0 }}
         layoutId={EDIT_CONTROL}
         onClick={workspace.startEditing}
-        transition={spring.slow}
+        transition={timing.settle}
         type="button"
       >
         <PencilLine aria-hidden="true" size={17} />

@@ -27,11 +27,7 @@ proxy: ## Run the local nginx proxy on port 8000
 web-install: ## Install the site's locked dependencies
 	cd web && bun install --frozen-lockfile
 
-.PHONY: web-ui-view web-ui-add
-web-ui-view: ## Show a registry component's source and dependencies; set COMPONENT
-	@test -n "$$COMPONENT" || { echo "Set COMPONENT, for example @diceui/timeline."; exit 1; }
+.PHONY: web-ui-view
+web-ui-view: ## Show a registry component's source to read for ideas; set COMPONENT to its JSON address
+	@test -n "$$COMPONENT" || { echo "Set COMPONENT, for example https://diceui.com/r/timeline.json."; exit 1; }
 	cd web && $(SHADCN) view "$$COMPONENT"
-
-web-ui-add: ## Add one component from a registry; set COMPONENT
-	@test -n "$$COMPONENT" || { echo "Set COMPONENT, for example @diceui/timeline."; exit 1; }
-	cd web && $(SHADCN) add "$$COMPONENT"

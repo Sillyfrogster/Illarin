@@ -1,12 +1,12 @@
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-/** Empty is shadcn's empty state: a centred title, a line of help and what to do next. */
+/** Empty is a page or panel with nothing in it: a centred title, a line of help and what to do next. */
 function Empty({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-plate p-6 text-center text-balance md:p-12",
+        "flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-card p-6 text-center text-balance md:p-12",
         className,
       )}
       data-slot="empty"
@@ -29,7 +29,7 @@ function EmptyMedia({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "mb-2 flex size-12 shrink-0 items-center justify-center rounded-plate bg-accent-wash text-accent [&_svg]:size-6 [&_svg]:shrink-0",
+        "mb-2 flex size-12 shrink-0 items-center justify-center rounded-art bg-accent-wash text-accent [&_svg]:size-6 [&_svg]:shrink-0",
         className,
       )}
       data-slot="empty-media"

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import type { BrowseType } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { fileWeight } from "@/lib/file-weight";
-import { spring } from "@/lib/springs";
+import { timing } from "@/lib/timing";
 import { TYPE_LABELS } from "@/lib/work-types";
 import type { ScanPart } from "./scan-file";
 
@@ -106,7 +106,7 @@ export function ScanView({
             animate={{ opacity: 1, y: 0 }}
             className="mt-2 flex items-center gap-2 text-lede text-ink wrap-anywhere"
             initial={{ opacity: 0, y: 6 }}
-            transition={spring.slow}
+            transition={timing.settle}
           >
             <TypeMark
               className="size-5 shrink-0 text-accent"
@@ -224,7 +224,7 @@ function PartList({
                 )}
                 initial={still ? false : { opacity: 0, x: -10 }}
                 key={part.id}
-                transition={spring.slow}
+                transition={timing.settle}
               >
                 <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[6px] bg-deep">
                   {part.picture ? (
@@ -321,7 +321,7 @@ function Viewer({
                 still ? false : { opacity: 0, x: 24, filter: "blur(6px)" }
               }
               key={part.id}
-              transition={spring.slow}
+              transition={timing.settle}
             >
               <PartFace part={part} pace={pace} still={Boolean(still)} />
             </motion.div>
@@ -361,7 +361,7 @@ function Viewer({
                 : "bg-stop text-on-stop",
             )}
             initial={still ? false : { scale: 0, opacity: 0 }}
-            transition={{ ...spring.slow, delay: 0.1 }}
+            transition={{ ...timing.settle, delay: 0.1 }}
           >
             {upload.at === "found" ? (
               <Check aria-hidden="true" size={20} strokeWidth={2.6} />
@@ -404,7 +404,7 @@ function PartFace({
             initial={still ? false : { opacity: 0, y: 4 }}
             // biome-ignore lint/suspicious/noArrayIndexKey: lines of one fixed part
             key={index}
-            transition={{ ...spring.moderate, delay: index * step }}
+            transition={{ ...timing.quick, delay: index * step }}
           >
             {line}
           </motion.p>

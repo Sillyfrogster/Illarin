@@ -26,14 +26,14 @@ export function TopWorks({ works }: { works: ReportWork[] }) {
         <CardDescription>Every format counted together</CardDescription>
       </CardHeader>
       {works.length === 0 ? (
-        <p className="px-4 py-8 font-ui text-meta text-mute">
+        <p className="px-5 py-8 font-ui text-meta text-mute">
           Nothing has been downloaded in the last 30 days.
         </p>
       ) : (
         <ol className="flex list-none flex-col pt-2">
           {works.map((work, index) => (
             <li
-              className="group relative flex items-center gap-3 border-b border-rule/70 px-4 py-2.5 last:border-b-0 hover:bg-inset/70"
+              className="group relative flex items-center gap-3 border-b border-rule/70 px-5 py-2.5 last:border-b-0 hover:bg-fill"
               key={work.id}
             >
               <span className="w-4 shrink-0 text-right font-ui text-label text-mute tabular-nums">
@@ -82,7 +82,7 @@ function Cover({ work }: { work: ReportWork }) {
     return (
       <Image
         alt=""
-        className="size-8 shrink-0 rounded-[5px] bg-inset object-cover"
+        className="size-8 shrink-0 rounded-chip bg-inset object-cover"
         height={64}
         src={work.cover}
         unoptimized
@@ -91,7 +91,7 @@ function Cover({ work }: { work: ReportWork }) {
     );
   }
   return (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-[5px] bg-deep">
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-chip bg-deep">
       <TypeMark className="size-4 text-accent" type={work.type as BrowseType} />
     </span>
   );

@@ -52,10 +52,9 @@ export function ReportTable({ report }: { report: Report }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {report.days.map((day, index) => (
+              {report.days.map((day) => (
                 <TableRow
                   className={isWeekend(day.day) ? "bg-inset/60" : ""}
-                  index={index}
                   key={day.day}
                 >
                   <TableHead
