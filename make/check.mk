@@ -72,6 +72,6 @@ production-proxy-check: ## Check the production nginx configuration
 		nginx:1.31.2-alpine3.23 nginx -t
 
 .PHONY: shots
-shots: ## Photograph one part of a page in every state; set URL and TARGET, SIGNED_IN=1 for a signed-in page, and CLICKS='a|b' to click through to the part first
+shots: ## Photograph one part of a page in every state and film its hover, press and open frame by frame; set URL and TARGET, SIGNED_IN=1 for a signed-in page, and CLICKS='a|b' to click through to the part first
 	@test -n "$$URL" && test -n "$$TARGET" || { echo "Set URL and TARGET, for example make shots URL=/settings TARGET='[role=radiogroup]'."; exit 1; }
 	.ai/tools/shots.ts "$$URL" "$$TARGET" $(if $(SIGNED_IN),--signed-in) $(if $(CLICKS),--clicks "$$CLICKS")
