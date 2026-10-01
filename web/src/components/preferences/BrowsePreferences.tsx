@@ -64,6 +64,7 @@ export function BrowsePreferences() {
     write: () => Promise<void>,
     what: string,
   ) {
+    if (pending) return;
     setPending(true);
     setStatus(undefined);
     setPicked(pick);
@@ -94,7 +95,6 @@ export function BrowsePreferences() {
         <div className="mt-3.5">
           <AppChoice
             apps={apps.data}
-            disabled={pending}
             name="settings-app"
             onChange={(next) =>
               void save(
@@ -114,7 +114,6 @@ export function BrowsePreferences() {
         </legend>
         <div className="mt-3">
           <AdultContentChoice
-            disabled={pending}
             name="settings-adult"
             onChange={(next: NsfwPreference) =>
               void save(
