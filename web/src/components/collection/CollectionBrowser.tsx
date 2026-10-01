@@ -312,7 +312,6 @@ function Controls({
           checked={includeOff}
           label={`Include the ${off} that ${off === 1 ? "is" : "are"} off`}
           onCheckedChange={onIncludeOff}
-          size="compact"
         />
       ) : null}
       {shown === total ? null : (

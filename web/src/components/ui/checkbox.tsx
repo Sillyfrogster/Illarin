@@ -1,13 +1,8 @@
 "use client";
 
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { motion } from "framer-motion";
-import { type ReactNode, useId, useMemo, useRef } from "react";
-import { FluidHoverHighlight } from "@/components/ui/fluid-hover-highlight";
-import { WeightLabel } from "@/components/ui/weight-label";
+import { type ReactNode, useId } from "react";
 import { cn, focusRing } from "@/lib/cn";
-import { spring } from "@/lib/springs";
-import { useFluidHover } from "@/lib/use-fluid-hover";
 
 type CheckboxProps = {
   checked: boolean;
@@ -21,7 +16,7 @@ type CheckboxProps = {
   ref?: React.Ref<HTMLButtonElement>;
 };
 
-/** Checkbox is the box alone: violet when ticked, with the tick drawn on the fast spring. */
+/** Checkbox is the box alone: a grey fill that turns violet with a white tick. */
 export function Checkbox({
   checked,
   onCheckedChange,
@@ -32,8 +27,9 @@ export function Checkbox({
       {...props}
       checked={checked}
       className={cn(
-        "peer grid size-4 shrink-0 cursor-pointer place-items-center rounded-[5px] border-[1.5px] border-edge transition-colors duration-80 hover:border-mute disabled:cursor-default disabled:opacity-50 aria-invalid:border-stop data-[state=checked]:border-action data-[state=checked]:bg-action",
+        "grid size-4 shrink-0 cursor-pointer place-items-center rounded-chip bg-off transition-colors duration-80 group-hover/row:bg-off-hover hover:bg-off-hover disabled:cursor-default disabled:opacity-50 aria-invalid:ring-1 aria-invalid:ring-stop data-[state=checked]:bg-action group-hover/row:data-[state=checked]:bg-action-hover",
         focusRing,
+        "focus-visible:ring-offset-1 focus-visible:ring-offset-field",
       )}
       onCheckedChange={(next: CheckboxPrimitive.CheckedState) =>
         onCheckedChange(next === true)
@@ -50,12 +46,7 @@ export function Checkbox({
           strokeWidth={2.5}
           viewBox="0 0 24 24"
         >
-          <motion.path
-            animate={{ pathLength: 1 }}
-            d="M5 12.5L10 17L19 7"
-            initial={{ pathLength: 0 }}
-            transition={spring.fast}
-          />
+          <path d="M5 12.5L10 17L19 7" />
         </svg>
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
@@ -66,28 +57,28 @@ type RowProps = {
   htmlFor: string;
   label: ReactNode;
   hint?: ReactNode;
-  checked?: boolean;
+  hintId?: string;
   className?: string;
   children: ReactNode;
 };
 
-function Row({ htmlFor, label, hint, checked, className, children }: RowProps) {
+function Row({ htmlFor, label, hint, hintId, className, children }: RowProps) {
   return (
     <label
       htmlFor={htmlFor}
       className={cn(
-        "relative z-10 flex min-h-control cursor-pointer items-start gap-2.5 py-[calc((var(--control)-1lh)/2)] font-ui text-ui text-ink has-disabled:cursor-default has-disabled:opacity-50",
+        "group/row flex min-h-control cursor-pointer items-start gap-2.5 py-[calc((var(--control)-1lh)/2)] font-ui text-ui text-ink has-disabled:cursor-default has-disabled:opacity-50",
         className,
       )}
     >
       <span className="flex h-lh shrink-0 items-center">{children}</span>
       <span className="grid min-w-0 gap-0.5">
-        {checked === undefined ? (
-          <span>{label}</span>
-        ) : (
-          <WeightLabel chosen={checked}>{label}</WeightLabel>
-        )}
-        {hint ? <span className="text-meta text-mute">{hint}</span> : null}
+        <span>{label}</span>
+        {hint ? (
+          <span className="text-meta text-mute" id={hintId}>
+            {hint}
+          </span>
+        ) : null}
       </span>
     </label>
   );
@@ -120,7 +111,7 @@ type CheckboxOption<T extends string> = {
   disabled?: boolean;
 };
 
-/** CheckboxGroup is Fluid Functionalism's checkbox group: several rows, any of them ticked, with a plate that follows the pointer. */
+/** CheckboxGroup is several checkbox rows, any of them ticked. */
 export function CheckboxGroup<T extends string>({
   options,
   value,
@@ -134,69 +125,34 @@ export function CheckboxGroup<T extends string>({
   disabled?: boolean;
   className?: string;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hover = useFluidHover(containerRef);
-  const { registerItem } = hover;
-  const count = options.length;
-  const itemRefs = useMemo(
-    () =>
-      Array.from(
-        { length: count },
-        (_, index) => (element: HTMLElement | null) =>
-          registerItem(index, element),
-      ),
-    [count, registerItem],
-  );
   const id = useId();
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: the pointer only moves the hover plate; each row is its own checkbox
-    <div
-      className={cn(
-        "relative -mx-3 grid w-[calc(100%+1.5rem)] max-w-[calc(28rem+1.5rem)] min-w-0",
-        className,
-      )}
-      onMouseEnter={hover.handlers.onMouseEnter}
-      onMouseLeave={hover.handlers.onMouseLeave}
-      onMouseMove={hover.handlers.onMouseMove}
-      ref={containerRef}
-    >
-      <FluidHoverHighlight className="rounded-control" hover={hover} />
+    <div className={cn("grid max-w-md min-w-0", className)}>
       {options.map((option, index) => {
         const checked = value.includes(option.value);
+        const hintId = option.hint ? `${id}-${index}-hint` : undefined;
         return (
-          <div
-            data-fluid-hover-index={index}
+          <Row
+            hint={option.hint}
+            hintId={hintId}
+            htmlFor={`${id}-${index}`}
             key={option.value}
-            ref={itemRefs[index]}
+            label={option.label}
           >
-            <Row
+            <Checkbox
+              aria-describedby={hintId}
               checked={checked}
-              className="px-3"
-              htmlFor={`${id}-${index}`}
-              hint={
-                option.hint ? (
-                  <span id={`${id}-${index}-hint`}>{option.hint}</span>
-                ) : undefined
+              disabled={disabled || option.disabled}
+              id={`${id}-${index}`}
+              onCheckedChange={(on) =>
+                onValueChange(
+                  on
+                    ? [...value, option.value]
+                    : value.filter((one) => one !== option.value),
+                )
               }
-              label={option.label}
-            >
-              <Checkbox
-                aria-describedby={
-                  option.hint ? `${id}-${index}-hint` : undefined
-                }
-                checked={checked}
-                disabled={disabled || option.disabled}
-                id={`${id}-${index}`}
-                onCheckedChange={(on) =>
-                  onValueChange(
-                    on
-                      ? [...value, option.value]
-                      : value.filter((one) => one !== option.value),
-                  )
-                }
-              />
-            </Row>
-          </div>
+            />
+          </Row>
         );
       })}
     </div>

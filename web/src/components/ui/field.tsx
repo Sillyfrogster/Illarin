@@ -28,7 +28,7 @@ export function useFieldControl(props: {
   };
 }
 
-/** Field is shadcn's field: a label, the control, an error and a hint, with the hint and error wired to the control for screen readers. */
+/** Field is a label, the control, an error and a hint, with the hint and error wired to the control for screen readers. */
 export function Field({
   children,
   className,
