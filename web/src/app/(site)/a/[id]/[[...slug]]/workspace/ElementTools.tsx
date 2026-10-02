@@ -6,7 +6,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import type { WorkBlock, WorkElement } from "@/lib/api/query";
 import { editsInTheRail } from "@/lib/page-arrangement";
 import { moveElement, removeElement } from "./composition";
-import { useWorkspace } from "./state";
+import { useWorkspaceActions } from "./state";
 
 export function ElementTools({
   block,
@@ -15,7 +15,7 @@ export function ElementTools({
   block: WorkBlock;
   element: WorkElement;
 }) {
-  const workspace = useWorkspace();
+  const workspace = useWorkspaceActions();
   const position = block.elements.findIndex((item) => item.id === element.id);
   const total = block.elements.length;
   const name = element.label || "this content";

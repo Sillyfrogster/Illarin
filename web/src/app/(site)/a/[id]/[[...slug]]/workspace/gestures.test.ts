@@ -59,12 +59,12 @@ describe("dropPosition", () => {
 
   test("lands after everything below the last row", () => {
     expect(dropPosition(rest, { x: 100, y: 1200 })).toBe(3);
-    expect(dropPosition(rest, { x: 800, y: 600 })).toBe(3);
+    expect(dropPosition(rest, { x: 800, y: 900 })).toBe(3);
   });
 
-  test("counts the pointer as in a row from just above its top, where a block's handle sits", () => {
-    expect(dropPosition(rest, { x: 900, y: 480 }, 40)).toBe(3);
-    expect(dropPosition(rest, { x: 100, y: 480 }, 40)).toBe(2);
+  test("passes a block alone in its row once the pointer is below its middle, wherever it is across", () => {
+    expect(dropPosition(rest, { x: 100, y: 620 })).toBe(2);
+    expect(dropPosition(rest, { x: 100, y: 680 })).toBe(3);
   });
 
   test("lands first above the page", () => {

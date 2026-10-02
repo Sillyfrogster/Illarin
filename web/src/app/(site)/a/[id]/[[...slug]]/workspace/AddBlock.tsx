@@ -7,14 +7,8 @@ import { offerGroups } from "./composition";
 import { Note } from "./fields";
 import { useWorkspace } from "./state";
 
-/** AddBlock finds a block to add by typing or browsing, one option per block and starting content, and puts it at `at` or at the end. */
-export function AddBlock({
-  at,
-  onDone,
-}: {
-  at?: number;
-  onDone?: () => void;
-} = {}) {
+/** AddBlock finds a block to add by typing or browsing, one option per block and starting content. */
+export function AddBlock() {
   const workspace = useWorkspace();
   const { addableBlocks, arrangement, blocks } = workspace;
   const [search, setSearch] = useState("");
@@ -52,9 +46,8 @@ export function AddBlock({
       onQueryChange={setSearch}
       onSelect={(item) => {
         const [definition, type] = item.value.split("\u0000");
-        arrangement.add(definition, type as ElementType, at);
-        if (onDone) onDone();
-        else workspace.closePane();
+        arrangement.add(definition, type as ElementType);
+        workspace.closePane();
       }}
       placeholder="Find a block"
       query={search}

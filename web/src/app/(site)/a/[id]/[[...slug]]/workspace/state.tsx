@@ -7,6 +7,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -60,9 +61,6 @@ export type Pane =
   | { kind: "remove"; blockId: string }
   | { kind: "element"; blockId: string; elementId: string };
 
-/** Look is which of the two editor designs is on screen: writing and an arrange map, or handles on the page itself. */
-export type Look = "altitudes" | "hands";
-
 export type Altitude = "write" | "arrange";
 
 type MakingPublic = { prompts: string[]; keepsAPrivatePrompt: boolean };
@@ -72,8 +70,6 @@ type Workspace = {
   isOwner: boolean;
   isDraft: boolean;
   editing: boolean;
-  look: Look;
-  setLook: (look: Look) => void;
   altitude: Altitude;
   setAltitude: (altitude: Altitude) => void;
   sweep: number;
@@ -113,6 +109,29 @@ type Workspace = {
 
 const WorkspaceContext = createContext<Workspace | null>(null);
 
+/** WorkspaceActions are the workspace's writes; the object never changes, so a block that only writes does not redraw when another block is written. */
+export type WorkspaceActions = Pick<
+  Workspace,
+  "writeElement" | "writeBlock" | "setCursor" | "say" | "openPane"
+> & { setHidden: (blockId: string, hidden: boolean) => void };
+
+const ActionsContext = createContext<WorkspaceActions | null>(null);
+
+type Focus = { cursor: string | null; editing: boolean };
+
+const FocusContext = createContext<Focus>({ cursor: null, editing: false });
+
+export function useWorkspaceActions(): WorkspaceActions {
+  const actions = useContext(ActionsContext);
+  if (!actions) throw new Error("This page has no editing workspace.");
+  return actions;
+}
+
+/** useWorkspaceFocus is which text is being written and whether the page is in edit mode, the two things a block's fields read. */
+export function useWorkspaceFocus(): Focus {
+  return useContext(FocusContext);
+}
+
 export function useWorkspace() {
   const workspace = useContext(WorkspaceContext);
   if (!workspace) throw new Error("This page has no editing workspace.");
@@ -148,9 +167,6 @@ export function WorkspaceProvider({
   const searchParams = useSearchParams();
   const [editing, setEditing] = useState(
     isOwner && searchParams.get("edit") === "true",
-  );
-  const [look, setLook] = useState<Look>(
-    searchParams.get("editor") === "c" ? "hands" : "altitudes",
   );
   const [altitude, setAltitude] = useState<Altitude>("write");
   const [sweep, setSweep] = useState(0);
@@ -437,8 +453,9 @@ export function WorkspaceProvider({
     setPane(null);
   }, [cursor]);
 
+  // Escape closes the open panel and nothing else; leaving edit mode is always Done
   useEffect(() => {
-    if (!editing) return;
+    if (!editing || !pane) return;
     const onEscape = (event: KeyboardEvent) => {
       if (
         event.key !== "Escape" ||
@@ -454,12 +471,11 @@ export function WorkspaceProvider({
       )
         return;
       event.preventDefault();
-      if (pane) setPane(null);
-      else stopEditing();
+      setPane(null);
     };
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
-  }, [editing, pane, stopEditing, makingPublic]);
+  }, [editing, pane, makingPublic]);
 
   const value: Workspace = {
     addableBlocks,
@@ -468,8 +484,6 @@ export function WorkspaceProvider({
     isOwner,
     isDraft,
     editing,
-    look,
-    setLook,
     altitude,
     setAltitude,
     sweep,
@@ -537,9 +551,30 @@ export function WorkspaceProvider({
     },
   };
 
+  const latest = useRef(value);
+  useLayoutEffect(() => {
+    latest.current = value;
+  });
+  const actions = useMemo<WorkspaceActions>(
+    () => ({
+      openPane: (pane) => latest.current.openPane(pane),
+      say: (message) => latest.current.say(message),
+      setCursor: (next) => latest.current.setCursor(next),
+      setHidden: (blockId, hidden) =>
+        latest.current.arrangement.setHidden(blockId, hidden),
+      writeBlock: (block) => latest.current.writeBlock(block),
+      writeElement: (blockId, element) =>
+        latest.current.writeElement(blockId, element),
+    }),
+    [],
+  );
+  const focus = useMemo(() => ({ cursor, editing }), [cursor, editing]);
+
   return (
     <WorkspaceContext.Provider value={value}>
-      {children}
+      <ActionsContext.Provider value={actions}>
+        <FocusContext.Provider value={focus}>{children}</FocusContext.Provider>
+      </ActionsContext.Provider>
     </WorkspaceContext.Provider>
   );
 }

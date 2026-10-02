@@ -229,48 +229,6 @@ export function WorkspaceDock(props: EditProps) {
   );
 }
 
-/** EditBar is the on-page editor's control row: it takes the header's place while editing, so the page below stays the page. */
-export function EditBar(props: EditProps) {
-  const workspace = useWorkspace();
-  const tools = useTools(props.waiting ?? 0);
-  return (
-    <motion.div
-      animate={{ y: 0 }}
-      className="fixed inset-x-0 top-0 z-85 border-b border-rule bg-field"
-      data-edit-bar
-      initial={{ y: "-100%" }}
-      transition={timing.settle}
-    >
-      <div className="mx-auto flex h-[var(--header-height)] w-full max-w-[var(--shell)] items-center gap-2 px-[var(--gutter)] md:gap-3">
-        <span className="hidden shrink-0 items-center gap-2 rounded-control bg-accent-wash px-2.5 py-1.5 text-meta font-medium text-accent sm:inline-flex">
-          <PencilLine aria-hidden="true" className="size-4" />
-          Editing
-        </span>
-        <div className="min-w-0 flex-1">
-          <SaveStatus
-            compact
-            detail={props.detail}
-            state={workspace.saveState}
-          />
-        </div>
-        <TryAgain />
-        <div className="hidden items-center gap-0.5 lg:flex">
-          <VisibilityMenu {...props} />
-          <Tools tools={tools} />
-        </div>
-        <div className="lg:hidden">
-          <MoreTools tools={tools} />
-        </div>
-        <span aria-hidden="true" className="hidden h-6 w-px bg-rule lg:block" />
-        <Button onClick={workspace.stopEditing} variant="secondary">
-          Done
-        </Button>
-        <PublishButton />
-      </div>
-    </motion.div>
-  );
-}
-
 function VisibilityMenu({ takenDown, typeName, visibility }: EditProps) {
   const workspace = useWorkspace();
   const shown = SHOWN[workspace.isDraft ? "draft" : visibility];
@@ -317,7 +275,7 @@ export function EditToggle({ typeName }: { typeName: string }) {
           "focus-visible:ring-offset-1 focus-visible:ring-offset-field",
         )}
         initial={{ opacity: 0, y: 24 }}
-        layoutId={workspace.look === "altitudes" ? EDIT_CONTROL : undefined}
+        layoutId={EDIT_CONTROL}
         onClick={workspace.startEditing}
         transition={timing.settle}
         type="button"

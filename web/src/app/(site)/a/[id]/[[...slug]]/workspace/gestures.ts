@@ -40,19 +40,20 @@ export function snapWidth({
   );
 }
 
-/** dropPosition is where a dragged block lands among the others, read in page order: earlier rows, then the pointer's side of each block in its own row. A row starts `reach` pixels above its top, where a block's handle sits. */
+/** dropPosition is where a dragged block lands among the others, read in page order: earlier rows, then the pointer's side of each block in its own row, or of the middle of a block alone in its row. */
 export function dropPosition(
   rest: Edges[],
   point: { x: number; y: number },
-  reach = 0,
 ): number {
   const tops = [...new Set(rest.map((one) => one.top))].sort((a, b) => a - b);
-  const rowTop = tops.filter((top) => top <= point.y + reach).at(-1);
+  const rowTop = tops.filter((top) => top <= point.y).at(-1);
   if (rowTop === undefined) return 0;
   const row = rest.filter((one) => one.top === rowTop);
   const rowBottom = Math.max(...row.map((one) => one.bottom));
   const earlier = rest.filter((one) => one.top < rowTop).length;
   if (point.y > rowBottom) return earlier + row.length;
+  if (row.length === 1)
+    return earlier + (point.y >= (row[0].top + row[0].bottom) / 2 ? 1 : 0);
   return (
     earlier + row.filter((one) => point.x >= (one.left + one.right) / 2).length
   );

@@ -355,18 +355,6 @@ body:has([data-site-header-hidden="true"]) {
   --site-header-offset: 0px;
 }
 
-/* The work editor's edit bar takes the header's place */
-body:has([data-edit-bar]) [data-site-header-hidden],
-body:has([data-edit-bar]) [data-site-header-hidden] * {
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-}
-
-body:has([data-edit-bar]) {
-  --site-header-offset: var(--header-height);
-}
-
 /* Moving between writing and the arrange map: each block grows or shrinks into its other size, cropped from its top */
 ::view-transition-group(.edit-block) {
   animation-duration: 460ms;
@@ -378,6 +366,19 @@ body:has([data-edit-bar]) {
   height: 100%;
   object-fit: cover;
   object-position: top;
+}
+
+/* While a block is held or its edge is dragged, the whole page keeps that cursor and no text gets selected */
+body[data-lifting],
+body[data-lifting] * {
+  cursor: grabbing;
+  user-select: none;
+}
+
+body[data-stretching],
+body[data-stretching] * {
+  cursor: ew-resize;
+  user-select: none;
 }
 
 main {

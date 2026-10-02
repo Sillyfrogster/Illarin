@@ -1,4 +1,5 @@
 import { Check, Info, TriangleAlert } from "lucide-react";
+import { memo } from "react";
 import { cn } from "@/lib/cn";
 import {
   type RichAlign,
@@ -7,7 +8,7 @@ import {
   readRichText,
 } from "@/lib/rich-text";
 
-export function RichText({
+export const RichText = memo(function RichText({
   text,
   className,
 }: {
@@ -26,7 +27,7 @@ export function RichText({
       <Blocks blocks={blocks} />
     </div>
   );
-}
+});
 
 export function FormattingNotice() {
   return (

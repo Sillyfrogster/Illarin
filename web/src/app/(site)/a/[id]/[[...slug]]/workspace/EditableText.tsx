@@ -1,7 +1,13 @@
 "use client";
 
 import type { KeyboardEvent, MouseEvent } from "react";
-import { useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { cn } from "@/lib/cn";
 import { applyMarkdown, type MarkdownAction } from "@/lib/markdown-edit";
 import { FormattingBar } from "./FormattingBar";
@@ -26,6 +32,45 @@ function offsetAtPoint(x: number, y: number, host: HTMLElement) {
     node = walker.nextNode();
   }
   return undefined;
+}
+
+/** How long a pause in typing lasts before the text reaches the page, so each keystroke redraws only the field. */
+const COMMIT_AFTER_MS = 220;
+
+/** useLocalDraft holds what is being typed in the field itself and hands it to the page after a pause, on leaving the field, or when the field goes away. */
+function useLocalDraft(value: string, onChange: (value: string) => void) {
+  const [local, setLocal] = useState<string | null>(null);
+  const pending = useRef<{ timer: number; text: string } | null>(null);
+  const commit = useRef(onChange);
+  useLayoutEffect(() => {
+    commit.current = onChange;
+  });
+
+  const flush = useCallback(() => {
+    const waiting = pending.current;
+    if (!waiting) return;
+    window.clearTimeout(waiting.timer);
+    pending.current = null;
+    commit.current(waiting.text);
+  }, []);
+
+  useEffect(() => flush, [flush]);
+
+  function change(text: string) {
+    setLocal(text);
+    if (pending.current) window.clearTimeout(pending.current.timer);
+    pending.current = {
+      text,
+      timer: window.setTimeout(flush, COMMIT_AFTER_MS),
+    };
+  }
+
+  function settle() {
+    flush();
+    setLocal(null);
+  }
+
+  return { change, settle, shown: local ?? value };
 }
 
 function growToFit(field: HTMLTextAreaElement) {
@@ -66,6 +111,11 @@ export function EditableText({
   const host = useRef<HTMLHeadingElement>(null);
   const caret = useRef<number | undefined>(undefined);
   const byKeyboard = useRef(false);
+  const draft = useLocalDraft(value, onChange);
+  function finish() {
+    draft.settle();
+    done();
+  }
 
   useLayoutEffect(() => {
     if (!active) {
@@ -91,7 +141,7 @@ export function EditableText({
       end: input.selectionEnd,
       start: input.selectionStart,
     });
-    onChange(edit.text);
+    draft.change(edit.text);
     window.requestAnimationFrame(() => {
       const still = field.current;
       if (!still) return;
@@ -110,20 +160,20 @@ export function EditableText({
           className,
         )}
         id={id}
-        onBlur={done}
+        onBlur={finish}
         onChange={(event) => {
           growToFit(event.currentTarget);
-          onChange(event.target.value);
+          draft.change(event.target.value);
         }}
         onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
           if (event.key === "Escape") {
             byKeyboard.current = true;
-            done();
+            finish();
           }
           if (singleLine && event.key === "Enter") {
             event.preventDefault();
             byKeyboard.current = true;
-            done();
+            finish();
           }
           const shortcut = SHORTCUTS[event.key.toLowerCase()];
           if (rich && shortcut && (event.metaKey || event.ctrlKey)) {
@@ -134,7 +184,7 @@ export function EditableText({
         placeholder={placeholder}
         ref={field}
         rows={1}
-        value={value}
+        value={draft.shown}
       />
     );
 

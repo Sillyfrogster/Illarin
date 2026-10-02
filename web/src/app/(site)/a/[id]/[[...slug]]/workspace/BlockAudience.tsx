@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import type { WorkBlock } from "@/lib/api/query";
 import { blockAudience } from "@/lib/work-page-content";
-import { useWorkspace } from "./state";
+import { useWorkspaceActions } from "./state";
 
 const NOTE = "-mt-1 mb-5 font-ui text-label text-mute";
 
@@ -12,7 +12,7 @@ const PANEL =
 
 /** Tells a creator when a reader does not meet this block where it sits */
 export function BlockAudience({ block }: { block: WorkBlock }) {
-  const workspace = useWorkspace();
+  const actions = useWorkspaceActions();
   const audience = blockAudience(block);
 
   if (audience === "shown") return null;
@@ -23,7 +23,7 @@ export function BlockAudience({ block }: { block: WorkBlock }) {
         <span>Hidden from readers. Downloads still include it.</span>
         <Button
           className="shrink-0"
-          onClick={() => workspace.arrangement.setHidden(block.id, false)}
+          onClick={() => actions.setHidden(block.id, false)}
           size="compact"
         >
           Show block

@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, Plus, SlidersHorizontal, X } from "lucide-react";
+import { ImagePlus, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   type DragEvent,
@@ -9,18 +9,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
-import { BadgeList } from "@/components/ui/badge";
-import { Field } from "@/components/ui/field";
-import { Textarea } from "@/components/ui/input";
-import { RichText } from "@/components/ui/RichText";
 import { Segmented } from "@/components/ui/segmented";
 import { Spinner } from "@/components/ui/spinner";
-import { TagField } from "@/components/ui/tag-field";
 import { addWorkImage } from "@/lib/api/query";
 import { cn, focusRing } from "@/lib/cn";
 import { useDraftedChanges } from "@/lib/drafted-changes";
-import { useCardStage } from "../card/stage";
 import {
   BLURB_LIMIT,
   blurbCharacterCount,
@@ -324,136 +317,6 @@ function InlineTags({
         </li>
       </ul>
       {trouble ? <p className="text-label text-stop">{trouble}</p> : null}
-    </div>
-  );
-}
-
-/** DetailsBack is the on-page editor's card back while editing: the blurb, tags and rating, written on the card that carries them into Browse. */
-export function DetailsBack({ typeName }: { typeName: string }) {
-  const stage = useCardStage();
-  const { details, rating, setBlurb, setRating, addTag, removeTag } =
-    useDetails();
-  const [tagProblem, setTagProblem] = useState("");
-  const count = blurbCharacterCount(details.blurb);
-  const trouble = blurbLimitMessage(details.blurb);
-  if (!stage.backSlot) return null;
-  return createPortal(
-    <div className="flex flex-col gap-6 pb-2">
-      <Field
-        hint="Readers see this under the name in Browse."
-        htmlFor="work-blurb"
-        label="Blurb"
-        trailing={
-          <span
-            className={cn(
-              "text-label tabular-nums",
-              trouble ? "text-stop" : "text-mute",
-            )}
-          >
-            {count} / {BLURB_LIMIT}
-          </span>
-        }
-        trouble={trouble || undefined}
-      >
-        <Textarea
-          className="field-sizing-content min-h-28"
-          id="work-blurb"
-          onChange={(event) => setBlurb(event.target.value)}
-          placeholder={`Describe this ${typeName} in a few words`}
-          value={details.blurb}
-        />
-      </Field>
-      <Field
-        hint={`Readers find this ${typeName} by its tags.`}
-        htmlFor="work-tag"
-        label="Tags"
-        trailing={
-          <span className="text-label text-mute tabular-nums">
-            {details.tags.length} / {TAG_LIMIT}
-          </span>
-        }
-        trouble={tagProblem || undefined}
-      >
-        <TagField
-          id="work-tag"
-          onAdd={(tag) => {
-            const problem = addTag(tag);
-            setTagProblem(problem);
-            return !problem;
-          }}
-          onRemove={(index) => {
-            setTagProblem("");
-            removeTag(index);
-          }}
-          tags={details.tags}
-        />
-      </Field>
-      <div className="flex flex-col gap-2" id="adult-content-answer">
-        <p className="text-ui font-medium text-ink">Adult content</p>
-        <Segmented
-          aria-label="Adult content"
-          onValueChange={setRating}
-          options={RATINGS}
-          value={rating}
-        />
-        {rating === null ? (
-          <p className="text-label text-mute">
-            Say whether this is adult content before you publish.
-          </p>
-        ) : null}
-      </div>
-    </div>,
-    stage.backSlot,
-  );
-}
-
-/** ReaderDetails is the on-page editor's left column while editing: the blurb and tags exactly as readers see them, each a way to turn the card over and change it. */
-export function ReaderDetails({ typeName }: { typeName: string }) {
-  const stage = useCardStage();
-  const workspace = useWorkspace();
-  const { blurb, tags, isNsfw } = workspace.details;
-  function open(field: string) {
-    stage.turn(true);
-    window.setTimeout(
-      () => document.getElementById(field)?.focus({ preventScroll: true }),
-      420,
-    );
-  }
-  return (
-    <div className="group/details relative -mx-4 -my-3 flex flex-col items-start gap-4 rounded-art px-4 py-3 transition-colors duration-150 hover:bg-fill">
-      <div
-        className="pointer-events-none flex flex-col items-start gap-4"
-        inert
-      >
-        {blurb ? (
-          <div className="font-prose text-lede text-ink">
-            <RichText text={blurb} />
-          </div>
-        ) : (
-          <p className="font-prose text-lede text-mute italic">
-            No blurb yet. Readers see a few words about this {typeName} here.
-          </p>
-        )}
-        {tags.length > 0 ? (
-          <BadgeList
-            items={tags.map((tag) => ({ id: tag, label: tag }))}
-            limit={8}
-          />
-        ) : null}
-      </div>
-      <button
-        className={cn(
-          "inline-flex items-center gap-1.5 text-meta font-medium text-accent after:absolute after:inset-0 after:rounded-art after:content-['']",
-          focusRing,
-        )}
-        onClick={() => open("work-blurb")}
-        type="button"
-      >
-        <SlidersHorizontal aria-hidden="true" className="size-4" />
-        {isNsfw === null
-          ? "Edit blurb and tags, and answer adult content"
-          : "Edit blurb, tags and rating on the card"}
-      </button>
     </div>
   );
 }

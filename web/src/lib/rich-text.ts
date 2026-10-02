@@ -49,7 +49,23 @@ export type RichText = {
   formattingRemoved: boolean;
 };
 
+/** How many parsed texts stay cached; a page re-renders the same texts on every keystroke, and parsing is the costly part. */
+const READ_CACHE_LIMIT = 800;
+const readCache = new Map<string, RichText>();
+
 export function readRichText(source: string): RichText {
+  const cached = readCache.get(source);
+  if (cached) return cached;
+  const read = parseRichText(source);
+  if (readCache.size >= READ_CACHE_LIMIT) {
+    const oldest = readCache.keys().next().value;
+    if (oldest !== undefined) readCache.delete(oldest);
+  }
+  readCache.set(source, read);
+  return read;
+}
+
+function parseRichText(source: string): RichText {
   const stripped = stripHtml(source);
   const removed = { formatting: stripped.removed };
   const blocks = readRentry(stripped.text, removed);

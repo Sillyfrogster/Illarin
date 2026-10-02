@@ -1,8 +1,7 @@
 "use client";
 
-import { Ellipsis, EyeOff, GripVertical, Plus, Trash2 } from "lucide-react";
-import { type CSSProperties, type KeyboardEvent, useState } from "react";
-import { createPortal } from "react-dom";
+import { Ellipsis, EyeOff, GripVertical, Trash2 } from "lucide-react";
+import type { CSSProperties, KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,11 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { WorkBlock } from "@/lib/api/query";
 import { cn, focusRing } from "@/lib/cn";
@@ -33,10 +27,9 @@ import {
   WIDTH_LABELS,
   widthChoiceIssue,
 } from "@/lib/page-arrangement";
-import { AddBlock } from "./AddBlock";
 import { relaidBlock } from "./composition";
 import { useWorkspace } from "./state";
-import type { Arranging } from "./use-arranging";
+import type { ArrangeHandlers } from "./use-arranging";
 
 /** Undoes the arrange map's zoom so a control keeps its real size on a shrunken block. */
 const UNZOOM = { zoom: "calc(1 / var(--map-zoom, 1))" } as CSSProperties;
@@ -173,25 +166,26 @@ export function MapTile({
   onOpen,
   position,
   startColumn,
+  stretching,
   suggestion,
   total,
 }: {
-  arranging: Arranging;
+  arranging: ArrangeHandlers;
   block: WorkBlock;
   onOpen: () => void;
   position: number;
   startColumn: number;
+  stretching: boolean;
   suggestion?: BlockWidth;
   total: number;
 }) {
   const keys = useBlockKeys(block, position, total);
-  const stretching = arranging.stretch?.blockId === block.id;
   return (
     <>
       <button
         aria-label={`${block.title}, ${WIDTH_LABELS[block.width].toLowerCase()} width, ${position + 1} of ${total}. Enter writes in it. ${KEYS_HINT}`}
         className={cn(
-          "absolute inset-0 z-10 cursor-grab rounded-card active:cursor-grabbing",
+          "absolute inset-0 z-10 cursor-grab touch-pan-y rounded-card active:cursor-grabbing",
           focusRing,
           "focus-visible:ring-2",
         )}
@@ -210,17 +204,24 @@ export function MapTile({
         className="pointer-events-none absolute top-3 left-3 z-20 flex items-center gap-1.5"
         style={UNZOOM}
       >
-        <span className="inline-flex h-7 items-center gap-1 rounded-chip bg-field/90 px-2 text-label font-medium text-ink ring-1 ring-ink/8 tabular-nums">
+        <span
+          aria-hidden="true"
+          className="pointer-events-auto hidden size-9 touch-none items-center justify-center rounded-control bg-field text-mute ring-1 ring-rule pointer-coarse:inline-flex"
+          onPointerDown={(event) => arranging.pressGrip(event, block)}
+        >
+          <GripVertical className="size-4.5" />
+        </span>
+        <span className="inline-flex h-7 items-center gap-1.5 rounded-chip bg-field px-2 text-label font-medium text-ink ring-1 ring-ink/8 tabular-nums max-md:hidden">
           <WidthGlyph width={block.width} />
           {WIDTH_LABELS[block.width]}
         </span>
         {block.hidden ? (
-          <span className="inline-flex h-7 items-center gap-1 rounded-chip bg-field/90 px-2 text-label text-mute ring-1 ring-ink/8">
+          <span className="inline-flex h-7 items-center gap-1 rounded-chip bg-field px-2 text-label text-mute ring-1 ring-ink/8">
             <EyeOff aria-hidden="true" className="size-3.5" />
             Hidden
           </span>
         ) : null}
-        <Suggestion block={block} width={suggestion} />
+        {stretching ? null : <Suggestion block={block} width={suggestion} />}
       </div>
       <div
         className="absolute top-3 right-3 z-20 opacity-0 transition-opacity duration-150 group-focus-within/block:opacity-100 group-hover/block:opacity-100 pointer-coarse:opacity-100"
@@ -228,71 +229,32 @@ export function MapTile({
       >
         <BlockMenu block={block} />
       </div>
+      {stretching ? <WidthReadout width={block.width} /> : null}
       <Edge
         arranging={arranging}
         block={block}
         startColumn={startColumn}
         stretching={stretching}
-        unzoom
       />
     </>
   );
 }
 
-/** Frame is a block's handles on the page itself: a tab to drag it by, its options, and a right edge to drag wider or narrower. */
-export function Frame({
-  arranging,
-  block,
-  position,
-  startColumn,
-  suggestion,
-  total,
-}: {
-  arranging: Arranging;
-  block: WorkBlock;
-  position: number;
-  startColumn: number;
-  suggestion?: BlockWidth;
-  total: number;
-}) {
-  const keys = useBlockKeys(block, position, total);
-  const stretching = arranging.stretch?.blockId === block.id;
+/** WidthReadout names the width a block will take while its edge is held, large enough to read without looking away from the edge. */
+function WidthReadout({ width }: { width: BlockWidth }) {
   return (
-    <>
-      <div className="absolute -top-4 left-3 z-20 flex -translate-y-1/2 items-center gap-1">
-        <button
-          aria-label={`Move “${block.title}”, ${position + 1} of ${total}. ${KEYS_HINT}`}
-          className={cn(
-            "inline-flex h-8 cursor-grab touch-none items-center gap-1.5 rounded-control bg-field pr-2.5 pl-1.5 text-label font-medium text-mute ring-1 ring-rule transition-colors duration-150 hover:text-ink hover:ring-accent/60 active:cursor-grabbing group-hover/block:text-ink",
-            focusRing,
-          )}
-          onKeyDown={keys}
-          onPointerDown={(event) => arranging.pressBlock(event, block)}
-          type="button"
-        >
-          <GripVertical aria-hidden="true" className="size-4" />
-          <WidthGlyph width={block.width} />
-          <span className="tabular-nums">{WIDTH_LABELS[block.width]}</span>
-          {block.hidden ? (
-            <>
-              <span aria-hidden="true">·</span>
-              <EyeOff aria-hidden="true" className="size-3.5" />
-              Hidden
-            </>
-          ) : null}
-        </button>
-        <Suggestion block={block} width={suggestion} />
-      </div>
-      <div className="absolute -top-4 right-3 z-20 -translate-y-1/2">
-        <BlockMenu block={block} />
-      </div>
-      <Edge
-        arranging={arranging}
-        block={block}
-        startColumn={startColumn}
-        stretching={stretching}
-      />
-    </>
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-card bg-accent-wash/80"
+    >
+      <span
+        className="inline-flex animate-pop items-center gap-3 rounded-control bg-action px-5 py-3 text-title font-medium text-on-accent shadow-popover"
+        style={UNZOOM}
+      >
+        <WidthGlyph width={width} />
+        {WIDTH_LABELS[width]}
+      </span>
+    </div>
   );
 }
 
@@ -340,126 +302,69 @@ function Edge({
   block,
   startColumn,
   stretching,
-  unzoom = false,
 }: {
-  arranging: Arranging;
+  arranging: ArrangeHandlers;
   block: WorkBlock;
   startColumn: number;
   stretching: boolean;
-  unzoom?: boolean;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      className="group/edge absolute inset-y-0 -right-6 z-40 hidden w-12 cursor-ew-resize touch-none justify-center md:flex"
+      onPointerDown={(event) => arranging.pressEdge(event, block, startColumn)}
+    >
+      <span
+        className={cn(
+          "sticky top-[calc(50vh-1.75rem)] my-6 flex h-14 w-4 items-center justify-center gap-0.5 rounded-full bg-field ring-1 ring-edge transition-[background-color,box-shadow,opacity] duration-150 group-hover/edge:bg-action group-hover/edge:ring-action opacity-0 group-hover/block:opacity-100",
+          stretching && "bg-action opacity-100 ring-action",
+        )}
+        style={UNZOOM}
+      >
+        <span
+          className={cn(
+            "h-5 w-px rounded-full bg-mute group-hover/edge:bg-on-accent",
+            stretching && "bg-on-accent",
+          )}
+        />
+        <span
+          className={cn(
+            "h-5 w-px rounded-full bg-mute group-hover/edge:bg-on-accent",
+            stretching && "bg-on-accent",
+          )}
+        />
+      </span>
+    </div>
+  );
+}
+
+const COLUMNS = Array.from({ length: 12 }, (_, column) => column + 1);
+
+/** ColumnGuides lies the page's twelve columns under the arrange map, and lights the ones a block being resized will fill. */
+export function ColumnGuides({
+  span,
+}: {
+  span: { start: number; columns: number } | null;
 }) {
   return (
     <div
       aria-hidden="true"
       className={cn(
-        "group/edge absolute inset-y-0 z-20 hidden w-5 cursor-ew-resize touch-none justify-center md:flex",
-        unzoom ? "-right-2.5" : "-right-[1.125rem]",
-      )}
-      onPointerDown={(event) => arranging.pressEdge(event, block, startColumn)}
-    >
-      <span
-        className={cn(
-          "sticky top-[calc(50vh-1.5rem)] my-6 flex h-12 w-1.5 items-center rounded-full bg-rule transition-[background-color,width] duration-150 group-hover/edge:w-2 group-hover/edge:bg-accent",
-          stretching && "w-2 bg-accent",
-        )}
-        style={unzoom ? UNZOOM : undefined}
-      >
-        {stretching ? (
-          <span className="absolute left-4 inline-flex h-8 items-center gap-1.5 rounded-control bg-ink px-2.5 text-meta font-medium whitespace-nowrap text-field shadow-popover">
-            <WidthGlyph width={block.width} />
-            {WIDTH_LABELS[block.width]}
-          </span>
-        ) : null}
-      </span>
-    </div>
-  );
-}
-
-const COLUMNS = Array.from({ length: 12 }, (_, column) => `column-${column}`);
-
-/** ColumnGuides shows the page's twelve columns while a block is being resized, so the snap points are visible. */
-export function ColumnGuides({ shown }: { shown: boolean }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={cn(
         "pointer-events-none absolute inset-0 -z-1 hidden grid-cols-12 gap-x-[var(--block-grid-gap)] transition-opacity duration-200 md:grid",
-        shown ? "opacity-100" : "opacity-0",
+        span ? "opacity-100" : "opacity-0",
       )}
     >
       {COLUMNS.map((column) => (
-        <span className="rounded-chip bg-accent-wash/70" key={column} />
+        <span
+          className={cn(
+            "rounded-chip transition-colors duration-150",
+            span && column >= span.start && column < span.start + span.columns
+              ? "bg-accent-wash"
+              : "bg-ink/5",
+          )}
+          key={column}
+        />
       ))}
-    </div>
-  );
-}
-
-/** LiftCard rides under the pointer while a block is being moved, naming what is held. */
-export function LiftCard({ arranging }: { arranging: Arranging }) {
-  if (!arranging.lift) return null;
-  return createPortal(
-    <div
-      aria-hidden="true"
-      className="pointer-events-none fixed top-0 left-0 z-90 flex h-11 -rotate-2 items-center gap-2 rounded-control bg-plane pr-4 pl-2.5 text-ui font-medium text-ink shadow-popover ring-1 ring-accent"
-      ref={arranging.liftCard}
-    >
-      <GripVertical aria-hidden="true" className="size-4 text-accent" />
-      <span className="max-w-64 truncate">{arranging.lift.title}</span>
-      <span className="text-meta font-normal text-mute">
-        {WIDTH_LABELS[arranging.lift.width]}
-      </span>
-    </div>,
-    document.body,
-  );
-}
-
-/** Seam is the line between two rows of blocks where a new block can be added in place. */
-export function Seam({ at, last = false }: { at: number; last?: boolean }) {
-  const workspace = useWorkspace();
-  const [open, setOpen] = useState(false);
-  if (workspace.addableBlocks.length === 0) return null;
-  return (
-    <div
-      className={cn(
-        "group/seam pointer-events-none relative col-span-full flex h-0",
-        !last && "max-md:hidden",
-        "items-center justify-center md:[grid-column:1/-1] md:[grid-row:var(--seam-row)]",
-        last
-          ? "md:self-end md:translate-y-[calc(var(--seam-gap)/2)]"
-          : "md:self-start md:-translate-y-[calc(var(--seam-gap)/2)]",
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "absolute inset-x-0 h-px bg-accent opacity-0 transition-opacity duration-150 group-hover/seam:opacity-60",
-          open && "opacity-60",
-        )}
-      />
-      <Popover onOpenChange={setOpen} open={open}>
-        <PopoverTrigger asChild>
-          <button
-            aria-label={
-              last
-                ? "Add a block at the end"
-                : `Add a block here, before block ${at + 1}`
-            }
-            className={cn(
-              "pointer-events-auto relative inline-flex h-9 items-center gap-1.5 rounded-control bg-field px-3 text-meta font-medium text-mute ring-1 ring-rule transition-[color,opacity,box-shadow] duration-150 hover:text-ink hover:ring-accent",
-              "opacity-0 group-hover/seam:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100",
-              (open || last) && "opacity-100",
-              focusRing,
-            )}
-            type="button"
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            Add a block
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[min(26rem,calc(100vw-2rem))] p-2">
-          <AddBlock at={at} onDone={() => setOpen(false)} />
-        </PopoverContent>
-      </Popover>
     </div>
   );
 }

@@ -26,11 +26,7 @@ import { coverMedia, WorkMedia } from "./WorkMedia";
 import { useAltitudeShift } from "./workspace/Altitudes";
 import { EditableText } from "./workspace/EditableText";
 import { FileMark } from "./workspace/fields";
-import {
-  DetailsBack,
-  InlineDetails,
-  ReaderDetails,
-} from "./workspace/Identity";
+import { InlineDetails } from "./workspace/Identity";
 import { useWorkspace } from "./workspace/state";
 
 const TAG_PREVIEW_LIMIT = 8;
@@ -116,12 +112,8 @@ export function WorkHeader({
 }) {
   const workspace = useWorkspace();
   const isDraft = work.lifecycle === "draft";
-  const mapped =
-    workspace.editing &&
-    workspace.look === "altitudes" &&
-    workspace.altitude === "arrange";
+  const mapped = workspace.editing && workspace.altitude === "arrange";
   const writing = workspace.editing && !mapped;
-  const hands = writing && workspace.look === "hands";
   const inFile = (field: string) =>
     !isDraft && writing && Boolean(work.fileFields?.includes(field));
   const cover = coverMedia(work.media).find((image) => image.isCover);
@@ -142,9 +134,7 @@ export function WorkHeader({
 
   const about = (
     <>
-      {hands ? (
-        <ReaderDetails typeName={typeLabel.toLowerCase()} />
-      ) : writing ? (
+      {writing ? (
         <InlineDetails typeName={typeLabel.toLowerCase()} />
       ) : (
         <>
@@ -259,11 +249,6 @@ export function WorkHeader({
                       />
                     </ViewTransition>
                   }
-                  back={
-                    hands ? (
-                      <DetailsBack typeName={typeLabel.toLowerCase()} />
-                    ) : null
-                  }
                   details={
                     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-mute">
                       {typeLabel}
@@ -281,8 +266,7 @@ export function WorkHeader({
                       ) : null}
                     </p>
                   }
-                  backLabel={hands ? "Blurb, tags and rating" : undefined}
-                  hasBack={hasBack || hands}
+                  hasBack={hasBack}
                   live={live}
                   name={
                     <>

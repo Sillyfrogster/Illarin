@@ -10,7 +10,7 @@ import { EditableText } from "./EditableText";
 import { ElementTools } from "./ElementTools";
 import { AddAction, RemoveAction } from "./fields";
 import { isEmptyContent, writesInPlace } from "./save";
-import { useWorkspace } from "./state";
+import { useWorkspaceActions, useWorkspaceFocus } from "./state";
 
 const EDITABLE_ITEM =
   "flex min-w-0 flex-col gap-1.5 px-4 py-3.5 not-first:border-rule/45 not-first:border-t";
@@ -93,11 +93,11 @@ export function EditableElement({
   blockId: string;
   element: WorkElement;
 }) {
-  const workspace = useWorkspace();
+  const actions = useWorkspaceActions();
 
   function write(content: WorkElement["content"]) {
     const next = { ...element, content } as WorkElement;
-    workspace.writeElement(blockId, { ...next, isEmpty: isEmptyContent(next) });
+    actions.writeElement(blockId, { ...next, isEmpty: isEmptyContent(next) });
   }
 
   const field = (parts: (string | number)[], options: FieldOptions) => (
@@ -330,13 +330,14 @@ type FieldOptions = {
 };
 
 function Field({ cursor, ...options }: FieldOptions & { cursor: string }) {
-  const workspace = useWorkspace();
+  const focus = useWorkspaceFocus();
+  const actions = useWorkspaceActions();
   return (
     <EditableText
-      active={workspace.cursor === cursor}
-      activate={() => workspace.setCursor(cursor)}
-      done={() => workspace.setCursor(null)}
-      live={workspace.editing}
+      active={focus.cursor === cursor}
+      activate={() => actions.setCursor(cursor)}
+      done={() => actions.setCursor(null)}
+      live={focus.editing}
       {...options}
     />
   );
@@ -366,8 +367,8 @@ function Run({
 }
 
 function Add({ label, onAdd }: { label: string; onAdd: () => void }) {
-  const workspace = useWorkspace();
-  if (!workspace.editing) return null;
+  const { editing } = useWorkspaceFocus();
+  if (!editing) return null;
   return (
     <AddAction className="mt-1" onClick={onAdd}>
       {label}
@@ -384,8 +385,8 @@ function Drop({
   label: string;
   onDrop: () => void;
 }) {
-  const workspace = useWorkspace();
-  if (!workspace.editing) return null;
+  const { editing } = useWorkspaceFocus();
+  if (!editing) return null;
   return (
     <RemoveAction
       className={cn(

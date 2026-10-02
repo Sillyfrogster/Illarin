@@ -81,10 +81,7 @@ export function EditCanvas({ children }: { children: ReactNode }) {
   const workspace = useWorkspace();
   const shift = useAltitudeShift();
   const [measure, width] = useMeasuredWidth<HTMLDivElement>();
-  const mapped =
-    workspace.editing &&
-    workspace.look === "altitudes" &&
-    workspace.altitude === "arrange";
+  const mapped = workspace.editing && workspace.altitude === "arrange";
   const zoom = mapped && width ? mapZoom(width) : 1;
 
   useEffect(() => {
