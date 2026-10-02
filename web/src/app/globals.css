@@ -357,6 +357,16 @@ body:has([data-site-header-hidden="true"]) {
 
 main {
   min-height: calc(100svh - var(--header-height));
+  view-transition-name: page;
+  view-transition-class: page;
+}
+
+::view-transition-group(.page) {
+  animation: none;
+}
+
+::view-transition-new(.page) {
+  background: var(--v-field);
 }
 
 /* Link colours sit in the base layer so a link's own colour class wins */
@@ -437,6 +447,60 @@ img {
   }
 }
 
+/* Moving between Browse and a work: the next page wipes across while the last one steps back, and the cover morphs between them */
+::view-transition-group(.morph) {
+  z-index: 10;
+  animation-duration: 560ms;
+  animation-timing-function: var(--ease-wipe);
+}
+
+::view-transition-image-pair(.morph) {
+  animation: 560ms var(--ease-wipe) via-blur;
+}
+
+html:active-view-transition-type(nav-forward, nav-back)::view-transition-old(
+    .page
+  ) {
+  animation: 560ms var(--ease-wipe) both page-step-back;
+}
+
+html:active-view-transition-type(nav-back)::view-transition-old(.page) {
+  --step: 48px;
+}
+
+html:active-view-transition-type(nav-forward)::view-transition-new(.page) {
+  --wipe-from: inset(0 0 0 100%);
+  animation: 560ms var(--ease-wipe) both page-wipe;
+}
+
+html:active-view-transition-type(nav-back)::view-transition-new(.page) {
+  --wipe-from: inset(0 100% 0 0);
+  animation: 560ms var(--ease-wipe) both page-wipe;
+}
+
+@keyframes via-blur {
+  35% {
+    filter: blur(4px);
+  }
+}
+
+@keyframes page-step-back {
+  to {
+    opacity: 0.25;
+    filter: blur(2px);
+    transform: translateX(var(--step, -48px)) scale(0.98);
+  }
+}
+
+@keyframes page-wipe {
+  from {
+    clip-path: var(--wipe-from);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -444,5 +508,11 @@ img {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

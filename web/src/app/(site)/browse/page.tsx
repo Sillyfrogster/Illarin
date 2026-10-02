@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import Image from "next/image";
 import { BrowseSurface } from "@/components/browse/BrowseSurface";
 import { fetchWorks } from "@/lib/api/query";
 import { readBrowseFilters } from "@/lib/browse-url";
@@ -34,40 +33,16 @@ export default async function BrowsePage({
   );
 
   return (
-    <div className="relative isolate">
-      <div
-        aria-hidden="true"
-        data-artwork
-        className="pointer-events-none absolute inset-x-0 top-[calc(var(--header-height)*-1)] -z-1 h-[calc(22rem+var(--header-height))] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_20%,transparent)]"
-      >
-        <Image
-          alt=""
-          className="hidden object-cover object-[50%_62%] opacity-30 dark:block"
-          fill
-          priority
-          sizes="100vw"
-          src="/landing/flight/gallery.webp"
-        />
-        <Image
-          alt=""
-          className="object-cover object-[50%_40%] opacity-25 dark:hidden"
-          fill
-          priority
-          sizes="100vw"
-          src="/landing/flight/kingdom-distance.webp"
-        />
-      </div>
-      <BrowseSurface
-        filters={filters}
-        heading="Browse"
-        initialPage={initialPage}
-        search={{
-          label: "Search works",
-          placeholder: "Search works, or tag:fantasy",
-          tags: true,
-        }}
-        showHeading
-      />
-    </div>
+    <BrowseSurface
+      filters={filters}
+      heading="Browse"
+      initialPage={initialPage}
+      search={{
+        label: "Search works",
+        placeholder: "Search works, or tag:fantasy",
+        tags: true,
+      }}
+      showHeading
+    />
   );
 }

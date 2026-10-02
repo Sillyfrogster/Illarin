@@ -53,7 +53,7 @@ export function SiteHeader() {
   return (
     <motion.header
       animate={{ y: hidden ? -160 : 0 }}
-      className="sticky top-0 z-80 border-b border-transparent transition-colors duration-240 data-[scrolled=true]:border-rule data-[scrolled=true]:bg-field"
+      className="sticky top-0 z-80 border-b border-transparent transition-colors duration-240 [view-transition-name:site-header] data-[scrolled=true]:border-rule data-[scrolled=true]:bg-field"
       data-scrolled={scrolled}
       data-site-header-hidden={hidden}
       initial={false}

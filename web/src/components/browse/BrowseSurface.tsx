@@ -1,6 +1,10 @@
 "use client";
 
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { Shell } from "@/components/layout/Shell";
@@ -24,12 +28,11 @@ import {
   readSessionPreference,
   writeSessionPreference,
 } from "@/lib/nsfw-preference";
+import { BrowseGrid } from "./BrowseGrid";
 import { BrowsePoster } from "./BrowsePoster";
 import { BrowseSearch } from "./BrowseSearch";
 import { BrowseLoading, GRID, Message } from "./BrowseStates";
-import { FeatureRow } from "./FeatureRow";
-import { ReaderLine } from "./ReaderLine";
-import { SortMenu } from "./SortMenu";
+import { FilterLine } from "./FilterLine";
 import { TypeIndex } from "./TypeIndex";
 import { useBrowseNavigation } from "./use-browse-navigation";
 
@@ -90,6 +93,7 @@ export function BrowseSurface({
       }),
     initialPageParam: null as BrowseCursor | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
     initialData:
       initialPage && preferenceOverride === undefined
         ? { pages: [initialPage], pageParams: [null] }
@@ -157,84 +161,64 @@ export function BrowseSurface({
       as="section"
       className={cn("pb-chapter", creator ? "pt-4" : "pt-6 lg:pt-8")}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-3">
-          {showHeading ? (
-            <h1
-              className="font-display text-title font-medium tracking-[-0.02em] md:pt-1"
-              id={`${panel}-heading`}
-            >
-              {heading}
-            </h1>
-          ) : (
-            <h2 className="sr-only" id={`${panel}-heading`}>
-              {heading}
-            </h2>
-          )}
-          {search ? (
-            <div
-              className={cn("w-full md:max-w-md", showHeading && "md:ml-auto")}
-            >
-              <BrowseSearch
-                hint={search.hint}
-                id={`${panel}-search`}
-                label={search.label}
-                onSearch={(q) => navigate({ ...filters, q })}
-                placeholder={search.placeholder}
-                tags={search.tags}
-                value={filters.q ?? ""}
-              />
-            </div>
-          ) : null}
-        </div>
-
-        <TypeIndex
-          basePath={basePath}
-          filters={filters}
-          navigate={navigate}
-          overview={overview}
-        />
-
-        {overview ? (
-          <FeatureRow
-            facets={overview.facets}
+      {showHeading ? (
+        <h1 className="sr-only" id={`${panel}-heading`}>
+          {heading}
+        </h1>
+      ) : (
+        <h2 className="sr-only" id={`${panel}-heading`}>
+          {heading}
+        </h2>
+      )}
+      <div className="flex flex-col-reverse gap-3 md:flex-row md:items-center md:justify-between md:gap-10">
+        <div className="min-w-0 flex-1">
+          <TypeIndex
+            basePath={basePath}
             filters={filters}
             navigate={navigate}
-          />
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <ReaderLine
-            adultOpen={adultOpen}
-            asking={asking}
-            locked={account === undefined || saving}
             overview={overview}
-            preference={preference}
-            setAdultOpen={setAdultOpen}
-            setApp={creator ? null : (app) => void setApp(app)}
-            setPreference={(next) => void setPreference(next)}
-            signedIn={Boolean(account)}
           />
-          <div className="flex w-full min-w-0 gap-2 sm:ml-auto sm:w-auto">
-            <SortMenu
-              className="flex-1 sm:flex-none"
-              filters={filters}
-              navigate={navigate}
+        </div>
+        {search ? (
+          <div className="w-full md:w-64 xl:w-80">
+            <BrowseSearch
+              hint={search.hint}
+              id={`${panel}-search`}
+              label={search.label}
+              onSearch={(q) => navigate({ ...filters, q })}
+              placeholder={search.placeholder}
+              tags={search.tags}
+              value={filters.q ?? ""}
             />
           </div>
-        </div>
-        {trouble ? (
-          <p className="font-ui text-meta text-stop" role="alert">
-            {trouble}
-          </p>
         ) : null}
       </div>
+      <div className="sticky top-(--site-header-offset) z-20 -mx-(--gutter) mt-3 bg-field px-(--gutter) py-2 transition-[top] duration-240 ease-(--ease-wipe)">
+        <FilterLine
+          adultOpen={adultOpen}
+          asking={asking}
+          filters={filters}
+          locked={account === undefined || saving}
+          navigate={navigate}
+          overview={overview}
+          preference={preference}
+          setAdultOpen={setAdultOpen}
+          setApp={creator ? null : (app) => void setApp(app)}
+          setPreference={(next) => void setPreference(next)}
+        />
+      </div>
+      {trouble ? (
+        <p className="font-ui text-meta text-stop" role="alert">
+          {trouble}
+        </p>
+      ) : null}
 
       <div
         aria-busy={pending || query.isFetching || undefined}
         className={cn(
-          "mt-8 transition-opacity duration-160 motion-reduce:transition-none",
-          (pending || (query.isFetching && !query.isFetchingNextPage)) &&
+          "mt-4 transition-opacity duration-160 motion-reduce:transition-none",
+          creator &&
+            (pending || (query.isFetching && !query.isFetchingNextPage)) &&
             "opacity-60",
         )}
       >
@@ -298,7 +282,10 @@ export function BrowseSurface({
         {showHeading && works.length ? (
           <h2 className="sr-only">Works</h2>
         ) : null}
-        {works.length ? (
+        {works.length && !creator ? (
+          <BrowseGrid preference={preference} works={works} />
+        ) : null}
+        {works.length && creator ? (
           <ul className={GRID}>
             {works.map((work, index) => (
               <BrowsePoster

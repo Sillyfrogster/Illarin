@@ -2,7 +2,7 @@
 
 import { ArrowLeft, EyeOff, Globe, PencilLine } from "lucide-react";
 import Link from "next/link";
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useState, ViewTransition } from "react";
 import { Badge, BadgeList } from "@/components/ui/badge";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import type { Profile, WorkConnectedApp, WorkDetail } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { formattingWasRemoved } from "@/lib/rich-text";
 import { tagSearchHref } from "@/lib/tag-search";
+import { workCoverTransition } from "@/lib/view-transitions";
 import { workDisplayName } from "@/lib/work-name";
 import { canSendWork } from "@/lib/work-send";
 import { CreatorLine } from "./card/CreatorLine";
@@ -289,6 +290,7 @@ export function WorkHeader({
             <Link
               className="mr-auto inline-flex min-h-control items-center gap-2 text-meta text-mute hover:text-ink"
               href="/browse"
+              transitionTypes={["nav-back"]}
             >
               <ArrowLeft aria-hidden="true" className="size-4" />
               Browse
@@ -335,17 +337,19 @@ export function WorkHeader({
             <div className="order-1 mx-auto w-(--card-phone) min-w-0 md:col-start-1 md:row-span-5 md:row-start-1 md:mx-0 md:w-full lg:col-start-2 lg:row-span-1">
               <WorkCard
                 art={
-                  <WorkMedia
-                    id={work.id}
-                    isNsfw={work.isNsfw}
-                    key={cover?.id ?? "coverless"}
-                    type={work.type}
-                    media={work.media}
-                    name={work.name}
-                    preference={work.nsfwPreference}
-                    coverInFile={inFile("cover")}
-                    writing={work.isOwner && writing}
-                  />
+                  <ViewTransition {...workCoverTransition(work.id)}>
+                    <WorkMedia
+                      id={work.id}
+                      isNsfw={work.isNsfw}
+                      key={cover?.id ?? "coverless"}
+                      type={work.type}
+                      media={work.media}
+                      name={work.name}
+                      preference={work.nsfwPreference}
+                      coverInFile={inFile("cover")}
+                      writing={work.isOwner && writing}
+                    />
+                  </ViewTransition>
                 }
                 details={
                   <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-mute">

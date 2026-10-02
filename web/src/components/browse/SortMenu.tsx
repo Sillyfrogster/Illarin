@@ -33,14 +33,13 @@ export function SortMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className={cn("gap-1.5", className)}>
-          <ArrowDownWideNarrow
-            aria-hidden="true"
-            className="hidden text-mute sm:block"
-          />
+        <Button
+          className={cn("gap-1.5 max-md:w-control max-md:px-0", className)}
+        >
+          <ArrowDownWideNarrow aria-hidden="true" className="text-mute" />
           <span className="sr-only">Sort: </span>
-          <span className="truncate">{SORTS[sort]}</span>
-          <ChevronDown aria-hidden="true" className="text-mute" />
+          <span className="truncate max-md:sr-only">{SORTS[sort]}</span>
+          <ChevronDown aria-hidden="true" className="text-mute max-md:hidden" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
