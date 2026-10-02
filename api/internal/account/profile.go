@@ -151,23 +151,31 @@ func (s *Service) PublicProfile(ctx context.Context, handle string) (PublicProfi
 	return found, nil
 }
 
-// OwnAvatar is an account's own avatar for the header, or nil when it has none.
-func (s *Service) OwnAvatar(ctx context.Context, ownerID uuid.UUID) (*ProfilePicture, error) {
+// OwnIdentity is the display name and avatar an account sees on itself in the header.
+type OwnIdentity struct {
+	DisplayName string
+	Avatar      *ProfilePicture
+}
+
+// ReadOwnIdentity reads an account's own display name and avatar, both empty before it has a profile.
+func (s *Service) ReadOwnIdentity(ctx context.Context, ownerID uuid.UUID) (OwnIdentity, error) {
+	var found OwnIdentity
 	var avatar storedPicture
 	err := s.pool.QueryRow(ctx, `
-		select avatar.id, avatar.width, avatar.height
+		select coalesce(profile.display_name, ''), avatar.id, avatar.width, avatar.height
 		  from public_profiles profile
-		  join profile_media avatar
-		    on avatar.id = profile.avatar_media_id and avatar.blob_id is not null
+		  left join profile_media avatar
+		         on avatar.id = profile.avatar_media_id and avatar.blob_id is not null
 		 where profile.user_id = $1
-	`, ownerID).Scan(&avatar.id, &avatar.width, &avatar.height)
+	`, ownerID).Scan(&found.DisplayName, &avatar.id, &avatar.width, &avatar.height)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return OwnIdentity{}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read own avatar: %w", err)
+		return OwnIdentity{}, fmt.Errorf("read own identity: %w", err)
 	}
-	return avatar.picture(), nil
+	found.Avatar = avatar.picture()
+	return found, nil
 }
 
 func (s *Service) SaveProfile(ctx context.Context, owner api.Account, in ProfileEdit) (PublicProfile, error) {

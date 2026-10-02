@@ -38,7 +38,7 @@ export default async function BrowsePage({
       <div
         aria-hidden="true"
         data-artwork
-        className="pointer-events-none absolute inset-x-0 top-0 -z-1 h-[22rem] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_20%,transparent)]"
+        className="pointer-events-none absolute inset-x-0 top-[calc(var(--header-height)*-1)] -z-1 h-[calc(22rem+var(--header-height))] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_20%,transparent)]"
       >
         <Image
           alt=""

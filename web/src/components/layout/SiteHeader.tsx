@@ -8,14 +8,15 @@ import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
-import { cn, navLink } from "@/lib/cn";
+import { cn } from "@/lib/cn";
 import { timing } from "@/lib/timing";
 import { AccountMenu } from "./AccountMenu";
-import { BROWSE, isCurrentPage, PUBLISH } from "./destinations";
+import { BrowseMenu } from "./BrowseMenu";
+import { PUBLISH } from "./destinations";
 import { shellClasses } from "./Shell";
 
 const ROW =
-  "flex h-[var(--header-height)] items-center gap-x-3 sm:gap-x-4 md:gap-x-8";
+  "flex h-[var(--header-height)] items-center gap-x-2 sm:gap-x-3 md:gap-x-5";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -47,10 +48,12 @@ export function SiteHeader() {
     if (pathname) setHidden(false);
   }, [pathname]);
 
+  useEffect(() => setScrolled(scrollY.get() > 0), [scrollY]);
+
   return (
     <motion.header
       animate={{ y: hidden ? -160 : 0 }}
-      className="sticky top-0 z-80 border-b border-transparent bg-field transition-colors duration-240 data-[scrolled=true]:border-rule"
+      className="sticky top-0 z-80 border-b border-transparent transition-colors duration-240 data-[scrolled=true]:border-rule data-[scrolled=true]:bg-field"
       data-scrolled={scrolled}
       data-site-header-hidden={hidden}
       initial={false}
@@ -64,17 +67,10 @@ export function SiteHeader() {
           aria-label="Illarin home"
           className="flex min-h-control items-center text-ink"
         >
-          <BrandLogo className="w-20 sm:w-28" tone="accent" />
+          <BrandLogo className="w-8 sm:hidden" shape="mark" />
+          <BrandLogo className="w-28 max-sm:hidden" />
         </Link>
-        <Link
-          aria-current={
-            isCurrentPage(pathname, BROWSE.href) ? "page" : undefined
-          }
-          className={navLink}
-          href={BROWSE.href}
-        >
-          {BROWSE.label}
-        </Link>
+        <BrowseMenu />
         <div className="ml-auto flex items-center sm:gap-1">
           <Button
             asChild

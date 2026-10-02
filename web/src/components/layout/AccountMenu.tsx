@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -25,12 +26,12 @@ import { SIGN_OUT_FAILURE, useSignOut } from "./use-sign-out";
 /** AccountMenu is the header's avatar: your pages, the theme and sign out, or sign in and create an account. */
 export function AccountMenu() {
   const pathname = usePathname();
-  const { account, avatar, writer } = useAuth();
+  const { account, identity, writer } = useAuth();
   const [open, setOpen] = useState(false);
   const { signingOut, failed, signOut } = useSignOut(() => setOpen(false));
 
   if (account === undefined) return <span className="block size-control" />;
-  const destinations = accountDestinations(account, writer);
+  const groups = accountDestinations(account, writer);
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -40,7 +41,7 @@ export function AccountMenu() {
             <Portrait
               className="size-7"
               handle={account.handle}
-              picture={avatar}
+              picture={identity.avatarUrl}
             />
           ) : (
             <CircleUserRound aria-hidden="true" />
@@ -51,45 +52,52 @@ export function AccountMenu() {
 
       <DropdownMenuContent align="end" className="w-72">
         {account ? (
-          <DropdownMenuLabel className="flex items-center gap-3 pt-2">
-            <Portrait
-              className="size-10 text-lede"
-              handle={account.handle}
-              picture={avatar}
-            />
-            <span className="min-w-0">
-              <span className="block truncate text-ui font-medium text-ink">
-                @{account.handle}
+          <DropdownMenuItem asChild className="gap-3 py-2">
+            <Link href={`/@${account.handle}`}>
+              <Portrait
+                className="size-10 text-lede"
+                handle={account.handle}
+                picture={identity.avatarUrl}
+              />
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate font-medium">
+                  {identity.displayName || `@${account.handle}`}
+                </span>
+                {identity.displayName ? (
+                  <span className="block truncate text-meta text-mute">
+                    @{account.handle}
+                  </span>
+                ) : null}
               </span>
-              <span className="block text-meta text-mute">
-                {account.emailVerified
-                  ? "Email verified"
-                  : "Verify your email to publish"}
-              </span>
-            </span>
-          </DropdownMenuLabel>
+            </Link>
+          </DropdownMenuItem>
         ) : (
           <DropdownMenuLabel>Not signed in</DropdownMenuLabel>
         )}
 
-        {destinations.map((destination) => {
-          const current = isCurrentPage(pathname, destination.href);
-          return (
-            <DropdownMenuItem
-              key={destination.href}
-              asChild
-              data-current={current ? "page" : undefined}
-            >
-              <Link
-                aria-current={current ? "page" : undefined}
-                href={destination.href}
-              >
-                <DestinationIcon id={destination.id} />
-                {destination.label}
-              </Link>
-            </DropdownMenuItem>
-          );
-        })}
+        {groups.map((group, index) => (
+          <DropdownMenuGroup key={group[0].id}>
+            {account || index > 0 ? <DropdownMenuSeparator /> : null}
+            {group.map((destination) => {
+              const current = isCurrentPage(pathname, destination.href);
+              return (
+                <DropdownMenuItem
+                  key={destination.href}
+                  asChild
+                  data-current={current ? "page" : undefined}
+                >
+                  <Link
+                    aria-current={current ? "page" : undefined}
+                    href={destination.href}
+                  >
+                    <DestinationIcon id={destination.id} />
+                    {destination.label}
+                  </Link>
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuGroup>
+        ))}
 
         <DropdownMenuSeparator />
         <AppearanceChoices />

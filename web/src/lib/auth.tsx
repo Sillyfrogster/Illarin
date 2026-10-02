@@ -18,13 +18,18 @@ export type SignedInAccount = Account;
 type AuthContextValue = {
   account: SignedInAccount | null | undefined;
   writer: boolean;
-  avatar: string | undefined;
+  identity: OwnIdentity;
   artwork: boolean;
   setArtwork: (on: boolean) => Promise<void>;
   refresh: () => Promise<void>;
   setAccount: (account: SignedInAccount | null) => void;
   signOut: () => Promise<void>;
 };
+
+/** OwnIdentity is the name and picture the signed-in account sees on itself. */
+export type OwnIdentity = Pick<SessionState, "displayName" | "avatarUrl">;
+
+const NO_IDENTITY: OwnIdentity = {};
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -33,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     undefined,
   );
   const [writer, setWriter] = useState(false);
-  const [avatar, setAvatar] = useState<string>();
+  const [identity, setIdentity] = useState<OwnIdentity>(NO_IDENTITY);
   const [artwork, setArtworkState] = useState(true);
 
   useEffect(() => setArtworkState(readArtwork()), []);
@@ -48,18 +53,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!state) {
         setAccount(null);
         setWriter(false);
-        setAvatar(undefined);
+        setIdentity(NO_IDENTITY);
         return;
       }
       setAccount(state.user);
       setWriter(state.writer);
-      setAvatar(state.avatarUrl);
+      setIdentity({
+        displayName: state.displayName,
+        avatarUrl: state.avatarUrl,
+      });
       setArtworkState(state.artwork);
       applyArtwork(state.artwork);
     } catch {
       setAccount(null);
       setWriter(false);
-      setAvatar(undefined);
+      setIdentity(NO_IDENTITY);
     }
   }, []);
 
@@ -72,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!response.ok) throw new Error("Could not sign out");
     setAccount(null);
     setWriter(false);
-    setAvatar(undefined);
+    setIdentity(NO_IDENTITY);
   }, []);
 
   const setArtwork = useCallback(
@@ -92,14 +100,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       account,
       artwork,
-      avatar,
+      identity,
       setArtwork,
       refresh,
       setAccount,
       signOut,
       writer,
     }),
-    [account, artwork, avatar, refresh, setArtwork, signOut, writer],
+    [account, artwork, identity, refresh, setArtwork, signOut, writer],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

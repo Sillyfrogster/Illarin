@@ -1,19 +1,20 @@
 import Image from "next/image";
 import { cn } from "@/lib/cn";
 
-const LOGOS = {
-  full: { light: "black", dark: "white" },
-  accent: { light: "on-light", dark: "on-dark" },
+const SHAPES = {
+  wordmark: { file: "illarin-horizontal", width: 429, height: 144 },
+  mark: { file: "illarin-mark", width: 118, height: 82 },
 } as const;
 
+/** BrandLogo is the violet butterfly, with the Illarin wordmark beside it unless only the mark is asked for. */
 export function BrandLogo({
   className,
-  tone = "full",
+  shape = "wordmark",
 }: {
   className?: string;
-  tone?: keyof typeof LOGOS;
+  shape?: keyof typeof SHAPES;
 }) {
-  const colors = LOGOS[tone];
+  const { file, width, height } = SHAPES[shape];
 
   return (
     <span
@@ -25,19 +26,19 @@ export function BrandLogo({
         alt=""
         aria-hidden="true"
         className="col-start-1 row-start-1 h-auto w-full dark:invisible"
-        height={144}
+        height={height}
         loading="eager"
-        src={`/brand/illarin-horizontal-${colors.light}.svg`}
-        width={429}
+        src={`/brand/${file}-on-light.svg`}
+        width={width}
       />
       <Image
         alt=""
         aria-hidden="true"
         className="invisible col-start-1 row-start-1 h-auto w-full dark:visible"
-        height={144}
+        height={height}
         loading="eager"
-        src={`/brand/illarin-horizontal-${colors.dark}.svg`}
-        width={429}
+        src={`/brand/${file}-on-dark.svg`}
+        width={width}
       />
     </span>
   );

@@ -214,15 +214,15 @@ func (h *Handlers) GetSession(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
 		return
 	}
-	avatar, err := h.accounts.OwnAvatar(c.Request.Context(), current.ID)
+	own, err := h.accounts.ReadOwnIdentity(c.Request.Context(), current.ID)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
 		return
 	}
 	user := toAPIAccount(*current)
-	state := SessionState{User: &user, Writer: writer, Artwork: preferences.Artwork}
-	if avatar != nil {
-		state.AvatarUrl = PictureURL(Avatar, avatar.MediaID, avatar.ImageSizeVersion)
+	state := SessionState{User: &user, Writer: writer, Artwork: preferences.Artwork, DisplayName: own.DisplayName}
+	if own.Avatar != nil {
+		state.AvatarUrl = PictureURL(Avatar, own.Avatar.MediaID, own.Avatar.ImageSizeVersion)
 	}
 	c.JSON(http.StatusOK, state)
 }
