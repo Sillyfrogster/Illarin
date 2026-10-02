@@ -14,7 +14,7 @@ import {
   readWorkReveal,
   writeWorkReveal,
 } from "@/lib/nsfw-preference";
-import { CoverControl } from "./CoverControl";
+import { CoverDrop } from "./workspace/Identity";
 
 interface WorkMediaProps {
   id: string;
@@ -110,6 +110,7 @@ export function WorkMedia({
             />
           </ImageZoom>
         )}
+        {writing ? <CoverDrop hasCover={!useFallback} /> : null}
         {isNsfw === true ? (
           <p className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-control bg-media/85 px-2.5 py-1 text-label font-medium text-on-media">
             {showClear ? (
@@ -170,12 +171,10 @@ export function WorkMedia({
         </ul>
       ) : null}
 
-      {writing ? (
-        <CoverControl
-          inFile={coverInFile}
-          preview={useFallback ? undefined : source}
-          workId={id}
-        />
+      {writing && coverInFile ? (
+        <p className="mt-2 text-label text-mute">
+          The cover is in the file, so a new one waits for Publish.
+        </p>
       ) : null}
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, type PanInfo } from "framer-motion";
-import { FileText, ImageIcon } from "lucide-react";
+import { FileText, ImageIcon, SlidersHorizontal } from "lucide-react";
 import {
   type CSSProperties,
   type PointerEvent,
@@ -46,12 +46,16 @@ export function versionName(version: RecordedVersion): string {
 /** WorkCard is the work as one card: its cover and name on the front, what its file holds on the back, and an older version rising behind it when the reader points at one. */
 export function WorkCard({
   art,
+  back,
+  backLabel,
   name,
   details,
   hasBack,
   live,
 }: {
   art: ReactNode;
+  back?: ReactNode;
+  backLabel?: string;
   name: ReactNode;
   details: ReactNode;
   hasBack: boolean;
@@ -65,6 +69,11 @@ export function WorkCard({
   const shown = stage.viewing ?? versions[0] ?? null;
 
   useShuffle(stage.card, stage.viewing?.number ?? null);
+
+  const { turn, turned } = stage;
+  useEffect(() => {
+    if (turned && !hasBack) turn(false);
+  }, [hasBack, turn, turned]);
 
   function lean(event: PointerEvent<HTMLDivElement>) {
     if (!live || event.pointerType !== "mouse" || !tilt.current) return;
@@ -140,7 +149,7 @@ export function WorkCard({
                     {name}
                     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                       {details}
-                      {hasBack ? <TurnButton /> : null}
+                      {hasBack ? <TurnButton label={backLabel} /> : null}
                     </div>
                   </div>
                   {live ? (
@@ -161,8 +170,9 @@ export function WorkCard({
                       ref={stage.setBackSlot}
                     />
                     <div className="flex justify-end border-t border-rule/60 px-3 py-2">
-                      <TurnButton />
+                      <TurnButton label={backLabel} />
                     </div>
+                    {back}
                   </div>
                 ) : null}
               </div>
@@ -229,9 +239,9 @@ function Peek({ version }: { version: RecordedVersion | null }) {
   );
 }
 
-function TurnButton() {
+function TurnButton({ label }: { label?: string }) {
   const stage = useCardStage();
-  const Icon = stage.turned ? ImageIcon : FileText;
+  const Icon = stage.turned ? ImageIcon : label ? SlidersHorizontal : FileText;
   return (
     <button
       aria-pressed={stage.turned}
@@ -243,7 +253,7 @@ function TurnButton() {
       type="button"
     >
       <Icon aria-hidden="true" />
-      {stage.turned ? "Show the cover" : "What's in the file"}
+      {stage.turned ? "Show the cover" : (label ?? "What's in the file")}
     </button>
   );
 }

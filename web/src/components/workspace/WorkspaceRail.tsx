@@ -33,11 +33,8 @@ export function WorkspaceRail({
       animate={reduced ? { opacity: 1 } : { x: 0 }}
       aria-label={title}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 flex max-h-[76dvh] flex-col rounded-t-plate bg-plane shadow-popover",
-        "lg:top-(--site-header-offset) lg:right-0 lg:transition-[top] lg:duration-240 lg:bottom-0 lg:left-auto lg:max-h-none lg:w-[28rem] lg:rounded-none",
-        "before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:content-['']",
-        "lg:before:inset-y-0 lg:before:right-auto lg:before:left-0 lg:before:h-auto lg:before:w-0.5",
-        tone === "stop" ? "before:bg-stop" : "before:bg-accent",
+        "fixed inset-x-0 bottom-0 z-40 flex max-h-[76dvh] flex-col rounded-t-card bg-plane shadow-popover ring-1 ring-ink/8",
+        "lg:top-(--site-header-offset) lg:right-0 lg:transition-[top] lg:duration-240 lg:bottom-0 lg:left-auto lg:max-h-none lg:w-[28rem] lg:rounded-none lg:shadow-none lg:ring-0 lg:border-l lg:border-rule",
       )}
       exit={reduced ? { opacity: 0 } : { x: "100%" }}
       initial={reduced ? { opacity: 0 } : { x: "100%" }}
@@ -46,7 +43,10 @@ export function WorkspaceRail({
       <div className="flex items-start justify-between gap-4 px-6 pt-7 pb-4 md:px-8">
         <div className="min-w-0">
           <h2
-            className="font-display text-section font-medium text-ink outline-offset-3 wrap-anywhere"
+            className={cn(
+              "font-display text-section font-medium outline-offset-3 wrap-anywhere",
+              tone === "stop" ? "text-stop" : "text-ink",
+            )}
             ref={heading}
             tabIndex={-1}
           >

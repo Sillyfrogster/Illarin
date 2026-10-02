@@ -2,41 +2,32 @@
 
 import { motion } from "framer-motion";
 import {
+  Check,
   ChevronDown,
+  Ellipsis,
   EyeOff,
   Globe,
   LibraryBig,
   Link2,
   LockKeyhole,
   PencilLine,
+  RefreshCw,
   Upload,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { VisibilityItems } from "@/components/work/VisibilityItems";
-import {
-  Dock,
-  DockAction,
-  DockTool,
-  TOOL,
-  WORDED_TOOL,
-} from "@/components/workspace/Dock";
+import { DockTool, SaveStatus } from "@/components/workspace/Dock";
 import type { WorkDetail } from "@/lib/api/query";
-import { cn } from "@/lib/cn";
+import { cn, focusRing } from "@/lib/cn";
 import { timing } from "@/lib/timing";
-import type { SaveState } from "./state";
-import { useWorkspace } from "./state";
-
-const STATUS: Record<SaveState, string> = {
-  failed: "Not saved",
-  private: "Drafted changes",
-  published: "Published",
-  saving: "Saving",
-  unsaved: "Saving",
-};
+import { AltitudeSwitch } from "./Altitudes";
+import { type Pane, useWorkspace } from "./state";
 
 export const EDIT_CONTROL = "work-edit-control";
 
@@ -46,127 +37,260 @@ const SHOWN = {
   unlisted: { icon: Link2, label: "Unlisted" },
 };
 
-export function WorkspaceDock({
-  detail,
-  takenDown,
-  typeName,
-  visibility,
-  waiting = 0,
-}: {
+type EditProps = {
   detail: string;
   takenDown: boolean;
   typeName: string;
   visibility: WorkDetail["visibility"];
   waiting?: number;
-}) {
+};
+
+type Tool = {
+  key: string;
+  pane: Pane["kind"];
+  icon: typeof Upload;
+  label: string;
+  words?: string;
+  count?: number;
+};
+
+function useTools(waiting: number): Tool[] {
   const workspace = useWorkspace();
   const holdsPrompts = workspace.blocks.some((block) =>
     block.elements.some((element) => element.type === "prompt_list"),
   );
+  return [
+    ...(workspace.isDraft
+      ? []
+      : [
+          {
+            icon: Upload,
+            key: "replacement",
+            label: "Upload a new version",
+            pane: "replacement" as const,
+            words: "New version",
+          },
+        ]),
+    {
+      count: waiting,
+      icon: LibraryBig,
+      key: "shelf",
+      label:
+        waiting > 0
+          ? `Shelf, ${waiting} ${waiting === 1 ? "piece" : "pieces"} waiting`
+          : "Shelf, empty",
+      pane: "shelf" as const,
+      words: "Shelf",
+    },
+    ...(holdsPrompts
+      ? [
+          {
+            icon: LockKeyhole,
+            key: "private-prompts",
+            label: "Private prompts",
+            pane: "private-prompts" as const,
+            words: "Private prompts",
+          },
+        ]
+      : []),
+  ];
+}
 
-  return (
-    <Dock
-      actions={
-        <>
-          <DockAction onClick={workspace.stopEditing}>Done</DockAction>
-          {workspace.saveState === "failed" ? (
-            <DockAction onClick={workspace.save}>Try again</DockAction>
-          ) : null}
-          <DockAction
-            disabled={
-              workspace.busy ||
-              workspace.dirty ||
-              workspace.arrangement.busy ||
-              (!workspace.isDraft && !workspace.unpublishedChanges)
-            }
-            onClick={() => workspace.openPane({ kind: "publication" })}
-            strong
-          >
-            Publish
-          </DockAction>
-        </>
-      }
-      detail={detail}
-      layoutId={EDIT_CONTROL}
-      railOpen={workspace.pane !== null}
-      state={workspace.saveState}
-      tools={
-        <>
-          <VisibilityMenu
-            takenDown={takenDown}
-            typeName={typeName}
-            visibility={visibility}
-          />
-          {!workspace.isDraft ? (
-            <DockTool
-              active={workspace.pane?.kind === "replacement"}
-              icon={Upload}
-              label="Upload a new version"
-              onClick={() => workspace.openPane({ kind: "replacement" })}
-              worded
-            />
-          ) : null}
-          <DockTool
-            active={workspace.pane?.kind === "shelf"}
-            count={waiting}
-            icon={LibraryBig}
-            worded
-            words="Shelf"
-            label={
-              waiting > 0
-                ? `Shelf, ${waiting} ${waiting === 1 ? "piece" : "pieces"} waiting`
-                : "Shelf, empty"
-            }
-            onClick={() => workspace.openPane({ kind: "shelf" })}
-          />
-          {holdsPrompts ? (
-            <DockTool
-              active={workspace.pane?.kind === "private-prompts"}
-              icon={LockKeyhole}
-              label="Private prompts"
-              onClick={() => workspace.openPane({ kind: "private-prompts" })}
-            />
-          ) : null}
-        </>
-      }
-      words={STATUS[workspace.saveState]}
+function Tools({ tools }: { tools: Tool[] }) {
+  const workspace = useWorkspace();
+  return tools.map((tool) => (
+    <DockTool
+      active={workspace.pane?.kind === tool.pane}
+      count={tool.count}
+      icon={tool.icon}
+      key={tool.key}
+      label={tool.label}
+      onClick={() => workspace.openPane({ kind: tool.pane } as Pane)}
+      words={tool.words}
     />
+  ));
+}
+
+/** MoreTools folds the tools into one menu where the bar has no room for them. */
+function MoreTools({ tools, done }: { tools: Tool[]; done?: boolean }) {
+  const workspace = useWorkspace();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button aria-label="More tools" size="icon" variant="ghost">
+          <Ellipsis aria-hidden="true" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="top">
+        {tools.map((tool) => (
+          <DropdownMenuItem
+            key={tool.key}
+            onSelect={() => workspace.openPane({ kind: tool.pane } as Pane)}
+          >
+            <tool.icon />
+            {tool.words ?? tool.label}
+            {tool.count ? (
+              <span className="ml-auto text-label text-accent tabular-nums">
+                {tool.count}
+              </span>
+            ) : null}
+          </DropdownMenuItem>
+        ))}
+        {done ? (
+          <DropdownMenuItem onSelect={workspace.stopEditing}>
+            <Check />
+            Done editing
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
-function VisibilityMenu({
-  takenDown,
-  typeName,
-  visibility,
-}: {
-  takenDown: boolean;
-  typeName: string;
-  visibility: WorkDetail["visibility"];
-}) {
+/** PublishButton reads what Publish would do now: publish a draft, publish changes, or nothing because readers already see this. */
+function PublishButton() {
+  const workspace = useWorkspace();
+  const upToDate = !workspace.isDraft && !workspace.unpublishedChanges;
+  const waiting =
+    workspace.busy || workspace.dirty || workspace.arrangement.busy;
+  if (upToDate && !workspace.dirty)
+    return (
+      <Button className="text-mute" disabled variant="secondary">
+        <Check aria-hidden="true" />
+        Published
+      </Button>
+    );
+  return (
+    <Button
+      disabled={waiting}
+      onClick={() => workspace.openPane({ kind: "publication" })}
+      variant="primary"
+    >
+      {workspace.isDraft ? "Publish" : "Publish changes"}
+    </Button>
+  );
+}
+
+function TryAgain() {
+  const workspace = useWorkspace();
+  if (workspace.saveState !== "failed") return null;
+  return (
+    <Button onClick={workspace.save} size="compact" variant="ghost">
+      <RefreshCw aria-hidden="true" />
+      Try again
+    </Button>
+  );
+}
+
+/** WorkspaceDock is the arrange-map editor's strip at the bottom: whether the edits are saved, writing or arranging, the tools, and Publish. */
+export function WorkspaceDock(props: EditProps) {
+  const workspace = useWorkspace();
+  const tools = useTools(props.waiting ?? 0);
+  return (
+    <div
+      className={cn(
+        "pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3 transition-[padding] duration-240 ease-wipe md:pb-6",
+        workspace.pane !== null && "max-lg:hidden lg:pr-[28rem]",
+      )}
+    >
+      <motion.div
+        animate={{ opacity: 1, y: 0 }}
+        className="pointer-events-auto flex w-full max-w-[58rem] items-center gap-1.5 rounded-card bg-plane p-1.5 shadow-popover ring-1 ring-ink/8 md:gap-2 md:p-2"
+        initial={false}
+        layoutId={EDIT_CONTROL}
+        transition={timing.settle}
+      >
+        <div className="min-w-0 flex-1 px-2 md:px-3">
+          <SaveStatus
+            compact
+            detail={props.detail}
+            state={workspace.saveState}
+          />
+        </div>
+        <TryAgain />
+        <AltitudeSwitch compact />
+        <div className="hidden items-center gap-0.5 md:flex">
+          <VisibilityMenu {...props} />
+          <Tools tools={tools} />
+        </div>
+        <div className="md:hidden">
+          <MoreTools done tools={tools} />
+        </div>
+        <Button
+          className="max-md:hidden"
+          onClick={workspace.stopEditing}
+          variant="secondary"
+        >
+          Done
+        </Button>
+        <PublishButton />
+      </motion.div>
+    </div>
+  );
+}
+
+/** EditBar is the on-page editor's control row: it takes the header's place while editing, so the page below stays the page. */
+export function EditBar(props: EditProps) {
+  const workspace = useWorkspace();
+  const tools = useTools(props.waiting ?? 0);
+  return (
+    <motion.div
+      animate={{ y: 0 }}
+      className="fixed inset-x-0 top-0 z-85 border-b border-rule bg-field"
+      data-edit-bar
+      initial={{ y: "-100%" }}
+      transition={timing.settle}
+    >
+      <div className="mx-auto flex h-[var(--header-height)] w-full max-w-[var(--shell)] items-center gap-2 px-[var(--gutter)] md:gap-3">
+        <span className="hidden shrink-0 items-center gap-2 rounded-control bg-accent-wash px-2.5 py-1.5 text-meta font-medium text-accent sm:inline-flex">
+          <PencilLine aria-hidden="true" className="size-4" />
+          Editing
+        </span>
+        <div className="min-w-0 flex-1">
+          <SaveStatus
+            compact
+            detail={props.detail}
+            state={workspace.saveState}
+          />
+        </div>
+        <TryAgain />
+        <div className="hidden items-center gap-0.5 lg:flex">
+          <VisibilityMenu {...props} />
+          <Tools tools={tools} />
+        </div>
+        <div className="lg:hidden">
+          <MoreTools tools={tools} />
+        </div>
+        <span aria-hidden="true" className="hidden h-6 w-px bg-rule lg:block" />
+        <Button onClick={workspace.stopEditing} variant="secondary">
+          Done
+        </Button>
+        <PublishButton />
+      </div>
+    </motion.div>
+  );
+}
+
+function VisibilityMenu({ takenDown, typeName, visibility }: EditProps) {
   const workspace = useWorkspace();
   const shown = SHOWN[workspace.isDraft ? "draft" : visibility];
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          aria-label={`Visibility: ${shown.label}`}
+          aria-label={`Who can see it: ${shown.label}`}
           className={cn(
-            TOOL,
-            WORDED_TOOL,
-            "@max-3xl/dock:w-control @max-3xl/dock:px-0",
+            "inline-flex h-control shrink-0 items-center gap-2 rounded-control px-2.5 text-meta font-medium text-mute transition-colors duration-80 hover:bg-fill hover:text-ink",
+            focusRing,
           )}
           type="button"
         >
-          <shown.icon aria-hidden="true" size={18} />
-          <span className="@max-3xl/dock:sr-only">{shown.label}</span>
-          <ChevronDown
-            aria-hidden="true"
-            className="@max-3xl/dock:hidden"
-            size={14}
-          />
+          <shown.icon aria-hidden="true" className="size-4.5" />
+          <span className="max-xl:sr-only">{shown.label}</span>
+          <ChevronDown aria-hidden="true" className="size-3.5" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="center" side="top">
+      <DropdownMenuContent align="center">
         <VisibilityItems
           frozen={takenDown}
           initialVisibility={visibility}
@@ -186,15 +310,19 @@ export function EditToggle({ typeName }: { typeName: string }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-4 md:pb-7">
       <motion.button
-        className="pointer-events-auto inline-flex min-h-13 items-center gap-2.5 rounded-plate bg-ink py-2 pr-6 pl-5 text-ui font-medium text-field shadow-popover outline-offset-3 hover:bg-ink/90"
-        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        layoutId={EDIT_CONTROL}
+        className={cn(
+          "pointer-events-auto inline-flex h-12 items-center gap-2.5 rounded-card bg-action pr-6 pl-5 text-ui font-medium text-on-accent shadow-popover transition-colors duration-80 hover:bg-action-hover",
+          focusRing,
+          "focus-visible:ring-offset-1 focus-visible:ring-offset-field",
+        )}
+        initial={{ opacity: 0, y: 24 }}
+        layoutId={workspace.look === "altitudes" ? EDIT_CONTROL : undefined}
         onClick={workspace.startEditing}
         transition={timing.settle}
         type="button"
       >
-        <PencilLine aria-hidden="true" size={17} />
+        <PencilLine aria-hidden="true" className="size-4.5" />
         Edit your {typeName}
       </motion.button>
     </div>

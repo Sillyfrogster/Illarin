@@ -2,7 +2,7 @@
 
 import {
   Bold,
-  ChevronDown,
+  CircleHelp,
   Code,
   Italic,
   Link,
@@ -10,10 +10,14 @@ import {
   ListOrdered,
   TextQuote,
 } from "lucide-react";
-import { type ComponentType, useId, useState } from "react";
+import type { ComponentType } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Tooltip } from "@/components/ui/tooltip";
-import { cn } from "@/lib/cn";
 import type { MarkdownAction } from "@/lib/markdown-edit";
 
 type Tool = {
@@ -32,77 +36,68 @@ const TOOLS: Tool[] = [
   { action: "quote", icon: TextQuote, label: "Block quote" },
 ];
 
-/** Offers the page markdown a rich field accepts, so a creator does not have to know the markers */
+/** Floats the markdown a rich field accepts above the text being written, so a creator does not have to know the markers and nothing on the page moves */
 export function FormattingBar({
   apply,
 }: {
   apply: (action: MarkdownAction) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const detail = useId();
-
   return (
-    <div className="mb-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <div
-          aria-label="Formatting"
-          className="flex shrink-0 items-center gap-0.5 rounded-plate bg-deep p-0.5"
-          data-measurement-ignore
-          role="toolbar"
+    <div
+      aria-label="Formatting"
+      className="absolute bottom-2 left-0 flex animate-pop items-center gap-0.5 rounded-control bg-plane p-1 shadow-popover ring-1 ring-ink/8"
+      data-measurement-ignore
+      role="toolbar"
+    >
+      {TOOLS.map(({ action, icon: Icon, label }) => (
+        <Tooltip content={label} key={action}>
+          <Button
+            aria-label={label}
+            onClick={() => apply(action)}
+            onMouseDown={(event) => event.preventDefault()}
+            size="icon-compact"
+            variant="ghost"
+          >
+            <Icon aria-hidden="true" />
+          </Button>
+        </Tooltip>
+      ))}
+      <span aria-hidden="true" className="mx-1 h-5 w-px bg-rule" />
+      <Popover>
+        <Tooltip content="What markdown does here">
+          <PopoverTrigger asChild>
+            <Button
+              aria-label="What markdown does here"
+              onMouseDown={(event) => event.preventDefault()}
+              size="icon-compact"
+              variant="ghost"
+            >
+              <CircleHelp aria-hidden="true" />
+            </Button>
+          </PopoverTrigger>
+        </Tooltip>
+        <PopoverContent
+          align="start"
+          className="w-[min(24rem,calc(100vw-2rem))]"
+          onCloseAutoFocus={(event) => event.preventDefault()}
+          onOpenAutoFocus={(event) => event.preventDefault()}
         >
-          {TOOLS.map(({ action, icon: Icon, label }) => (
-            <Tooltip content={label} key={action}>
-              <Button
-                aria-label={label}
-                onClick={() => apply(action)}
-                onMouseDown={(event) => event.preventDefault()}
-                size="icon-compact"
-                variant="ghost"
-              >
-                <Icon aria-hidden="true" />
-              </Button>
-            </Tooltip>
-          ))}
-        </div>
-        <Button
-          aria-controls={detail}
-          aria-expanded={open}
-          data-measurement-ignore
-          onClick={() => setOpen((shown) => !shown)}
-          onMouseDown={(event) => event.preventDefault()}
-          size="compact"
-          variant="ghost"
-        >
-          Markdown works here
-          <ChevronDown
-            aria-hidden="true"
-            className={cn(
-              "transition-transform duration-160 motion-reduce:transition-none",
-              open && "rotate-180",
-            )}
-          />
-        </Button>
-      </div>
-      {open ? (
-        <dl
-          className="mt-2 grid gap-x-3 gap-y-1 rounded-control bg-deep p-3 font-ui text-label text-mute [grid-template-columns:fit-content(6rem)_minmax(0,1fr)]"
-          data-measurement-ignore
-          id={detail}
-        >
-          <dt className="font-medium">Takes</dt>
-          <dd>
-            Emphasis, links, inline code, headings, lists, block quotes, fenced
-            code and tables.
-          </dd>
-          <dt className="font-medium">Drops</dt>
-          <dd>
-            Callouts, dividers and images. HTML is reduced to the words inside
-            it, and a note says once where anything was dropped.
-          </dd>
-          <dt className="font-medium">Keeps</dt>
-          <dd>A download carries your text exactly as you typed it.</dd>
-        </dl>
-      ) : null}
+          <dl className="grid gap-x-3 gap-y-2 text-meta text-mute [grid-template-columns:fit-content(5rem)_minmax(0,1fr)]">
+            <dt className="font-medium text-ink">Takes</dt>
+            <dd>
+              Emphasis, links, inline code, headings, lists, block quotes,
+              fenced code and tables.
+            </dd>
+            <dt className="font-medium text-ink">Drops</dt>
+            <dd>
+              Callouts, dividers and images. HTML is reduced to the words inside
+              it, and a note says once where anything was dropped.
+            </dd>
+            <dt className="font-medium text-ink">Keeps</dt>
+            <dd>A download carries your text exactly as you typed it.</dd>
+          </dl>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

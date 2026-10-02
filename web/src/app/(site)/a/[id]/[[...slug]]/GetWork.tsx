@@ -46,6 +46,7 @@ import { useCardStage } from "./card/stage";
 import { versionName } from "./card/WorkCard";
 import { FollowOffer } from "./follow/FollowOffer";
 import { InstallProgress } from "./InstallProgress";
+import { useWorkspace } from "./workspace/state";
 
 const POLL_INTERVAL_MS = 8000;
 const POLL_LIMIT = 20;
@@ -85,6 +86,7 @@ export function GetWork({
 }) {
   const { account } = useAuth();
   const stage = useCardStage();
+  const workspace = useWorkspace();
   const button = useRef<HTMLElement>(null);
   const [connectedApps, setConnectedApps] = useState(initialApps);
   const [busy, setBusy] = useState(false);
@@ -236,7 +238,10 @@ export function GetWork({
         ))
       : null;
   const back =
-    primary && stage.backSlot && (backFormat || original || sends)
+    primary &&
+    !workspace.editing &&
+    stage.backSlot &&
+    (backFormat || original || sends)
       ? createPortal(
           <FileContents
             main={backFormat}

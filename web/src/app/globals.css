@@ -355,6 +355,31 @@ body:has([data-site-header-hidden="true"]) {
   --site-header-offset: 0px;
 }
 
+/* The work editor's edit bar takes the header's place */
+body:has([data-edit-bar]) [data-site-header-hidden],
+body:has([data-edit-bar]) [data-site-header-hidden] * {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+body:has([data-edit-bar]) {
+  --site-header-offset: var(--header-height);
+}
+
+/* Moving between writing and the arrange map: each block grows or shrinks into its other size, cropped from its top */
+::view-transition-group(.edit-block) {
+  animation-duration: 460ms;
+  animation-timing-function: var(--ease-wipe);
+}
+
+::view-transition-old(.edit-block),
+::view-transition-new(.edit-block) {
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
 main {
   min-height: calc(100svh - var(--header-height));
   view-transition-name: page;

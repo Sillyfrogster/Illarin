@@ -14,7 +14,7 @@ import { arrangementRequest, moveBlock } from "./composition";
 
 export type Arrangement = {
   busy: boolean;
-  add: (definition: string, elementType: ElementType) => void;
+  add: (definition: string, elementType: ElementType, at?: number) => void;
   move: (blockId: string, to: number) => void;
   remove: (blockId: string) => void;
   moveContent: (blockId: string, destinationBlockId: string) => void;
@@ -84,7 +84,7 @@ export function useArrangement(page: Page): Arrangement {
   );
 
   return {
-    add: (definition, elementType) =>
+    add: (definition, elementType, at) =>
       run(async () => {
         const added = await addWorkBlock(
           page.candidate,
@@ -94,6 +94,17 @@ export function useArrangement(page: Page): Arrangement {
         );
         page.editBlockList((list) => [...list, added]);
         page.say(`${added.title} is on the page.`);
+        const order = [...page.blocks.current, added];
+        if (at === undefined || at >= order.length - 1) return;
+        const saved = await arrangeWorkBlocks(
+          page.candidate,
+          page.workId,
+          arrangementRequest(moveBlock(order, added.id, at), [
+            ...page.savedBlocks.current,
+            added,
+          ]),
+        );
+        page.applyServerBlocks(saved);
       }, "The block could not be added. Try again."),
     busy,
     move: (blockId, to) => {

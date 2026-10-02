@@ -6,7 +6,6 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn, focusRing } from "@/lib/cn";
-import { timing } from "@/lib/timing";
 
 export type DockState =
   | "failed"
@@ -15,45 +14,85 @@ export type DockState =
   | "private"
   | "published";
 
-export const TOOL = `relative inline-flex size-control shrink-0 items-center justify-center rounded-control text-field opacity-70 transition-[opacity,background-color] duration-80 hover:bg-field/15 hover:opacity-100 focus-visible:opacity-100 aria-pressed:bg-field/15 aria-pressed:opacity-100 ${focusRing}`;
+const SAVED: Record<DockState, string> = {
+  failed: "Not saved",
+  private: "Saved",
+  published: "Saved",
+  saving: "Saving",
+  unsaved: "Saving",
+};
 
-const QUIET_ACTION = `inline-flex h-control items-center rounded-control px-3.5 font-ui text-ui font-medium text-field opacity-75 transition-[opacity,background-color] duration-80 hover:bg-field/15 hover:opacity-100 disabled:opacity-35 ${focusRing}`;
-
+/** StatusLight is the save state as a dot: violet and breathing while saving, a stop colour when a save failed, quiet when saved. */
 export function StatusLight({ state }: { state: DockState }) {
   const reduced = useReducedMotion();
+  const busy = state === "saving" || state === "unsaved";
   return (
     <span className="relative flex size-2.5 shrink-0">
-      {state === "unsaved" && !reduced ? (
+      {busy && !reduced ? (
         <motion.span
-          animate={{ opacity: [0.5, 0], scale: [1, 2.4] }}
+          animate={{ opacity: [0.6, 0], scale: [1, 2.4] }}
           className="absolute inset-0 rounded-full bg-accent"
-          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+          transition={{ duration: 1.4, repeat: Number.POSITIVE_INFINITY }}
         />
       ) : null}
       <span
         className={cn(
           "relative size-2.5 rounded-full",
           state === "failed" && "bg-stop",
-          state === "unsaved" && "bg-accent",
-          state === "saving" && "bg-accent",
-          state === "private" && "shadow-[inset_0_0_0_2px_var(--v-action)]",
-          state === "published" && "bg-field/60",
+          busy && "bg-accent",
+          (state === "private" || state === "published") && "bg-mute/60",
         )}
       />
     </span>
   );
 }
 
-export const WORDED_TOOL = "w-auto gap-2 px-3 text-meta font-medium";
+/** SaveStatus says whether the creator's edits are safe, and under it what readers see right now. */
+export function SaveStatus({
+  detail,
+  state,
+  compact = false,
+}: {
+  detail: string;
+  state: DockState;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      aria-live="polite"
+      className="flex min-w-0 items-center gap-2.5"
+      title={compact ? detail : undefined}
+    >
+      <StatusLight state={state} />
+      <span className="min-w-0 leading-4">
+        <span
+          className={cn(
+            "block truncate text-meta font-medium",
+            state === "failed" ? "text-stop" : "text-ink",
+          )}
+        >
+          {SAVED[state]}
+        </span>
+        <span
+          className={cn(
+            "block truncate text-label text-mute",
+            compact && "max-md:sr-only",
+          )}
+        >
+          {detail}
+        </span>
+      </span>
+    </div>
+  );
+}
 
-/** DockTool is an icon, or an icon and words; the words fold away when the dock is narrow and stay as its accessible name. */
+/** DockTool is one of the editor's tools: an icon, with its words when there is room, and a count when something waits in it. */
 export function DockTool({
   active,
   count,
   icon: Icon,
   label,
   onClick,
-  worded,
   words,
 }: {
   active?: boolean;
@@ -61,38 +100,30 @@ export function DockTool({
   icon: LucideIcon;
   label: string;
   onClick: () => void;
-  worded?: boolean;
   words?: string;
 }) {
-  const shown = words ?? label;
   return (
     <Tooltip content={label}>
       <button
         aria-label={label}
         aria-pressed={active}
         className={cn(
-          TOOL,
-          worded && WORDED_TOOL,
-          worded && "@max-3xl/dock:w-control @max-3xl/dock:px-0",
+          "relative inline-flex h-control shrink-0 items-center gap-2 rounded-control px-2.5 text-meta font-medium text-mute transition-colors duration-80 hover:bg-fill hover:text-ink aria-pressed:bg-accent-wash aria-pressed:text-accent",
+          focusRing,
         )}
         onClick={onClick}
         type="button"
       >
-        <Icon aria-hidden="true" size={18} />
-        {worded ? (
-          <span className="@max-3xl/dock:sr-only" aria-hidden="true">
-            {shown}
+        <Icon aria-hidden="true" className="size-4.5" />
+        {words ? (
+          <span aria-hidden="true" className="max-xl:sr-only">
+            {words}
           </span>
         ) : null}
         {count ? (
           <span
             aria-hidden="true"
-            className={cn(
-              "inline-flex min-w-5 items-center justify-center rounded-full bg-action px-1.5 font-ui text-label leading-5 font-semibold text-on-accent tabular-nums",
-              worded
-                ? "@max-3xl/dock:absolute @max-3xl/dock:-top-1 @max-3xl/dock:-right-1"
-                : "absolute -top-1 -right-1",
-            )}
+            className="inline-flex min-w-5 items-center justify-center rounded-full bg-action px-1.5 text-label leading-5 font-semibold text-on-accent tabular-nums max-xl:absolute max-xl:-top-1 max-xl:-right-1"
           >
             {count}
           </span>
@@ -102,6 +133,7 @@ export function DockTool({
   );
 }
 
+/** DockAction is a dock's action: violet when it is the main one, grey otherwise. */
 export function DockAction({
   children,
   disabled,
@@ -113,28 +145,21 @@ export function DockAction({
   onClick: () => void;
   strong?: boolean;
 }) {
-  if (strong)
-    return (
-      <Button disabled={disabled} onClick={onClick} variant="primary">
-        {children}
-      </Button>
-    );
   return (
-    <button
-      className={QUIET_ACTION}
+    <Button
       disabled={disabled}
       onClick={onClick}
-      type="button"
+      variant={strong ? "primary" : "secondary"}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
+/** Dock is a writing surface's control strip at the bottom of the screen: the save state, the tools and the actions. */
 export function Dock({
   actions,
   detail,
-  layoutId,
   railOpen,
   state,
   tools,
@@ -142,55 +167,36 @@ export function Dock({
 }: {
   actions: ReactNode;
   detail: string;
-  layoutId?: string;
   railOpen: boolean;
   state: DockState;
   tools: ReactNode;
   words: string;
 }) {
-  const reduced = useReducedMotion();
-
   return (
     <div
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-4 transition-[padding] duration-240 ease-wipe motion-reduce:transition-none md:pb-7",
+        "pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3 transition-[padding] duration-240 ease-wipe md:pb-6",
         railOpen && "max-lg:hidden lg:pr-[28rem]",
       )}
     >
-      <motion.div
-        animate={{ opacity: 1, y: 0 }}
-        className="@container/dock pointer-events-auto flex w-full max-w-[50rem] flex-wrap items-center gap-1 rounded-plate bg-ink p-2 shadow-popover sm:flex-nowrap md:gap-2"
-        initial={
-          layoutId && !reduced
-            ? false
-            : reduced
-              ? { opacity: 0 }
-              : { opacity: 0, y: 96 }
-        }
-        layoutId={reduced ? undefined : layoutId}
-        transition={reduced ? { duration: 0 } : timing.settle}
-      >
+      <div className="pointer-events-auto flex w-full max-w-[50rem] items-center gap-1.5 rounded-card bg-plane p-1.5 shadow-popover ring-1 ring-ink/8 md:gap-2 md:p-2">
         <div
           aria-live="polite"
-          className="flex w-full min-w-0 items-center gap-2.5 px-2 text-field sm:w-auto sm:pr-1 sm:pl-3"
+          className="flex min-w-0 flex-1 items-center gap-2.5 px-2 md:px-3"
         >
           <StatusLight state={state} />
           <span className="min-w-0 leading-4">
-            <span className="block truncate text-meta font-medium">
+            <span className="block truncate text-meta font-medium text-ink">
               {words}
             </span>
-            <span className="block truncate text-label opacity-65">
+            <span className="block truncate text-label text-mute max-md:sr-only">
               {detail}
             </span>
           </span>
         </div>
-
-        <div className="flex min-w-0 flex-1 basis-auto items-center gap-0.5 sm:justify-center">
-          {tools}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">{actions}</div>
-      </motion.div>
+        <div className="flex items-center gap-0.5">{tools}</div>
+        <div className="flex shrink-0 items-center gap-1.5">{actions}</div>
+      </div>
     </div>
   );
 }

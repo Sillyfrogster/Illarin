@@ -140,8 +140,10 @@ export function EditableText({
 
     if (!rich) return writing;
     return (
-      <div className="min-w-0">
-        <FormattingBar apply={format} />
+      <div className="relative min-w-0">
+        <div className="sticky top-[calc(var(--site-header-offset)+6.25rem)] z-30 h-0">
+          <FormattingBar apply={format} />
+        </div>
         {writing}
       </div>
     );
@@ -154,7 +156,8 @@ export function EditableText({
       aria-readonly={live ? true : undefined}
       className={cn(
         "m-0 whitespace-pre-wrap wrap-anywhere",
-        live && "cursor-text rounded-sm focus-visible:bg-accent-wash",
+        live &&
+          "-mx-2 -my-1 cursor-text rounded-control px-2 py-1 transition-colors duration-150 hover:bg-fill focus-visible:bg-accent-wash",
         className,
         empty && "text-mute italic",
       )}

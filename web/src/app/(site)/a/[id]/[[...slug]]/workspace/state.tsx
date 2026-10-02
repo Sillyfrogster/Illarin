@@ -60,6 +60,11 @@ export type Pane =
   | { kind: "remove"; blockId: string }
   | { kind: "element"; blockId: string; elementId: string };
 
+/** Look is which of the two editor designs is on screen: writing and an arrange map, or handles on the page itself. */
+export type Look = "altitudes" | "hands";
+
+export type Altitude = "write" | "arrange";
+
 type MakingPublic = { prompts: string[]; keepsAPrivatePrompt: boolean };
 
 type Workspace = {
@@ -67,6 +72,10 @@ type Workspace = {
   isOwner: boolean;
   isDraft: boolean;
   editing: boolean;
+  look: Look;
+  setLook: (look: Look) => void;
+  altitude: Altitude;
+  setAltitude: (altitude: Altitude) => void;
   sweep: number;
   blocks: WorkBlock[];
   addableBlocks: AddableBlock[];
@@ -140,6 +149,10 @@ export function WorkspaceProvider({
   const [editing, setEditing] = useState(
     isOwner && searchParams.get("edit") === "true",
   );
+  const [look, setLook] = useState<Look>(
+    searchParams.get("editor") === "c" ? "hands" : "altitudes",
+  );
+  const [altitude, setAltitude] = useState<Altitude>("write");
   const [sweep, setSweep] = useState(0);
   const [draft, setDraft] = useState(blocks);
   const [saved, setSaved] = useState(blocks);
@@ -419,6 +432,7 @@ export function WorkspaceProvider({
   const stopEditing = useCallback(() => {
     lastCursor.current = cursor;
     setEditing(false);
+    setAltitude("write");
     setCursor(null);
     setPane(null);
   }, [cursor]);
@@ -454,6 +468,10 @@ export function WorkspaceProvider({
     isOwner,
     isDraft,
     editing,
+    look,
+    setLook,
+    altitude,
+    setAltitude,
     sweep,
     blocks: draft,
     details: draftDetails,

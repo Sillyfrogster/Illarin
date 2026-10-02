@@ -15,6 +15,7 @@ import type {
 } from "@/lib/api/query";
 import { fetchWaitingReplacement, type UploadOperation } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import type { PageTarget } from "@/lib/readiness";
 import { ElementFields, elementHint } from "../ElementEditors";
 import { MakePublicConfirmation } from "../MakePublicConfirmation";
@@ -34,7 +35,7 @@ import { ReplacementStep } from "./ReplacementStep";
 import { ShelfPane } from "./ShelfPane";
 import { useShelf } from "./shelf";
 import { useWorkspace } from "./state";
-import { EditToggle, WorkspaceDock } from "./WorkspaceDock";
+import { EditBar, EditToggle, WorkspaceDock } from "./WorkspaceDock";
 
 export type WorkspaceSurfacesProps = {
   creator: string;
@@ -70,6 +71,17 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
     if (target.where === "name") workspace.setCursor("identity:name");
   }
 
+  const editProps = {
+    detail: detail(
+      workspace.isDraft,
+      workspace.saveState,
+      workspace.unpublishedChanges,
+    ),
+    takenDown: props.takenDown,
+    typeName: props.typeName,
+    visibility: props.visibility,
+    waiting: shelf.count,
+  };
   const pane = workspace.pane;
   const edited =
     pane?.kind === "element"
@@ -95,23 +107,21 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
         </Button>
       ) : null}
 
-      {workspace.editing ? <div aria-hidden="true" className="h-28" /> : null}
+      {workspace.editing && workspace.look === "altitudes" ? (
+        <div aria-hidden="true" className="h-28" />
+      ) : null}
 
       {workspace.editing ? (
-        <WorkspaceDock
-          detail={detail(
-            workspace.isDraft,
-            workspace.saveState,
-            workspace.unpublishedChanges,
-          )}
-          takenDown={props.takenDown}
-          typeName={props.typeName}
-          visibility={props.visibility}
-          waiting={shelf.count}
-        />
+        workspace.look === "hands" ? (
+          <EditBar {...editProps} />
+        ) : (
+          <WorkspaceDock {...editProps} />
+        )
       ) : workspace.isOwner && !props.takenDown ? (
         <EditToggle typeName={props.typeName} />
       ) : null}
+
+      {workspace.isOwner ? <LookSwitch /> : null}
 
       <AnimatePresence>
         {pane?.kind === "conflict" ? (
@@ -281,7 +291,12 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
         {workspace.message && workspace.message !== NO_ALLOWED_APP ? (
           <motion.output
             animate={{ opacity: 1, y: 0 }}
-            className="fixed inset-x-4 bottom-28 z-50 mx-auto block max-w-lg rounded-plate bg-plane px-5 py-3.5 text-meta text-ink shadow-popover md:bottom-32"
+            className={cn(
+              "fixed inset-x-4 z-50 mx-auto block max-w-lg rounded-control bg-ink px-5 py-3 text-meta font-medium text-field shadow-popover",
+              workspace.editing && workspace.look === "altitudes"
+                ? "bottom-24 md:bottom-28"
+                : "bottom-6",
+            )}
             exit={{ opacity: 0, y: 8 }}
             initial={reduced ? { opacity: 0 } : { opacity: 0, y: 14 }}
           >
@@ -389,11 +404,39 @@ function ActivationSweep() {
 }
 
 function detail(isDraft: boolean, state: string, unpublished: boolean): string {
-  if (state === "failed")
-    return "Your edits are still on this page. Try saving again.";
-  if (isDraft) return "Only you can open this page.";
+  if (state === "failed") return "Your edits are still on this page.";
+  if (isDraft) return "Only you can see this draft.";
   if (unpublished) return "Readers still see the published version.";
-  return "All changes are published.";
+  return "Readers see this page.";
+}
+
+/** LookSwitch flips between the two editor designs while they are compared. */
+function LookSwitch() {
+  const workspace = useWorkspace();
+  if (!workspace.editing) return null;
+  return (
+    <div className="fixed right-3 bottom-3 z-90 flex items-center gap-0.5 rounded-control bg-ink p-1 text-label font-medium text-field shadow-popover max-md:hidden">
+      {(
+        [
+          ["altitudes", "A · Two altitudes"],
+          ["hands", "C · Hands on the page"],
+        ] as const
+      ).map(([look, label]) => (
+        <button
+          aria-pressed={workspace.look === look}
+          className="rounded-chip px-2.5 py-1.5 opacity-60 hover:opacity-100 aria-pressed:bg-field aria-pressed:text-ink aria-pressed:opacity-100"
+          key={look}
+          onClick={() => {
+            workspace.setAltitude("write");
+            workspace.setLook(look);
+          }}
+          type="button"
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function Replacement({ typeName }: { typeName: string }) {

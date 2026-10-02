@@ -2,7 +2,6 @@
 
 import { ArrowDown, ArrowUp, FileText, Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
@@ -10,10 +9,12 @@ import { cn } from "@/lib/cn";
 /** FileMark marks a field written into the downloaded file, which waits for Publish on a published work. */
 export function FileMark() {
   return (
-    <Badge tone="accent">
-      <FileText aria-hidden="true" className="size-3.5" />
-      In the file · waits for Publish
-    </Badge>
+    <Tooltip content="This is written into the downloaded file, so a change reaches readers when you publish.">
+      <span className="inline-flex items-center gap-1 text-label font-medium text-mute">
+        <FileText aria-hidden="true" className="size-3.5" />
+        In the file
+      </span>
+    </Tooltip>
   );
 }
 

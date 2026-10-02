@@ -19,6 +19,7 @@ import { isWorkId, workRedirect } from "@/lib/work-url";
 import { GitHubReleases } from "./GitHubReleases";
 import { WorkBlocks } from "./WorkBlocks";
 import { WorkHeader } from "./WorkHeader";
+import { EditCanvas } from "./workspace/Altitudes";
 import { ShelfRoom } from "./workspace/ShelfTargets";
 import { ShelfProvider } from "./workspace/shelf";
 import { WorkspaceProvider } from "./workspace/state";
@@ -94,25 +95,27 @@ export default async function WorkPage({
           >
             <ShelfRoom>
               <div className="relative isolate overflow-x-clip pb-chapter">
-                <article>
-                  <WorkHeader
-                    connectedApps={connectedApps}
-                    creator={creator}
-                    work={work}
-                    typeLabel={typeLabel}
-                    sharedDate={sharedDate}
-                    shellClassName={shellClasses}
-                  />
-                  <WorkBlocks
-                    images={work.media}
-                    isOwner={work.isOwner}
-                    type={work.type}
-                    shellClassName={shellClasses}
-                  />
-                  {work.isOwner && !isDraft && work.type === "extension" ? (
-                    <GitHubReleases workId={work.id} />
-                  ) : null}
-                </article>
+                <EditCanvas>
+                  <article>
+                    <WorkHeader
+                      connectedApps={connectedApps}
+                      creator={creator}
+                      work={work}
+                      typeLabel={typeLabel}
+                      sharedDate={sharedDate}
+                      shellClassName={shellClasses}
+                    />
+                    <WorkBlocks
+                      images={work.media}
+                      isOwner={work.isOwner}
+                      type={work.type}
+                      shellClassName={shellClasses}
+                    />
+                    {work.isOwner && !isDraft && work.type === "extension" ? (
+                      <GitHubReleases workId={work.id} />
+                    ) : null}
+                  </article>
+                </EditCanvas>
               </div>
             </ShelfRoom>
           </ExtensionDependenciesProvider>

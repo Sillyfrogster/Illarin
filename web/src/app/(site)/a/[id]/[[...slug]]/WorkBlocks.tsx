@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import {
   type CSSProperties,
   useCallback,
@@ -39,15 +40,22 @@ import { ContentsBar } from "./ContentsBar";
 import { ElementBody } from "./ElementBody";
 import { EmptyPage, EmptyPageInvitation } from "./QuietPage";
 import { useSuggestedWidths } from "./use-suggested-widths";
+import { useAltitudeShift } from "./workspace/Altitudes";
 import { BlockAudience } from "./workspace/BlockAudience";
-import { BlockTools } from "./workspace/BlockTools";
+import {
+  ColumnGuides,
+  Frame,
+  LiftCard,
+  MapTile,
+  Seam,
+} from "./workspace/BlockChrome";
 import { EditableElementSection } from "./workspace/EditableElement";
 import { EditableText } from "./workspace/EditableText";
 import { GhostBlock, TextTarget } from "./workspace/ShelfTargets";
 import { useShelf } from "./workspace/shelf";
 import { withGhost } from "./workspace/shelf-places";
 import { useWorkspace } from "./workspace/state";
-import { useBlockDrag } from "./workspace/use-block-drag";
+import { useArranging } from "./workspace/use-arranging";
 
 function returnToBlock(blockId: string) {
   const anchor = `block-${blockId}`;
@@ -72,7 +80,12 @@ export function WorkBlocks({
 
   const blocks = workspace.blocks;
   const writing = isOwner && workspace.editing;
-  const drag = useBlockDrag(workspace.arrangement.move);
+  const hands = writing && workspace.look === "hands";
+  const mapped =
+    writing &&
+    workspace.look === "altitudes" &&
+    workspace.altitude === "arrange";
+  const arranging = useArranging();
   const shelf = useShelf();
   const moving = shelf.dragging ?? shelf.pending?.piece ?? null;
   const landing = shelf.pending?.target ?? shelf.target;
@@ -102,7 +115,7 @@ export function WorkBlocks({
     [rowsRef],
   );
   const packable: Array<WorkBlock & { empty?: boolean }> = writing
-    ? blocks
+    ? arranging.shown
     : publicBlocks.filter(rendersOnThePage);
   const placed = placeBlocks(
     withGhost<(typeof packable)[number] | typeof GHOST>(
@@ -120,23 +133,30 @@ export function WorkBlocks({
   const suggestedWidths = useSuggestedWidths({
     availableWidth,
     blocks,
-    paused: !writing || workspace.cursor !== null,
+    paused: !writing || workspace.cursor !== null || arranging.lift !== null,
     rows: rowsNode,
   });
+  const rows = seamRows(placed);
+  const shift = useAltitudeShift();
 
   return (
     <>
-      <ContentsBar
-        blocks={contentsBlocks}
-        shellClassName={shellClassName}
-        writing={writing}
-      />
+      {mapped ? null : (
+        <ContentsBar
+          blocks={contentsBlocks}
+          shellClassName={shellClassName}
+          writing={writing && !hands}
+        />
+      )}
 
       <div
-        className={cn(shellClassName, "pt-10")}
+        className={cn(
+          shellClassName,
+          mapped ? "pt-6" : hands ? "pt-24" : "pt-10",
+        )}
         data-shelf-page={writing ? blocks.length : undefined}
       >
-        {writing ? (
+        {writing && !mapped ? (
           <p className="mb-8 rounded-control bg-deep p-3 text-meta text-mute md:hidden">
             On a phone, every block is full width.
           </p>
@@ -152,62 +172,127 @@ export function WorkBlocks({
         ) : null}
         {placed.length === 0 ? null : (
           <div
-            className="grid grid-cols-1 items-start gap-14 md:grid-cols-12 md:gap-x-[var(--block-grid-gap)] md:gap-y-[5.5rem]"
+            className={cn(
+              "relative isolate grid grid-cols-1 items-start md:grid-cols-12 md:gap-x-[var(--block-grid-gap)]",
+              hands
+                ? "gap-20 md:gap-y-[var(--seam-gap)]"
+                : mapped
+                  ? "gap-10 md:gap-y-12"
+                  : "gap-14 md:gap-y-[5.5rem]",
+            )}
+            data-block-grid
             ref={setRowsRef}
             style={
               {
                 "--block-grid-gap": `${BLOCK_GRID_GAP_PX}px`,
+                "--seam-gap": "7rem",
               } as CSSProperties
             }
           >
-            {placed.map(({ block, columns, startColumn, row, place }) => (
-              <Arrive
-                className="col-span-full min-w-0 md:[grid-column:var(--block-start)_/_span_var(--block-columns)] md:[grid-row:var(--block-row)]"
-                key={block.id}
-                layout={shelf.shifting}
-                quiet={writing}
-                place={writing ? 0 : place}
-                style={
-                  {
-                    "--block-columns": columns,
-                    "--block-row": row,
-                    "--block-start": startColumn,
-                  } as CSSProperties
-                }
-              >
-                {"ghost" in block ? (
-                  moving ? (
-                    <GhostBlock piece={moving} />
-                  ) : null
-                ) : (
-                  <div
-                    data-shelf-index={blocks.findIndex(
-                      (one) => one.id === block.id,
-                    )}
+            {writing ? (
+              <ColumnGuides shown={arranging.stretch !== null || mapped} />
+            ) : null}
+            {placed.map(({ block, columns, startColumn, row, place }) => {
+              if ("ghost" in block)
+                return (
+                  <Arrive
+                    className="col-span-full min-w-0 md:[grid-column:var(--block-start)_/_span_var(--block-columns)] md:[grid-row:var(--block-row)]"
+                    key={block.id}
+                    layout={shelf.shifting}
+                    quiet
+                    style={
+                      {
+                        "--block-columns": columns,
+                        "--block-row": row,
+                        "--block-start": startColumn,
+                      } as CSSProperties
+                    }
                   >
+                    {moving ? <GhostBlock piece={moving} /> : null}
+                  </Arrive>
+                );
+              const position = blocks.findIndex((one) => one.id === block.id);
+              const lifted = arranging.lift?.blockId === block.id;
+              const folded = hands && arranging.lift !== null;
+              const suggestion = suggestedWidths[block.id];
+              return (
+                <Arrive
+                  className={cn(
+                    "col-span-full min-w-0 md:[grid-column:var(--block-start)_/_span_var(--block-columns)] md:[grid-row:var(--block-row)]",
+                    arranging.stretch?.blockId === block.id && "relative z-20",
+                  )}
+                  key={block.id}
+                  layout={
+                    shelf.shifting || (writing && arranging.lift !== null)
+                  }
+                  quiet={writing}
+                  place={writing ? 0 : place}
+                  style={
+                    {
+                      "--block-columns": columns,
+                      "--block-row": row,
+                      "--block-start": startColumn,
+                    } as CSSProperties
+                  }
+                >
+                  <div data-shelf-index={position}>
                     <article
                       className={cn(
                         "group/block relative min-w-0 scroll-mt-[calc(var(--header-height)+5rem)] [container-name:block] [container-type:inline-size]",
-                        writing &&
-                          "after:pointer-events-none after:absolute after:-inset-x-5 after:-inset-y-4 after:rounded-plate after:opacity-0 after:ring-1 after:ring-accent/45 after:transition-opacity after:duration-160 after:content-[''] hover:after:opacity-100 focus-within:after:opacity-100 motion-reduce:after:transition-none",
-                        drag.dragging === block.id && "opacity-45",
-                        drag.over === block.id &&
-                          "after:!opacity-100 after:!ring-2 after:!ring-accent",
+                        hands &&
+                          "after:pointer-events-none after:absolute after:-inset-x-2 after:-inset-y-4 after:rounded-card after:ring-1 after:ring-rule/70 after:transition-[box-shadow] after:duration-200 after:content-[''] hover:after:ring-accent/50 focus-within:after:ring-accent/50",
+                        arranging.stretch?.blockId === block.id && "z-20",
+                        hands &&
+                          arranging.stretch?.blockId === block.id &&
+                          "after:!ring-2 after:!ring-accent",
+                        mapped &&
+                          "rounded-card bg-plane px-8 pt-24 pb-8 ring-1 ring-ink/8 transition-[box-shadow] duration-200 hover:ring-2 hover:ring-accent/60",
+                        mapped &&
+                          arranging.stretch?.blockId === block.id &&
+                          "ring-2 ring-accent",
+                        lifted && "opacity-40 after:!ring-2 after:!ring-accent",
+                        lifted && mapped && "bg-accent-wash ring-2 ring-accent",
                         shelf.glowing === block.id &&
-                          "after:!opacity-100 after:!ring-2 after:!ring-accent",
-                        writing && "after:duration-240",
-                        writing && block.hidden && "bg-deep/60 px-5 pt-6 pb-7",
+                          "after:!ring-2 after:!ring-accent",
+                        writing &&
+                          block.hidden &&
+                          !mapped &&
+                          "bg-deep/60 px-5 pt-6 pb-7",
+                        mapped && block.hidden && "bg-deep",
                       )}
+                      data-arrange-id={writing ? block.id : undefined}
                       data-block-id={block.id}
-                      data-dragging={
-                        drag.dragging === block.id ? true : undefined
-                      }
                       data-hidden={writing && block.hidden ? true : undefined}
                       id={`block-${block.id}`}
-                      {...(writing
-                        ? drag.target(block.id, block.position)
-                        : {})}
+                      style={
+                        writing
+                          ? ({
+                              viewTransitionName: `block-${block.id}`,
+                              viewTransitionClass: "edit-block",
+                            } as CSSProperties)
+                          : undefined
+                      }
                     >
+                      {mapped ? (
+                        <MapTile
+                          arranging={arranging}
+                          block={block}
+                          onOpen={() => shift("write", block.id)}
+                          position={position}
+                          startColumn={startColumn}
+                          suggestion={suggestion}
+                          total={blocks.length}
+                        />
+                      ) : hands ? (
+                        <Frame
+                          arranging={arranging}
+                          block={block}
+                          position={position}
+                          startColumn={startColumn}
+                          suggestion={suggestion}
+                          total={blocks.length}
+                        />
+                      ) : null}
                       <header
                         className={cn(
                           "mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3.5",
@@ -215,31 +300,30 @@ export function WorkBlocks({
                         )}
                       >
                         <div className="flex min-w-0 flex-1 basis-45 flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                          <BlockTitle block={block} />
-                          {writing && block.required ? (
+                          <BlockTitle block={block} live={writing && !mapped} />
+                          {writing && block.required && !mapped ? (
                             <Badge className="shrink-0">
                               {block.hideable ? "Required" : "Always shown"}
                             </Badge>
                           ) : null}
                           <BlockCounts elements={block.elements} />
                         </div>
-                        {writing ? (
-                          <BlockTools
-                            block={block}
-                            grip={drag.grip(block.id)}
-                            position={block.position}
-                            suggestedWidth={suggestedWidths[block.id]}
-                            total={blocks.length}
-                          />
-                        ) : null}
                       </header>
-                      {writing ? <BlockAudience block={block} /> : null}
+                      {writing && !mapped ? (
+                        <BlockAudience block={block} />
+                      ) : null}
                       <div
                         className={cn(
                           "grid gap-x-8 gap-y-7 [grid-template-columns:var(--element-tracks,minmax(0,1fr))] max-md:![grid-template-columns:minmax(0,1fr)]",
                           writing && block.hidden ? "opacity-50" : null,
+                          (mapped || folded) &&
+                            "overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]",
+                          mapped && "max-h-48 md:max-h-[56rem]",
+                          folded && "max-h-40",
+                          mapped && "pointer-events-none",
                         )}
                         data-block-content
+                        inert={mapped || undefined}
                         style={
                           {
                             "--element-tracks": elementTracks(
@@ -255,6 +339,7 @@ export function WorkBlocks({
                             key={element.id}
                           >
                             {writing &&
+                            !mapped &&
                             element.type === "prose" &&
                             !element.fromFile ? (
                               <TextTarget
@@ -268,7 +353,7 @@ export function WorkBlocks({
                                   markEmpty={!invited}
                                 />
                               </TextTarget>
-                            ) : writing ? (
+                            ) : writing && !mapped ? (
                               <EditableElementSection
                                 block={block}
                                 element={element}
@@ -290,9 +375,30 @@ export function WorkBlocks({
                       </div>
                     </article>
                   </div>
-                )}
-              </Arrive>
-            ))}
+                </Arrive>
+              );
+            })}
+            {hands && arranging.lift === null
+              ? rows.map(({ row, at, last }) => (
+                  <div
+                    className="contents"
+                    key={`seam-${row}-${last ? "end" : "start"}`}
+                    style={{ "--seam-row": row } as CSSProperties}
+                  >
+                    <Seam at={at} last={last} />
+                  </div>
+                ))
+              : null}
+            {mapped && workspace.addableBlocks.length > 0 ? (
+              <button
+                className="col-span-full flex min-h-40 items-center justify-center gap-3 rounded-card bg-fill text-title font-medium text-mute transition-colors duration-150 hover:bg-fill-hover hover:text-ink md:[grid-column:1/-1]"
+                onClick={() => workspace.openPane({ kind: "add-block" })}
+                type="button"
+              >
+                <Plus aria-hidden="true" className="size-8" />
+                Add a block
+              </button>
+            ) : null}
           </div>
         )}
         {modelContent.length > 0 ? (
@@ -319,13 +425,32 @@ export function WorkBlocks({
           </Accordion>
         ) : null}
       </div>
+      {writing ? <LiftCard arranging={arranging} /> : null}
     </>
   );
 }
 
+/** seamRows names where a block can be added between rows: before the first block of each row, and after the last row. */
+function seamRows<T extends { block: { id: string } }>(
+  placed: Array<T & { row: number }>,
+): Array<{ row: number; at: number; last: boolean }> {
+  const seams: Array<{ row: number; at: number; last: boolean }> = [];
+  let count = 0;
+  let row = 0;
+  for (const one of placed) {
+    if (one.row !== row) {
+      row = one.row;
+      seams.push({ at: count, last: false, row });
+    }
+    if (!("ghost" in one.block)) count += 1;
+  }
+  if (row > 0) seams.push({ at: count, last: true, row });
+  return seams;
+}
+
 const GHOST = { id: "ghost", ghost: true, width: "full" } as const;
 
-function BlockTitle({ block }: { block: WorkBlock }) {
+function BlockTitle({ block, live }: { block: WorkBlock; live: boolean }) {
   const workspace = useWorkspace();
   const cursor = `block:${block.id}:title`;
   return (
@@ -336,7 +461,7 @@ function BlockTitle({ block }: { block: WorkBlock }) {
       className="font-display text-title font-medium tracking-tight text-ink [overflow-wrap:anywhere]"
       done={() => workspace.setCursor(null)}
       label={`Heading of ${block.title}`}
-      live={workspace.editing}
+      live={live}
       onChange={(title) =>
         workspace.setBlocks(
           workspace.blocks.map((item) =>
