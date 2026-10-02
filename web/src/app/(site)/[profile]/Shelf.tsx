@@ -350,10 +350,9 @@ function PinToggle({ pinning, work }: { pinning: Pinning; work: BrowseWork }) {
         aria-label={pinned ? `Unfeature ${name}` : `Feature ${name}`}
         aria-pressed={pinned}
         className={cn(
-          `grid size-control place-items-center rounded-control backdrop-blur-sm transition duration-160 ${focusRing}`,
-          pinned
-            ? "bg-action text-on-accent shadow-[0_6px_16px_-6px_var(--v-action)]"
-            : "bg-plane/80 text-ink hover:bg-plane focus-visible:opacity-100 [@media(hover:hover)]:opacity-0",
+          `grid size-control place-items-center rounded-control bg-plane/80 text-ink backdrop-blur-sm transition duration-160 hover:bg-plane ${focusRing}`,
+          !pinned &&
+            "focus-visible:opacity-100 [@media(hover:hover)]:opacity-0",
           !pinned &&
             (full
               ? "opacity-40 group-hover:opacity-40"
