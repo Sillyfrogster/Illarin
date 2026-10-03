@@ -1,7 +1,11 @@
 import { afterEach, expect, mock, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
-mock.module("next/navigation", () => ({ useRouter: () => ({ refresh() {} }) }));
+const navigation = await import("next/navigation");
+mock.module("next/navigation", () => ({
+  ...navigation,
+  useRouter: () => ({ refresh() {} }),
+}));
 
 const { DraftedChangesProvider, useDraftedChanges } = await import(
   "./drafted-changes"
