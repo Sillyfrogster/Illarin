@@ -162,7 +162,7 @@ function Carrying({ upload }: { upload: Upload }) {
           style={{ transform: `scaleX(${sent})` }}
         />
         {upload.at === "reading" ? (
-          <span className="absolute inset-y-0 w-1/3 bg-white/50 motion-safe:animate-sweep motion-reduce:hidden" />
+          <span className="absolute inset-y-0 w-1/3 bg-over/50 motion-safe:animate-sweep motion-reduce:hidden" />
         ) : null}
       </div>
     </div>
@@ -344,7 +344,7 @@ function Viewer({
         ) : null}
 
         {part ? (
-          <p className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/75 to-transparent px-3 pt-8 pb-2.5 font-mono text-label text-on-media">
+          <p className="absolute inset-x-0 bottom-0 truncate bg-linear-to-t from-media/75 to-transparent px-3 pt-8 pb-2.5 font-mono text-label text-on-media">
             {part.name}
           </p>
         ) : null}
