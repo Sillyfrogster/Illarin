@@ -59,7 +59,7 @@ export function Scroller({
     <div className="relative">
       <div
         className={cn(
-          "overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "relative overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           className,
         )}
         ref={row}
