@@ -71,29 +71,10 @@
   }
 }
 
-/* The closing picture drifts slower than the page as it scrolls past. */
-@supports (animation-timeline: view()) {
-  .home-drift {
-    scale: 1.06;
-    animation: home-drift linear both;
-    animation-timeline: view();
-  }
-
-  @keyframes home-drift {
-    from {
-      translate: 0 -3%;
-    }
-    to {
-      translate: 0 3%;
-    }
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .home-line > span,
   .home-after,
   .home-settle,
-  .home-drift,
   .home-track {
     animation: none;
   }

@@ -27,7 +27,7 @@ export function Lead({ children, href }: { children: string; href: string }) {
 export function Aside({ children, href }: { children: string; href: string }) {
   return (
     <Link
-      className="group/aside inline-flex h-12 items-center gap-1.5 text-ui font-medium text-over"
+      className="group/aside inline-flex h-12 items-center gap-1.5 text-ui font-medium text-current"
       href={href}
     >
       <span className="bg-linear-to-r from-current to-current bg-size-[0%_1px] bg-left-bottom bg-no-repeat pb-0.5 transition-[background-size] duration-300 ease-(--ease-wipe) group-hover/aside:bg-size-[100%_1px]">

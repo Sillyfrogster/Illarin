@@ -54,27 +54,15 @@ export function PublishBand() {
   );
 }
 
-/** Closing is the watcher at her window across the full width, with the page's last call to browse or publish in the night sky. */
+/** Closing is the page's last call to browse or publish, the heading on one side and the two ways in on the other. */
 export function Closing() {
   return (
     <section
       aria-labelledby="home-close"
-      className="relative isolate mt-chapter flex min-h-[min(80svh,52rem)] overflow-hidden bg-media text-over"
+      className={cn(shellClasses, "pt-chapter")}
     >
-      <div
-        aria-hidden="true"
-        className="home-drift absolute inset-0 -z-10 bg-[url(/home/watcher-window.webp)] bg-cover bg-[position:60%_12%] max-md:bg-[position:66%_10%]"
-        data-artwork
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-linear-to-b from-media/80 via-media/20 to-media/60"
-      />
-      <div className={cn(shellClasses, "flex flex-col gap-8 pt-section")}>
-        <h2
-          className="max-w-[12ch] font-display text-[clamp(2.25rem,4.4vw,3.75rem)] leading-[1.02] font-medium tracking-[-0.04em]"
-          id="home-close"
-        >
+      <div className="flex flex-wrap items-end justify-between gap-8 border-t border-rule pt-section">
+        <h2 className={cn(HEADING, "max-w-[16ch]")} id="home-close">
           Find your next favorite
         </h2>
         <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
