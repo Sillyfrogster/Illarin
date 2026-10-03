@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import type { PostSummary } from "@/lib/api/query";
+import { timing } from "@/lib/timing";
 import { ArchiveRow } from "./ArchiveEntry";
 
 export function ArchiveList({
@@ -30,11 +31,7 @@ export function ArchiveList({
               aria-hidden="true"
               className="absolute inset-y-1 -inset-x-4 rounded-plate bg-deep sm:-inset-x-6"
               layoutId="archive-here"
-              transition={
-                reduced
-                  ? { duration: 0 }
-                  : { type: "spring", stiffness: 260, damping: 30 }
-              }
+              transition={reduced ? { duration: 0 } : timing.settle}
             />
           ) : null}
           <ArchiveRow narrowed={narrowed} post={post} />

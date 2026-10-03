@@ -1,5 +1,5 @@
 import {
-  CircleUserRound,
+  Library,
   LogIn,
   type LucideIcon,
   Mail,
@@ -12,8 +12,7 @@ import {
 import type { AccountDestination } from "./destinations";
 
 const icons: Record<AccountDestination["id"], LucideIcon> = {
-  profile: CircleUserRound,
-  work: NotebookPen,
+  work: Library,
   settings: Settings,
   posts: NotebookPen,
   "blog-admin": Signature,

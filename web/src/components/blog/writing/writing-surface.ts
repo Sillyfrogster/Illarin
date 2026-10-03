@@ -4,7 +4,7 @@ const FLOW =
 const HEADINGS = [
   "[&_h2]:mt-12 [&_h2]:mb-4 [&_h2]:font-display [&_h2]:text-title [&_h2]:leading-tight [&_h2]:font-medium [&_h2]:text-balance",
   "[&_h3]:mt-10 [&_h3]:mb-3 [&_h3]:font-display [&_h3]:text-section [&_h3]:leading-snug [&_h3]:font-medium [&_h3]:text-balance",
-  "[&_h4]:mt-8 [&_h4]:mb-2 [&_h4]:font-display [&_h4]:text-ui [&_h4]:font-semibold [&_h4]:tracking-[0.02em] [&_h4]:uppercase",
+  "[&_h4]:mt-8 [&_h4]:mb-2 [&_h4]:font-display [&_h4]:text-ui [&_h4]:font-semibold",
 ].join(" ");
 
 const LISTS = [
@@ -26,7 +26,7 @@ const QUOTE =
 const CODE = [
   "[&_code]:rounded-[6px] [&_code]:bg-deep [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.88em]",
   "[&_pre]:my-8 [&_pre]:overflow-x-auto [&_pre]:rounded-plate [&_pre]:bg-deep [&_pre]:p-5",
-  "[&_pre_code]:block [&_pre_code]:min-w-max [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-meta [&_pre_code]:leading-7 [&_pre_code]:whitespace-pre",
+  "[&_pre_code]:block [&_pre_code]:min-w-max [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-meta [&_pre_code]:leading-[1.7] [&_pre_code]:whitespace-pre",
 ].join(" ");
 
 const TABLE = [

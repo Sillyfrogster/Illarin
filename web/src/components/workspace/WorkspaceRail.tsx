@@ -4,7 +4,9 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { timing } from "@/lib/timing";
 
 export function WorkspaceRail({
   children,
@@ -26,37 +28,25 @@ export function WorkspaceRail({
     heading.current?.focus({ preventScroll: true });
   }, []);
 
-  useEffect(() => {
-    if (!onClose) return;
-    function leave(event: KeyboardEvent) {
-      const inField =
-        event.target instanceof HTMLElement &&
-        ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName);
-      if (event.key === "Escape" && !inField) onClose?.();
-    }
-    document.addEventListener("keydown", leave);
-    return () => document.removeEventListener("keydown", leave);
-  }, [onClose]);
-
   return (
     <motion.aside
       animate={reduced ? { opacity: 1 } : { x: 0 }}
       aria-label={title}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 flex max-h-[76dvh] flex-col rounded-t-plate bg-plane shadow-popover",
-        "lg:top-[var(--header-height)] lg:right-0 lg:bottom-0 lg:left-auto lg:max-h-none lg:w-[28rem] lg:rounded-none",
-        "before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:content-['']",
-        "lg:before:inset-y-0 lg:before:right-auto lg:before:left-0 lg:before:h-auto lg:before:w-0.5",
-        tone === "stop" ? "before:bg-stop" : "before:bg-accent",
+        "fixed inset-x-0 bottom-0 z-40 flex max-h-[76dvh] flex-col rounded-t-card bg-plane shadow-popover ring-1 ring-ink/8",
+        "lg:top-(--site-header-offset) lg:right-0 lg:transition-[top] lg:duration-240 lg:bottom-0 lg:left-auto lg:max-h-none lg:w-[28rem] lg:rounded-none lg:shadow-none lg:ring-0 lg:border-l lg:border-rule",
       )}
       exit={reduced ? { opacity: 0 } : { x: "100%" }}
       initial={reduced ? { opacity: 0 } : { x: "100%" }}
-      transition={{ duration: reduced ? 0 : 0.44, ease: [0.22, 1, 0.36, 1] }}
+      transition={timing.settle}
     >
       <div className="flex items-start justify-between gap-4 px-6 pt-7 pb-4 md:px-8">
         <div className="min-w-0">
           <h2
-            className="font-display text-section font-medium text-ink outline-offset-3 wrap-anywhere"
+            className={cn(
+              "font-display text-section font-medium outline-offset-3 wrap-anywhere",
+              tone === "stop" ? "text-stop" : "text-ink",
+            )}
             ref={heading}
             tabIndex={-1}
           >
@@ -67,14 +57,15 @@ export function WorkspaceRail({
           ) : null}
         </div>
         {onClose ? (
-          <button
+          <Button
             aria-label={`Close ${title.toLowerCase()}`}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-ink"
+            className="shrink-0"
             onClick={onClose}
-            type="button"
+            size="icon"
+            variant="ghost"
           >
-            <X aria-hidden="true" size={18} />
-          </button>
+            <X aria-hidden="true" />
+          </Button>
         ) : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pt-2 pb-8 [container-name:rail] [container-type:inline-size] md:px-8 lg:pb-32">
@@ -92,13 +83,14 @@ export function RailBack({
   onClick: () => void;
 }) {
   return (
-    <button
-      className="-ml-2 inline-flex min-h-11 items-center gap-1 self-start rounded-control pr-3 pl-1 font-ui text-meta font-medium text-accent outline-offset-3 hover:underline"
+    <Button
+      className="-ml-3 self-start"
       onClick={onClick}
-      type="button"
+      size="compact"
+      variant="ghost"
     >
-      <ChevronLeft aria-hidden="true" size={16} />
+      <ChevronLeft aria-hidden="true" />
       {children}
-    </button>
+    </Button>
   );
 }

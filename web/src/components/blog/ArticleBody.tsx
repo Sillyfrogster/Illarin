@@ -45,7 +45,7 @@ const CALLOUTS: Record<
 const HEADING = {
   2: "mt-12 mb-4 font-display text-title font-medium leading-tight",
   3: "mt-10 mb-3 font-display text-section font-medium leading-snug",
-  4: "mt-8 mb-2 font-display text-ui font-semibold tracking-[0.02em] uppercase",
+  4: "mt-8 mb-2 font-display text-ui font-semibold",
 } as const;
 
 const CAPTION = "mt-3 font-prose text-meta leading-6 text-mute text-pretty";

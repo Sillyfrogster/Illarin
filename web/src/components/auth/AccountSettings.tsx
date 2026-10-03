@@ -3,9 +3,11 @@
 import { Check, KeyRound, Mail, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, type ReactNode, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Said, TextInput } from "@/components/ui/field";
 import { Gate } from "@/components/ui/gate";
+import { Input } from "@/components/ui/input";
+import { Item, ItemGroup } from "@/components/ui/item";
 import { type WayIn, type WayInId, waysIn } from "@/lib/account-access";
 import { readRefusal, refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
@@ -13,8 +15,7 @@ import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 const MARKS: Record<WayInId, ReactNode> = {
   discord: (
@@ -128,11 +129,11 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
             : `${settled} sign-in methods are available.`}
       </p>
 
-      {said ? <Said>{said}</Said> : null}
+      {said ? <Alert tone="done">{said}</Alert> : null}
 
-      <ul className="m-0 grid list-none gap-px overflow-hidden rounded-plate bg-rule p-0">
+      <ItemGroup label="Sign-in methods">
         {ways.map((way) => (
-          <li className="bg-plane" key={way.id}>
+          <Item className="p-0" key={way.id}>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-4 px-5 py-5">
               <span
                 className={cn(
@@ -170,7 +171,7 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
                 <label className="sr-only" htmlFor="settings-password">
                   New password
                 </label>
-                <TextInput
+                <Input
                   autoComplete="new-password"
                   className="min-w-0 flex-1 basis-56"
                   id="settings-password"
@@ -188,9 +189,9 @@ export function AccountSettings({ discordNotice }: { discordNotice?: string }) {
                 </Button>
               </form>
             ) : null}
-          </li>
+          </Item>
         ))}
-      </ul>
+      </ItemGroup>
 
       {discord?.settled && !discord.canDetach ? (
         <p className="font-ui text-meta text-mute" id="detach-requirement">
@@ -258,7 +259,7 @@ function WayAction({
 
 function Settled() {
   return (
-    <span className="inline-flex min-h-11 items-center gap-2 font-ui text-meta font-medium text-accent">
+    <span className="inline-flex min-h-control items-center gap-2 font-ui text-meta font-medium text-accent">
       <Check aria-hidden="true" className="size-4" strokeWidth={2} />
       Verified
     </span>

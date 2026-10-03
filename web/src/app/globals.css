@@ -15,6 +15,12 @@
   }
 }
 
+/* An open menu or popover trigger, read from aria-expanded too because a Tooltip around the trigger overwrites data-state */
+@custom-variant opened (&:is(
+    [data-state="open"],
+    [aria-haspopup][aria-expanded="true"]
+  ));
+
 @theme {
   --color-*: initial;
   --font-*: initial;
@@ -43,10 +49,17 @@
   --color-over-mute: var(--v-over-mute);
   --color-media: var(--v-media);
   --color-on-media: var(--v-on-media);
+  --color-fill: var(--v-fill);
+  --color-fill-hover: var(--v-fill-hover);
+  --color-action-hover: var(--v-action-hover);
+  --color-stop-hover: var(--v-stop-hover);
+  --color-off: var(--v-off);
+  --color-off-hover: var(--v-off-hover);
+  --color-scrim: var(--v-scrim);
 
-  --font-display: var(--font-outfit), system-ui, sans-serif;
-  --font-ui: var(--font-outfit), system-ui, sans-serif;
-  --font-prose: var(--font-dm-sans), system-ui, sans-serif;
+  --font-display: var(--font-onest), system-ui, sans-serif;
+  --font-ui: var(--font-onest), system-ui, sans-serif;
+  --font-prose: var(--font-onest), system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --text-hero: clamp(2.5rem, 4.5vw, 4.75rem);
@@ -59,40 +72,53 @@
   --text-section--line-height: 1.3;
   --text-brand: 1.75rem;
   --text-brand--line-height: 1.5;
-  --text-lede: 1.1875rem;
+  --text-lede: var(--type-lede);
   --text-lede--line-height: 1.6;
-  --text-article: 1.0625rem;
+  --text-article: var(--type-article);
   --text-article--line-height: 1.85;
-  --text-prose: 1rem;
+  --text-prose: var(--type-prose);
   --text-prose--line-height: 1.8;
-  --text-ui: 0.9375rem;
+  --text-ui: var(--type-ui);
   --text-ui--line-height: 1.5;
-  --text-meta: 0.8125rem;
+  --text-meta: var(--type-meta);
   --text-meta--line-height: 1.5;
   --text-label: 0.75rem;
   --text-label--line-height: 1.5;
+  --text-name-l: 1.75rem;
+  --text-name-l--line-height: 1.15;
+  --text-name-m: 1.5rem;
+  --text-name-m--line-height: 1.2;
+  --text-name-s: 1.25rem;
+  --text-name-s--line-height: 1.25;
 
   --spacing-flow: 1.25rem;
   --spacing-group: 2rem;
   --spacing-section: 4rem;
   --spacing-chapter: 6rem;
+  --spacing-control: var(--control);
+  --spacing-control-compact: var(--control-compact);
+  --spacing-segment: calc(var(--control) - 0.5rem);
+  --spacing-segment-compact: calc(var(--control-compact) - 0.25rem);
 
-  --radius-control: 10px;
+  --radius-chip: 6px;
+  --radius-control: 8px;
+  --radius-art: 12px;
   --radius-plate: 14px;
+  --radius-card: 20px;
 
   --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --animate-pop-in: pop-in 150ms var(--ease-wipe);
-  --animate-pop-out: pop-out 110ms ease-in;
-  --animate-slide-in: slide-in 220ms var(--ease-wipe);
-  --animate-slide-out: slide-out 160ms ease-in;
-  --animate-slide-left-in: slide-left-in 220ms var(--ease-wipe);
-  --animate-slide-left-out: slide-left-out 160ms ease-in;
-  --animate-plate-in: plate-in 260ms var(--ease-wipe);
-  --animate-plate-out: plate-out 140ms ease-in;
   --animate-sweep: sweep 1.4s var(--ease-wipe) infinite;
-  --animate-cell-in: cell-in 420ms var(--ease-wipe) both;
+  --animate-cell-in: cell-in 240ms var(--ease-wipe) both;
+  --animate-trace: trace 1.4s linear infinite;
+  --animate-pop: pop 120ms var(--ease-wipe);
+  --animate-fade: fade 120ms var(--ease-wipe);
+  --animate-leave: leave 80ms ease-in forwards;
+  --animate-slide-in: slide 200ms var(--ease-wipe);
+  --animate-slide-out: slide-out 120ms ease-in forwards;
 
   --shadow-cover: 0 20px 45px -20px rgb(0 0 0 / 0.5);
+  --shadow-card:
+    inset 0 1px 0 var(--v-card-light), 0 22px 44px -17px var(--v-card-drop);
   --shadow-popover: 0 16px 60px -12px rgb(0 0 0 / 0.35);
   --shadow-contents: 0 8px 15px -15px rgb(0 0 0 / 0.5);
 
@@ -109,54 +135,41 @@
       transform: translateX(360%);
     }
   }
-  @keyframes pop-in {
+  @keyframes pop {
     from {
       opacity: 0;
-      transform: scale(0.97) translateY(-4px);
+      transform: translateY(var(--pop-y, -4px));
     }
   }
-  @keyframes pop-out {
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes leave {
     to {
       opacity: 0;
-      transform: scale(0.98);
     }
   }
-  @keyframes slide-in {
+  @keyframes slide {
     from {
-      transform: translateY(-100%);
+      translate: var(--slide-from);
     }
   }
   @keyframes slide-out {
     to {
-      transform: translateY(-100%);
+      translate: var(--slide-from);
     }
   }
-  @keyframes slide-left-in {
-    from {
-      transform: translateX(-100%);
-    }
-  }
-  @keyframes slide-left-out {
+  @keyframes trace {
     to {
-      transform: translateX(-100%);
-    }
-  }
-  @keyframes plate-in {
-    from {
-      opacity: 0;
-      transform: scale(0.96) translateY(12px);
+      stroke-dashoffset: -100;
     }
   }
   @keyframes cell-in {
     from {
       opacity: 0;
       transform: scaleY(0.3);
-    }
-  }
-  @keyframes plate-out {
-    to {
-      opacity: 0;
-      transform: scale(0.98);
     }
   }
 }
@@ -171,7 +184,7 @@
   --v-ink: light-dark(#000000, #ffffff);
   --v-mute: light-dark(#636363, #a3a3a3);
   --v-rule: light-dark(#d4d4d4, #404040);
-  --v-edge: light-dark(#858585, #737373);
+  --v-edge: light-dark(#d4d4d4, #404040);
   --v-accent: light-dark(#6d28d9, #b89aff);
   --v-action: light-dark(#6d28d9, #7c3aed);
   --v-on-accent: #ffffff;
@@ -182,38 +195,34 @@
   --v-over: #ffffff;
   --v-over-mute: #d5dbe2;
 
+  --v-fill: light-dark(#efefef, #1c1c1c);
+  --v-fill-hover: light-dark(#e5e5e5, #262626);
+  --v-action-hover: light-dark(#5b21b6, #8447ef);
+  --v-stop-hover: light-dark(#8c1f3b, #ffbccc);
+  --v-off: light-dark(#c4c4c4, #444444);
+  --v-off-hover: light-dark(#adadad, #555555);
+  --v-scrim: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.7));
+  --v-card-light: light-dark(transparent, rgb(255 255 255 / 0.06));
+  --v-card-drop: light-dark(rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.6));
+
   --v-media: #050505;
   --v-on-media: #f5f5f2;
 
+  --control: 2.25rem;
+  --control-compact: 1.75rem;
+  --type-lede: 1.125rem;
+  --type-article: 1rem;
+  --type-prose: 0.9375rem;
+  --type-ui: 0.875rem;
+  --type-meta: 0.75rem;
+
   --shell: 86rem;
   --gutter: 20px;
-  --header-height: 72px;
-  --header-bay-height: 96px;
+  --header-height: 56px;
 
   --rail-inset: calc(max(0px, (100% - var(--shell)) / 2) + var(--gutter));
 
   --ease-wipe: cubic-bezier(0.22, 1, 0.36, 1);
-
-  --spring-smooth: linear(
-    0,
-    0.004,
-    0.016 2.3%,
-    0.063 4.7%,
-    0.141 7.2%,
-    0.25 9.9%,
-    0.601 16.5%,
-    0.815 21%,
-    0.929 25.2%,
-    0.987 29%,
-    1.025 33.5%,
-    1.042 38%,
-    1.04 43.5%,
-    1.027 50%,
-    1.013 57.5%,
-    1.005 67%,
-    1.001 79%,
-    1
-  );
 }
 
 @media (min-width: 768px) {
@@ -225,6 +234,18 @@
 @media (min-width: 1280px) {
   :root {
     --gutter: 56px;
+  }
+}
+
+@media (pointer: coarse) {
+  :root {
+    --control: 2.75rem;
+    --control-compact: 2.75rem;
+    --type-lede: 1.1875rem;
+    --type-article: 1.0625rem;
+    --type-prose: 1rem;
+    --type-ui: 0.9375rem;
+    --type-meta: 0.8125rem;
   }
 }
 
@@ -248,7 +269,6 @@ body {
 }
 
 html {
-  scrollbar-color: var(--v-mute) var(--v-field);
   scrollbar-gutter: stable;
 }
 
@@ -258,7 +278,7 @@ body {
   background: var(--v-field);
   color: var(--v-ink);
   caret-color: var(--v-action);
-  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-family: var(--font-onest), system-ui, sans-serif;
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.8;
@@ -267,23 +287,126 @@ body {
   text-wrap: pretty;
 }
 
+/* A grey fill on a raised panel steps up once so it still reads against the panel in dark mode */
+.bg-plane {
+  --v-fill: light-dark(#efefef, #262626);
+  --v-fill-hover: light-dark(#e5e5e5, #303030);
+}
+
+/* A popup that opened above or beside its trigger pops toward it instead of down */
+[data-side="top"] {
+  --pop-y: 4px;
+}
+
+[data-side="left"],
+[data-side="right"] {
+  --pop-y: 0px;
+}
+
+/* Every piece of art carries data-artwork so the reader's switch can remove it. */
+html[data-artwork="off"] [data-artwork] {
+  display: none;
+}
+
+/* Publish catches the light once each time the pointer arrives, and its plus spins */
+.publish {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    background-color 80ms,
+    scale 120ms var(--ease-wipe);
+}
+
+.publish::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    105deg,
+    transparent 25%,
+    rgb(255 255 255 / 0.38) 50%,
+    transparent 75%
+  );
+  translate: -100% 0;
+}
+
+.publish svg {
+  transition: rotate 360ms var(--ease-wipe);
+}
+
+.publish:active {
+  scale: 0.97;
+}
+
+@media (hover: hover) {
+  .publish:hover::before {
+    translate: 100% 0;
+    transition: translate 650ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .publish:hover svg {
+    rotate: 180deg;
+  }
+}
+
 body:has([data-site-header-hidden="true"]) {
   --site-header-offset: 0px;
 }
 
+/* Moving between writing and the arrange map: each block grows or shrinks into its other size, cropped from its top */
+::view-transition-group(.edit-block) {
+  animation-duration: 460ms;
+  animation-timing-function: var(--ease-wipe);
+}
+
+::view-transition-old(.edit-block),
+::view-transition-new(.edit-block) {
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* While a block is held or its edge is dragged, the whole page keeps that cursor and no text gets selected */
+body[data-lifting],
+body[data-lifting] * {
+  cursor: grabbing;
+  user-select: none;
+}
+
+body[data-stretching],
+body[data-stretching] * {
+  cursor: ew-resize;
+  user-select: none;
+}
+
 main {
   min-height: calc(100svh - var(--header-height));
+  view-transition-name: page;
+  view-transition-class: page;
 }
 
-a {
-  color: var(--v-mute);
-  text-decoration: none;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.22em;
+::view-transition-group(.page) {
+  animation: none;
 }
 
-a:hover {
-  color: var(--v-ink);
+::view-transition-new(.page) {
+  background: var(--v-field);
+}
+
+/* Link colours sit in the base layer so a link's own colour class wins */
+@layer base {
+  a {
+    color: var(--v-mute);
+    text-decoration: none;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+  }
+
+  a:hover {
+    color: var(--v-ink);
+  }
 }
 
 button {
@@ -317,31 +440,101 @@ img {
 }
 
 :focus-visible {
-  outline: 2px solid var(--v-accent);
-  outline-offset: 3px;
+  outline: 1px solid var(--v-accent);
+  outline-offset: 2px;
 }
 
-* {
-  scrollbar-width: thin;
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--v-ink) 12%, transparent)
+      transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-clip: content-box;
+    background-color: color-mix(in oklab, var(--v-ink) 12%, transparent);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--v-ink) 20%, transparent);
+  }
 }
 
-*::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+/* Moving between Browse and a work: the next page wipes across while the last one steps back, and the cover morphs between them */
+::view-transition-group(.morph) {
+  z-index: 10;
+  animation-duration: 560ms;
+  animation-timing-function: var(--ease-wipe);
 }
 
-*::-webkit-scrollbar-track {
-  background: var(--v-field);
+::view-transition-image-pair(.morph) {
+  animation: 560ms var(--ease-wipe) both via-blur;
 }
 
-*::-webkit-scrollbar-thumb {
-  border: 3px solid var(--v-field);
-  border-radius: var(--radius-control);
-  background: var(--v-mute);
+::view-transition-old(.morph),
+::view-transition-new(.morph) {
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
 }
 
-*::-webkit-scrollbar-thumb:hover {
-  background: var(--v-ink);
+/* The page's group takes the new page's place, so the leaving page is lifted by how far it was scrolled to stay where it was */
+html:active-view-transition-type(nav-forward, nav-back)::view-transition-old(
+    .page
+  ) {
+  translate: 0 calc(-1 * var(--leave-scroll, 0px));
+  transform-origin: 50% calc(var(--leave-scroll, 0px) + 50vh);
+  animation: 560ms var(--ease-wipe) both page-step-back;
+}
+
+html:active-view-transition-type(nav-back)::view-transition-old(.page) {
+  --step: 48px;
+}
+
+html:active-view-transition-type(nav-forward)::view-transition-new(.page) {
+  --wipe-from: inset(0 0 0 100%);
+  animation: 560ms var(--ease-wipe) both page-wipe;
+}
+
+html:active-view-transition-type(nav-back)::view-transition-new(.page) {
+  --wipe-from: inset(0 100% 0 0);
+  animation: 560ms var(--ease-wipe) both page-wipe;
+}
+
+@keyframes via-blur {
+  35% {
+    filter: blur(4px);
+  }
+}
+
+@keyframes page-step-back {
+  to {
+    opacity: 0.25;
+    filter: blur(2px);
+    transform: translateX(var(--step, -48px)) scale(0.98);
+  }
+}
+
+@keyframes page-wipe {
+  from {
+    clip-path: var(--wipe-from);
+  }
+  to {
+    clip-path: inset(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -351,5 +544,11 @@ img {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

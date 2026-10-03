@@ -86,12 +86,12 @@ export function collectionItems(
       content.settings.filter((setting) => setting.value != null),
     ).map((setting) => ({
       detail: (
-        <dl className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <SettingBody
             raw={setting.slot.rank === "unrecognised"}
             setting={setting}
           />
-        </dl>
+        </div>
       ),
       key: setting.id ?? setting.name,
       name: setting.slot.name,

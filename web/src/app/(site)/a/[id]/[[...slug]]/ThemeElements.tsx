@@ -95,7 +95,7 @@ export function ThemeStyles({
       ))}
       {(content.assets ?? []).length > 0 ? (
         <p className="!text-meta text-mute [overflow-wrap:anywhere]">
-          {(content.assets ?? []).length.toLocaleString("en-GB")} attached{" "}
+          {(content.assets ?? []).length.toLocaleString("en-US")} attached{" "}
           {(content.assets ?? []).length === 1 ? "file" : "files"}:{" "}
           {(content.assets ?? []).map((work) => work.path).join(", ")}
         </p>

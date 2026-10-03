@@ -29,6 +29,7 @@ func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
 	routes.Handle(http.MethodGet, "/v1/works", d.JSON, h.ListWorks)
 	routes.Handle(http.MethodGet, "/v1/apps", d.JSON, h.ListApps)
+	routes.Handle(http.MethodGet, "/v1/tags", d.JSON, h.SuggestTags)
 	routes.Handle(http.MethodDelete, "/v1/works/:id", d.JSON, h.DeleteWork)
 	routes.Handle(http.MethodGet, "/v1/works/:id", d.JSON, h.GetWork)
 	routes.Handle(http.MethodPost, "/v1/works/:id/restore", d.JSON, h.RestoreWork)

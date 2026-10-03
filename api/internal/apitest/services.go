@@ -83,8 +83,11 @@ func (closedTransport) RoundTrip(*http.Request) (*http.Response, error) {
 	return nil, errors.New("this test stack sends nowhere")
 }
 
+// ProofKey signs the codes a test account is shown to prove an app link or a repository
+var ProofKey = []byte("01234567890123456789012345678901")
+
 func NewAppsService(pool *pgxpool.Pool) *connect.Apps {
-	return connect.NewApps(pool, "http://localhost:3000", []byte("01234567890123456789012345678901"))
+	return connect.NewApps(pool, "http://localhost:3000", ProofKey)
 }
 
 func NewSendsService(

@@ -1,13 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { TypeMark } from "@/components/browse/TypeMark";
 import {
-  Slab,
-  SlabFoot,
-  SlabHead,
-  SlabNote,
-  SlabTitle,
-} from "@/components/ui/slab";
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { BrowseType } from "@/lib/api/query";
 import type { ReportWork } from "@/lib/api/staff";
 import { count } from "@/lib/report";
@@ -20,20 +21,20 @@ export function TopWorks({ works }: { works: ReportWork[] }) {
   const between = works.reduce((sum, work) => sum + work.downloads, 0);
 
   return (
-    <Slab>
-      <SlabHead>
-        <SlabTitle>Most downloaded</SlabTitle>
-        <SlabNote>Every format counted together</SlabNote>
-      </SlabHead>
+    <Card>
+      <CardHeader>
+        <CardTitle>Most downloaded</CardTitle>
+        <CardDescription>Every format counted together</CardDescription>
+      </CardHeader>
       {works.length === 0 ? (
-        <p className="px-4 py-8 font-ui text-meta text-mute">
+        <p className="px-5 py-8 font-ui text-meta text-mute">
           Nothing has been downloaded in the last 30 days.
         </p>
       ) : (
-        <ol className="flex list-none flex-col">
+        <ol className="flex list-none flex-col pt-2">
           {works.map((work, index) => (
             <li
-              className="group relative flex items-center gap-3 border-b border-rule/70 px-4 py-2.5 last:border-b-0 hover:bg-inset/70"
+              className="group relative flex items-center gap-3 border-b border-rule/70 px-5 py-2.5 last:border-b-0 hover:bg-fill"
               key={work.id}
             >
               <span className="w-4 shrink-0 text-right font-ui text-label text-mute tabular-nums">
@@ -66,24 +67,26 @@ export function TopWorks({ works }: { works: ReportWork[] }) {
           ))}
         </ol>
       )}
-      <SlabFoot>
+      <CardFooter>
         <span>
           {works.length === 0
             ? "The list fills as works are handed over."
             : `${count.format(between)} downloads between them`}
         </span>
-      </SlabFoot>
-    </Slab>
+      </CardFooter>
+    </Card>
   );
 }
 
 function Cover({ work }: { work: ReportWork }) {
-  if (work.cover) {
+  const [failed, setFailed] = useState(false);
+  if (work.cover && !failed) {
     return (
       <Image
         alt=""
-        className="size-8 shrink-0 rounded-[5px] bg-inset object-cover"
+        className="size-8 shrink-0 rounded-chip bg-inset object-cover"
         height={64}
+        onError={() => setFailed(true)}
         src={work.cover}
         unoptimized
         width={64}
@@ -91,7 +94,7 @@ function Cover({ work }: { work: ReportWork }) {
     );
   }
   return (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-[5px] bg-deep">
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-chip bg-deep">
       <TypeMark className="size-4 text-accent" type={work.type as BrowseType} />
     </span>
   );

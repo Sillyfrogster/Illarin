@@ -124,10 +124,6 @@ func (h *Handlers) GetWork(c *gin.Context) {
 }
 
 func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
-	tags := make([]WorkTag, 0, len(found.Tags))
-	for _, tag := range found.Tags {
-		tags = append(tags, WorkTag{Label: tag.Label, Value: tag.Value})
-	}
 	media := ToImages(found.Media)
 	blocks, err := block.ToBlocks(found.Type, found.Blocks)
 	if err != nil {
@@ -136,6 +132,7 @@ func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
 	addable := toAPIAddableBlocks(found.Type, found.IsOwner)
 	return WorkDetail{
 		DraftedChangesVersion: found.DraftedChangesVersion,
+		FileFields:            found.FileFields,
 		UnpublishedChanges:    found.UnpublishedChanges,
 		ViewCount:             found.ViewCount,
 		DownloadCount:         found.DownloadCount,
@@ -145,7 +142,7 @@ func ToPage(found Detail, preference work.NSFWPreference) (WorkDetail, error) {
 		Type:                  WorkDetailType(found.Type),
 		Name:                  found.Name,
 		Blurb:                 found.Blurb,
-		Tags:                  tags,
+		Tags:                  toAPITags(found.Tags),
 		Creator:               found.Creator,
 		Identifier:            found.Identifier,
 		ExtensionDependencies: toAPIExtensionDependencies(found.Dependencies),

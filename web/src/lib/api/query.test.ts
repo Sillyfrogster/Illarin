@@ -44,7 +44,7 @@ describe("details client", () => {
         headers: { "X-Drafted-Changes-Version": String(7 + versions.length) },
       });
     });
-    const candidate = { version: 7 };
+    const candidate = { workId: ID, version: 7 };
     const details = {
       name: "Fixture work",
       blurb: "First edit",
@@ -76,7 +76,7 @@ describe("details client", () => {
         }),
       );
 
-      await saveWorkDetails({ version: 7 }, ID, {
+      await saveWorkDetails({ workId: ID, version: 7 }, ID, {
         blurb,
         isNsfw: false,
         name: "Fixture work",
@@ -121,9 +121,9 @@ describe("details client", () => {
       name: "Fixture work",
     };
 
-    await expect(saveWorkDetails({ version: 7 }, ID, details)).rejects.toThrow(
-      "These drafted changes changed after you opened them.",
-    );
+    await expect(
+      saveWorkDetails({ workId: ID, version: 7 }, ID, details),
+    ).rejects.toThrow("These drafted changes changed after you opened them.");
 
     expect(announcements).toEqual([DRAFTED_CHANGES_STALE]);
     expect(details.blurb).toBe("Keep this unsaved pitch.");

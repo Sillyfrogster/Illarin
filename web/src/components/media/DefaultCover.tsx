@@ -101,13 +101,13 @@ export function DefaultCover({
         )}
       >
         <span
-          className="absolute -z-1 inset-0 bg-current/15 transition-transform duration-500 group-hover/cover:rotate-45 motion-reduce:transition-none"
+          className="absolute -z-1 inset-0 bg-current/15 transition-transform duration-240 group-hover/cover:rotate-45 motion-reduce:transition-none"
           style={{ clipPath: STAR }}
         />
         <Icon size={compact ? 22 : 38} strokeWidth={1.25} />
       </span>
       {compact ? null : (
-        <span className="relative z-1 text-label font-semibold tracking-[0.18em] uppercase">
+        <span className="relative z-1 text-meta font-medium">
           {TYPE_LABELS[type]}
         </span>
       )}

@@ -12,32 +12,27 @@ const account: SignedInAccount = {
   role: "user",
 };
 
-test("account navigation exposes the destinations allowed by each role", () => {
-  const destinations = (role: SignedInAccount["role"], writer = false) =>
-    accountDestinations({ ...account, role }, writer).map(({ id }) => id);
-  expect(destinations("user")).toEqual(["work", "profile", "settings"]);
-  expect(destinations("user", true)).toEqual([
-    "work",
-    "profile",
-    "settings",
-    "posts",
+test("account navigation groups the destinations allowed by each role", () => {
+  const groups = (
+    role: SignedInAccount["role"],
+    writer = false,
+    emailVerified = true,
+  ) =>
+    accountDestinations({ ...account, role, emailVerified }, writer).map(
+      (group) => group.map(({ id }) => id),
+    );
+  expect(groups("user")).toEqual([["work"], ["settings"]]);
+  expect(groups("user", true, false)).toEqual([
+    ["work", "posts"],
+    ["settings", "verify"],
   ]);
-  expect(destinations("moderator")).toContain("staff");
-  expect(destinations("admin", true)).toEqual([
-    "work",
-    "profile",
-    "settings",
-    "posts",
-    "blog-admin",
-    "staff",
-  ]);
-  expect(accountDestinations(null, false).map(({ id }) => id)).toEqual([
-    "sign-in",
-    "sign-up",
+  expect(groups("moderator")).toEqual([["work"], ["settings"], ["staff"]]);
+  expect(groups("admin", true)).toEqual([
+    ["work", "posts"],
+    ["settings"],
+    ["blog-admin", "staff"],
   ]);
   expect(
-    accountDestinations({ ...account, emailVerified: false }, false).map(
-      ({ id }) => id,
-    ),
-  ).toContain("verify");
+    accountDestinations(null, false).map((group) => group.map(({ id }) => id)),
+  ).toEqual([["sign-in", "sign-up"]]);
 });

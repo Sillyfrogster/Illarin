@@ -1,8 +1,16 @@
 "use client";
 
-import { CircleSlash2, PencilLine, RotateCcw } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import {
+  ChevronRight,
+  CircleSlash2,
+  PencilLine,
+  RotateCcw,
+} from "lucide-react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
   correctWorkVersionNotes,
@@ -12,6 +20,7 @@ import {
 } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import type { Candidate } from "@/lib/drafted-changes";
+import { versionTag } from "@/lib/version-label";
 import { workHref } from "@/lib/work-url";
 import {
   earlierVersions,
@@ -78,7 +87,7 @@ export function VersionDetail({
           <p className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-meta text-mute">
             <time dateTime={version.recordedAt}>{versionDate(version)}</time>
             {version.versionLabel ? (
-              <span>Creator’s version {version.versionLabel}</span>
+              <span>{versionTag(version.versionLabel)}</span>
             ) : null}
             {version.notesEditedAt ? <span>Notes edited</span> : null}
           </p>
@@ -196,10 +205,10 @@ function VersionManagement({
 
   return (
     <div className="mt-8 max-w-[38rem] border-rule border-t pt-2">
-      <div className="flex min-h-11 flex-wrap items-center gap-x-1">
+      <div className="flex min-h-control flex-wrap items-center gap-x-1">
         {!current ? (
           <Button
-            aria-pressed={mode === "restore"}
+            aria-expanded={mode === "restore"}
             className={cn("-ml-3", mode === "restore" && "text-ink")}
             onClick={() => setMode("restore")}
             size="compact"
@@ -210,7 +219,7 @@ function VersionManagement({
           </Button>
         ) : null}
         <Button
-          aria-pressed={mode === "correct"}
+          aria-expanded={mode === "correct"}
           className={cn(mode === "correct" && "text-ink")}
           onClick={() => setMode("correct")}
           size="compact"
@@ -221,7 +230,7 @@ function VersionManagement({
         </Button>
         {!current && !version.withdrawnAt ? (
           <Button
-            aria-pressed={mode === "withdraw"}
+            aria-expanded={mode === "withdraw"}
             className={cn(mode === "withdraw" && "text-stop")}
             onClick={() => setMode("withdraw")}
             size="compact"
@@ -236,10 +245,8 @@ function VersionManagement({
       {mode === "restore" ? (
         <div className="grid gap-4 pt-4 pb-1">
           <p className="text-meta text-mute">
-            This replaces your drafted changes with this version, including its
-            pictures and page arrangement. Access, private prompts and allowed
-            apps stay current. Publishing it later needs fresh version notes and
-            a fresh check.
+            Your drafted changes become this version, images and layout
+            included. Private prompts and allowed apps stay as they are.
           </p>
           <ActionRow
             busy={busy}
@@ -250,6 +257,7 @@ function VersionManagement({
                 () =>
                   restoreWorkVersion(
                     {
+                      workId,
                       version: owner.draftedChangesVersion,
                     } satisfies Candidate,
                     workId,
@@ -264,27 +272,23 @@ function VersionManagement({
 
       {mode === "correct" ? (
         <div className="grid gap-4 pt-4 pb-1">
-          <label className="grid gap-1 text-meta text-mute">
-            Summary
-            <input
-              className="min-h-11 rounded-control bg-field px-3 text-ui text-ink"
+          <Field label="Summary">
+            <Input
               maxLength={200}
               onChange={(event) => setSummary(event.target.value)}
               value={summary}
             />
-          </label>
-          <label className="grid gap-1 text-meta text-mute">
-            Notes
-            <textarea
-              className="min-h-28 rounded-control bg-field p-3 text-ui text-ink"
+          </Field>
+          <Field label="Notes">
+            <Textarea
               maxLength={4000}
               onChange={(event) => setNotes(event.target.value)}
               value={notes}
             />
-          </label>
+          </Field>
           <ActionRow
             busy={busy}
-            confirm="Save correction"
+            confirm="Save notes"
             onCancel={() => setMode("")}
             onConfirm={() =>
               runMutation(
@@ -306,18 +310,16 @@ function VersionManagement({
       {mode === "withdraw" ? (
         <div className="grid gap-4 pt-4 pb-1">
           <p className="text-meta text-mute">
-            Readers will see the version number, date and this explanation. Its
-            content, comparisons and downloads will be blocked.
+            Readers see the version number, the date and this reason. Nobody can
+            read or download it.
           </p>
-          <label className="grid gap-1 text-meta text-mute">
-            Public explanation
-            <textarea
-              className="min-h-24 rounded-control bg-field p-3 text-ui text-ink"
+          <Field label="Reason readers see">
+            <Textarea
               maxLength={1000}
               onChange={(event) => setExplanation(event.target.value)}
               value={explanation}
             />
-          </label>
+          </Field>
           <ActionRow
             busy={busy}
             confirm="Withdraw version"
@@ -387,17 +389,15 @@ function Baseline({
     <p className="flex flex-wrap items-center gap-2 text-meta text-mute">
       <label htmlFor={field}>Since</label>
       <Select
-        className="text-meta"
+        className="h-control-compact w-auto text-meta"
         id={field}
-        onChange={(event) => onChoose(Number(event.target.value))}
-        value={chosen}
-      >
-        {earlier.map((one) => (
-          <option key={one.id} value={one.number}>
-            {versionTitle(one)} · {versionDate(one)}
-          </option>
-        ))}
-      </Select>
+        onValueChange={(number) => onChoose(Number(number))}
+        options={earlier.map((one) => ({
+          value: String(one.number),
+          label: `${versionTitle(one)} · ${versionDate(one)}`,
+        }))}
+        value={String(chosen)}
+      />
     </p>
   );
 }
@@ -405,27 +405,39 @@ function Baseline({
 function Note({ notes }: { notes: string }) {
   const foldable = isLongNote(notes);
   const [shown, setShown] = useState(!foldable);
+  const id = useId();
 
   return (
-    <div className="mt-4 max-w-[60ch]">
+    <Collapsible
+      className="mt-4 max-w-[60ch]"
+      onOpenChange={setShown}
+      open={shown}
+    >
       <p
         className={cn(
           "font-prose text-prose whitespace-pre-wrap text-mute",
           shown ? null : "line-clamp-4",
         )}
+        id={id}
       >
         {notes}
       </p>
       {foldable ? (
-        <button
-          aria-expanded={shown}
-          className="mt-1 inline-flex min-h-11 items-center text-meta font-medium text-accent outline-offset-3 hover:text-ink"
-          onClick={() => setShown(!shown)}
-          type="button"
-        >
-          {shown ? "Show less" : "Read full notes"}
-        </button>
+        <CollapsibleTrigger asChild>
+          <Button
+            aria-controls={id}
+            className="group/notes mt-1 -ml-2 px-2"
+            size="compact"
+            variant="ghost"
+          >
+            <ChevronRight
+              aria-hidden="true"
+              className="transition-transform duration-80 group-data-[state=open]/notes:rotate-90 motion-reduce:transition-none"
+            />
+            {shown ? "Show less" : "Read full notes"}
+          </Button>
+        </CollapsibleTrigger>
       ) : null}
-    </div>
+    </Collapsible>
   );
 }

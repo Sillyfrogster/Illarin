@@ -137,7 +137,7 @@ func (e Element) itemNoun() (string, string) {
 	case TypeScriptList:
 		return "script", "scripts"
 	case TypeColorSet:
-		return "colour", "colours"
+		return "color", "colors"
 	case TypeStylesheetSet:
 		return "stylesheet", "stylesheets"
 	case TypeRecordList:

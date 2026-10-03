@@ -1,6 +1,7 @@
 "use client";
 
-import { Field, TextInput } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type {
   BlogCategory,
@@ -44,17 +45,14 @@ export function DetailsRail({
     <div className="flex flex-col gap-7">
       <Field htmlFor="post-category" label="Category">
         <Select
-          className="w-full"
           id="post-category"
-          onChange={(event) => onChange({ categoryId: event.target.value })}
+          onValueChange={(categoryId) => onChange({ categoryId })}
+          options={categories.map((one) => ({
+            value: one.id,
+            label: one.label,
+          }))}
           value={draft.categoryId}
-        >
-          {categories.map((one) => (
-            <option key={one.id} value={one.id}>
-              {one.label}
-            </option>
-          ))}
-        </Select>
+        />
       </Field>
 
       {locked ? null : (
@@ -63,7 +61,7 @@ export function DetailsRail({
           htmlFor="post-slug"
           label="Address"
         >
-          <TextInput
+          <Input
             id="post-slug"
             maxLength={80}
             onChange={(event) => onChange({ slug: event.target.value })}

@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
 import { Button } from "@/components/ui/button";
+import { Segmented } from "@/components/ui/segmented";
 import {
   acceptWorkReplacement,
   cancelWorkReplacement,
@@ -33,7 +34,9 @@ export function ReplacementStep({
   onDiscarded,
   waiting,
   onWaiting,
+  typeName,
 }: {
+  typeName: string;
   onApplied: (groups: VersionChangeGroup[]) => void;
   onDiscarded: () => void;
   waiting: UploadOperation | null;
@@ -73,7 +76,7 @@ export function ReplacementStep({
           if (next.status !== "pending" && next.status !== "processing") return;
         } catch {
           setMessage(
-            "Import status is unavailable. Reopen this panel to check again. Your published work has not changed.",
+            `Illarin could not check your upload. Reopen this to check again. Your published ${typeName} hasn't changed.`,
           );
           return;
         }
@@ -83,7 +86,7 @@ export function ReplacementStep({
     return () => {
       polling = false;
     };
-  }, [operation, reading, onWaiting]);
+  }, [operation, reading, onWaiting, typeName]);
 
   function choose(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
@@ -170,9 +173,8 @@ export function ReplacementStep({
       {staged ? (
         <div className="flex flex-col gap-5">
           <p className="text-ui text-ink">
-            Read as {staged.preview.format}. New content stays private until you
-            publish. Making private prompts public needs a separate confirmation
-            because it can affect text already published.
+            Read as {staged.preview.format}. Readers see nothing new until you
+            publish.
           </p>
           <ReplacementWarnings preview={staged.preview} />
           {staged.preview.groups.length === 0 ? (
@@ -195,32 +197,22 @@ export function ReplacementStep({
                     <p className="text-ui text-ink" id={`subject-${role}`}>
                       {replacementSubjectLabel(role)}
                     </p>
-                    <div
+                    <Segmented
                       aria-labelledby={`subject-${role}`}
-                      className="flex flex-wrap gap-2"
-                      role="radiogroup"
-                    >
-                      {(["keep", "remove"] as const).map((answer) => (
-                        <label
-                          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control bg-deep px-4 text-meta text-ink has-checked:bg-accent-wash"
-                          key={answer}
-                        >
-                          <input
-                            checked={decisions[role] === answer}
-                            className="size-4 accent-[var(--v-action)]"
-                            name={`decision-${role}`}
-                            onChange={() =>
-                              setDecisions((current) => ({
-                                ...current,
-                                [role]: answer,
-                              }))
-                            }
-                            type="radio"
-                          />
-                          {answer === "keep" ? "Keep it" : "Remove it"}
-                        </label>
-                      ))}
-                    </div>
+                      className="self-start"
+                      name={`decision-${role}`}
+                      onValueChange={(answer) =>
+                        setDecisions((current) => ({
+                          ...current,
+                          [role]: answer,
+                        }))
+                      }
+                      options={[
+                        { value: "keep", label: "Keep it" },
+                        { value: "remove", label: "Remove it" },
+                      ]}
+                      value={decisions[role] ?? null}
+                    />
                   </div>
                 ))}
               </div>
@@ -250,7 +242,7 @@ export function ReplacementStep({
             <span className="text-meta text-mute">
               {file
                 ? "Choose a different file"
-                : "It must be the same type as this one"}
+                : `It has to be ${/^[aeiou]/i.test(typeName) ? "an" : "a"} ${typeName}.`}
             </span>
           </label>
         </div>

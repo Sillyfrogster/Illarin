@@ -4,13 +4,14 @@ import { ArrowDownRight, ArrowUpRight, Minus, RotateCw } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  SideScroll,
-  Slab,
-  SlabFoot,
-  SlabHead,
-  SlabNote,
-  SlabTitle,
-} from "@/components/ui/slab";
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Scroller } from "@/components/ui/scroller";
 import type { Report } from "@/lib/api/staff";
 import { cn } from "@/lib/cn";
 import {
@@ -61,43 +62,45 @@ export function ActivityMatrix({
   }
 
   return (
-    <Slab>
-      <SlabHead className="items-center">
+    <Card>
+      <CardHeader className="items-center">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-          <SlabTitle>Thirty days</SlabTitle>
-          <SlabNote>
+          <CardTitle>Thirty days</CardTitle>
+          <CardDescription>
             {reportDate(report.from)} to {reportDate(report.through, true)}, in
             UTC
-          </SlabNote>
+          </CardDescription>
         </div>
-        <Button
-          className="-my-1 text-mute"
-          loading={refreshing}
-          onClick={onRefresh}
-          size="compact"
-          variant="ghost"
-        >
-          {refreshing ? null : <RotateCw aria-hidden="true" />}
-          Refresh
-        </Button>
-      </SlabHead>
+        <CardAction>
+          <Button
+            className="-my-1 text-mute"
+            loading={refreshing}
+            onClick={onRefresh}
+            size="compact"
+            variant="ghost"
+          >
+            {refreshing ? null : <RotateCw aria-hidden="true" />}
+            Refresh
+          </Button>
+        </CardAction>
+      </CardHeader>
 
-      <div className="flex flex-col gap-4 px-4 py-4 lg:flex-row lg:gap-6">
+      <div className="flex flex-col gap-4 px-5 pt-4 lg:flex-row lg:gap-6">
         <DayReadout day={days[shown]} series={series} shown={shown} />
-        <div
-          aria-label="The day being read"
-          aria-valuemax={last}
-          aria-valuemin={0}
-          aria-valuenow={shown}
-          aria-valuetext={`${weekday(days[shown])} ${reportDate(days[shown], true)}`}
-          className="min-w-0 flex-1 rounded-control outline-offset-4"
-          onKeyDown={move}
-          onPointerLeave={() => setHeld(null)}
-          role="slider"
-          tabIndex={0}
-        >
-          <SideScroll>
-            <div className="relative min-w-[34rem]">
+        <div className="min-w-0 flex-1">
+          <Scroller>
+            <div
+              aria-label="The day being read"
+              aria-valuemax={last}
+              aria-valuemin={0}
+              aria-valuenow={shown}
+              aria-valuetext={`${weekday(days[shown])} ${reportDate(days[shown], true)}`}
+              className="relative min-w-[34rem] rounded-control outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent focus-visible:ring-inset"
+              onKeyDown={move}
+              onPointerLeave={() => setHeld(null)}
+              role="slider"
+              tabIndex={0}
+            >
               <Bands days={days} shown={shown} />
               <div className="relative flex flex-col gap-2">
                 {series.map((one) => (
@@ -123,11 +126,11 @@ export function ActivityMatrix({
                 </div>
               </div>
             </div>
-          </SideScroll>
+          </Scroller>
         </div>
       </div>
 
-      <SlabFoot>
+      <CardFooter>
         <span>
           Each row is shaded against its own busiest day. Weekends stand on a
           darker ground.
@@ -143,8 +146,8 @@ export function ActivityMatrix({
           ))}
           Busy
         </span>
-      </SlabFoot>
-    </Slab>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -178,10 +181,8 @@ function DayReadout({
 }) {
   return (
     <div className="shrink-0 lg:w-[13rem]">
-      <p className="font-ui text-label tracking-[0.06em] text-mute uppercase">
-        {weekday(day)}
-      </p>
-      <p className="font-display text-[1.5rem] leading-tight font-medium tracking-[-0.03em] text-ink">
+      <p className="font-ui text-meta text-mute">{weekday(day)}</p>
+      <p className="font-display text-name-m font-medium tracking-[-0.03em] text-ink">
         {reportDate(day, true)}
       </p>
       <dl

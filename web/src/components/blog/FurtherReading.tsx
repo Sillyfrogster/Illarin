@@ -18,7 +18,7 @@ export function FurtherReading({ posts }: { posts: PostSummary[] }) {
         {posts.map((post) => (
           <li key={post.id}>
             <Link
-              className="group -mx-4 flex min-h-14 flex-wrap items-center justify-between gap-x-5 gap-y-1 rounded-plate px-4 py-3 transition-colors hover:bg-deep"
+              className="group -mx-4 flex min-h-14 items-center justify-between gap-x-5 gap-y-1 rounded-plate px-4 py-3 transition-colors hover:bg-deep"
               href={postPath(post.slug)}
             >
               <span className="min-w-0">
@@ -34,7 +34,7 @@ export function FurtherReading({ posts }: { posts: PostSummary[] }) {
               </span>
               <ArrowRight
                 aria-hidden="true"
-                className="size-4 shrink-0 text-mute transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
+                className="size-4 shrink-0 text-mute transition-transform duration-160 group-hover:translate-x-1 motion-reduce:transition-none"
               />
             </Link>
           </li>

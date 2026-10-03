@@ -83,6 +83,7 @@ import type {
   WorkImage,
   WorkList,
   WorkTag,
+  WorkTagSuggestionList,
   WorkVersion,
   WorkVersionNotesRequest,
   WorkVersionRequest,
@@ -271,6 +272,20 @@ export async function fetchWorks(
   return data;
 }
 
+/** fetchTagSuggestions lists listed tags containing what the reader typed. */
+export async function fetchTagSuggestions(
+  typed: string,
+  nsfw: NsfwPreference | undefined,
+  signal?: AbortSignal,
+) {
+  const { data, error } = await api<WorkTagSuggestionList>("GET", "/v1/tags", {
+    query: { q: typed, nsfw },
+    signal,
+  });
+  if (error || !data) throw new Error("Could not load tag suggestions");
+  return data.tags;
+}
+
 export async function fetchDeletedWorks(
   handle: string,
   cookie: string,
@@ -295,6 +310,19 @@ export async function fetchWork(
   });
   if (error || !data) return null;
   return data;
+}
+
+/** fetchWorkConnectedApps lists the signed-in reader's connected apps for a work, empty when signed out. */
+export async function fetchWorkConnectedApps(
+  id: string,
+  cookie: string,
+): Promise<WorkConnectedApp[]> {
+  const { data } = await api<WorkConnectedAppList>(
+    "GET",
+    `/v1/works/${id}/connected-apps`,
+    { headers: { cookie } },
+  );
+  return data?.items ?? [];
 }
 
 /** fetchBuildChoices asks which types can be built from nothing and which apps each asks for. */
@@ -350,7 +378,7 @@ export async function saveNsfwPreference(preference: NsfwPreference) {
   const { error } = await api<void>("PUT", "/v1/account/nsfw-preference", {
     body: { preference },
   });
-  if (error) throw new Error("Could not save the content preference");
+  if (error) throw new Error("Could not save your adult content setting");
 }
 
 export async function saveWorkVisibility(
@@ -560,7 +588,7 @@ export async function letGoOfShelfPiece(
     { candidate },
   );
   if (error) {
-    throw writeRefusal(error, "Illarin could not let that go. Try again.");
+    throw writeRefusal(error, "Illarin could not delete that. Try again.");
   }
 }
 
@@ -575,7 +603,7 @@ export async function letGoOfShelfImport(
     { candidate },
   );
   if (error) {
-    throw writeRefusal(error, "Illarin could not let that go. Try again.");
+    throw writeRefusal(error, "Illarin could not delete that. Try again.");
   }
 }
 
@@ -905,7 +933,7 @@ export async function compareWorkVersions(
     return {
       compared: null,
       refusal:
-        "This is the first version Illarin recorded, so there is nothing before it to compare.",
+        "This is the first recorded version, so there is no earlier version to compare it with.",
     };
   }
   if (response.status === 404) {

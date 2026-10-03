@@ -42,16 +42,16 @@ export function PublicProfileCard() {
   });
 
   return (
-    <section className="flex flex-wrap items-center gap-x-4 gap-y-4 rounded-plate bg-inset px-5 py-5">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-4 rounded-plate bg-inset px-5 py-5">
       <CreatorPortrait
         className="size-14"
         handle={profile.handle}
         picture={profile.avatar}
       />
       <div className="min-w-0 flex-1 basis-56">
-        <h3 className="font-ui text-ui font-medium text-ink [overflow-wrap:anywhere]">
+        <p className="font-ui text-ui font-medium text-ink [overflow-wrap:anywhere]">
           {profile.displayName || `@${profile.handle}`}
-        </h3>
+        </p>
         <p className="font-ui text-meta text-mute">
           {showing.length > 0
             ? `Showing ${showing.join(", ")}.`
@@ -64,6 +64,6 @@ export function PublicProfileCard() {
           <ArrowRight aria-hidden="true" />
         </Link>
       </Button>
-    </section>
+    </div>
   );
 }

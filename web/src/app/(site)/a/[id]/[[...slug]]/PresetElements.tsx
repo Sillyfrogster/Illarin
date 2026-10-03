@@ -1,8 +1,8 @@
 import { Lock } from "lucide-react";
 import { Fragment } from "react";
-import { ChipSet } from "@/components/ui/Chip";
+import { BadgeList } from "@/components/ui/badge";
+import { Item, ItemGroup, ItemGroupHeading } from "@/components/ui/item";
 import { RichText } from "@/components/ui/RichText";
-import { Run, RunHeading, RunItem } from "@/components/ui/run";
 import type {
   PresetSetting,
   PresetVariable,
@@ -95,17 +95,19 @@ export function PromptList({
     else runs.push({ group: entry.group, fragments: [entry] });
   }
   return (
-    <Run as="ol">
+    <ItemGroup as="ol">
       {runs.map((run, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: Runs hold no local state.
         <Fragment key={index}>
           {run.group ? (
-            <RunHeading count={countOf(sizes.get(run.group) ?? 0, "fragment")}>
+            <ItemGroupHeading
+              count={countOf(sizes.get(run.group) ?? 0, "fragment")}
+            >
               {run.group}
-            </RunHeading>
+            </ItemGroupHeading>
           ) : null}
           {run.fragments.map(({ fragment, place }) => (
-            <RunItem
+            <Item
               className={cn(!fragment.enabled && OFF)}
               itemKey={fragment.id ?? `${place}`}
               key={fragment.id ?? place}
@@ -115,11 +117,11 @@ export function PromptList({
                 isOwner={isOwner}
                 place={place}
               />
-            </RunItem>
+            </Item>
           ))}
         </Fragment>
       ))}
-    </Run>
+    </ItemGroup>
   );
 }
 
@@ -186,29 +188,27 @@ export function SettingGroup({
   const named = shown.filter((setting) => setting.slot.rank !== "unrecognised");
   const raw = shown.filter((setting) => setting.slot.rank === "unrecognised");
   return (
-    <Run as="dl">
+    <ItemGroup>
       {named.map((setting) => (
-        <RunItem
-          as="div"
+        <Item
           itemKey={setting.id ?? setting.name}
           key={setting.id ?? setting.name}
         >
           <SettingBody setting={setting} />
-        </RunItem>
+        </Item>
       ))}
       {raw.length > 0 ? (
-        <RunHeading>Other settings from the file</RunHeading>
+        <ItemGroupHeading>Other settings from the file</ItemGroupHeading>
       ) : null}
       {raw.map((setting) => (
-        <RunItem
-          as="div"
+        <Item
           itemKey={setting.id ?? setting.name}
           key={setting.id ?? setting.name}
         >
           <SettingBody raw setting={setting} />
-        </RunItem>
+        </Item>
       ))}
-    </Run>
+    </ItemGroup>
   );
 }
 
@@ -221,7 +221,7 @@ export function SettingBody({
 }) {
   return (
     <>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-0.5">
+      <dl className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-0.5">
         <dt
           className={cn(
             "min-w-0 [overflow-wrap:anywhere]",
@@ -233,7 +233,7 @@ export function SettingBody({
         <dd className={ITEM_VALUE}>
           <SettingValue name={setting.name} value={setting.value} />
         </dd>
-      </div>
+      </dl>
       {setting.slot.note ? (
         <p className={cn(ITEM_META, "max-w-[52ch] text-pretty")}>
           {setting.slot.note}
@@ -276,7 +276,7 @@ function SettingValue({
 export function writeValue(value: TypedValue | undefined): string {
   if (!value) return "";
   if (value.number != null) {
-    return value.number.toLocaleString("en-GB", { maximumFractionDigits: 20 });
+    return value.number.toLocaleString("en-US", { maximumFractionDigits: 20 });
   }
   if (value.boolean != null) return value.boolean ? "Yes" : "No";
   if (value.strings) {
@@ -297,16 +297,16 @@ export function VariableSchema({
   itemLimit?: number;
 }) {
   return (
-    <Run>
+    <ItemGroup>
       {variables.slice(0, itemLimit).map((variable, index) => (
-        <RunItem
+        <Item
           itemKey={variable.id ?? `${index}`}
           key={variable.id ?? `${index}-${variable.name}`}
         >
           <VariableBody variable={variable} />
-        </RunItem>
+        </Item>
       ))}
-    </Run>
+    </ItemGroup>
   );
 }
 
@@ -318,7 +318,7 @@ export function VariableBody({ variable }: { variable: PresetVariable }) {
         <RichText className={ITEM_BODY} text={variable.description} />
       ) : null}
       {variable.options && variable.options.length > 0 ? (
-        <ChipSet
+        <BadgeList
           className="mt-1"
           items={variable.options.map((option, position) => ({
             id: `${position}-${option.value}`,
@@ -343,17 +343,17 @@ export function ScriptList({
   itemLimit?: number;
 }) {
   return (
-    <Run>
+    <ItemGroup>
       {scripts.slice(0, itemLimit).map((script, index) => (
-        <RunItem
+        <Item
           className={cn(!script.enabled && OFF)}
           itemKey={script.id ?? `${index}`}
           key={script.id ?? index}
         >
           <ScriptBody index={index} script={script} />
-        </RunItem>
+        </Item>
       ))}
-    </Run>
+    </ItemGroup>
   );
 }
 

@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Run, RunHeading, RunItem } from "@/components/ui/run";
+import { Item, ItemGroup, ItemGroupHeading } from "@/components/ui/item";
 import { groupAdditions } from "@/lib/extension-additions";
 import { ITEM_META, ITEM_NAME } from "./element-runs";
 
@@ -17,18 +17,20 @@ export function ExtensionAdditions({
         Found in the extension’s code. Anything named only while it runs is not
         listed.
       </p>
-      <Run>
+      <ItemGroup>
         {groupAdditions(fields, itemLimit).map((group) => (
           <Fragment key={group.name}>
-            <RunHeading count={`${group.total}`}>{group.name}</RunHeading>
+            <ItemGroupHeading count={`${group.total}`}>
+              {group.name}
+            </ItemGroupHeading>
             {group.shown.map((addition) => (
-              <RunItem itemKey={addition.key} key={addition.key}>
+              <Item itemKey={addition.key} key={addition.key}>
                 <p className={ITEM_NAME}>{addition.name}</p>
-              </RunItem>
+              </Item>
             ))}
           </Fragment>
         ))}
-      </Run>
+      </ItemGroup>
     </div>
   );
 }

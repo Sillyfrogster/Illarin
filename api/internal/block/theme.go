@@ -85,12 +85,12 @@ func decodeColorSet(raw json.RawMessage) (Content, error) {
 	modes := make([]ColorMode, len(*incoming.Modes))
 	for i, mode := range *incoming.Modes {
 		if mode.Colors == nil {
-			return nil, fmt.Errorf("mode %d must include colours as a list", i+1)
+			return nil, fmt.Errorf("mode %d must include colors as a list", i+1)
 		}
 		colors := make([]Color, len(*mode.Colors))
 		for j, color := range *mode.Colors {
 			if color.Name == nil || color.Value == nil {
-				return nil, fmt.Errorf("mode %d colour %d must include name and value as strings", i+1, j+1)
+				return nil, fmt.Errorf("mode %d color %d must include name and value as strings", i+1, j+1)
 			}
 			colors[j] = Color{
 				ID: itemID(color.ID), Name: *color.Name, Value: *color.Value,

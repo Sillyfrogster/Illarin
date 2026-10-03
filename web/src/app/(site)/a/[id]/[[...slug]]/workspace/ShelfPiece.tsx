@@ -25,11 +25,11 @@ import {
 import { RichText } from "@/components/ui/RichText";
 import type { ShelfPiece } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
+import { timing } from "@/lib/timing";
 import { useShelf } from "./shelf";
 import { placeChoices } from "./shelf-places";
 import { useWorkspace } from "./state";
 
-const SPRING = { type: "spring", stiffness: 420, damping: 36 } as const;
 const PREVIEW_CHARACTERS = 1400;
 
 export function sectionName(piece: ShelfPiece): string {
@@ -68,23 +68,23 @@ export function SectionRow({
       className="relative grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-2"
       exit={{ opacity: 0, height: 0 }}
       layout={still ? false : "position"}
-      transition={SPRING}
+      transition={timing.quick}
     >
       <Spine done={placed} last={last} working={busy} />
       <div
         className={cn(
-          "min-w-0 rounded-control transition-colors duration-150 motion-reduce:transition-none",
+          "min-w-0 rounded-control transition-colors duration-160 motion-reduce:transition-none",
           !placed && "hover:bg-deep",
           open && !placed && "bg-deep",
           isDragging && "opacity-35",
         )}
       >
-        <div className="flex min-h-11 items-center gap-1 pr-1">
+        <div className="flex min-h-control items-center gap-1 pr-1">
           <button
             aria-controls={preview}
             aria-expanded={placed ? undefined : open}
             className={cn(
-              "group/row flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-control py-2 pl-2 text-left outline-offset-2",
+              "group/row flex min-h-control min-w-0 flex-1 items-center gap-2 rounded-control py-2 pl-2 text-left outline-offset-2",
               shelf.canDrag &&
                 !placed &&
                 "cursor-grab touch-none active:cursor-grabbing",
@@ -151,7 +151,7 @@ export function SectionRow({
               exit={{ height: 0, opacity: 0 }}
               id={preview}
               initial={{ height: 0, opacity: 0 }}
-              transition={still ? { duration: 0 } : SPRING}
+              transition={still ? { duration: 0 } : timing.quick}
             >
               <div className="flex flex-col gap-3 px-3 pt-1 pb-3">
                 <RichText
@@ -188,12 +188,12 @@ function Spine({
       <motion.span
         animate={{ scale: done ? [1.35, 1] : 1 }}
         className={cn(
-          "relative mt-[1.125rem] flex size-3.5 items-center justify-center rounded-full transition-colors duration-300 motion-reduce:transition-none",
+          "relative mt-[1.125rem] flex size-3.5 items-center justify-center rounded-full transition-colors duration-240 motion-reduce:transition-none",
           done
             ? "bg-action text-on-accent"
             : "bg-plane inset-ring-2 inset-ring-edge",
         )}
-        transition={{ duration: 0.35 }}
+        transition={timing.settle}
       >
         {working ? (
           <LoaderCircle className="size-3 animate-spin text-accent motion-reduce:animate-none" />
@@ -213,7 +213,7 @@ export function LiftedSection({ piece }: { piece: ShelfPiece }) {
       animate={still ? {} : { scale: 1.04, rotate: -2 }}
       className="flex w-72 cursor-grabbing items-center gap-3 rounded-plate bg-plane py-3 pr-4 pl-3 shadow-popover inset-ring-2 inset-ring-accent"
       initial={still ? false : { scale: 1, rotate: 0 }}
-      transition={{ type: "spring", stiffness: 420, damping: 24 }}
+      transition={timing.quick}
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-action text-on-accent">
         <Plus aria-hidden="true" className="size-4.5" />
@@ -238,14 +238,14 @@ function PlaceMenu({ piece }: { piece: ShelfPiece }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
+        <Button
           aria-label={`Place “${sectionName(piece)}”`}
-          className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-accent outline-offset-2 hover:bg-accent-wash disabled:opacity-45 data-[state=open]:bg-action data-[state=open]:text-on-accent"
           disabled={shelf.busy !== null}
-          type="button"
+          size="icon"
+          variant="ghost"
         >
-          <Plus aria-hidden="true" className="size-5" />
-        </button>
+          <Plus aria-hidden="true" />
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
@@ -300,7 +300,7 @@ function LetGo({ piece }: { piece: ShelfPiece }) {
       size="compact"
       variant="ghost"
     >
-      Let go
+      Delete
     </Button>
   );
 }
@@ -338,7 +338,7 @@ export function PictureTile({
       className="w-28 shrink-0"
       exit={{ opacity: 0, scale: 0.9 }}
       layout={still ? false : "position"}
-      transition={SPRING}
+      transition={timing.quick}
     >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -357,7 +357,7 @@ export function PictureTile({
               <Image
                 alt=""
                 className={cn(
-                  "size-full object-cover transition-transform duration-300 hover:scale-105 motion-reduce:transition-none",
+                  "size-full object-cover transition-transform duration-240 hover:scale-105 motion-reduce:transition-none",
                   placed && "opacity-40",
                 )}
                 height={piece.media.height}
@@ -409,7 +409,7 @@ export function PictureTile({
             className="text-stop data-[highlighted]:bg-stop-wash data-[highlighted]:text-stop"
             onSelect={() => shelf.letGo(piece)}
           >
-            Let go
+            Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Profile } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { portraitGround } from "@/lib/portrait-tone";
@@ -30,36 +30,24 @@ export function CreatorPortrait({
   priority?: boolean;
   size?: Size;
 }) {
-  const frame = cn(
-    "block shrink-0 overflow-hidden rounded-plate",
-    FRAME[size],
-    className,
-  );
-
-  if (picture) {
-    return (
-      <span className={cn(frame, "bg-deep")}>
-        <Image
+  return (
+    <Avatar className={cn(FRAME[size], className)}>
+      {picture ? (
+        <AvatarImage
           alt=""
-          className="size-full object-cover"
+          fetchPriority={priority ? "high" : undefined}
           height={picture.height}
-          priority={priority}
           src={picture.url}
-          unoptimized
           width={picture.width}
         />
-      </span>
-    );
-  }
-
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(frame, "grid place-items-center", portraitGround(handle))}
-    >
-      <span className={cn("font-display font-medium", INITIAL[size])}>
+      ) : null}
+      <AvatarFallback
+        aria-hidden="true"
+        className={cn(INITIAL[size], portraitGround(handle))}
+        delayMs={picture ? 600 : 0}
+      >
         {handle.slice(0, 1).toUpperCase()}
-      </span>
-    </span>
+      </AvatarFallback>
+    </Avatar>
   );
 }

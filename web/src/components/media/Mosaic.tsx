@@ -56,7 +56,7 @@ export function Mosaic({
                 >
                   <Image
                     alt={picture.name || ""}
-                    className="w-full object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none"
+                    className="w-full object-cover transition-transform duration-240 group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none"
                     draggable={false}
                     height={picture.height}
                     sizes="(max-width: 768px) 90vw, 460px"

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDownWideNarrow, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,10 +11,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { BrowseFilters, BrowseSort } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
-import { CONTROL } from "./BrowseStates";
 
 const SORTS: Record<BrowseSort, string> = {
-  recent: "Recent",
+  recent: "Newest",
   downloads: "Most downloaded · 30 days",
   views: "Most viewed · 30 days",
 };
@@ -31,15 +31,16 @@ export function SortMenu({
   const sort = filters.sort ?? "recent";
 
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger className={cn(CONTROL, className)}>
-        <ArrowDownWideNarrow
-          aria-hidden="true"
-          className="hidden size-4 text-mute sm:block"
-        />
-        <span className="sr-only">Sort: </span>
-        <span className="truncate">{SORTS[sort]}</span>
-        <ChevronDown aria-hidden="true" className="size-4 text-mute" />
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          className={cn("gap-1.5 max-md:w-control max-md:px-0", className)}
+        >
+          <ArrowDownWideNarrow aria-hidden="true" className="text-mute" />
+          <span className="sr-only">Sort: </span>
+          <span className="truncate max-md:sr-only">{SORTS[sort]}</span>
+          <ChevronDown aria-hidden="true" className="text-mute max-md:hidden" />
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuRadioGroup

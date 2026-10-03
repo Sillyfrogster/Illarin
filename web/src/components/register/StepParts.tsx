@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 export function StepForm({
@@ -28,13 +29,9 @@ export function StepForm({
   return (
     <form className="flex flex-col gap-6" onSubmit={send}>
       <div className="flex flex-col gap-5">{children}</div>
-      <button
-        className="inline-flex min-h-11 items-center justify-center rounded-control bg-action px-5 font-ui text-ui font-medium text-on-accent outline-offset-3 hover:opacity-90 disabled:opacity-40"
-        disabled={!ready || busy}
-        type="submit"
-      >
+      <Button disabled={!ready || busy} type="submit" variant="primary">
         {busy ? "Saving…" : commit}
-      </button>
+      </Button>
       {under}
     </form>
   );
@@ -73,22 +70,14 @@ export function StepAction({
   tone?: "quiet" | "stop";
 }) {
   return (
-    <button
-      className={cn(
-        "inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 font-ui text-ui font-medium outline-offset-3 disabled:opacity-40",
-        tone === "stop"
-          ? "bg-stop-wash text-stop hover:opacity-85"
-          : "bg-deep text-ink hover:bg-rule/45",
-      )}
+    <Button
+      className={cn(tone === "stop" && "text-stop hover:text-stop")}
       disabled={busy}
       onClick={onClick}
-      type="button"
     >
-      {Icon ? (
-        <Icon aria-hidden="true" className="size-4" strokeWidth={1.9} />
-      ) : null}
+      {Icon ? <Icon aria-hidden="true" /> : null}
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -115,23 +104,19 @@ export function Consequence({
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
-        <button
+        <Button
           aria-expanded={asking}
-          className="inline-flex min-h-11 items-center justify-center rounded-control bg-stop-wash px-4 font-ui text-ui font-medium text-stop outline-offset-3 hover:opacity-85 disabled:opacity-40"
+          className={cn(!asking && "text-stop hover:text-stop")}
           disabled={busy}
           onClick={() => (asking ? onConfirm() : setAsking(true))}
-          type="button"
+          variant={asking ? "stop" : "secondary"}
         >
           {asking ? confirm : action}
-        </button>
+        </Button>
         {asking ? (
-          <button
-            className="inline-flex min-h-11 items-center justify-center rounded-control px-4 font-ui text-ui font-medium text-mute outline-offset-3 hover:text-ink"
-            onClick={() => setAsking(false)}
-            type="button"
-          >
+          <Button onClick={() => setAsking(false)} variant="ghost">
             Cancel
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>

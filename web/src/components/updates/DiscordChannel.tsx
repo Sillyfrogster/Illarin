@@ -2,8 +2,10 @@
 
 import { Hash } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, TextInput, Trouble } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   connectDiscordChannel,
   type DiscordScope,
@@ -59,14 +61,14 @@ export function DiscordChannel({ scope }: { scope: DiscordScope }) {
             ? "Connected to a Discord channel"
             : "No Discord channel"}
       </p>
-      {error ? <Trouble>{error}</Trouble> : null}
+      {error ? <Alert tone="stop">{error}</Alert> : null}
       <form className="grid gap-3" onSubmit={save}>
         <Field
           hint="In Discord: channel settings, Integrations, Webhooks, Copy webhook URL."
           htmlFor={`discord-${scope}`}
           label={connected ? "Replace the webhook address" : "Webhook address"}
         >
-          <TextInput
+          <Input
             autoComplete="off"
             id={`discord-${scope}`}
             onChange={(event) => setAddress(event.target.value)}

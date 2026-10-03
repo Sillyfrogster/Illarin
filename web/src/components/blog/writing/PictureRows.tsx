@@ -10,10 +10,11 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useId, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
 import type { PostMedia } from "@/lib/api/query";
 import { POST_PICTURE_TEXT_LIMIT } from "@/lib/post-body";
 import type { PictureAttributes } from "./picture-nodes";
-import { Choice, Pair, Row, RowInput, RowNote } from "./RowParts";
+import { Choice, Pair, Row, RowNote } from "./RowParts";
 import type { Controls } from "./use-controls";
 
 export type Upload = (file: File) => Promise<PostMedia | null>;
@@ -118,7 +119,7 @@ export function PictureRow({
         type="file"
       />
       <Pair field={`${field}-alt`} label="Description">
-        <RowInput
+        <Input
           aria-describedby={`${field}-note`}
           aria-invalid={held !== null && !alt.trim() ? true : undefined}
           id={`${field}-alt`}
@@ -136,7 +137,7 @@ export function PictureRow({
         />
       </Pair>
       <Pair field={`${field}-caption`} label="Caption">
-        <RowInput
+        <Input
           id={`${field}-caption`}
           maxLength={POST_PICTURE_TEXT_LIMIT}
           onChange={(event) => setCaption(event.target.value)}
@@ -254,7 +255,7 @@ function PictureText({
   return (
     <>
       <Pair field={`${field}-alt`} label="Description">
-        <RowInput
+        <Input
           aria-invalid={missing ? true : undefined}
           id={`${field}-alt`}
           maxLength={POST_PICTURE_TEXT_LIMIT}
@@ -269,7 +270,7 @@ function PictureText({
         />
       </Pair>
       <Pair field={`${field}-caption`} label="Caption">
-        <RowInput
+        <Input
           id={`${field}-caption`}
           maxLength={POST_PICTURE_TEXT_LIMIT}
           onChange={(event) =>

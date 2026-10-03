@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Select } from "@/components/ui/select";
 import type { WorkBlock } from "@/lib/api/query";
 import { contentItemCount, LAYOUTS } from "@/lib/page-arrangement";
-import { ChoiceField, Field, Note } from "./fields";
+import { Note } from "./fields";
 import { useWorkspace } from "./state";
-
-const KEEP =
-  "inline-flex min-h-11 items-center self-start rounded-control bg-deep px-4 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45";
 
 export function contentDestinations(source: WorkBlock, blocks: WorkBlock[]) {
   const movable = source.elements.filter((element) => !element.pinned).length;
@@ -40,9 +40,7 @@ export function RemoveBlock({ block }: { block: WorkBlock }) {
       <section className="flex flex-col gap-3">
         {holdsContent ? (
           <>
-            <p className="text-ui text-ink">
-              This takes the following with it:
-            </p>
+            <p className="text-ui text-ink">Removing it deletes:</p>
             <ul className="flex list-none flex-col gap-2">
               {losses.map(({ count, element }) => (
                 <li key={element.id}>
@@ -76,17 +74,16 @@ export function RemoveBlock({ block }: { block: WorkBlock }) {
               <p className="text-meta text-mute">
                 Everything stays in downloads and leaves the public page.
               </p>
-              <button
-                className={KEEP}
+              <Button
+                className="self-start"
                 disabled={arrangement.busy}
                 onClick={() => {
                   arrangement.setHidden(block.id, true);
                   close();
                 }}
-                type="button"
               >
                 Hide the block
-              </button>
+              </Button>
             </div>
           ) : null}
           {canMove && destinations.length > 0 ? (
@@ -94,56 +91,48 @@ export function RemoveBlock({ block }: { block: WorkBlock }) {
               <p className="text-ui text-ink">
                 Move the content somewhere else
               </p>
-              <Field label="Destination block">
-                <ChoiceField
+              <Field label="Move to">
+                <Select
                   disabled={arrangement.busy}
-                  onChange={(event) => setDestination(event.target.value)}
+                  onValueChange={setDestination}
+                  options={destinations.map((candidate) => ({
+                    value: candidate.id,
+                    label: candidate.title,
+                  }))}
                   value={destination}
-                >
-                  {destinations.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.title}
-                    </option>
-                  ))}
-                </ChoiceField>
+                />
               </Field>
-              <button
-                className={KEEP}
+              <Button
+                className="self-start"
                 disabled={arrangement.busy || !destination}
                 onClick={() => {
                   arrangement.moveContent(block.id, destination);
                   close();
                 }}
-                type="button"
               >
                 Move it and remove this block
-              </button>
+              </Button>
             </div>
           ) : canMove ? (
-            <Note>No other block has room for these elements yet.</Note>
+            <Note>No other block can hold this content.</Note>
           ) : null}
         </section>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          className="inline-flex min-h-11 items-center rounded-control bg-stop px-5 text-ui font-medium text-on-stop outline-offset-3 hover:opacity-90 disabled:opacity-45"
+        <Button
           disabled={arrangement.busy}
           onClick={() => {
             arrangement.remove(block.id);
             close();
           }}
-          type="button"
+          variant="stop"
         >
           Delete block and content
-        </button>
-        <button
-          className="inline-flex min-h-11 items-center rounded-control px-4 text-ui font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink"
-          onClick={close}
-          type="button"
-        >
+        </Button>
+        <Button onClick={close} variant="ghost">
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -2,6 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DocMarkdown, docSections } from "@/components/docs/DocMarkdown";
 import { Shell } from "@/components/layout/Shell";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { DOCS, findDoc, readDoc } from "@/lib/docs";
 import { pageMetadata } from "@/lib/site-metadata";
 
@@ -24,9 +30,9 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
   return (
     <Shell className="pt-8 pb-chapter lg:pt-12">
       <div className="grid min-w-0 gap-10 lg:grid-cols-[13.5rem_minmax(0,1fr)_12rem] lg:gap-10">
-        <aside className="lg:sticky lg:top-28 lg:self-start">
+        <div className="lg:sticky lg:top-28 lg:self-start">
           <Link
-            className="flex min-h-11 items-center font-ui text-meta text-mute hover:text-accent"
+            className="flex min-h-control items-center font-ui text-meta text-mute hover:text-accent"
             href="/docs"
           >
             ← All documentation
@@ -39,7 +45,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
             {DOCS.map((entry) => (
               <Link
                 aria-current={entry.slug === slug ? "page" : undefined}
-                className="flex min-h-11 items-center rounded-control px-3 font-ui text-ui text-mute hover:bg-deep hover:text-ink aria-[current=page]:bg-deep aria-[current=page]:font-medium aria-[current=page]:text-ink"
+                className="flex min-h-control items-center rounded-control px-3 font-ui text-ui text-mute hover:bg-deep hover:text-ink aria-[current=page]:bg-deep aria-[current=page]:font-medium aria-[current=page]:text-ink"
                 href={`/docs/${entry.slug}`}
                 key={entry.slug}
               >
@@ -47,27 +53,29 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
               </Link>
             ))}
           </nav>
-        </aside>
+        </div>
         <article className="min-w-0 max-w-[75ch]">
-          <details className="mb-8 rounded-control bg-deep px-4 lg:hidden">
-            <summary className="flex min-h-11 cursor-pointer items-center font-ui text-ui text-ink">
-              On this page
-            </summary>
-            <nav aria-label="On this page" className="grid pb-3">
-              {sections.map((section) => (
-                <a
-                  className="flex min-h-11 items-center font-ui text-ui text-mute hover:text-accent"
-                  href={`#${section.id}`}
-                  key={section.id}
-                >
-                  {section.title}
-                </a>
-              ))}
-            </nav>
-          </details>
+          <Accordion className="mb-8 lg:hidden" collapsible type="single">
+            <AccordionItem value="contents">
+              <AccordionTrigger>On this page</AccordionTrigger>
+              <AccordionContent>
+                <nav aria-label="On this page" className="grid pb-2 pl-6">
+                  {sections.map((section) => (
+                    <a
+                      className="flex min-h-control items-center font-ui text-ui text-mute hover:text-accent"
+                      href={`#${section.id}`}
+                      key={section.id}
+                    >
+                      {section.title}
+                    </a>
+                  ))}
+                </nav>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
           <DocMarkdown source={source} />
         </article>
-        <aside className="hidden lg:sticky lg:top-28 lg:block lg:max-h-[calc(100vh-8rem)] lg:self-start lg:overflow-y-auto">
+        <div className="hidden lg:sticky lg:top-28 lg:block lg:max-h-[calc(100vh-8rem)] lg:self-start lg:overflow-y-auto">
           <nav aria-label="On this page">
             <p className="font-ui text-label font-medium text-mute">
               On this page
@@ -85,7 +93,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
               ))}
             </ul>
           </nav>
-        </aside>
+        </div>
       </div>
     </Shell>
   );

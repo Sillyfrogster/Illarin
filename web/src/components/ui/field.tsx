@@ -1,26 +1,34 @@
-import type { ComponentProps, ReactNode } from "react";
+"use client";
+
+import {
+  type AriaAttributes,
+  createContext,
+  type ReactNode,
+  useContext,
+  useId,
+} from "react";
 import { cn } from "@/lib/cn";
 
-export const controlClasses =
-  "w-full min-h-11 rounded-control border-0 bg-deep px-3.5 py-2.5 font-ui text-ui text-ink transition-colors duration-200 outline-offset-2 placeholder:text-mute hover:bg-rule/40 aria-invalid:inset-ring-2 aria-invalid:inset-ring-stop motion-reduce:transition-none";
+type FieldIds = { id: string; describedBy?: string; invalid: boolean };
 
-export function TextInput({ className, ...props }: ComponentProps<"input">) {
-  return <input className={cn(controlClasses, className)} {...props} />;
+const FieldContext = createContext<FieldIds | null>(null);
+
+/** useFieldControl gives a control inside a Field the field's id and ties its hint and error to it, unless the control sets its own. */
+export function useFieldControl(props: {
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: AriaAttributes["aria-invalid"];
+}) {
+  const field = useContext(FieldContext);
+  if (!field) return {};
+  return {
+    id: props.id ?? field.id,
+    "aria-describedby": props["aria-describedby"] ?? field.describedBy,
+    "aria-invalid": props["aria-invalid"] ?? (field.invalid || undefined),
+  };
 }
 
-export function TextArea({ className, ...props }: ComponentProps<"textarea">) {
-  return (
-    <textarea
-      className={cn(
-        controlClasses,
-        "min-h-28 resize-y leading-relaxed",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
+/** Field is a label, the control, an error and a hint, with the hint and error wired to the control for screen readers. */
 export function Field({
   children,
   className,
@@ -38,69 +46,40 @@ export function Field({
   trailing?: ReactNode;
   trouble?: string;
 }) {
+  const generated = useId();
+  const id = htmlFor ?? generated;
+  const describedBy =
+    [trouble ? `${id}-trouble` : null, hint ? `${id}-hint` : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
   return (
-    <div className={cn("grid min-w-0 gap-2", className)}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        {htmlFor ? (
-          <label className="font-ui text-ui text-ink" htmlFor={htmlFor}>
+    <FieldContext.Provider value={{ id, describedBy, invalid: !!trouble }}>
+      <div
+        className={cn("grid min-w-0 content-start gap-2", className)}
+        data-invalid={trouble ? "" : undefined}
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <label className="font-ui text-ui font-medium text-ink" htmlFor={id}>
             {label}
           </label>
-        ) : (
-          <span className="font-ui text-ui text-ink">{label}</span>
-        )}
-        {trailing}
-      </div>
-      {children}
-      {trouble ? (
-        <p
-          className="font-ui text-meta text-stop"
-          id={htmlFor ? `${htmlFor}-trouble` : undefined}
-        >
-          {trouble}
-        </p>
-      ) : null}
-      {hint ? (
-        <div
-          className="font-ui text-meta text-mute"
-          id={htmlFor ? `${htmlFor}-hint` : undefined}
-        >
-          {hint}
+          {trailing}
         </div>
-      ) : null}
-    </div>
-  );
-}
-
-export function Trouble({ children }: { children: ReactNode }) {
-  return (
-    <p
-      className="rounded-control bg-stop-wash px-4 py-3 font-ui text-ui text-stop"
-      role="alert"
-    >
-      {children}
-    </p>
-  );
-}
-
-export function Said({
-  children,
-  className,
-  id,
-}: {
-  children: ReactNode;
-  className?: string;
-  id?: string;
-}) {
-  return (
-    <output
-      aria-live="polite"
-      className={cn(
-        "block rounded-control bg-accent-wash px-4 py-3 font-ui text-ui text-accent",
-        className,
-      )}
-      id={id}
-    >
-      {children}
-    </output>
+        {children}
+        {trouble ? (
+          <p
+            className="font-ui text-meta text-stop"
+            id={`${id}-trouble`}
+            role="alert"
+          >
+            {trouble}
+          </p>
+        ) : null}
+        {hint ? (
+          <div className="font-ui text-meta text-mute" id={`${id}-hint`}>
+            {hint}
+          </div>
+        ) : null}
+      </div>
+    </FieldContext.Provider>
   );
 }

@@ -66,7 +66,10 @@ export function ScopedArchive({
   return (
     <ArchivePage archive={archive} scope={scope}>
       {archive.posts.length > 0 ? (
-        <ArchiveList narrowed={NARROWED[scope.kind]} posts={archive.posts} />
+        <>
+          <h2 className="sr-only">Posts</h2>
+          <ArchiveList narrowed={NARROWED[scope.kind]} posts={archive.posts} />
+        </>
       ) : (
         <p className="max-w-[44ch] pb-section font-prose text-lede text-mute">
           No posts published here yet.
@@ -125,7 +128,7 @@ function ArchiveFacts({
       </span>
       {scope.kind === "Blog" ? null : (
         <Link
-          className="flex min-h-11 items-center gap-2 text-mute hover:text-ink"
+          className="flex min-h-control items-center gap-2 text-mute hover:text-ink"
           href={BLOG_HOME}
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
@@ -134,7 +137,7 @@ function ArchiveFacts({
       )}
       {scope.home ? (
         <a
-          className="flex min-h-11 items-center gap-2 text-mute hover:text-ink"
+          className="flex min-h-control items-center gap-2 text-mute hover:text-ink"
           href={scope.home}
           rel="noreferrer noopener"
           target="_blank"
@@ -144,7 +147,7 @@ function ArchiveFacts({
         </a>
       ) : null}
       <a
-        className="flex min-h-11 items-center gap-2 text-mute hover:text-ink"
+        className="flex min-h-control items-center gap-2 text-mute hover:text-ink"
         href={feedAddresses(scope.address).rss}
       >
         <Rss aria-hidden="true" className="size-4" />

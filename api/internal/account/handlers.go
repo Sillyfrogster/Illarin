@@ -209,8 +209,22 @@ func (h *Handlers) GetSession(c *gin.Context) {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
 		return
 	}
+	preferences, err := h.accounts.Preferences(c.Request.Context(), api.SessionToken(c))
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
+		return
+	}
+	own, err := h.accounts.ReadOwnIdentity(c.Request.Context(), current.ID)
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not read the signed-in account.")
+		return
+	}
 	user := toAPIAccount(*current)
-	c.JSON(http.StatusOK, SessionState{User: &user, Writer: writer})
+	state := SessionState{User: &user, Writer: writer, Artwork: preferences.Artwork, DisplayName: own.DisplayName}
+	if own.Avatar != nil {
+		state.AvatarUrl = PictureURL(Avatar, own.Avatar.MediaID, own.Avatar.ImageSizeVersion)
+	}
+	c.JSON(http.StatusOK, state)
 }
 
 func (h *Handlers) VerifyEmail(c *gin.Context) {
@@ -400,6 +414,24 @@ func (h *Handlers) SetNsfwPreference(c *gin.Context) {
 	}
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not save the content preference.")
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (h *Handlers) SetArtwork(c *gin.Context) {
+	var request ArtworkRequest
+	if err := api.DecodeOneJSON(c.Request.Body, &request); err != nil {
+		api.Refuse(c, http.StatusBadRequest, "Send the artwork setting as JSON.")
+		return
+	}
+	err := h.accounts.SetArtwork(c.Request.Context(), api.SessionToken(c), request.On)
+	if errors.Is(err, ErrUnauthorized) {
+		api.Refuse(c, http.StatusUnauthorized, "Sign in before saving the artwork setting.")
+		return
+	}
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "Could not save the artwork setting.")
 		return
 	}
 	c.Status(http.StatusNoContent)

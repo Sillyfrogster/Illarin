@@ -56,7 +56,7 @@ export function postMetadata(post: PublicPost): Metadata {
     openGraph: {
       type: "article",
       siteName: BLOG_TITLE,
-      locale: "en_GB",
+      locale: "en_US",
       title: post.title,
       description: post.summary,
       url: canonical,

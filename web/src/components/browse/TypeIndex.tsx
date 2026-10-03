@@ -75,7 +75,7 @@ export function TypeIndex({
                     aria-current={here ? "page" : undefined}
                     data-type={entry.key}
                     className={cn(
-                      "relative flex min-h-11 items-center gap-1.5 rounded-control font-ui text-[1.0625rem] font-medium whitespace-nowrap outline-offset-4 transition-colors duration-300 motion-reduce:transition-none",
+                      "relative flex min-h-control items-center gap-1.5 rounded-control font-ui text-[1.0625rem] font-medium whitespace-nowrap outline-offset-4 transition-colors duration-240 motion-reduce:transition-none",
                       here ? "text-ink" : "text-mute hover:text-ink",
                       empty && "opacity-45",
                     )}

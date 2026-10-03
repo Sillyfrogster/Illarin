@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { api } from "@/lib/api/client";
 
-/** Records this display as a work view and shows the lifetime counts, giving the creator the download split and followers outright */
+/** Records this display as a work view and shows the lifetime counts on one line, with the download split behind the download count */
 export function WorkCounts({
   workId,
   isOwner,
@@ -33,22 +33,15 @@ export function WorkCounts({
     `${sends.toLocaleString("en-US")} sent to an app`,
   ];
   return (
-    <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4">
-      <Count label={views === 1 ? "View" : "Views"} value={views} />
+    <dl className="flex flex-wrap gap-x-2 gap-y-1 text-meta text-mute">
+      <Count label={views === 1 ? "view" : "views"} value={views} />
       <Count
-        label={downloads === 1 ? "Download" : "Downloads"}
-        note={isOwner ? split : undefined}
-        value={
-          isOwner ? (
-            downloads
-          ) : (
-            <DownloadSplit total={downloads} split={split} />
-          )
-        }
+        label={downloads === 1 ? "download" : "downloads"}
+        value={<DownloadSplit total={downloads} split={split} />}
       />
       {followers === undefined ? null : (
         <Count
-          label={followers === 1 ? "Follower" : "Followers"}
+          label={followers === 1 ? "follower" : "followers"}
           value={followers}
         />
       )}
@@ -56,30 +49,13 @@ export function WorkCounts({
   );
 }
 
-function Count({
-  label,
-  note,
-  value,
-}: {
-  label: string;
-  note?: string[];
-  value: number | ReactNode;
-}) {
+function Count({ label, value }: { label: string; value: number | ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
-      <dt className="order-2 text-meta text-mute">{label}</dt>
-      <dd className="order-1 font-display text-title font-medium tracking-tight text-ink tabular-nums">
+    <div className="flex items-baseline gap-1 not-first:before:mr-1 not-first:before:content-['·']">
+      <dt className="order-2">{label}</dt>
+      <dd className="order-1 font-medium text-ink tabular-nums">
         {typeof value === "number" ? value.toLocaleString("en-US") : value}
       </dd>
-      {note ? (
-        <dd className="order-3 text-label text-mute tabular-nums">
-          {note.map((line) => (
-            <span className="block" key={line}>
-              {line}
-            </span>
-          ))}
-        </dd>
-      ) : null}
     </div>
   );
 }
@@ -101,7 +77,7 @@ function DownloadSplit({ total, split }: { total: number; split: string[] }) {
     >
       <PopoverTrigger asChild>
         <button
-          className="relative rounded-control underline decoration-mute/50 decoration-dotted decoration-2 underline-offset-[0.2em] after:absolute after:inset-x-0 after:-inset-y-2 after:content-[''] hover:decoration-ink data-[state=open]:decoration-ink"
+          className="relative rounded-control underline decoration-mute/50 decoration-dotted decoration-1 underline-offset-[0.25em] after:absolute after:inset-x-0 after:-inset-y-2 after:content-[''] hover:decoration-ink data-[state=open]:decoration-ink"
           onBlur={() => setFocused(false)}
           onClick={(event) => {
             event.preventDefault();
@@ -128,7 +104,7 @@ function DownloadSplit({ total, split }: { total: number; split: string[] }) {
         className="w-auto p-4 text-meta tabular-nums"
         onCloseAutoFocus={(event) => event.preventDefault()}
         onOpenAutoFocus={(event) => event.preventDefault()}
-        sideOffset={32}
+        sideOffset={10}
       >
         {split.map((line) => (
           <p key={line}>{line}</p>

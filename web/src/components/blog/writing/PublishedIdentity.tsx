@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, Said, TextInput, Trouble } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { correctPostAddress, correctPostByline } from "@/lib/api/posts";
 import type { Post } from "@/lib/api/query";
 import { useBlogAddress } from "@/lib/origins";
@@ -114,8 +116,8 @@ export function PublishedIdentity({
         ) : null}
       </div>
 
-      {failure ? <Trouble>{failure}</Trouble> : null}
-      {changed ? <Said>{changed}</Said> : null}
+      {failure ? <Alert tone="stop">{failure}</Alert> : null}
+      {changed ? <Alert tone="done">{changed}</Alert> : null}
     </section>
   );
 }
@@ -204,8 +206,7 @@ function ChangeAddress({
         htmlFor="corrected-address"
         label="New address"
       >
-        <TextInput
-          className="bg-plane"
+        <Input
           disabled={busy}
           id="corrected-address"
           maxLength={80}
@@ -264,8 +265,7 @@ function ChangeName({
         htmlFor="corrected-name"
         label="Handle of the person who wrote it"
       >
-        <TextInput
-          className="bg-plane"
+        <Input
           disabled={busy}
           id="corrected-name"
           maxLength={40}

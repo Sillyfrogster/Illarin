@@ -1,50 +1,39 @@
 "use client";
 
-import * as SheetPrimitive from "@radix-ui/react-dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import type { ComponentProps } from "react";
+import {
+  Dialog,
+  DialogClose,
+  DialogDescription,
+  DialogTitle,
+  SCRIM,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/cn";
 
-const Sheet = SheetPrimitive.Root;
-const SheetTrigger = SheetPrimitive.Trigger;
-const SheetClose = SheetPrimitive.Close;
-const SheetTitle = SheetPrimitive.Title;
-const SheetDescription = SheetPrimitive.Description;
-
-const SIDES = {
-  top: "inset-x-0 top-0 max-h-dvh pb-6 motion-safe:data-[state=closed]:animate-slide-out motion-safe:data-[state=open]:animate-slide-in",
-  left: "inset-y-0 left-0 h-dvh w-[18rem] max-w-[85vw] motion-safe:data-[state=closed]:animate-slide-left-out motion-safe:data-[state=open]:animate-slide-left-in",
-};
-
+/** SheetContent is a dialog for a phone that slides up from the bottom edge. */
 function SheetContent({
   className,
-  children,
-  side = "top",
   ...props
-}: ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: keyof typeof SIDES;
-}) {
+}: ComponentProps<typeof DialogPrimitive.Content>) {
   return (
-    <SheetPrimitive.Portal>
-      <SheetPrimitive.Overlay className="fixed inset-0 z-90 bg-ink/35 data-[state=closed]:opacity-0 motion-safe:transition-opacity motion-safe:duration-200" />
-      <SheetPrimitive.Content
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className={SCRIM} />
+      <DialogPrimitive.Content
         className={cn(
-          "fixed z-90 overflow-y-auto bg-plane font-ui text-ink shadow-popover outline-none inset-ring inset-ring-edge/60",
-          SIDES[side],
+          "fixed inset-x-0 bottom-0 z-90 flex max-h-[92dvh] flex-col overflow-hidden rounded-t-card bg-plane font-ui text-ink outline-none [--slide-from:0_100%] animate-slide-in data-[state=closed]:animate-slide-out",
           className,
         )}
         {...props}
-      >
-        {children}
-      </SheetPrimitive.Content>
-    </SheetPrimitive.Portal>
+      />
+    </DialogPrimitive.Portal>
   );
 }
 
 export {
-  Sheet,
-  SheetClose,
+  Dialog as Sheet,
+  DialogClose as SheetClose,
   SheetContent,
-  SheetDescription,
-  SheetTitle,
-  SheetTrigger,
+  DialogDescription as SheetDescription,
+  DialogTitle as SheetTitle,
 };

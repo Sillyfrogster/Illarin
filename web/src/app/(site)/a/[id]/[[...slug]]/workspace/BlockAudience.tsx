@@ -1,20 +1,18 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import type { WorkBlock } from "@/lib/api/query";
 import { blockAudience } from "@/lib/work-page-content";
-import { useWorkspace } from "./state";
+import { useWorkspaceActions } from "./state";
 
 const NOTE = "-mt-1 mb-5 font-ui text-label text-mute";
 
 const PANEL =
   "-mt-1 mb-5 flex flex-col items-stretch justify-between gap-3 rounded-control bg-plane p-3 text-meta text-mute sm:flex-row sm:items-center";
 
-const SHOW =
-  "min-h-11 shrink-0 rounded-control bg-deep px-3 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45";
-
 /** Tells a creator when a reader does not meet this block where it sits */
 export function BlockAudience({ block }: { block: WorkBlock }) {
-  const workspace = useWorkspace();
+  const actions = useWorkspaceActions();
   const audience = blockAudience(block);
 
   if (audience === "shown") return null;
@@ -22,16 +20,14 @@ export function BlockAudience({ block }: { block: WorkBlock }) {
   if (audience === "hidden") {
     return (
       <div className={PANEL}>
-        <span>
-          Hidden from readers. This content is still included in downloads.
-        </span>
-        <button
-          className={SHOW}
-          onClick={() => workspace.arrangement.setHidden(block.id, false)}
-          type="button"
+        <span>Hidden from readers. Downloads still include it.</span>
+        <Button
+          className="shrink-0"
+          onClick={() => actions.setHidden(block.id, false)}
+          size="compact"
         >
           Show block
-        </button>
+        </Button>
       </div>
     );
   }
@@ -45,10 +41,5 @@ export function BlockAudience({ block }: { block: WorkBlock }) {
     );
   }
 
-  return (
-    <p className={NOTE}>
-      Empty. The block stays on your page, and readers see it as soon as you
-      write in it.
-    </p>
-  );
+  return <p className={NOTE}>Empty. Readers see it once you write in it.</p>;
 }

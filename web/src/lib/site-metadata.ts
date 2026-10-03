@@ -23,7 +23,7 @@ export function siteOpenGraph(): NonNullable<Metadata["openGraph"]> {
   return {
     type: "website",
     siteName: SITE_NAME,
-    locale: "en_GB",
+    locale: "en_US",
     images: [SITE_CARD],
   };
 }

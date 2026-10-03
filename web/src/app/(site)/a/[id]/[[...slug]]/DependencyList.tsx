@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Run, RunItem } from "@/components/ui/run";
+import { Item, ItemGroup } from "@/components/ui/item";
 import {
   dependencyLinks,
   useExtensionDependencies,
@@ -21,9 +21,9 @@ export function DependencyList({
     useExtensionDependencies(),
   );
   return (
-    <Run>
+    <ItemGroup>
       {links.map((link, index) => (
-        <RunItem itemKey={`${index}`} key={`${index}-${link.name}`}>
+        <Item itemKey={`${index}`} key={`${index}-${link.name}`}>
           <p className="font-mono text-meta text-ink [overflow-wrap:anywhere]">
             {link.name}
           </p>
@@ -38,8 +38,8 @@ export function DependencyList({
               by {found.creator}
             </p>
           ))}
-        </RunItem>
+        </Item>
       ))}
-    </Run>
+    </ItemGroup>
   );
 }

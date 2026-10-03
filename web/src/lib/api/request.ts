@@ -1,7 +1,6 @@
 import { type ApiMethod, type ApiOptions, type ApiResult, api } from "./client";
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 export type Refusal = { error?: string; field?: string; version?: number };
 

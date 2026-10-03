@@ -13,6 +13,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const tagSuggestionLimit = 8
+
 func (h *Handlers) ListWorks(c *gin.Context) {
 	q := api.ReadQuery(c)
 	aliasBrowseQuery(q)
@@ -177,6 +179,49 @@ func parseFacets(raw []string) []FacetSelection {
 	return out
 }
 
+// SuggestTags answers the search field's tag suggestions under the reader's adult content setting
+func (h *Handlers) SuggestTags(c *gin.Context) {
+	q := api.ReadQuery(c)
+	params := SuggestTagsParams{
+		Q:    api.QueryText[string](q, "q"),
+		Nsfw: api.QueryText[SuggestTagsParamsNsfw](q, "nsfw"),
+	}
+	if q.Refused(c) {
+		return
+	}
+	var requested *string
+	if params.Nsfw != nil {
+		value := string(*params.Nsfw)
+		requested = &value
+	}
+	preference, ok := ReaderNSFWPreference(c, h.accounts, requested)
+	if !ok {
+		return
+	}
+	typed := ""
+	if params.Q != nil {
+		typed = *params.Q
+	}
+	found, err := h.works.SuggestTags(c.Request.Context(), typed, preference, tagSuggestionLimit)
+	if err != nil {
+		api.Refuse(c, http.StatusInternalServerError, "could not suggest tags")
+		return
+	}
+	tags := make([]WorkTagSuggestion, 0, len(found))
+	for _, tag := range found {
+		tags = append(tags, WorkTagSuggestion{Value: tag.Value, Count: tag.Count})
+	}
+	c.JSON(http.StatusOK, WorkTagSuggestionList{Tags: tags})
+}
+
+func toAPITags(found []DetailTag) []WorkTag {
+	tags := make([]WorkTag, 0, len(found))
+	for _, tag := range found {
+		tags = append(tags, WorkTag{Label: tag.Label, Value: tag.Value})
+	}
+	return tags
+}
+
 // ListApps lists the apps a reader can pick as theirs
 func (h *Handlers) ListApps(c *gin.Context) {
 	ids := make([]string, 0, len(format.Apps()))
@@ -205,6 +250,7 @@ func ToAPIBrowseWorks(found []BrowseItem) []BrowseWork {
 			Apps: item.Apps,
 			Id:   item.ID, Name: item.Name, Creator: item.Creator,
 			Type: BrowseWorkType(item.Type), IsNsfw: item.IsNSFW, Cover: cover,
+			Tags:       toAPITags(item.Tags),
 			OwnerState: ownerState,
 			Takedown:   toAPITakedown(item.Takedown),
 			ViewCount:  item.Views, DownloadCount: item.Downloads,

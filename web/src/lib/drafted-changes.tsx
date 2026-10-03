@@ -1,23 +1,45 @@
 "use client";
 
-import { createContext, type ReactNode, useContext, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
-export type Candidate = { version: number };
+export type Candidate = { workId: string; version: number };
 
 export const DRAFTED_CHANGES_SAVED = "illarin:drafted-changes-saved";
 
 export const DRAFTED_CHANGES_STALE = "illarin:drafted-changes-stale";
 
+/** The newest drafted-changes version each work reached from this tab, kept across mounts because Back replays an older page */
+const savedVersions = new Map<string, number>();
+
 const DraftedChangesContext = createContext<Candidate | null>(null);
 
+/** Re-reads the page while it is older than this tab's last save, and holds the editor until it catches up */
 export function DraftedChangesProvider({
-  version,
+  workId,
+  version = 0,
   children,
 }: {
+  workId: string;
   version: number | undefined;
   children: ReactNode;
 }) {
-  const [candidate] = useState<Candidate>(() => ({ version: version ?? 0 }));
+  const router = useRouter();
+  const current = !isOlderThanSaved(workId, version);
+  const [candidate, setCandidate] = useState<Candidate | null>(() =>
+    current ? { workId, version } : null,
+  );
+  if (!candidate && current) setCandidate({ workId, version });
+  useEffect(() => {
+    if (!current) router.refresh();
+  }, [current, router]);
+  if (!candidate) return null;
   return (
     <DraftedChangesContext.Provider value={candidate}>
       {children}
@@ -32,13 +54,21 @@ export function useDraftedChanges() {
   return candidate;
 }
 
+/** Whether a page read carries drafted changes older than ones this tab has already saved. */
+export function isOlderThanSaved(workId: string, version: number): boolean {
+  return version < (savedVersions.get(workId) ?? 0);
+}
+
 export function acceptCandidateVersion(
   candidate: Candidate,
   response: Response,
 ) {
   if (!response.ok) return;
   const version = Number(response.headers.get("X-Drafted-Changes-Version"));
-  if (Number.isSafeInteger(version) && version > candidate.version) {
+  if (!Number.isSafeInteger(version)) return;
+  if (!isOlderThanSaved(candidate.workId, version))
+    savedVersions.set(candidate.workId, version);
+  if (version > candidate.version) {
     candidate.version = version;
     window.dispatchEvent(new Event(DRAFTED_CHANGES_SAVED));
   }

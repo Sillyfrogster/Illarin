@@ -2,13 +2,23 @@
 
 import { Search, X } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { Kbd } from "@/components/ui/kbd";
+import { TagSuggestionList, useTagSuggestions } from "./TagSuggestions";
 
+/** BrowseSearch is a list's search field, focused by "/"; on the catalog it also suggests tags as you type. */
 export function BrowseSearch({
   hint,
   id,
   label,
   onSearch,
   placeholder,
+  tags = false,
   value,
 }: {
   hint?: string;
@@ -16,6 +26,7 @@ export function BrowseSearch({
   label: string;
   onSearch: (query: string | undefined) => void;
   placeholder: string;
+  tags?: boolean;
   value: string;
 }) {
   const [written, setWritten] = useState(value);
@@ -38,27 +49,34 @@ export function BrowseSearch({
     return () => window.removeEventListener("keydown", focusOnSlash);
   }, []);
 
+  const suggestions = useTagSuggestions({
+    onChoose: (query) => {
+      setWritten(query);
+      onSearch(query.trim() || undefined);
+    },
+    written: tags ? written : "",
+  });
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     onSearch(written.trim() || undefined);
   }
 
   return (
-    <search className="group/search">
+    <search className="group/search relative">
       <form onSubmit={submit}>
         <label className="sr-only" htmlFor={id}>
           {label}
         </label>
-        <div className="flex h-11 items-center gap-2.5 rounded-control bg-deep pr-1.5 pl-3.5 transition-shadow duration-200 focus-within:inset-ring-2 focus-within:inset-ring-accent motion-reduce:transition-none">
-          <Search
-            aria-hidden="true"
-            className="size-4 shrink-0 text-mute"
-            strokeWidth={1.8}
-          />
-          <input
+        <InputGroup>
+          <InputGroupAddon>
+            <Search aria-hidden="true" />
+          </InputGroupAddon>
+          <InputGroupInput
+            {...(tags ? suggestions.inputProps : {})}
             aria-describedby={hint ? `${id}-hint` : undefined}
             autoComplete="off"
-            className="h-full min-w-0 flex-1 appearance-none border-0 bg-transparent font-ui text-ui text-ink outline-none! placeholder:text-mute [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+            className="[&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
             enterKeyHint="search"
             id={id}
             onChange={(event) => setWritten(event.target.value)}
@@ -67,26 +85,29 @@ export function BrowseSearch({
             type="search"
             value={written}
           />
-          {written ? (
-            <button
-              aria-label="Clear the search"
-              className="grid size-8 shrink-0 place-items-center rounded-[7px] text-mute outline-offset-2 hover:text-ink"
-              onClick={() => {
-                setWritten("");
-                if (value) onSearch(undefined);
-                field.current?.focus();
-              }}
-              type="button"
-            >
-              <X aria-hidden="true" className="size-4" />
-            </button>
-          ) : (
-            <kbd className="mr-1 grid h-6 min-w-6 place-items-center rounded-[6px] bg-plane font-ui text-meta text-mute shadow-[0_1px_0_rgb(0_0_0/0.12)] group-focus-within/search:opacity-0 max-md:hidden">
-              /
-            </kbd>
-          )}
-        </div>
+          <InputGroupAddon align="inline-end">
+            {written ? (
+              <Button
+                onClick={() => {
+                  setWritten("");
+                  if (value) onSearch(undefined);
+                  field.current?.focus();
+                }}
+                size="icon-compact"
+                variant="ghost"
+              >
+                <X aria-hidden="true" />
+                <span className="sr-only">Clear the search</span>
+              </Button>
+            ) : (
+              <Kbd className="group-focus-within/search:opacity-0 max-md:hidden">
+                /
+              </Kbd>
+            )}
+          </InputGroupAddon>
+        </InputGroup>
       </form>
+      {tags ? <TagSuggestionList state={suggestions.list} /> : null}
       {hint ? (
         <p className="mt-1.5 font-ui text-meta text-mute" id={`${id}-hint`}>
           {hint}

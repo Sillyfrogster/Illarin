@@ -2,14 +2,12 @@
 
 import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { WorkBlock } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { useWorkspace } from "./workspace/state";
 
 type ContentsBlock = Pick<WorkBlock, "id" | "title">;
-
-const TOOL =
-  "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink";
 
 export function ContentsBar({
   blocks,
@@ -98,7 +96,7 @@ export function ContentsBar({
                     aria-current={
                       activeBlockId === block.id ? "location" : undefined
                     }
-                    className="flex min-h-11 items-center whitespace-nowrap text-ui text-mute outline-offset-3 hover:text-ink aria-[current=location]:font-medium aria-[current=location]:text-accent"
+                    className="flex min-h-control items-center whitespace-nowrap text-ui text-mute outline-offset-3 hover:text-ink aria-[current=location]:font-medium aria-[current=location]:text-accent"
                     href={`#block-${block.id}`}
                     onClick={() => setActiveBlockId(block.id)}
                   >
@@ -113,15 +111,14 @@ export function ContentsBar({
         )}
 
         {writing && workspace.addableBlocks.length > 0 ? (
-          <button
+          <Button
             aria-expanded={workspace.pane?.kind === "add-block"}
-            className={cn(TOOL, "shrink-0")}
             onClick={() => workspace.openPane({ kind: "add-block" })}
-            type="button"
+            variant="ghost"
           >
-            <Plus aria-hidden="true" size={17} />
-            <span>Add block</span>
-          </button>
+            <Plus aria-hidden="true" />
+            Add block
+          </Button>
         ) : null}
       </div>
     </div>

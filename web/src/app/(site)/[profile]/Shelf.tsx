@@ -11,7 +11,8 @@ import { BrowseLoading, GRID, Message } from "@/components/browse/BrowseStates";
 import { useBrowseNavigation } from "@/components/browse/use-browse-navigation";
 import { Button } from "@/components/ui/button";
 import { Scroller } from "@/components/ui/scroller";
-import { TravellingHighlight } from "@/components/ui/travelling-highlight";
+import { SubtleTabs } from "@/components/ui/subtle-tabs";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   type BrowseCursor,
   type BrowseFilters,
@@ -23,15 +24,13 @@ import {
   workKeys,
 } from "@/lib/api/query";
 import { buildBrowseHref } from "@/lib/browse-url";
-import { cn } from "@/lib/cn";
+import { cn, focusRing } from "@/lib/cn";
 import { FEATURED_LIMIT } from "@/lib/profile-portfolio";
+import { timing } from "@/lib/timing";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_PLURALS, WORK_TYPES } from "@/lib/work-types";
 
 const PAGE = 24;
-
-const TAB =
-  "relative flex min-h-11 items-center gap-1.5 rounded-control px-3.5 font-ui text-ui font-medium whitespace-nowrap outline-offset-3 transition-colors duration-300 motion-reduce:transition-none";
 
 export type Pinning = {
   featured: string[];
@@ -148,59 +147,31 @@ export function Shelf({
         {nothingAtAll || tabs.length < 3 ? null : (
           <nav aria-label="Type" className="mt-4 -ml-1 min-w-0">
             <Scroller buttonClassName="bottom-0.5">
-              <TravellingHighlight
+              <SubtleTabs
                 chosen={filters.type ?? "all"}
-                className="w-max"
-                plateClassName="rounded-control"
-              >
-                <ul className="m-0 flex w-max list-none gap-1 p-1">
-                  {tabs.map((tab) => {
-                    const here = (filters.type ?? "all") === tab.key;
-                    return (
-                      <li key={tab.key}>
-                        <Link
-                          aria-current={here ? "page" : undefined}
-                          className={cn(
-                            TAB,
-                            here
-                              ? "text-on-accent"
-                              : "text-mute hover:text-ink",
-                          )}
-                          data-cell={tab.key}
-                          href={buildBrowseHref(
-                            { ...filters, type: tab.type, facet: undefined },
-                            basePath,
-                          )}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            navigate({
-                              ...filters,
-                              type: tab.type,
-                              facet: undefined,
-                            });
-                          }}
-                        >
-                          {tab.label}
-                          {tab.count === undefined ? null : (
-                            <span
-                              className={cn(
-                                "font-ui text-meta tabular-nums",
-                                here ? "text-on-accent/80" : "text-mute",
-                              )}
-                            >
-                              <span className="sr-only">, </span>
-                              {tab.count}
-                              <span className="sr-only">
-                                {tab.count === 1 ? " work" : " works"}
-                              </span>
-                            </span>
-                          )}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </TravellingHighlight>
+                onChoose={(key) => {
+                  const tab = tabs.find((one) => one.key === key);
+                  navigate({ ...filters, type: tab?.type, facet: undefined });
+                }}
+                tabs={tabs.map((tab) => ({
+                  value: tab.key,
+                  label: tab.label,
+                  href: buildBrowseHref(
+                    { ...filters, type: tab.type, facet: undefined },
+                    basePath,
+                  ),
+                  count:
+                    tab.count === undefined ? undefined : (
+                      <>
+                        <span className="sr-only">, </span>
+                        {tab.count}
+                        <span className="sr-only">
+                          {tab.count === 1 ? " work" : " works"}
+                        </span>
+                      </>
+                    ),
+                }))}
+              />
             </Scroller>
           </nav>
         )}
@@ -208,7 +179,7 @@ export function Shelf({
         <div
           aria-busy={pending || query.isFetching || undefined}
           className={cn(
-            "mt-8 transition-opacity duration-200 motion-reduce:transition-none",
+            "mt-8 transition-opacity duration-160 motion-reduce:transition-none",
             (pending || (query.isFetching && !query.isFetchingNextPage)) &&
               "opacity-60",
           )}
@@ -259,8 +230,7 @@ export function Shelf({
               <Button
                 loading={query.isFetchingNextPage}
                 onClick={() => void query.fetchNextPage()}
-                size="large"
-                variant="outline"
+                variant="secondary"
               >
                 {query.isFetchingNextPage ? "Loading" : "Show more"}
               </Button>
@@ -344,7 +314,7 @@ function Featured({
               <motion.li
                 animate={{ opacity: 1 }}
                 aria-hidden="true"
-                className="grid aspect-5/6 place-items-center rounded-plate border border-dashed border-rule text-mute"
+                className="grid aspect-3/4 place-items-center rounded-plate border border-dashed border-rule text-mute"
                 exit={{ opacity: 0 }}
                 initial={{ opacity: 0 }}
                 key={`open-${featured.length + slot}`}
@@ -367,45 +337,47 @@ function PinToggle({ pinning, work }: { pinning: Pinning; work: BrowseWork }) {
   const full = !pinned && pinning.featured.length >= FEATURED_LIMIT;
   const name = workDisplayName(work.name);
   return (
-    <button
-      aria-label={pinned ? `Unfeature ${name}` : `Feature ${name}`}
-      aria-pressed={pinned}
-      className={cn(
-        "grid size-11 place-items-center rounded-control backdrop-blur-sm transition duration-200 outline-offset-2 motion-reduce:transition-none",
-        pinned
-          ? "bg-action text-on-accent shadow-[0_6px_16px_-6px_var(--v-action)]"
-          : "bg-plane/80 text-ink hover:bg-plane focus-visible:opacity-100 [@media(hover:hover)]:opacity-0",
-        !pinned &&
-          (full
-            ? "opacity-40 group-hover:opacity-40"
-            : "group-hover:opacity-100"),
-      )}
-      disabled={pinning.pending || full}
-      onClick={() => pinning.toggle(work)}
-      title={
+    <Tooltip
+      content={
         full
           ? `Up to ${FEATURED_LIMIT} featured`
           : pinned
             ? "Featured"
             : "Feature"
       }
-      type="button"
     >
-      <motion.span
-        animate={{ scale: 1, rotate: 0 }}
-        className="flex"
-        initial={still ? false : { scale: 0.5, rotate: pinned ? -30 : 30 }}
-        key={pinned ? "pinned" : "loose"}
-        transition={{ type: "spring", stiffness: 500, damping: 22 }}
+      <button
+        aria-label={pinned ? `Unfeature ${name}` : `Feature ${name}`}
+        aria-pressed={pinned}
+        className={cn(
+          `grid size-control place-items-center rounded-control bg-plane/80 text-ink backdrop-blur-sm transition duration-160 hover:bg-plane ${focusRing}`,
+          !pinned &&
+            "focus-visible:opacity-100 [@media(hover:hover)]:opacity-0",
+          !pinned &&
+            (full
+              ? "opacity-40 group-hover:opacity-40"
+              : "group-hover:opacity-100"),
+        )}
+        disabled={pinning.pending || full}
+        onClick={() => pinning.toggle(work)}
+        type="button"
       >
-        <Pin
-          aria-hidden="true"
-          className="size-4"
-          fill={pinned ? "currentColor" : "none"}
-          strokeWidth={1.9}
-        />
-      </motion.span>
-    </button>
+        <motion.span
+          animate={{ scale: 1, rotate: 0 }}
+          className="flex"
+          initial={still ? false : { scale: 0.5, rotate: pinned ? -30 : 30 }}
+          key={pinned ? "pinned" : "loose"}
+          transition={timing.settle}
+        >
+          <Pin
+            aria-hidden="true"
+            className="size-4"
+            fill={pinned ? "currentColor" : "none"}
+            strokeWidth={1.9}
+          />
+        </motion.span>
+      </button>
+    </Tooltip>
   );
 }
 
@@ -463,7 +435,7 @@ function Nothing({
         {[0, 1, 2, 3].map((slot) => (
           <li
             className={cn(
-              "aspect-5/6 rounded-plate border border-dashed border-rule",
+              "aspect-3/4 rounded-plate border border-dashed border-rule",
               slot > 1 && "max-sm:hidden",
               slot > 2 && "max-lg:hidden",
             )}

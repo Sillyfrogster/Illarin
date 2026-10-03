@@ -3,7 +3,7 @@
 import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RegisterRail } from "@/components/register/RegisterRail";
-import { Trouble } from "@/components/ui/field";
+import { Alert } from "@/components/ui/alert";
 import { Waiting } from "@/components/ui/waiting";
 import { DiscordChannel } from "@/components/updates/DiscordChannel";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
@@ -89,13 +89,13 @@ export function BlogAdmin() {
       <section
         aria-labelledby="register-heading"
         className={cn(
-          "mt-8 min-w-0 transition-[padding] duration-500 ease-wipe motion-reduce:transition-none",
+          "mt-8 min-w-0 transition-[padding] duration-240 ease-wipe motion-reduce:transition-none",
           step && "lg:pr-[30rem]",
         )}
       >
         {failure ? (
           <div className="mb-6">
-            <Trouble>{failure}</Trouble>
+            <Alert tone="stop">{failure}</Alert>
           </div>
         ) : null}
 
@@ -142,7 +142,7 @@ export function BlogAdmin() {
           >
             {refusal ? (
               <div className="mb-5">
-                <Trouble>{refusal}</Trouble>
+                <Alert tone="stop">{refusal}</Alert>
               </div>
             ) : null}
 

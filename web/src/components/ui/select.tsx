@@ -1,28 +1,94 @@
-import { ChevronDown } from "lucide-react";
-import type { ComponentProps } from "react";
-import { cn } from "@/lib/cn";
+"use client";
 
-export function Select({
+import * as SelectPrimitive from "@radix-ui/react-select";
+import { Check, ChevronDown } from "lucide-react";
+import type { ReactNode } from "react";
+import { useFieldControl } from "@/components/ui/field";
+import { inputClasses } from "@/components/ui/input";
+import { cn, popupRow, popupSurface } from "@/lib/cn";
+
+/** EMPTY carries an empty option through Radix, which reserves the empty string for "no value". */
+const EMPTY = "\u0000empty";
+
+type SelectOption<T extends string> = { value: T; label: ReactNode };
+
+type SelectProps<T extends string> = {
+  options: readonly SelectOption<T>[];
+  value: T;
+  onValueChange: (value: T) => void;
+  disabled?: boolean;
+  id?: string;
+  className?: string;
+  "aria-label"?: string;
+  "aria-describedby"?: string;
+};
+
+/** Select is a filled field that opens a list under it, the chosen row violet with a check. */
+export function Select<T extends string>({
+  options,
+  value,
+  onValueChange,
+  disabled,
   className,
-  children,
-  ...rest
-}: ComponentProps<"select">) {
+  ...props
+}: SelectProps<T>) {
+  const field = useFieldControl(props);
   return (
-    <span className="relative inline-grid max-w-full items-center">
-      <select
+    <SelectPrimitive.Root
+      disabled={disabled}
+      onValueChange={(next) => onValueChange((next === EMPTY ? "" : next) as T)}
+      value={value === "" ? EMPTY : value}
+    >
+      <SelectPrimitive.Trigger
+        {...props}
+        {...field}
         className={cn(
-          "col-start-1 row-start-1 min-h-11 w-full appearance-none rounded-control border-0 bg-deep py-2 pr-9 pl-3",
-          "text-ui text-ink outline-offset-3 disabled:opacity-60",
+          inputClasses,
+          "group flex cursor-pointer items-center justify-between gap-2 text-left data-[state=open]:bg-fill-hover data-placeholder:text-mute",
           className,
         )}
-        {...rest}
       >
-        {children}
-      </select>
-      <ChevronDown
-        aria-hidden="true"
-        className="pointer-events-none col-start-1 row-start-1 mr-3 size-4 justify-self-end text-mute"
-      />
-    </span>
+        <span className="min-w-0 flex-1 truncate">
+          <SelectPrimitive.Value />
+        </span>
+        <SelectPrimitive.Icon asChild>
+          <ChevronDown
+            aria-hidden="true"
+            className="size-4 shrink-0 text-mute transition-transform duration-160 group-data-[state=open]:rotate-180"
+          />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content
+          align="start"
+          className={cn(
+            popupSurface,
+            "max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) max-w-[calc(100vw-2rem)] overflow-hidden select-none",
+          )}
+          collisionPadding={16}
+          position="popper"
+          sideOffset={6}
+        >
+          <SelectPrimitive.Viewport className="max-h-80 p-1">
+            {options.map((option) => (
+              <SelectPrimitive.Item
+                className={cn(popupRow, "data-[state=checked]:text-accent")}
+                key={option.value}
+                value={option.value === "" ? EMPTY : option.value}
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  <SelectPrimitive.ItemText>
+                    {option.label}
+                  </SelectPrimitive.ItemText>
+                </span>
+                <SelectPrimitive.ItemIndicator>
+                  <Check aria-hidden="true" />
+                </SelectPrimitive.ItemIndicator>
+              </SelectPrimitive.Item>
+            ))}
+          </SelectPrimitive.Viewport>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
   );
 }

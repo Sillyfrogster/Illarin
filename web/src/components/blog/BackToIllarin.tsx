@@ -23,7 +23,7 @@ export function BackToIllarin() {
         Browse
         <ArrowRight
           aria-hidden="true"
-          className="size-5 transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none"
+          className="size-5 transition-transform duration-240 group-hover:translate-x-1 motion-reduce:transition-none"
         />
       </span>
     </a>

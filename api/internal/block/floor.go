@@ -50,7 +50,7 @@ var contentFloors = map[string][]Requirement{
 		{
 			ID:     "palette",
 			Label:  "Palette",
-			Detail: "Add at least one colour to the palette.",
+			Detail: "Add at least one color to the palette.",
 			Role:   RoleThemeTokens,
 		},
 	},

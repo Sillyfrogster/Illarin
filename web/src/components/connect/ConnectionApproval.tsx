@@ -11,8 +11,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Trouble } from "@/components/ui/field";
+import { inputClasses } from "@/components/ui/input";
 import { refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
@@ -44,8 +45,7 @@ type Stage =
   | { kind: "approved"; connection: PendingConnection }
   | { kind: "denied"; connection: PendingConnection };
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 export function ConnectionApproval() {
   const search = useSearchParams();
@@ -152,7 +152,7 @@ export function ConnectionApproval() {
         <Panel capture={capturePanel}>
           <Gate
             action={
-              <Button asChild size="large" variant="primary">
+              <Button asChild variant="primary">
                 <Link
                   href={`/sign-in?returnTo=${encodeURIComponent(returnTo)}`}
                 >
@@ -175,7 +175,7 @@ export function ConnectionApproval() {
         <Panel capture={capturePanel}>
           <Gate
             action={
-              <Button asChild size="large" variant="primary">
+              <Button asChild variant="primary">
                 <Link
                   href={`/verify-email?returnTo=${encodeURIComponent(returnTo)}`}
                 >
@@ -198,7 +198,7 @@ export function ConnectionApproval() {
         <Panel capture={capturePanel}>
           <Landing
             action={
-              <Button asChild size="large" variant="primary">
+              <Button asChild variant="primary">
                 <Link href="/settings">See connected apps</Link>
               </Button>
             }
@@ -221,7 +221,7 @@ export function ConnectionApproval() {
         <Panel capture={capturePanel}>
           <Landing
             action={
-              <Button onClick={startOver} size="large" variant="secondary">
+              <Button onClick={startOver} variant="secondary">
                 Enter another code
               </Button>
             }
@@ -311,7 +311,10 @@ export function ConnectionApproval() {
           }
           autoCapitalize="characters"
           autoComplete="off"
-          className="mt-5 block min-h-[4.5rem] w-full max-w-[26rem] rounded-plate border-0 bg-deep px-6 text-center font-mono text-[clamp(1.6rem,4.5vw,2.5rem)] tracking-[0.22em] text-ink uppercase outline-offset-2 placeholder:text-mute/45"
+          className={cn(
+            inputClasses,
+            "mt-5 block h-auto min-h-[4.5rem] max-w-[26rem] rounded-plate px-6 text-center font-mono text-[clamp(1.6rem,4.5vw,2.5rem)] tracking-[0.22em] uppercase placeholder:text-mute/45",
+          )}
           enterKeyHint="go"
           id="connect-code"
           maxLength={12}
@@ -324,11 +327,11 @@ export function ConnectionApproval() {
         />
         {trouble ? (
           <div className="mt-4" id="connect-entry-trouble">
-            <Trouble>{trouble}</Trouble>
+            <Alert tone="stop">{trouble}</Alert>
           </div>
         ) : null}
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
-          <Button size="large" type="submit" variant="primary">
+          <Button type="submit" variant="primary">
             Review request
           </Button>
           <p
@@ -347,13 +350,11 @@ function Frame({ children, lede }: { children: ReactNode; lede: string }) {
   return (
     <>
       <header>
-        <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
+        <h1 className="font-display text-title font-medium text-balance">
           Connect an app
         </h1>
         {lede ? (
-          <p className="mt-4 max-w-[58ch] font-prose text-lede text-mute">
-            {lede}
-          </p>
+          <p className="mt-2 max-w-[58ch] font-ui text-ui text-mute">{lede}</p>
         ) : null}
       </header>
       <div className="mt-9">{children}</div>

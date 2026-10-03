@@ -49,7 +49,7 @@ function pictureOf(
     name,
     kind: "picture",
     size,
-    note: "Picture",
+    note: "Image",
     picture: URL.createObjectURL(body),
   };
 }
@@ -59,7 +59,7 @@ async function pngParts(file: File): Promise<ScanPart[]> {
   const view = new DataView(bytes.buffer);
   const parts: ScanPart[] = [];
   const picture = pictureOf(file.name, file, file.size, 0);
-  picture.note = `${view.getUint32(16)} × ${view.getUint32(20)} picture`;
+  picture.note = `${view.getUint32(16)} × ${view.getUint32(20)} image`;
   parts.push(picture);
   const latin = new TextDecoder("latin1");
   for (let at = 8; at + 12 <= bytes.length; ) {
@@ -71,12 +71,7 @@ async function pngParts(file: File): Promise<ScanPart[]> {
       const keyword = latin.decode(data.subarray(0, split));
       if (keyword === "chara" || keyword === "ccv3") {
         const text = decodeBase64(latin.decode(data.subarray(split + 1)));
-        const card = dataPart(
-          `${keyword} text chunk`,
-          text,
-          length,
-          parts.length,
-        );
+        const card = dataPart(`${keyword} data`, text, length, parts.length);
         if (card) parts.push(card);
       }
     }
@@ -113,7 +108,7 @@ async function archiveParts(file: File): Promise<ScanPart[]> {
       const body = await archivedBody(file, entry);
       const part = pictureOf(entry.name, body, entry.size, index);
       const size = await pngSize(body);
-      if (size) part.note = `${size[0]} × ${size[1]} picture`;
+      if (size) part.note = `${size[0]} × ${size[1]} image`;
       parts.push(part);
       continue;
     }

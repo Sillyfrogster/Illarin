@@ -1,5 +1,9 @@
 "use client";
 
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type { LorebookEntry } from "@/lib/api/query";
 import { CollectionStep } from "./workspace/CollectionStep";
 import {
@@ -9,15 +13,16 @@ import {
   without,
   writeLines,
 } from "./workspace/collection";
-import {
-  ChoiceField,
-  Field,
-  FieldGroup,
-  FieldPair,
-  Switch,
-  TextAreaField,
-  TextField,
-} from "./workspace/fields";
+import { FieldGroup, FieldPair } from "./workspace/fields";
+
+const POSITIONS: {
+  value: NonNullable<LorebookEntry["position"]> | "";
+  label: string;
+}[] = [
+  { value: "", label: "Use app default" },
+  { value: "before_character", label: "Before the character" },
+  { value: "after_character", label: "After the character" },
+];
 
 export function entryName(entry: LorebookEntry, position: number): string {
   if (entry.name?.trim()) return entry.name;
@@ -41,7 +46,7 @@ export function EntryTableEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="This book has no entries yet."
+      emptyMessage="No entries yet"
       noun="entry"
       onAdd={() =>
         onChange([...entries, { enabled: true, keys: [], text: "" }])
@@ -88,7 +93,7 @@ function EntryFields({
   return (
     <div className="flex flex-col gap-6">
       <Field hint="optional, and never sent to a model" label="Name">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) =>
             onChange({ name: event.target.value || undefined })
@@ -98,7 +103,7 @@ function EntryFields({
       </Field>
 
       <Field label="Entry text">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) => onChange({ text: event.target.value })}
           rows={10}
@@ -108,7 +113,7 @@ function EntryFields({
 
       <FieldGroup legend="Activation">
         <Field hint="one per line" label="Keys">
-          <TextAreaField
+          <Textarea
             disabled={pending}
             onChange={(event) =>
               onChange({ keys: readLines(event.target.value) })
@@ -121,25 +126,25 @@ function EntryFields({
           checked={entry.enabled}
           hint="A switched-off entry stays in the book and reaches no model."
           label="Enabled"
-          onChange={(enabled) => onChange({ enabled })}
-          pending={pending}
+          onCheckedChange={(enabled) => onChange({ enabled })}
+          disabled={pending}
         />
         <Switch
           checked={entry.constant ?? false}
           hint="On whatever the conversation says, keys or no keys."
           label="Always on"
-          onChange={(constant) => onChange({ constant })}
-          pending={pending}
+          onCheckedChange={(constant) => onChange({ constant })}
+          disabled={pending}
         />
         <Switch
           checked={entry.selective ?? false}
           hint="One of the keys below has to turn up too."
           label="Require a secondary key"
-          onChange={(selective) => onChange({ selective })}
-          pending={pending}
+          onCheckedChange={(selective) => onChange({ selective })}
+          disabled={pending}
         />
         <Field hint="one per line" label="Second keys">
-          <TextAreaField
+          <Textarea
             disabled={pending}
             onChange={(event) =>
               onChange({ secondaryKeys: readLines(event.target.value) })
@@ -150,17 +155,17 @@ function EntryFields({
         </Field>
         <Switch
           checked={entry.caseSensitive ?? false}
-          hint="When disabled, keys match regardless of letter case."
+          hint='Off: "Dragon" matches "dragon".'
           label="Match the case of a key"
-          onChange={(caseSensitive) => onChange({ caseSensitive })}
-          pending={pending}
+          onCheckedChange={(caseSensitive) => onChange({ caseSensitive })}
+          disabled={pending}
         />
       </FieldGroup>
 
       <FieldGroup legend="Placement">
         <FieldPair>
           <Field hint="among the entries that fired with it" label="Order">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) =>
                 onChange({ order: Number(event.target.value) || 0 })
@@ -170,22 +175,14 @@ function EntryFields({
             />
           </Field>
           <Field label="Position">
-            <ChoiceField
+            <Select
               disabled={pending}
-              onChange={(event) =>
-                onChange({
-                  position:
-                    event.target.value === ""
-                      ? undefined
-                      : (event.target.value as LorebookEntry["position"]),
-                })
+              onValueChange={(position) =>
+                onChange({ position: position || undefined })
               }
+              options={POSITIONS}
               value={entry.position ?? ""}
-            >
-              <option value="">Use app default</option>
-              <option value="before_character">Before the character</option>
-              <option value="after_character">After the character</option>
-            </ChoiceField>
+            />
           </Field>
         </FieldPair>
       </FieldGroup>
@@ -193,27 +190,27 @@ function EntryFields({
       <FieldGroup legend="Recursive activation">
         <Switch
           checked={recursion.exclude ?? false}
-          label="Do not let this entry switch others on"
-          onChange={(exclude) =>
+          label="Don't let this entry switch others on"
+          onCheckedChange={(exclude) =>
             onChange({ recursion: { ...recursion, exclude } })
           }
-          pending={pending}
+          disabled={pending}
         />
         <Switch
           checked={recursion.prevent ?? false}
-          label="Do not let other entries switch this one on"
-          onChange={(prevent) =>
+          label="Don't let other entries switch this one on"
+          onCheckedChange={(prevent) =>
             onChange({ recursion: { ...recursion, prevent } })
           }
-          pending={pending}
+          disabled={pending}
         />
         <Switch
           checked={recursion.delayUntil ?? false}
           label="Hold it back until a later pass"
-          onChange={(delayUntil) =>
+          onCheckedChange={(delayUntil) =>
             onChange({ recursion: { ...recursion, delayUntil } })
           }
-          pending={pending}
+          disabled={pending}
         />
       </FieldGroup>
     </div>

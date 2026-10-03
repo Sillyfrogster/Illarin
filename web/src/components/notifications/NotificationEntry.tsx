@@ -10,6 +10,9 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip } from "@/components/ui/tooltip";
 import type { Notification } from "@/lib/api/notifications";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
@@ -102,7 +105,7 @@ export function NotificationEntry({
   return (
     <li
       className={cn(
-        "group/entry relative rounded-control transition-colors duration-150 motion-reduce:transition-none",
+        "group/entry relative rounded-control transition-colors duration-160 motion-reduce:transition-none",
         unread ? "bg-accent-wash/45 hover:bg-accent-wash/80" : "hover:bg-deep",
       )}
     >
@@ -116,15 +119,17 @@ export function NotificationEntry({
       {work && sends.length > 0 ? (
         <SendUpdates workId={work.id} apps={sends} />
       ) : null}
-      <button
-        type="button"
-        title="Remove"
-        onClick={() => onRemove(entry)}
-        className="absolute top-2 right-2 inline-flex size-8 items-center justify-center rounded-control text-mute opacity-0 outline-offset-2 transition-[opacity,background-color,color] duration-200 group-hover/entry:opacity-100 hover:bg-plane hover:text-ink focus-visible:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none"
-      >
-        <X aria-hidden="true" className="size-4" />
-        <span className="sr-only">Remove this notification</span>
-      </button>
+      <Tooltip content="Remove">
+        <Button
+          aria-label="Remove this notification"
+          className="absolute top-2 right-2 opacity-0 group-hover/entry:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
+          onClick={() => onRemove(entry)}
+          size="icon-compact"
+          variant="ghost"
+        >
+          <X aria-hidden="true" />
+        </Button>
+      </Tooltip>
     </li>
   );
 }
@@ -133,11 +138,11 @@ export function NotificationEntry({
 export function NotificationEntrySkeleton() {
   return (
     <li aria-hidden="true" className="flex gap-3.5 px-3 py-3">
-      <span className="size-9 shrink-0 animate-pulse rounded-control bg-deep" />
+      <Skeleton className="size-9 shrink-0" />
       <span className="flex-1">
-        <span className="block h-3.5 w-3/4 animate-pulse rounded-full bg-deep" />
-        <span className="mt-2.5 block h-3 w-1/2 animate-pulse rounded-full bg-deep" />
-        <span className="mt-2.5 block h-2.5 w-16 animate-pulse rounded-full bg-deep" />
+        <Skeleton className="h-3.5 w-3/4 rounded-full" />
+        <Skeleton className="mt-2.5 h-3 w-1/2 rounded-full" />
+        <Skeleton className="mt-2.5 h-2.5 w-16 rounded-full" />
       </span>
     </li>
   );

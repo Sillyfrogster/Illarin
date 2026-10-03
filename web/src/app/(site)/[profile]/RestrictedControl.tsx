@@ -3,8 +3,10 @@
 import { ShieldMinus, ShieldPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, TextArea, Trouble } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/input";
 import {
   fetchRestrictedProfile,
   type RestrictedProfile,
@@ -91,7 +93,7 @@ export function RestrictedControl({
 
   const failure = message ? (
     <div className="mt-4">
-      <Trouble>{message}</Trouble>
+      <Alert tone="stop">{message}</Alert>
     </div>
   ) : null;
 
@@ -149,7 +151,7 @@ export function RestrictedControl({
             <Button
               disabled={pending}
               onClick={() => setConfirmingRestore(true)}
-              variant="outline"
+              variant="secondary"
             >
               Restore profile
             </Button>
@@ -207,7 +209,7 @@ export function RestrictedControl({
             </span>
           }
         >
-          <TextArea
+          <Textarea
             disabled={pending}
             id="restricted-reason"
             maxLength={REASON_LIMIT}

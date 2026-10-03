@@ -29,7 +29,7 @@ function inline(nodes: readonly PhrasingContent[]): ReactNode {
       case "inlineCode":
         return (
           <code
-            className="rounded bg-inset px-1.5 py-0.5 font-mono text-[0.88em] text-ink"
+            className="rounded-chip bg-inset px-1.5 py-0.5 font-mono text-[0.88em] text-ink"
             key={key}
           >
             {node.value}

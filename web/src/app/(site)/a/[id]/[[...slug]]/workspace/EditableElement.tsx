@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
 import { Children, Fragment } from "react";
 import type { WorkBlock, WorkElement, WorkImage } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
@@ -9,17 +8,12 @@ import { ElementBody } from "../ElementBody";
 import { ELEMENT_NAME, ELEMENT_RULE, ITEM_NAME } from "../element-runs";
 import { EditableText } from "./EditableText";
 import { ElementTools } from "./ElementTools";
+import { AddAction, RemoveAction } from "./fields";
 import { isEmptyContent, writesInPlace } from "./save";
-import { useWorkspace } from "./state";
+import { useWorkspaceActions, useWorkspaceFocus } from "./state";
 
 const EDITABLE_ITEM =
   "flex min-w-0 flex-col gap-1.5 px-4 py-3.5 not-first:border-rule/45 not-first:border-t";
-
-const ADD =
-  "inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink";
-
-const DROP =
-  "inline-flex size-9 shrink-0 items-center justify-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-stop";
 
 const TEXT_SET_NOUNS: Record<string, string> = {
   greetings: "greeting",
@@ -99,11 +93,11 @@ export function EditableElement({
   blockId: string;
   element: WorkElement;
 }) {
-  const workspace = useWorkspace();
+  const actions = useWorkspaceActions();
 
   function write(content: WorkElement["content"]) {
     const next = { ...element, content } as WorkElement;
-    workspace.writeElement(blockId, { ...next, isEmpty: isEmptyContent(next) });
+    actions.writeElement(blockId, { ...next, isEmpty: isEmptyContent(next) });
   }
 
   const field = (parts: (string | number)[], options: FieldOptions) => (
@@ -336,13 +330,14 @@ type FieldOptions = {
 };
 
 function Field({ cursor, ...options }: FieldOptions & { cursor: string }) {
-  const workspace = useWorkspace();
+  const focus = useWorkspaceFocus();
+  const actions = useWorkspaceActions();
   return (
     <EditableText
-      active={workspace.cursor === cursor}
-      activate={() => workspace.setCursor(cursor)}
-      done={() => workspace.setCursor(null)}
-      live={workspace.editing}
+      active={focus.cursor === cursor}
+      activate={() => actions.setCursor(cursor)}
+      done={() => actions.setCursor(null)}
+      live={focus.editing}
       {...options}
     />
   );
@@ -372,17 +367,12 @@ function Run({
 }
 
 function Add({ label, onAdd }: { label: string; onAdd: () => void }) {
-  const workspace = useWorkspace();
-  if (!workspace.editing) return null;
+  const { editing } = useWorkspaceFocus();
+  if (!editing) return null;
   return (
-    <button
-      className={cn(ADD, "-ml-3 mt-1 self-start")}
-      onClick={onAdd}
-      type="button"
-    >
-      <Plus aria-hidden="true" size={15} />
+    <AddAction className="mt-1" onClick={onAdd}>
       {label}
-    </button>
+    </AddAction>
   );
 }
 
@@ -395,21 +385,17 @@ function Drop({
   label: string;
   onDrop: () => void;
 }) {
-  const workspace = useWorkspace();
-  if (!workspace.editing) return null;
+  const { editing } = useWorkspaceFocus();
+  if (!editing) return null;
   return (
-    <button
-      aria-label={label}
+    <RemoveAction
       className={cn(
-        DROP,
-        "opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 focus-visible:opacity-100",
+        "opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100",
         inline ? "self-start" : "absolute top-0 right-0",
       )}
+      label={label}
       onClick={onDrop}
-      type="button"
-    >
-      <Trash2 aria-hidden="true" size={15} />
-    </button>
+    />
   );
 }
 

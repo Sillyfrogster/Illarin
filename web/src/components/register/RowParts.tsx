@@ -1,6 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
 import { SortableItem } from "@/components/ui/sortable";
 import { cn } from "@/lib/cn";
 
@@ -64,7 +70,7 @@ export function Row({
   trailing?: ReactNode;
 }) {
   const row = (
-    <li className="group relative flex min-w-0 gap-4 rounded-plate bg-plane px-4 py-5 transition-colors duration-200 not-first:border-t not-first:border-rule/45 hover:border-transparent hover:bg-deep motion-reduce:transition-none data-dragging:border-transparent data-dragging:shadow-popover sm:px-5">
+    <li className="group relative flex min-w-0 gap-4 rounded-plate bg-plane px-4 py-5 transition-colors duration-160 not-first:before:absolute not-first:before:inset-x-4 not-first:before:top-0 not-first:before:h-px not-first:before:bg-rule/45 not-first:before:content-[''] hover:bg-deep hover:before:opacity-0 motion-reduce:transition-none data-dragging:shadow-popover data-dragging:before:opacity-0 sm:px-5">
       {lead}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
@@ -164,14 +170,9 @@ export function RowAction({
   onClick: () => void;
 }) {
   return (
-    <button
-      className="relative inline-flex min-h-11 items-center rounded-control bg-deep px-4 font-ui text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45 group-hover:bg-plane"
-      disabled={busy}
-      onClick={onClick}
-      type="button"
-    >
+    <Button disabled={busy} onClick={onClick}>
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -192,12 +193,18 @@ export function Past({
 }) {
   return (
     <div className="mt-8 max-w-[34rem]">
-      <MorphingDisclosure
+      <Accordion
         className="rounded-plate bg-deep px-5 py-4"
-        summary={summary}
+        collapsible
+        type="single"
       >
-        <ul className="mt-4 flex list-none flex-col gap-1">{children}</ul>
-      </MorphingDisclosure>
+        <AccordionItem value="past">
+          <AccordionTrigger>{summary}</AccordionTrigger>
+          <AccordionContent>
+            <ul className="mt-4 flex list-none flex-col gap-1">{children}</ul>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
@@ -229,14 +236,9 @@ export function StartAction({
   onClick: () => void;
 }) {
   return (
-    <button
-      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control bg-action px-5 font-ui text-ui font-medium text-on-accent outline-offset-3 hover:opacity-90 disabled:opacity-40"
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-    >
-      <Icon aria-hidden="true" className="size-4" strokeWidth={2} />
+    <Button disabled={disabled} onClick={onClick} variant="primary">
+      <Icon aria-hidden="true" />
       {children}
-    </button>
+    </Button>
   );
 }

@@ -225,9 +225,9 @@ describe("page arrangement", () => {
         "Personality",
         "Scenario",
       ]),
-    ).toBe("Trio needs Full width. Widen this block first.");
+    ).toBe("Three columns needs Full width. Widen this block first.");
     expect(widthChoiceIssue("trio", "half")).toBe(
-      "Trio needs Full width. Choose another layout before narrowing this block.",
+      "Three columns needs Full width. Choose another layout before narrowing this block.",
     );
     expect(
       layoutChoiceIssue("stack-2", "full", [
@@ -236,7 +236,7 @@ describe("page arrangement", () => {
         "Group-only greetings",
       ]),
     ).toBe(
-      "Stack 2 has no room for Group-only greetings. Move or remove it first.",
+      "Two stacked has no room for Group-only greetings. Move or remove it first.",
     );
   });
 

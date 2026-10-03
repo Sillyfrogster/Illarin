@@ -3,7 +3,7 @@ export type Refusal = { error?: string; field?: string };
 /** Reads a refusal body, throwing when it was not JSON so the caller treats the API as unreachable. */
 export function readRefusal(error: unknown): Refusal {
   if (typeof error === "object" && error !== null) return error as Refusal;
-  throw new Error("The refusal could not be read.");
+  throw new Error("Illarin sent an answer this page couldn't read. Try again.");
 }
 
 export function refusalMessage(value: unknown, fallback: string) {

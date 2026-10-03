@@ -23,6 +23,7 @@ type DetailTag struct {
 
 type Detail struct {
 	DraftedChangesVersion *int64
+	FileFields            []string
 	UnpublishedChanges    *bool
 	ID                    uuid.UUID
 	Type                  string
@@ -123,6 +124,9 @@ func (s *Service) detail(ctx context.Context, id uuid.UUID, viewerID *uuid.UUID,
 			return Detail{}, err
 		}
 		found.DraftedChangesVersion = &version
+	}
+	if found.IsOwner {
+		found.FileFields = s.reg.FileFields(found.Type)
 	}
 	var followers int
 	found.ViewCount, found.DownloadCount, found.SendCount, followers, err = lifetimeCounts(ctx, tx, id)

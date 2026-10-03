@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { TravellingHighlight } from "@/components/ui/travelling-highlight";
-import { cn } from "@/lib/cn";
+import { SubtleTabs } from "@/components/ui/subtle-tabs";
 
 export type RegisterCell<Id extends string> = {
   attention?: boolean;
@@ -11,6 +9,7 @@ export type RegisterCell<Id extends string> = {
   name: string;
 };
 
+/** RegisterRail moves between the sections of a register, each with its count, on a row that scrolls sideways when narrow. */
 export function RegisterRail<Id extends string>({
   cells,
   chosen,
@@ -22,49 +21,19 @@ export function RegisterRail<Id extends string>({
   label: string;
   onChoose: (id: Id) => void;
 }) {
-  const [lit, setLit] = useState<string>(chosen);
-
   return (
     <nav aria-label={label} className="-mx-[var(--gutter)] min-w-0">
-      <div className="overflow-x-auto px-[var(--gutter)] pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <TravellingHighlight
+      <div className="overflow-x-auto px-[calc(var(--gutter)-0.25rem)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <SubtleTabs
           chosen={chosen}
-          className="flex w-max gap-1"
-          onLit={setLit}
-        >
-          {cells.map((cell) => {
-            const on = lit === cell.id;
-            return (
-              <button
-                aria-current={chosen === cell.id ? "true" : undefined}
-                className={cn(
-                  "flex min-h-11 items-center gap-2 rounded-control px-4 font-ui text-ui font-medium whitespace-nowrap outline-offset-2 transition-colors duration-200 motion-reduce:transition-none",
-                  on ? "text-on-accent" : "text-mute",
-                )}
-                data-cell={cell.id}
-                key={cell.id}
-                onClick={() => onChoose(cell.id)}
-                type="button"
-              >
-                {cell.name}
-                {cell.count === null ? null : (
-                  <span
-                    className={cn(
-                      "font-prose text-meta tabular-nums",
-                      on
-                        ? "opacity-70"
-                        : cell.attention
-                          ? "rounded-control bg-stop-wash px-1.5 text-stop opacity-100"
-                          : "opacity-60",
-                    )}
-                  >
-                    {cell.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </TravellingHighlight>
+          onChoose={onChoose}
+          tabs={cells.map((cell) => ({
+            value: cell.id,
+            label: cell.name,
+            count: cell.count ?? undefined,
+            attention: cell.attention,
+          }))}
+        />
       </div>
     </nav>
   );

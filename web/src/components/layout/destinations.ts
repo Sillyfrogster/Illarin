@@ -1,20 +1,16 @@
 import type { SignedInAccount } from "@/lib/auth";
-import { BLOG_HOME } from "@/lib/blog-paths";
 
 const UPLOAD_RETURN = encodeURIComponent("/upload");
 
 export type Destination = { label: string; href: string };
 
-export function primaryDestinations(): Destination[] {
-  return [
-    { label: "Browse", href: "/browse" },
-    { label: "Blog", href: BLOG_HOME },
-    { label: "Docs", href: "/docs" },
-  ];
-}
+export const BROWSE: Destination = { label: "Browse", href: "/browse" };
+
+// Publish always reads "Publish"; the upload page asks for sign-in after the press.
+export const PUBLISH: Destination = { label: "Publish", href: "/upload" };
+
 export type AccountDestination = Destination & {
   id:
-    | "profile"
     | "work"
     | "settings"
     | "posts"
@@ -25,62 +21,55 @@ export type AccountDestination = Destination & {
     | "sign-up";
 };
 
-export function publishAction(
-  account: SignedInAccount | null | undefined,
-): Destination {
-  if (account === undefined) return { label: "Publish", href: "/upload" };
-  if (account === null)
-    return {
-      label: "Sign in to publish",
-      href: `/sign-in?returnTo=${UPLOAD_RETURN}`,
-    };
-  if (!account.emailVerified)
-    return {
-      label: "Verify email to publish",
-      href: `/verify-email?returnTo=${UPLOAD_RETURN}`,
-    };
-  return { label: "Publish", href: "/upload" };
-}
-
+/** accountDestinations groups the account menu's pages: your things, your account, then staff tools. */
 export function accountDestinations(
   account: SignedInAccount | null | undefined,
   writer: boolean,
-): AccountDestination[] {
+): AccountDestination[][] {
   if (!account)
     return [
-      { id: "sign-in", label: "Sign in", href: "/sign-in" },
-      { id: "sign-up", label: "Create account", href: "/sign-up" },
+      [
+        { id: "sign-in", label: "Sign in", href: "/sign-in" },
+        { id: "sign-up", label: "Create account", href: "/sign-up" },
+      ],
     ];
 
-  return [
-    { id: "work", label: "Your work", href: "/work" },
-    { id: "profile", label: "Your profile", href: `/@${account.handle}` },
-    { id: "settings", label: "Account settings", href: "/settings" },
-    ...(writer
-      ? [{ id: "posts" as const, label: "Your posts", href: "/posts" }]
-      : []),
-    ...(account.role === "admin"
-      ? [
-          {
-            id: "blog-admin" as const,
-            label: "Blog administration",
-            href: "/admin/blog",
-          },
-        ]
-      : []),
-    ...(account.role === "admin" || account.role === "moderator"
-      ? [{ id: "staff" as const, label: "Staff", href: "/staff" }]
-      : []),
-    ...(account.emailVerified
-      ? []
-      : [
-          {
-            id: "verify" as const,
-            label: "Verify email",
-            href: `/verify-email?returnTo=${UPLOAD_RETURN}`,
-          },
-        ]),
+  const staff = account.role === "admin" || account.role === "moderator";
+  const groups: AccountDestination[][] = [
+    [
+      { id: "work", label: "Your work", href: "/work" },
+      ...(writer
+        ? [{ id: "posts" as const, label: "Your posts", href: "/posts" }]
+        : []),
+    ],
+    [
+      { id: "settings", label: "Settings", href: "/settings" },
+      ...(account.emailVerified
+        ? []
+        : [
+            {
+              id: "verify" as const,
+              label: "Verify your email",
+              href: `/verify-email?returnTo=${UPLOAD_RETURN}`,
+            },
+          ]),
+    ],
+    [
+      ...(account.role === "admin"
+        ? [
+            {
+              id: "blog-admin" as const,
+              label: "Blog admin",
+              href: "/admin/blog",
+            },
+          ]
+        : []),
+      ...(staff
+        ? [{ id: "staff" as const, label: "Staff", href: "/staff" }]
+        : []),
+    ],
   ];
+  return groups.filter((group) => group.length > 0);
 }
 
 export function isCurrentPage(pathname: string, href: string) {

@@ -30,8 +30,9 @@ func ValidApp(app string) bool {
 
 // Preferences holds what a reader chose about browse, where a nil App means they have not said
 type Preferences struct {
-	App  *string
-	NSFW NSFWPreference
+	App     *string
+	NSFW    NSFWPreference
+	Artwork bool
 }
 
 // SignUpInput leaves App and NSFW empty when the reader skipped them

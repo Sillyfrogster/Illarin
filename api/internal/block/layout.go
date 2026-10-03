@@ -33,6 +33,23 @@ func (l Layout) Slots() []Slot { return slots[l] }
 
 func (l Layout) MinimumWidth() Width { return minimumWidths[l] }
 
+var layoutLabels = map[Layout]string{
+	Single:    "one column",
+	Duo:       "two columns",
+	MainAside: "wide and narrow",
+	Trio:      "three columns",
+	Stack2:    "two stacked",
+	Stack3:    "three stacked",
+}
+
+// label is the name the editor's layout menu shows for a layout
+func (l Layout) label() string {
+	if label, known := layoutLabels[l]; known {
+		return label
+	}
+	return string(l)
+}
+
 type Width string
 
 const (

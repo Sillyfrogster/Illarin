@@ -9,22 +9,23 @@ import {
   AppChoice,
   adultNote,
 } from "@/components/preferences/PreferenceChoices";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { CheckboxRow } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
-  controlClasses,
-  Field,
-  TextInput,
-  Trouble,
-} from "@/components/ui/field";
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { type Refusal, readRefusal } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 import type { AppName, NsfwPreference } from "@/lib/api/query";
 import type { SignedInAccount } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/cn";
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 const TERMS_REFUSAL = "Agree to the Terms to create an account.";
 
@@ -51,7 +52,7 @@ export function AccountForm({
   const [app, setApp] = useState(initialApp);
   const [adult, setAdult] = useState<NsfwPreference>("blurred");
   const [agreed, setAgreed] = useState(false);
-  const terms = useRef<HTMLInputElement>(null);
+  const terms = useRef<HTMLButtonElement>(null);
 
   const signUp = mode === "sign-up";
   const carry = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : "";
@@ -150,38 +151,40 @@ export function AccountForm({
       <div className="grid gap-5">
         {signUp ? (
           <div className="grid gap-2">
-            <label className="flex cursor-pointer items-start gap-3 font-ui text-ui text-ink">
-              <input
-                aria-describedby={failed("terms") ? "terms-trouble" : undefined}
-                aria-invalid={failed("terms") || undefined}
-                checked={agreed}
-                className="mt-1 size-4.5 shrink-0 accent-[var(--v-action)]"
-                name="terms"
-                onChange={(event) => {
-                  setAgreed(event.target.checked);
-                  if (failed("terms")) setRefused(null);
-                }}
-                ref={terms}
-                type="checkbox"
-              />
-              <span>
-                I&rsquo;m 13 or older and agree to the{" "}
-                <Link className={legalLink} href="/legal/terms" target="_blank">
-                  Terms
-                </Link>{" "}
-                and the{" "}
-                <Link
-                  className={legalLink}
-                  href="/legal/privacy"
-                  target="_blank"
-                >
-                  Privacy Policy
-                </Link>
-              </span>
-            </label>
+            <CheckboxRow
+              aria-describedby={failed("terms") ? "terms-trouble" : undefined}
+              aria-invalid={failed("terms") || undefined}
+              checked={agreed}
+              label={
+                <>
+                  I&rsquo;m 13 or older and agree to the{" "}
+                  <Link
+                    className={legalLink}
+                    href="/legal/terms"
+                    target="_blank"
+                  >
+                    Terms
+                  </Link>{" "}
+                  and the{" "}
+                  <Link
+                    className={legalLink}
+                    href="/legal/privacy"
+                    target="_blank"
+                  >
+                    Privacy Policy
+                  </Link>
+                </>
+              }
+              name="terms"
+              onCheckedChange={(on) => {
+                setAgreed(on);
+                if (failed("terms")) setRefused(null);
+              }}
+              ref={terms}
+            />
             {failed("terms") ? (
               <p
-                className="pl-7.5 font-ui text-meta text-stop"
+                className="pl-6.5 font-ui text-meta text-stop"
                 id="terms-trouble"
               >
                 {refused?.error}
@@ -190,14 +193,14 @@ export function AccountForm({
           </div>
         ) : null}
 
-        <Button asChild size="large" variant="outline">
+        <Button asChild variant="secondary">
           <a href={discordHref} onClick={continueWithDiscord}>
             <SiDiscord aria-hidden="true" color="default" title="" />
             Continue with Discord
           </a>
         </Button>
 
-        {discordError ? <Trouble>{discordError}</Trouble> : null}
+        {discordError ? <Alert tone="stop">{discordError}</Alert> : null}
 
         {signUp ? null : (
           <p className="-mt-2 font-ui text-meta text-mute">
@@ -233,7 +236,7 @@ export function AccountForm({
           label="Email"
           trouble={failed("email") ? refused?.error : undefined}
         >
-          <TextInput
+          <Input
             aria-invalid={failed("email") || undefined}
             autoCapitalize="none"
             autoComplete="email"
@@ -251,7 +254,7 @@ export function AccountForm({
           trailing={
             signUp ? null : (
               <Link
-                className="-mx-1 inline-flex min-h-11 items-center px-1 font-ui text-meta font-medium text-accent underline-offset-4 hover:underline"
+                className="-mx-1 inline-flex min-h-control items-center px-1 font-ui text-meta font-medium text-accent underline-offset-4 hover:underline"
                 href="/forgot-password"
               >
                 Forgot password?
@@ -260,7 +263,7 @@ export function AccountForm({
           }
           trouble={failed("password") ? refused?.error : undefined}
         >
-          <TextInput
+          <Input
             aria-invalid={failed("password") || undefined}
             autoComplete={signUp ? "new-password" : "current-password"}
             id="account-password"
@@ -271,13 +274,12 @@ export function AccountForm({
         </Field>
 
         {refused?.error && !refused.field ? (
-          <Trouble>{refused.error}</Trouble>
+          <Alert tone="stop">{refused.error}</Alert>
         ) : null}
 
         <Button
-          className="mt-1 shadow-none"
+          className="mt-1"
           loading={pending}
-          size="large"
           type="submit"
           variant="primary"
         >
@@ -302,25 +304,11 @@ function HandleField({ trouble }: { trouble?: string }) {
       label="Handle"
       trouble={trouble}
     >
-      <div
-        className={cn(
-          controlClasses,
-          "flex items-center gap-0.5 px-0 py-0",
-          trouble && "inset-ring-2 inset-ring-stop",
-        )}
-      >
-        <span
-          aria-hidden="true"
-          className="pl-3.5 font-display text-lede text-mute"
-        >
-          @
-        </span>
-        <input
-          aria-describedby="account-handle-hint"
-          aria-invalid={trouble ? true : undefined}
+      <InputGroup>
+        <InputGroupAddon>@</InputGroupAddon>
+        <InputGroupInput
           autoCapitalize="none"
           autoComplete="username"
-          className="min-h-11 w-full min-w-0 rounded-control bg-transparent pr-3.5 font-ui text-ui text-ink outline-offset-2"
           id="account-handle"
           maxLength={32}
           minLength={3}
@@ -329,7 +317,7 @@ function HandleField({ trouble }: { trouble?: string }) {
           spellCheck={false}
           type="text"
         />
-      </div>
+      </InputGroup>
     </Field>
   );
 }

@@ -5,10 +5,12 @@ import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Field, TextInput } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { startPost } from "@/lib/api/posts";
 import type { BlogWorkspace } from "@/lib/api/query";
+import { timing } from "@/lib/timing";
 
 export function StartPost({
   onFailure,
@@ -60,7 +62,7 @@ export function StartPost({
       className="w-full rounded-plate bg-deep p-5 sm:p-6"
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
       onSubmit={start}
-      transition={{ duration: reduced ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
+      transition={reduced ? { duration: 0 } : timing.settle}
     >
       <h2 className="font-display text-section font-medium tracking-tight text-ink">
         New post
@@ -70,8 +72,7 @@ export function StartPost({
       </p>
       <div className="mt-5 grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
         <Field htmlFor="new-post-title" label="Title">
-          <TextInput
-            className="bg-field"
+          <Input
             id="new-post-title"
             maxLength={160}
             onChange={(event) => setTitle(event.target.value)}
@@ -81,17 +82,14 @@ export function StartPost({
         </Field>
         <Field className="sm:w-56" htmlFor="new-post-category" label="Category">
           <Select
-            className="bg-field"
             id="new-post-category"
-            onChange={(event) => setCategoryId(event.target.value)}
+            onValueChange={setCategoryId}
+            options={workspace.categories.map((category) => ({
+              value: category.id,
+              label: category.label,
+            }))}
             value={categoryId}
-          >
-            {workspace.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.label}
-              </option>
-            ))}
-          </Select>
+          />
         </Field>
       </div>
       <div className="mt-6 flex flex-wrap items-center gap-2">

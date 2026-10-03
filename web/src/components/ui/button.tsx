@@ -1,29 +1,33 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { LoaderCircle } from "lucide-react";
 import type { ComponentProps } from "react";
-import { cn } from "@/lib/cn";
+import { Spinner } from "@/components/ui/spinner";
+import { cn, focusRing } from "@/lib/cn";
+
+const FILLED_FOCUS =
+  "focus-visible:ring-offset-1 focus-visible:ring-offset-field";
 
 const buttonVariants = cva(
-  "relative inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-control font-ui text-ui font-medium tracking-tight transition duration-200 outline-offset-3 disabled:pointer-events-none disabled:opacity-45 motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0",
+  `inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control font-ui text-ui font-medium transition-colors duration-80 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 ${focusRing}`,
   {
     variants: {
       variant: {
-        primary:
-          "bg-action text-on-accent shadow-[0_4px_14px_-5px_var(--v-action),inset_0_1px_0_rgb(255_255_255/0.18)] hover:bg-action/90 hover:text-on-accent motion-safe:hover:-translate-y-px active:translate-y-0",
-        secondary: "bg-deep text-ink hover:bg-rule/45",
-        outline: "text-ink inset-ring inset-ring-edge hover:bg-deep",
-        ghost: "text-mute hover:bg-deep hover:text-ink",
-        stop: "bg-stop text-on-stop hover:-translate-y-px active:translate-y-0",
-        link: "px-0 text-accent underline-offset-4 hover:underline",
+        primary: `bg-action text-on-accent hover:bg-action-hover hover:text-on-accent ${FILLED_FOCUS}`,
+        secondary: `bg-fill text-ink hover:bg-fill-hover hover:text-ink opened:bg-fill-hover ${FILLED_FOCUS}`,
+        ghost:
+          "text-mute hover:bg-fill hover:text-ink opened:bg-fill opened:text-ink",
+        stop: `bg-stop text-on-stop hover:bg-stop-hover hover:text-on-stop ${FILLED_FOCUS}`,
+        link: "text-accent underline-offset-4 hover:text-accent hover:underline",
       },
       size: {
-        default: "min-h-11 px-5",
-        large: "min-h-12 px-7 text-base",
-        compact: "min-h-11 px-3",
-        icon: "size-11 px-0",
+        default: "h-control px-4 has-[>svg:first-child]:pl-3",
+        compact:
+          "h-control-compact gap-1.5 px-3 text-meta has-[>svg:first-child]:pl-2",
+        icon: "size-control px-0",
+        "icon-compact": "size-control-compact px-0 [&_svg]:size-3.5",
       },
     },
+    compoundVariants: [{ variant: "link", className: "h-auto px-0" }],
     defaultVariants: { variant: "secondary", size: "default" },
   },
 );
@@ -34,7 +38,8 @@ type ButtonProps = ComponentProps<"button"> &
     loading?: boolean;
   };
 
-export function Button({
+/** Button is a filled control: violet for the main action, grey for the rest, one step lighter in dark or darker in light on hover. */
+function Button({
   className,
   variant,
   size,
@@ -45,7 +50,6 @@ export function Button({
   ...props
 }: ButtonProps) {
   const classes = cn(buttonVariants({ variant, size }), className);
-
   if (asChild) {
     return (
       <Slot className={classes} {...props}>
@@ -53,7 +57,6 @@ export function Button({
       </Slot>
     );
   }
-
   return (
     <button
       type="button"
@@ -62,15 +65,10 @@ export function Button({
       className={classes}
       {...props}
     >
-      {loading ? (
-        <LoaderCircle
-          aria-hidden="true"
-          className="animate-spin motion-reduce:animate-none"
-        />
-      ) : null}
+      {loading ? <Spinner /> : null}
       {children}
     </button>
   );
 }
 
-export { buttonVariants };
+export { Button, buttonVariants };

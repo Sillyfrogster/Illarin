@@ -69,8 +69,15 @@ type RenameHandleRequest struct {
 }
 
 type SessionState struct {
-	User   *Account `json:"user" tstype:"Account | null,required"`
-	Writer bool     `json:"writer"`
+	User        *Account `json:"user" tstype:"Account | null,required"`
+	Writer      bool     `json:"writer"`
+	Artwork     bool     `json:"artwork"`
+	DisplayName string   `json:"displayName,omitempty"`
+	AvatarUrl   string   `json:"avatarUrl,omitempty"`
+}
+
+type ArtworkRequest struct {
+	On bool `json:"on"`
 }
 
 type SignInRequest struct {

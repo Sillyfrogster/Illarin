@@ -1,6 +1,7 @@
 "use client";
 
-import { controlClasses, Field } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { inputClasses } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 import { type LocalParts, zoneLabel } from "@/lib/schedule-time";
 
@@ -23,7 +24,7 @@ export function ScheduleFields({
     >
       <div className="flex flex-wrap gap-2">
         <input
-          className={cn(controlClasses, "w-auto flex-[1_1_10rem]")}
+          className={cn(inputClasses, "w-auto flex-[1_1_10rem]")}
           disabled={disabled}
           id={`${id}-date`}
           onChange={(event) => onChange({ ...parts, date: event.target.value })}
@@ -32,7 +33,7 @@ export function ScheduleFields({
         />
         <input
           aria-label="Publication time"
-          className={cn(controlClasses, "w-auto flex-[1_1_7rem]")}
+          className={cn(inputClasses, "w-auto flex-[1_1_7rem]")}
           disabled={disabled}
           id={`${id}-time`}
           onChange={(event) => onChange({ ...parts, time: event.target.value })}

@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import type { Post, PostRevision } from "@/lib/api/query";
-import { cn } from "@/lib/cn";
+import { RadioGroup } from "@/components/ui/radio-group";
+import type { PostRevision } from "@/lib/api/query";
 import { readableMoment } from "@/lib/dates";
 import { revisionWords } from "@/lib/post-history";
 
@@ -64,42 +64,28 @@ export function Editions({
     );
   }
   return (
-    <fieldset className="flex flex-col gap-2 border-0">
+    <fieldset className="min-w-0 border-0">
       <legend className="mb-1 font-ui text-ui text-ink">Revision</legend>
-      {revisions.map((one) => {
-        const standing = standingOf(one);
-        return (
-          <label
-            className={cn(
-              "flex cursor-pointer items-start gap-3 rounded-control p-3",
-              chosen === one.id ? "bg-accent-wash" : "bg-deep",
-            )}
-            key={one.id}
-          >
-            <input
-              checked={chosen === one.id}
-              className="mt-1 size-4 shrink-0 accent-[var(--v-action)]"
-              name={name}
-              onChange={() => onChoose(one.id)}
-              type="radio"
-              value={one.id}
-            />
-            <span className="min-w-0 flex-1">
-              <span className="block font-ui text-ui text-ink">
-                {one.number}. {revisionWords(one.capturedFor)}
-              </span>
-              <span className="block font-prose text-meta text-mute">
+      <RadioGroup
+        name={name}
+        onValueChange={onChoose}
+        options={revisions.map((one) => {
+          const standing = standingOf(one);
+          return {
+            value: one.id,
+            label: `${one.number}. ${revisionWords(one.capturedFor)}`,
+            hint: (
+              <>
                 {readableMoment(one.capturedAt)}
-              </span>
-            </span>
-            {standing ? (
-              <span className="shrink-0 font-prose text-label text-accent">
-                {standing}
-              </span>
-            ) : null}
-          </label>
-        );
-      })}
+                {standing ? (
+                  <span className="text-accent"> · {standing}</span>
+                ) : null}
+              </>
+            ),
+          };
+        })}
+        value={chosen}
+      />
     </fieldset>
   );
 }

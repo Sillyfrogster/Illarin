@@ -11,7 +11,9 @@ export function useMeasuredWidth<T extends HTMLElement>() {
     if (!node) return;
 
     const measure = () => {
-      const nextWidth = Math.round(node.getBoundingClientRect().width);
+      // The layout width, before any CSS zoom on an ancestor shrinks it on screen
+      const zoom = (node as { currentCSSZoom?: number }).currentCSSZoom ?? 1;
+      const nextWidth = Math.round(node.getBoundingClientRect().width / zoom);
       setWidth((current) => (current === nextWidth ? current : nextWidth));
     };
     const observer = new ResizeObserver(measure);

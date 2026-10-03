@@ -64,8 +64,8 @@ test("each series totals its days, knows its busiest one and how it moved", () =
   });
   expect(changeOf(0, 0)).toEqual({ trend: "flat", words: "no change" });
   expect(changeOf(3, 0)).toEqual({ trend: "up", words: "from none" });
-  expect(reportDate("2026-08-21")).toBe("21 Aug");
-  expect(reportDate("2026-08-21", true)).toBe("21 Aug 2026");
+  expect(reportDate("2026-08-21")).toBe("Aug 21");
+  expect(reportDate("2026-08-21", true)).toBe("Aug 21, 2026");
 
   expect([0, 1, 3, 9].map((value) => levelOf(value, 9))).toEqual([0, 1, 2, 4]);
   expect(levelOf(5, 0)).toBe(0);

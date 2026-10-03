@@ -104,7 +104,7 @@ func TestRestoringARecordedVersionRestoresItsPictures(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := apitest.SaveDetails(t, r, session, started.ID,
-		`{"name":"Ilse of the west shelf","blurb":"Now with another picture.","isNsfw":false}`); got.Code != http.StatusNoContent {
+		`{"name":"Ilse of the east shelf","blurb":"","isNsfw":false}`); got.Code != http.StatusNoContent {
 		t.Fatalf("save second version details = %d: %s", got.Code, got.Body.String())
 	}
 	if got := apitest.PublishWorkVersion(t, r, session, started.ID, `{"summary":"Added another picture"}`); got.Code != http.StatusOK {

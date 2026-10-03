@@ -3,11 +3,15 @@
 import { ImagePlus } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Sortable,
   SortableItem,
   SortableItemHandle,
 } from "@/components/ui/sortable";
+import { Switch } from "@/components/ui/switch";
 import {
   addWorkImage,
   type WorkElement,
@@ -24,7 +28,7 @@ import {
 } from "./PresetEditors";
 import { ColorSetEditor, StylesheetSetEditor } from "./ThemeEditors";
 import { moveItem, replaceAt, without } from "./workspace/collection";
-import { Field, InlineItem, Note, Switch, TextField } from "./workspace/fields";
+import { InlineItem, Note } from "./workspace/fields";
 
 type ImageItem = {
   mediaId: string;
@@ -283,7 +287,7 @@ function ImageEditor({
   return (
     <div className="flex flex-col gap-6">
       {items.length === 0 ? (
-        <Note>No images are in this block yet.</Note>
+        <Note>No images yet</Note>
       ) : (
         <Sortable
           disabled={pending}
@@ -336,7 +340,7 @@ function ImageEditor({
                       </div>
                       <div className="flex min-w-0 flex-1 flex-col gap-4">
                         <Field hint="optional" label="Name">
-                          <TextField
+                          <Input
                             disabled={pending}
                             onChange={(event) =>
                               onChange(
@@ -351,9 +355,9 @@ function ImageEditor({
                         {isGallery ? (
                           <Switch
                             checked={item.omitFromDownloads !== true}
-                            hint="Readers can change this for their own copy."
+                            hint="Off leaves it out of downloads by default."
                             label="Include in downloads"
-                            onChange={(included) =>
+                            onCheckedChange={(included) =>
                               onChange(
                                 replaceAt(items, index, {
                                   omitFromDownloads: included
@@ -362,7 +366,7 @@ function ImageEditor({
                                 }),
                               )
                             }
-                            pending={pending}
+                            disabled={pending}
                           />
                         ) : null}
                       </div>
@@ -379,18 +383,22 @@ function ImageEditor({
           {message}
         </p>
       ) : null}
-      <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 self-start rounded-control bg-deep px-4 text-meta font-medium text-ink hover:bg-rule/45 has-disabled:opacity-45">
-        <ImagePlus aria-hidden="true" size={16} />
+      <Button
+        className="self-start"
+        disabled={pending}
+        loading={uploading}
+        onClick={() => file.current?.click()}
+      >
+        {uploading ? null : <ImagePlus aria-hidden="true" />}
         {uploading ? "Adding…" : "Add image"}
-        <input
-          accept="image/*"
-          className="sr-only"
-          disabled={pending || uploading}
-          onChange={(event) => void upload(event.target.files?.[0] ?? null)}
-          ref={file}
-          type="file"
-        />
-      </label>
+      </Button>
+      <input
+        accept="image/*"
+        hidden
+        onChange={(event) => void upload(event.target.files?.[0] ?? null)}
+        ref={file}
+        type="file"
+      />
     </div>
   );
 }
@@ -416,7 +424,7 @@ export function elementHint(type: WorkElement["type"]): string {
     case "setting_group":
       return "The names are your app's own, and a setting you leave out stays out of the file.";
     case "color_set":
-      return "These are the colours readers see first. Keep the app's names so the theme still knows where each colour belongs.";
+      return "These are the colors readers see first. Keep the app's names so the theme still knows where each color belongs.";
     case "stylesheet_set":
       return "The main sheet, component sheets, and their fonts travel together with the theme.";
     case "variable_schema":

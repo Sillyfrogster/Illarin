@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckRow } from "@/components/ui/check-row";
-import { Field, TextArea } from "@/components/ui/field";
+import { CheckboxRow } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/input";
 import { readWorkspace } from "@/lib/api/blog";
 import {
   cancelPostSchedule,
@@ -93,9 +94,11 @@ export function PublishStep({
         <ScheduleFields id="publish-schedule" onChange={setWhen} parts={when} />
       ) : null}
       {hasChannel && !post.publishedAt ? (
-        <CheckRow checked={discord} onChange={setDiscord}>
-          Post to the blog's Discord
-        </CheckRow>
+        <CheckboxRow
+          checked={discord}
+          label="Post to the blog's Discord"
+          onCheckedChange={setDiscord}
+        />
       ) : null}
       <Commit
         busy={busy}
@@ -141,7 +144,7 @@ export function UnpublishStep({ onFailure, onSettled, post }: StepProps) {
         htmlFor="unpublishing-reason"
         label="Private unpublishing reason"
       >
-        <TextArea
+        <Textarea
           id="unpublishing-reason"
           maxLength={SAID_LIMIT}
           onChange={(event) => setReason(event.target.value)}
@@ -154,7 +157,7 @@ export function UnpublishStep({ onFailure, onSettled, post }: StepProps) {
         htmlFor="unpublishing-explanation"
         label="Public explanation"
       >
-        <TextArea
+        <Textarea
           id="unpublishing-explanation"
           maxLength={SAID_LIMIT}
           onChange={(event) => setExplanation(event.target.value)}

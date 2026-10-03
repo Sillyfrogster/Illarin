@@ -5,24 +5,29 @@ import { CircleHelp, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
+import { Badge, BadgeLink } from "@/components/ui/badge";
 import type { BrowseWork, NsfwPreference } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { posterFace, type TypeSetting, typeSetting } from "@/lib/poster-face";
+import { tagSearchHref } from "@/lib/tag-search";
+import { timing } from "@/lib/timing";
 import { workCounts } from "@/lib/work-counts";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
 import { TypeMark } from "./TypeMark";
 
+const CARD_TAGS = 3;
+
 const SETTING: Record<TypeSetting, string> = {
-  grand: "text-[clamp(1.9rem,2.9vw,2.6rem)] leading-[1.02]",
-  large: "text-[clamp(1.5rem,2.1vw,1.95rem)] leading-[1.07]",
-  medium: "text-[clamp(1.15rem,1.5vw,1.4rem)] leading-[1.15]",
-  small: "text-[clamp(0.95rem,1.1vw,1.05rem)] leading-[1.35]",
+  grand: "text-[clamp(1.25rem,17cqi,2.6rem)] leading-[1.02]",
+  large: "text-[clamp(1.1rem,12.5cqi,1.95rem)] leading-[1.07]",
+  medium: "text-[clamp(1rem,9cqi,1.4rem)] leading-[1.15]",
+  small: "text-[clamp(0.85rem,6.5cqi,1.05rem)] leading-[1.35]",
 };
 
 const PLATE =
-  "overflow-hidden rounded-plate transition duration-500 group-hover:-translate-y-1 motion-reduce:transform-none motion-reduce:transition-none";
+  "overflow-hidden rounded-plate transition duration-240 group-hover:-translate-y-1 motion-reduce:transform-none motion-reduce:transition-none";
 
 const GROUNDS = [
   {
@@ -84,7 +89,7 @@ export function BrowsePoster({
           initial: { opacity: 0, scale: 0.92 },
           animate: { opacity: 1, scale: 1 },
           exit: { opacity: 0, scale: 0.92 },
-          transition: { type: "spring", stiffness: 300, damping: 30 } as const,
+          transition: timing.settle,
         }
       : {};
   return (
@@ -99,11 +104,11 @@ export function BrowsePoster({
         <div className="absolute top-2.5 right-2.5 z-2">{action}</div>
       ) : null}
       {face === "art" ? (
-        <div className={cn(PLATE, "relative aspect-5/6 bg-inset")}>
+        <div className={cn(PLATE, "relative aspect-3/4 bg-inset")}>
           {work.cover ? (
             <Image
               alt=""
-              className="size-full object-contain transition-transform duration-700 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
+              className="size-full object-cover object-top transition-transform duration-240 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
               fill
               loading={eager ? "eager" : "lazy"}
               onError={() => setFailed(true)}
@@ -117,7 +122,7 @@ export function BrowsePoster({
         <div
           className={cn(
             PLATE,
-            "flex aspect-5/6 min-w-0 flex-col justify-between p-5",
+            "@container flex aspect-3/4 min-w-0 flex-col justify-between p-5",
             groundFor(work.id).plate,
           )}
         >
@@ -129,7 +134,7 @@ export function BrowsePoster({
           <p
             aria-hidden="true"
             className={cn(
-              "min-w-0 font-display font-medium tracking-[-0.035em] text-balance [overflow-wrap:anywhere] transition-colors duration-300 motion-reduce:transition-none",
+              "min-w-0 font-display font-medium tracking-[-0.035em] text-balance [overflow-wrap:anywhere] transition-colors duration-240 motion-reduce:transition-none",
               groundFor(work.id).title,
               SETTING[typeSetting(name)],
             )}
@@ -140,7 +145,7 @@ export function BrowsePoster({
       )}
 
       <div className="pt-3.5">
-        <h3 className="line-clamp-2 font-display text-[1.0625rem] leading-[1.3] font-medium tracking-[-0.015em] [overflow-wrap:anywhere] transition-colors duration-200 group-hover:text-accent motion-reduce:transition-none">
+        <h3 className="line-clamp-2 font-display text-[1.0625rem] leading-[1.3] font-medium tracking-[-0.015em] [overflow-wrap:anywhere] transition-colors duration-160 group-hover:text-accent motion-reduce:transition-none">
           {title}
         </h3>
 
@@ -154,7 +159,7 @@ export function BrowsePoster({
             <>
               <span aria-hidden="true">·</span>
               <Link
-                className="relative z-1 -my-3 inline-flex min-h-11 min-w-0 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
+                className="relative z-1 -my-3 inline-flex min-h-control min-w-0 items-center [overflow-wrap:anywhere] hover:text-ink hover:underline"
                 href={`/@${work.creator}`}
                 prefetch={false}
               >
@@ -175,25 +180,41 @@ export function BrowsePoster({
           </p>
         ) : null}
 
+        {work.tags.length ? (
+          <ul className="m-0 mt-2 flex list-none flex-wrap gap-1.5 p-0">
+            {work.tags.slice(0, CARD_TAGS).map((tag) => (
+              <li className="max-w-full" key={tag.value}>
+                <BadgeLink
+                  className="relative z-1"
+                  href={tagSearchHref(tag.value)}
+                  prefetch={false}
+                >
+                  {tag.label}
+                </BadgeLink>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
         <div className="mt-2.5 flex flex-wrap gap-2 empty:hidden">
           {work.ownerState ? (
-            <span className="inline-flex min-h-6 items-center rounded-control bg-accent-wash px-2 font-ui text-label font-medium text-accent capitalize">
+            <Badge className="capitalize" tone="accent">
               {work.ownerState}
-            </span>
+            </Badge>
           ) : null}
           {work.isNsfw === null ? (
-            <span className="inline-flex min-h-6 items-center gap-1.5 rounded-control bg-deep px-2 font-ui text-label text-mute">
+            <Badge>
               <CircleHelp aria-hidden="true" className="size-3" />
               Rating not set
-            </span>
+            </Badge>
           ) : null}
           {work.isNsfw ? (
-            <span className="inline-flex min-h-6 items-center gap-1.5 rounded-control bg-stop-wash px-2 font-ui text-label font-medium text-stop">
+            <Badge tone="stop">
               {blurred ? (
                 <EyeOff aria-hidden="true" className="size-3" />
               ) : null}
               {blurred ? "Adult · blurred" : "Adult"}
-            </span>
+            </Badge>
           ) : null}
         </div>
 
@@ -216,7 +237,7 @@ function TakenDown({
       <p className="mt-1 font-ui text-label text-mute">
         Illarin staff ·{" "}
         <time dateTime={takedown.at}>
-          {new Date(takedown.at).toLocaleString("en-GB", {
+          {new Date(takedown.at).toLocaleString("en-US", {
             dateStyle: "medium",
             timeStyle: "short",
           })}

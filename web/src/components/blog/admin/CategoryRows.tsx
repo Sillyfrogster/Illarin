@@ -10,7 +10,9 @@ import {
   Rows,
 } from "@/components/register/RowParts";
 import { Consequence, StepForm } from "@/components/register/StepParts";
-import { Field, TextInput } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Sortable, SortableItemHandle } from "@/components/ui/sortable";
 import { orderCategories, updateCategory } from "@/lib/api/blog";
 import type { BlogCategory } from "@/lib/api/query";
@@ -104,13 +106,13 @@ export function CategoryRows({
           {retired.map((category) => (
             <PastRow
               action={
-                <button
-                  className="inline-flex min-h-11 items-center rounded-control px-3 font-ui text-meta font-medium text-accent outline-offset-3 hover:underline"
+                <Button
                   onClick={() => bringBack(category)}
-                  type="button"
+                  size="compact"
+                  variant="ghost"
                 >
                   Reactivate category
-                </button>
+                </Button>
               }
               key={category.id}
             >
@@ -172,7 +174,7 @@ export function CategoryStep({
         htmlFor="category-label"
         label="Name"
       >
-        <TextInput
+        <Input
           id="category-label"
           maxLength={48}
           onChange={(event) => setLabel(event.target.value)}

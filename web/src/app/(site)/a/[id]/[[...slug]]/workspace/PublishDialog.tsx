@@ -2,6 +2,7 @@
 
 import { SiDiscord } from "@icons-pack/react-simple-icons";
 import { Bell } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChangeList } from "@/components/changes/ChangeList";
@@ -12,7 +13,8 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LineLink } from "@/components/ui/line-link";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import { readDiscordChannel } from "@/lib/api/integrations";
 import {
   compareDraftedChanges,
@@ -29,7 +31,7 @@ import {
   useDraftedChanges,
 } from "@/lib/drafted-changes";
 import type { ReadinessTarget } from "@/lib/readiness";
-import { Field, Note, TextAreaField, TextField } from "./fields";
+import { Note } from "./fields";
 import { Hearer, HearerCheck, PublishSubject } from "./PublishParts";
 import { ReadinessList } from "./ReadinessList";
 import { useWorkspace } from "./state";
@@ -47,7 +49,7 @@ export function PublishDialog({
 }) {
   const workspace = useWorkspace();
   const liveCandidate = useDraftedChanges();
-  const [candidate] = useState(() => ({ version: liveCandidate.version }));
+  const [candidate] = useState(() => ({ ...liveCandidate }));
   const router = useRouter();
   const [groups, setGroups] = useState<VersionChangeGroup[] | null>(null);
   const [waiting, setWaiting] = useState(false);
@@ -227,7 +229,7 @@ export function PublishDialog({
                       hint="readers see this in the history"
                       label="Summary of what changed"
                     >
-                      <TextField
+                      <Input
                         autoComplete="off"
                         maxLength={200}
                         onChange={(event) => setSummary(event.target.value)}
@@ -238,7 +240,7 @@ export function PublishDialog({
 
                     <div className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_10rem]">
                       <Field hint="optional" label="Notes">
-                        <TextAreaField
+                        <Textarea
                           maxLength={4000}
                           onChange={(event) => setNotes(event.target.value)}
                           rows={3}
@@ -246,7 +248,7 @@ export function PublishDialog({
                         />
                       </Field>
                       <Field hint="optional" label="Version">
-                        <TextField
+                        <Input
                           autoComplete="off"
                           maxLength={60}
                           onChange={(event) => setLabel(event.target.value)}
@@ -272,7 +274,7 @@ export function PublishDialog({
                       <Hearer
                         control="publish-notify"
                         icon={<Bell aria-hidden="true" />}
-                        line="Followers and linked apps with it installed get a notification."
+                        line="Followers and connected apps that have it installed get a notification."
                         title="Notify followers"
                       >
                         <HearerCheck
@@ -304,12 +306,12 @@ export function PublishDialog({
                             onChange={setDiscord}
                           />
                         ) : (
-                          <LineLink
-                            className="text-accent hover:text-accent"
+                          <Link
+                            className="text-ui font-medium text-accent underline-offset-4 hover:underline"
                             href="/settings#discord-channel"
                           >
                             Connect
-                          </LineLink>
+                          </Link>
                         )}
                       </Hearer>
                     )}

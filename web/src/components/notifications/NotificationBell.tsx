@@ -10,6 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   type NotificationCursor,
   notificationKeys,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/api/notifications";
 import { useAuth } from "@/lib/auth";
 import { unreadBadge, unreadLabel } from "@/lib/notification-inbox";
+import { timing } from "@/lib/timing";
 import {
   NotificationEntry,
   NotificationEntrySkeleton,
@@ -37,17 +39,14 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const count = useUnreadCount();
   useUnreadRefreshOnNavigation();
+  if (account === undefined) return <span className="block size-control" />;
   if (!account) return null;
   const badge = unreadBadge(count);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-ink data-[state=open]:bg-deep"
-        >
+        <Button variant="ghost" size="icon" className="text-ink">
           <Bell aria-hidden="true" />
           <AnimatePresence initial={false}>
             {badge ? (
@@ -57,7 +56,7 @@ export function NotificationBell() {
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.5, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 560, damping: 30 }}
+                transition={timing.quick}
                 className="absolute top-1.5 right-1 grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-action px-1 text-label leading-none font-semibold text-on-accent tabular-nums ring-2 ring-plane"
               >
                 {badge}
@@ -127,16 +126,17 @@ function NotificationPanel({
             <CheckCheck aria-hidden="true" />
             Mark all read
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Clear all"
-            disabled={entries.length === 0 || clearAll.isPending}
-            onClick={() => clearAll.mutate()}
-          >
-            <Trash2 aria-hidden="true" />
-            <span className="sr-only">Clear all notifications</span>
-          </Button>
+          <Tooltip content="Clear all">
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={entries.length === 0 || clearAll.isPending}
+              onClick={() => clearAll.mutate()}
+            >
+              <Trash2 aria-hidden="true" />
+              <span className="sr-only">Clear all notifications</span>
+            </Button>
+          </Tooltip>
         </div>
       </div>
       {markAll.isError ? (
@@ -175,11 +175,11 @@ function NotificationPanel({
                   loading={inbox.isFetchingNextPage}
                   onClick={() => void inbox.fetchNextPage()}
                 >
-                  Show older notifications
+                  Show older
                 </Button>
               ) : (
                 <p className="px-3 pt-4 pb-3 text-center text-label text-mute">
-                  Notifications are kept for 90 days.
+                  Illarin keeps notifications for 90 days.
                 </p>
               )}
               {inbox.isFetchNextPageError ? (
@@ -195,8 +195,7 @@ function NotificationPanel({
             <div className="px-6 pt-5 pb-8 text-center">
               <p className="text-ui text-ink">No notifications</p>
               <p className="mx-auto mt-1 max-w-[30ch] text-meta text-mute">
-                Updates to work you follow, and anything Illarin staff do with
-                your work, arrive here.
+                Follow a work to hear when it updates.
               </p>
             </div>
           )

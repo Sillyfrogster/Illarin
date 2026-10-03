@@ -4,6 +4,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { WorkspaceRail } from "@/components/workspace/WorkspaceRail";
 import type {
   ReadinessItem,
@@ -13,6 +15,7 @@ import type {
 } from "@/lib/api/query";
 import { fetchWaitingReplacement, type UploadOperation } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import type { PageTarget } from "@/lib/readiness";
 import { ElementFields, elementHint } from "../ElementEditors";
 import { MakePublicConfirmation } from "../MakePublicConfirmation";
@@ -68,6 +71,17 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
     if (target.where === "name") workspace.setCursor("identity:name");
   }
 
+  const editProps = {
+    detail: detail(
+      workspace.isDraft,
+      workspace.saveState,
+      workspace.unpublishedChanges,
+    ),
+    takenDown: props.takenDown,
+    typeName: props.typeName,
+    visibility: props.visibility,
+    waiting: shelf.count,
+  };
   const pane = workspace.pane;
   const edited =
     pane?.kind === "element"
@@ -84,26 +98,19 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
   return (
     <>
       {!workspace.isOwner && canTakeDown && workspace.pane === null ? (
-        <button
-          className="fixed right-4 bottom-4 z-30 inline-flex min-h-11 items-center gap-2 rounded-control bg-ink px-4 text-meta font-medium text-field shadow-popover outline-offset-3"
+        <Button
+          className="fixed right-4 bottom-4 z-30 bg-field shadow-popover"
           onClick={() => workspace.openPane({ kind: "staff" })}
-          type="button"
         >
-          <ShieldAlert aria-hidden="true" size={16} />
+          <ShieldAlert aria-hidden="true" />
           Staff tools
-        </button>
+        </Button>
       ) : null}
 
       {workspace.editing ? <div aria-hidden="true" className="h-28" /> : null}
 
       {workspace.editing ? (
-        <WorkspaceDock
-          detail={detail(workspace.isDraft, workspace.saveState)}
-          takenDown={props.takenDown}
-          typeName={props.typeName}
-          visibility={props.visibility}
-          waiting={shelf.count}
-        />
+        <WorkspaceDock {...editProps} />
       ) : workspace.isOwner && !props.takenDown ? (
         <EditToggle typeName={props.typeName} />
       ) : null}
@@ -111,23 +118,19 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
       <AnimatePresence>
         {pane?.kind === "conflict" ? (
           <WorkspaceRail
-            description="Your writing is still on the page. Copy anything worth keeping, then reload to work from the newer drafted changes."
+            description="Copy anything you want to keep, then reload."
             key="conflict"
-            title="Newer drafted changes exist"
+            title="This was edited somewhere else"
             tone="stop"
           >
             <div className="flex flex-col gap-5">
-              <p className="text-ui text-mute">
-                This page was saved in another session. Copy any unsaved text,
-                then reload to edit the latest version.
-              </p>
-              <button
-                className="min-h-11 rounded-control bg-action px-5 text-ui font-medium text-on-accent outline-offset-3"
+              <Button
+                className="self-start"
                 onClick={() => window.location.reload()}
-                type="button"
+                variant="primary"
               >
                 Reload the page
-              </button>
+              </Button>
             </div>
           </WorkspaceRail>
         ) : null}
@@ -206,12 +209,14 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
 
         {pane?.kind === "replacement" ? (
           <WorkspaceRail
-            description={`Edited this ${props.typeName} in another app? Upload the file here and review what changed before you publish.`}
+            description={
+              "Upload the file you changed in your app. You see what changed before you publish."
+            }
             key="replacement"
             title="Upload a new version"
             onClose={workspace.closePane}
           >
-            <Replacement />
+            <Replacement typeName={props.typeName} />
             {props.hasOriginal ? (
               <PreservedPanel workId={workspace.workId} />
             ) : null}
@@ -278,7 +283,10 @@ export function WorkspaceSurfaces(props: WorkspaceSurfacesProps) {
         {workspace.message && workspace.message !== NO_ALLOWED_APP ? (
           <motion.output
             animate={{ opacity: 1, y: 0 }}
-            className="fixed inset-x-4 bottom-28 z-50 mx-auto block max-w-lg rounded-plate bg-plane px-5 py-3.5 text-meta text-ink shadow-popover md:bottom-32"
+            className={cn(
+              "fixed inset-x-4 z-50 mx-auto block max-w-lg rounded-control bg-ink px-5 py-3 text-meta font-medium text-field shadow-popover",
+              workspace.editing ? "bottom-24 md:bottom-28" : "bottom-6",
+            )}
             exit={{ opacity: 0, y: 8 }}
             initial={reduced ? { opacity: 0 } : { opacity: 0, y: 14 }}
           >
@@ -309,42 +317,33 @@ function PromptPrivacy() {
     ),
   );
   return lists.map(({ block, element, content }) => (
-    <fieldset
-      className="flex min-w-0 flex-col gap-1 border-0 p-0"
-      key={element.id}
-    >
+    <fieldset className="flex min-w-0 flex-col border-0 p-0" key={element.id}>
       <legend className="mb-2 text-ui font-medium text-ink">
         {element.label || block.title}
       </legend>
       {content.fragments.map((fragment, index) =>
         fragment.marker ? null : (
-          <label
-            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control px-3 text-ui text-ink hover:bg-deep has-checked:bg-accent-wash"
+          <Switch
+            checked={fragment.private ?? false}
+            disabled={workspace.busy}
             key={fragment.id ?? index}
-          >
-            <input
-              checked={fragment.private ?? false}
-              className="size-4 shrink-0 accent-[var(--v-action)]"
-              disabled={workspace.busy}
-              onChange={(event) =>
-                workspace.writeElement(block.id, {
-                  ...element,
-                  content: {
-                    ...content,
-                    fragments: content.fragments.map((one, at) =>
-                      at === index
-                        ? { ...one, private: event.target.checked }
-                        : one,
-                    ),
-                  },
-                })
-              }
-              type="checkbox"
-            />
-            <span className="min-w-0 wrap-anywhere">
-              {fragmentName(fragment, index)}
-            </span>
-          </label>
+            label={
+              <span className="wrap-anywhere">
+                {fragmentName(fragment, index)}
+              </span>
+            }
+            onCheckedChange={(on) =>
+              workspace.writeElement(block.id, {
+                ...element,
+                content: {
+                  ...content,
+                  fragments: content.fragments.map((one, at) =>
+                    at === index ? { ...one, private: on } : one,
+                  ),
+                },
+              })
+            }
+          />
         ),
       )}
     </fieldset>
@@ -384,9 +383,9 @@ function ActivationSweep() {
   return (
     <div className="pointer-events-none fixed inset-0 z-20 overflow-hidden">
       <motion.div
-        animate={{ left: "110vw" }}
-        className="absolute inset-y-[-10%] w-[34vw] min-w-60 bg-[linear-gradient(90deg,transparent,var(--v-action),transparent)] opacity-25 blur-[14px]"
-        initial={{ left: "-40vw" }}
+        animate={{ x: "110vw" }}
+        className="absolute inset-y-0 left-0 w-[40vw] min-w-72 bg-[linear-gradient(90deg,transparent,color-mix(in_oklab,var(--v-action)_22%,transparent),transparent)]"
+        initial={{ x: "-45vw" }}
         key={workspace.sweep}
         transition={{ duration: 0.95, ease: [0.4, 0, 0.2, 1] }}
       />
@@ -394,17 +393,14 @@ function ActivationSweep() {
   );
 }
 
-function detail(isDraft: boolean, state: string): string {
-  if (state === "failed")
-    return "Your edits are still on this page. Try saving again.";
-  if (isDraft) return "Only you can open this page.";
-  if (state === "private" || state === "unsaved" || state === "saving") {
-    return "Readers do not have your changes yet.";
-  }
-  return "All changes are published.";
+function detail(isDraft: boolean, state: string, unpublished: boolean): string {
+  if (state === "failed") return "Your edits are still on this page.";
+  if (isDraft) return "Only you can see this draft.";
+  if (unpublished) return "Readers still see the published version.";
+  return "Readers see this page.";
 }
 
-function Replacement() {
+function Replacement({ typeName }: { typeName: string }) {
   const workspace = useWorkspace();
   const router = useRouter();
   const [waiting, setWaiting] = useState<UploadOperation | null>(null);
@@ -439,6 +435,7 @@ function Replacement() {
     </p>
   ) : loaded ? (
     <ReplacementStep
+      typeName={typeName}
       onApplied={settled}
       onDiscarded={settled}
       waiting={waiting}

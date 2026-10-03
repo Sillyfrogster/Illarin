@@ -72,7 +72,7 @@ func (SillyTavernModule) Declaration() format.Declaration {
 	tokens.Write = format.RoleSupport{
 		Grade: format.SupportPartial,
 		Condition: &format.ContentCondition{
-			Description: "only the first colour mode and names this theme format understands are carried",
+			Description: "only the first color mode and names this theme format understands are carried",
 			Matches:     sillyTavernColorsReduced,
 		},
 		DropWhen: &format.ContentCondition{Matches: sillyTavernColorsDropped},
@@ -106,7 +106,7 @@ func themeDeclaration(
 				Write: format.RoleSupport{
 					Grade: format.SupportPartial,
 					Condition: &format.ContentCondition{
-						Description: "colour names this theme format does not understand",
+						Description: "color names this theme format does not understand",
 						Matches:     hasUnknownColors(colors),
 					},
 					DropWhen: &format.ContentCondition{Matches: hasNoKnownColors(colors)},

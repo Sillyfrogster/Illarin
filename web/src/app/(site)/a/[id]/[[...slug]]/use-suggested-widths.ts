@@ -79,6 +79,26 @@ function sameSuggestions(
   );
 }
 
+/** How long the page must stop changing size before the widths are measured again. */
+const REMEASURE_AFTER_MS = 500;
+/** The least idle time worth starting another block's measurement in. */
+const IDLE_FLOOR_MS = 4;
+
+function whenIdle(step: (deadline: IdleDeadline) => void): number {
+  if (typeof window.requestIdleCallback === "function")
+    return window.requestIdleCallback(step, { timeout: 2000 });
+  return window.setTimeout(
+    () => step({ didTimeout: false, timeRemaining: () => 8 }),
+    50,
+  );
+}
+
+function cancelIdle(task: number) {
+  if (typeof window.cancelIdleCallback === "function")
+    window.cancelIdleCallback(task);
+  clearTimeout(task);
+}
+
 export function useSuggestedWidths({
   availableWidth,
   blocks,
@@ -92,40 +112,56 @@ export function useSuggestedWidths({
 }): Record<string, BlockWidth> {
   const [suggested, setSuggested] = useState<Record<string, BlockWidth>>({});
 
+  // Measured a few blocks at a time while the page is idle, so it never holds up typing or a transition
   const measure = useCallback(() => {
-    if (!rows.current || availableWidth === undefined) return;
+    if (!rows.current || availableWidth === undefined) return () => {};
     const next: Record<string, BlockWidth> = {};
     const byId = new Map(blocks.map((block) => [block.id, block]));
-    for (const node of rows.current.querySelectorAll<HTMLElement>(
-      "[data-block-id]",
-    )) {
-      const blockId = node.dataset.blockId;
-      const content = node.querySelector<HTMLElement>("[data-block-content]");
-      const block = blockId ? byId.get(blockId) : undefined;
-      if (!blockId || !block || block.isEmpty || !content) continue;
-      const suggestion = suggestedBlockWidth({
-        availableWidth,
-        layout: block.layout,
-        renderedHeights: measureCandidateHeights(
-          node,
-          block.layout,
+    const nodes = [
+      ...rows.current.querySelectorAll<HTMLElement>("[data-block-id]"),
+    ];
+    let at = 0;
+    let task = 0;
+    const step = (deadline: IdleDeadline) => {
+      while (at < nodes.length && deadline.timeRemaining() > IDLE_FLOOR_MS) {
+        const node = nodes[at++];
+        const block = byId.get(node.dataset.blockId ?? "");
+        if (!block || block.isEmpty) continue;
+        if (!node.querySelector("[data-block-content]")) continue;
+        const suggestion = suggestedBlockWidth({
           availableWidth,
-        ),
-        width: block.width,
-      });
-      if (suggestion) next[blockId] = suggestion;
-    }
-    setSuggested((current) =>
-      sameSuggestions(current, next) ? current : next,
-    );
+          layout: block.layout,
+          renderedHeights: measureCandidateHeights(
+            node,
+            block.layout,
+            availableWidth,
+          ),
+          width: block.width,
+        });
+        if (suggestion) next[block.id] = suggestion;
+      }
+      if (at < nodes.length) {
+        task = whenIdle(step);
+        return;
+      }
+      setSuggested((current) =>
+        sameSuggestions(current, next) ? current : next,
+      );
+    };
+    task = whenIdle(step);
+    return () => cancelIdle(task);
   }, [availableWidth, blocks, rows]);
 
   useEffect(() => {
     if (paused || !rows.current) return;
-    let frame = window.requestAnimationFrame(measure);
+    let stop = measure();
+    let wait = 0;
     const observer = new ResizeObserver(() => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(measure);
+      stop();
+      window.clearTimeout(wait);
+      wait = window.setTimeout(() => {
+        stop = measure();
+      }, REMEASURE_AFTER_MS);
     });
     observer.observe(rows.current);
     for (const content of rows.current.querySelectorAll<HTMLElement>(
@@ -134,7 +170,8 @@ export function useSuggestedWidths({
       observer.observe(content);
     }
     return () => {
-      window.cancelAnimationFrame(frame);
+      stop();
+      window.clearTimeout(wait);
       observer.disconnect();
     };
   }, [measure, paused, rows]);

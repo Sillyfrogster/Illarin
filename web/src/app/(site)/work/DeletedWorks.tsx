@@ -109,7 +109,7 @@ export function DeletedWorks({
                   disabled={pending !== null}
                   loading={pending === item.id}
                   onClick={() => restore(item)}
-                  variant="outline"
+                  variant="secondary"
                 >
                   <RotateCcw aria-hidden="true" />
                   Restore

@@ -290,7 +290,7 @@ func (s *Service) SetNSFWPreference(
 
 // Preferences reads the signed-in reader's choices, or the defaults for a reader signed out
 func (s *Service) Preferences(ctx context.Context, token string) (Preferences, error) {
-	signedOut := Preferences{NSFW: NSFWBlurred}
+	signedOut := Preferences{NSFW: NSFWBlurred, Artwork: true}
 	hash, ok := credentialHash(token)
 	if !ok {
 		return signedOut, nil
@@ -302,7 +302,7 @@ func (s *Service) Preferences(ctx context.Context, token string) (Preferences, e
 	if err != nil {
 		return Preferences{}, fmt.Errorf("read preferences: %w", err)
 	}
-	preferences := Preferences{NSFW: NSFWPreference(row.NsfwPreference)}
+	preferences := Preferences{NSFW: NSFWPreference(row.NsfwPreference), Artwork: row.Artwork}
 	if row.AppPreference.Valid && ValidApp(row.AppPreference.String) {
 		preferences.App = &row.AppPreference.String
 	}
@@ -323,6 +323,24 @@ func (s *Service) SetAppPreference(ctx context.Context, token string, app string
 	})
 	if err != nil {
 		return fmt.Errorf("save app preference: %w", err)
+	}
+	if changed == 0 {
+		return ErrUnauthorized
+	}
+	return nil
+}
+
+func (s *Service) SetArtwork(ctx context.Context, token string, on bool) error {
+	hash, ok := credentialHash(token)
+	if !ok {
+		return ErrUnauthorized
+	}
+	changed, err := db.New(s.pool).SetArtworkBySessionHash(ctx, db.SetArtworkBySessionHashParams{
+		Artwork:   on,
+		TokenHash: hash,
+	})
+	if err != nil {
+		return fmt.Errorf("save artwork setting: %w", err)
 	}
 	if changed == 0 {
 		return ErrUnauthorized

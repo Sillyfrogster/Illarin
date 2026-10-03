@@ -170,20 +170,22 @@ func (s *Service) Compare(ctx context.Context, in ComparisonRequest) (Comparison
 		}
 		compared.PromptsHidden = compared.PromptsHidden || hidden
 	}
-	compared.Groups = compareVersions(earlier, later)
+	compared.Groups = compareVersions(earlier, later, s.works.Registry().FileFields(later.Type))
 	if err := AddressPictures(ctx, tx, s.works, in, compared.Groups); err != nil {
 		return Comparison{}, err
 	}
 	return compared, nil
 }
 
-func compareVersions(earlier, later work.FullVersion) []ChangeGroup {
+// compareVersions leaves out page edits, which reach readers without a version
+func compareVersions(earlier, later work.FullVersion, fileFields []string) []ChangeGroup {
 	groups := make([]ChangeGroup, 0, 8)
-	groups = AddGroup(groups, MetadataSubject, "Details", compareMetadata(earlier.Metadata, later.Metadata))
+	groups = AddGroup(groups, MetadataSubject, "Details",
+		compareMetadata(earlier.Metadata, later.Metadata, fileFields))
 	groups = append(groups, compareContent(earlier.Blocks, later.Blocks)...)
 	groups = AddGroup(groups, PresentationSubject, "Page",
 		ComparePresentation(later.Type, earlier.Blocks, later.Blocks))
-	groups = AddGroup(groups, PreservedSubject, "Preserved data",
+	groups = AddGroup(groups, PreservedSubject, "File extras",
 		ComparePreserved(earlier.Preserved, later.Preserved))
 	return groups
 }
@@ -195,22 +197,24 @@ func AddGroup(groups []ChangeGroup, subject, label string, changes []Change) []C
 	return append(groups, ChangeGroup{Subject: subject, Label: label, Changes: changes})
 }
 
-func compareMetadata(earlier, later work.VersionMetadata) []Change {
+func compareMetadata(earlier, later work.VersionMetadata, fileFields []string) []Change {
 	changes := make([]Change, 0, 8)
-	for _, field := range []struct{ name, before, after string }{
-		{"Name", earlier.Name, later.Name},
-		{"Blurb", earlier.Blurb, later.Blurb},
-		{"Tags", strings.Join(earlier.Tags, ", "), strings.Join(later.Tags, ", ")},
-		{"Adult content", nsfwFlag(earlier.IsNSFW), nsfwFlag(later.IsNSFW)},
-		{"Credited author", earlier.CreditedAuthor, later.CreditedAuthor},
-		{"Nickname", earlier.Nickname, later.Nickname},
-		{"Version", earlier.WorkVersion, later.WorkVersion},
+	for _, field := range []struct {
+		name, before, after string
+		recorded            bool
+	}{
+		{"Name", earlier.Name, later.Name, slices.Contains(fileFields, "name")},
+		{"Blurb", earlier.Blurb, later.Blurb, slices.Contains(fileFields, "blurb")},
+		{"Adult content", nsfwFlag(earlier.IsNSFW), nsfwFlag(later.IsNSFW), true},
+		{"Credited author", earlier.CreditedAuthor, later.CreditedAuthor, true},
+		{"Nickname", earlier.Nickname, later.Nickname, true},
+		{"Version", earlier.WorkVersion, later.WorkVersion, true},
 	} {
-		if change, changed := textChange(field.name, field.before, field.after); changed {
+		if change, changed := textChange(field.name, field.before, field.after); changed && field.recorded {
 			changes = append(changes, change)
 		}
 	}
-	if !sameMedia(earlier.Cover, later.Cover) {
+	if slices.Contains(fileFields, "cover") && !sameMedia(earlier.Cover, later.Cover) {
 		changes = append(changes, Change{
 			Type: mediaChangeType(earlier.Cover, later.Cover), Name: "Cover picture",
 			BeforeMedia: earlier.Cover, AfterMedia: later.Cover,

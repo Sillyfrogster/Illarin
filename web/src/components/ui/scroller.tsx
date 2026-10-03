@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 const FADE = "3.5rem";
 
 const edge =
-  "absolute z-10 grid size-9 place-items-center rounded-full bg-plane text-ink shadow-[0_4px_14px_-4px_rgb(0_0_0/0.35)] inset-ring inset-ring-rule/60 transition-[opacity,scale] duration-200 hover:scale-105 motion-reduce:transition-none";
+  "absolute z-10 grid size-control place-items-center rounded-control bg-fill text-ink transition-[opacity,background-color] duration-80 hover:bg-fill-hover motion-reduce:transition-none";
 
 /** Scroller keeps its children on one row, fading and offering a button at whichever edge hides more of them. */
 export function Scroller({
@@ -59,7 +59,7 @@ export function Scroller({
     <div className="relative">
       <div
         className={cn(
-          "overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "relative overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           className,
         )}
         ref={row}
@@ -73,7 +73,7 @@ export function Scroller({
           edge,
           buttonClassName,
           "left-0",
-          !hidden.left && "pointer-events-none scale-90 opacity-0",
+          !hidden.left && "pointer-events-none opacity-0",
         )}
         onClick={() => page(-1)}
         tabIndex={-1}
@@ -87,7 +87,7 @@ export function Scroller({
           edge,
           buttonClassName,
           "right-0",
-          !hidden.right && "pointer-events-none scale-90 opacity-0",
+          !hidden.right && "pointer-events-none opacity-0",
         )}
         onClick={() => page(1)}
         tabIndex={-1}

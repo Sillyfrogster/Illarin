@@ -4,6 +4,7 @@ import { BrowseSurface } from "@/components/browse/BrowseSurface";
 import { Shell } from "@/components/layout/Shell";
 import { Button } from "@/components/ui/button";
 import { Gate } from "@/components/ui/gate";
+import { SubtleTabs } from "@/components/ui/subtle-tabs";
 import { api } from "@/lib/api/client";
 import { fetchDeletedWorks, fetchWorks } from "@/lib/api/query";
 import type { SessionState } from "@/lib/api/shapes";
@@ -58,20 +59,18 @@ export default async function YourWork({
             <Link href="/upload">Upload</Link>
           </Button>
         </div>
-        <nav aria-label="Your work" className="mt-6 flex flex-wrap gap-2">
-          <Button asChild variant={deleted ? "ghost" : "primary"}>
-            <Link href="/work" aria-current={!deleted ? "page" : undefined}>
-              All work
-            </Link>
-          </Button>
-          <Button asChild variant={deleted ? "primary" : "ghost"}>
-            <Link
-              href="/work?deleted=true"
-              aria-current={deleted ? "page" : undefined}
-            >
-              Recently deleted
-            </Link>
-          </Button>
+        <nav aria-label="Your work" className="mt-6 -ml-1">
+          <SubtleTabs
+            chosen={deleted ? "deleted" : "all"}
+            tabs={[
+              { value: "all", label: "All work", href: "/work" },
+              {
+                value: "deleted",
+                label: "Recently deleted",
+                href: "/work?deleted=true",
+              },
+            ]}
+          />
         </nav>
       </Shell>
       {deleted ? (

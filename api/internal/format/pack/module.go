@@ -54,6 +54,7 @@ func (Module) Declaration() format.Declaration {
 		Header: []format.HeaderField{
 			format.HeaderName, format.HeaderWorkVersion, format.HeaderCreditedAuthor,
 		},
+		WritesCover: true,
 		Slots: []format.SlotDeclaration{
 			{Name: "lumiaName", Type: format.ValueString},
 			{Name: "lumiaDefinition", Type: format.ValueString},

@@ -2,8 +2,14 @@
 
 import { Plug, PlugZap } from "lucide-react";
 import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
+import { Item } from "@/components/ui/item";
 import { cn } from "@/lib/cn";
 import {
   installedHere,
@@ -34,7 +40,7 @@ export function ConnectedAppRow({
   const confirmationId = `revoke-${app.id}`;
 
   return (
-    <li className={cn("bg-plane px-5 py-5", cut && "opacity-60")}>
+    <Item className="px-5 py-5">
       <div className="flex flex-wrap items-start gap-x-5 gap-y-4">
         <span
           className={cn(
@@ -77,7 +83,7 @@ export function ConnectedAppRow({
         </div>
 
         {cut ? (
-          <span className="inline-flex min-h-11 items-center font-ui text-meta font-medium text-mute">
+          <span className="inline-flex min-h-control items-center font-ui text-meta font-medium text-mute">
             Revoked
           </span>
         ) : (
@@ -117,33 +123,41 @@ export function ConnectedAppRow({
       </div>
 
       {cut ? null : (
-        <MorphingDisclosure className="mt-3" summary="Capabilities">
-          <dl className="grid gap-4 pt-3 pb-1 sm:grid-cols-3">
-            {app.appVersion ? (
-              <DeclaredValues label="Version" values={[app.appVersion]} />
-            ) : null}
-            <DeclaredValues label="Formats" values={app.acceptedFormats} />
-            <DeclaredValues label="Capabilities" values={app.capabilities} />
-            {app.protocolVersion !== null ? (
-              <DeclaredValues
-                label="Protocol"
-                values={[`Version ${app.protocolVersion}`]}
-              />
-            ) : null}
-            <div className="sm:col-span-3">
-              <dt className="font-ui text-meta text-mute">
-                Refresh credential
-              </dt>
-              <dd className="mt-1 font-mono text-meta text-ink">
-                {app.prefix}
-              </dd>
-            </div>
-          </dl>
-          <p className="pb-1 font-ui text-meta text-mute">
-            Self-reported compatibility, not permission.
-          </p>
-        </MorphingDisclosure>
+        <Accordion className="mt-3" collapsible type="single">
+          <AccordionItem value="capabilities">
+            <AccordionTrigger>Capabilities</AccordionTrigger>
+            <AccordionContent>
+              <dl className="grid gap-4 pt-3 pb-1 sm:grid-cols-3">
+                {app.appVersion ? (
+                  <DeclaredValues label="Version" values={[app.appVersion]} />
+                ) : null}
+                <DeclaredValues label="Formats" values={app.acceptedFormats} />
+                <DeclaredValues
+                  label="Capabilities"
+                  values={app.capabilities}
+                />
+                {app.protocolVersion !== null ? (
+                  <DeclaredValues
+                    label="Protocol"
+                    values={[`Version ${app.protocolVersion}`]}
+                  />
+                ) : null}
+                <div className="sm:col-span-3">
+                  <dt className="font-ui text-meta text-mute">
+                    Refresh credential
+                  </dt>
+                  <dd className="mt-1 font-mono text-meta text-ink">
+                    {app.prefix}
+                  </dd>
+                </div>
+              </dl>
+              <p className="pb-1 font-ui text-meta text-mute">
+                Self-reported compatibility, not permission.
+              </p>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       )}
-    </li>
+    </Item>
   );
 }

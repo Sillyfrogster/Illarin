@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -91,7 +92,7 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	wantKeys := map[string]bool{
 		"id": true, "name": true, "creator": true, "type": true,
 		"isNsfw": true, "cover": true, "kind": true, "apps": true,
-		"viewCount": true, "downloadCount": true,
+		"viewCount": true, "downloadCount": true, "tags": true,
 	}
 	for key := range body.Items[0] {
 		if !wantKeys[key] {
@@ -105,6 +106,72 @@ func TestBrowseReturnsOnlyCardContentAndTheReadersEffectiveCount(t *testing.T) {
 	}
 	if cover, present := body.Items[0]["cover"]; !present || cover != nil {
 		t.Errorf("coverless card cover = %#v, present %v; want an explicit null", cover, present)
+	}
+	wantTags := []any{map[string]any{"label": "Midnight", "value": "midnight"}}
+	if !reflect.DeepEqual(body.Items[0]["tags"], wantTags) {
+		t.Errorf("card tags = %#v, want %#v", body.Items[0]["tags"], wantTags)
+	}
+}
+
+func TestTagSuggestionsMatchWhatTheReaderTypedAndHideAdultWorksWhenHidden(t *testing.T) {
+	t.Parallel()
+	router, session, works := harness.NewVerifiedUploadRouter(t, format.NewRegistry())
+	entries := []struct {
+		name  string
+		tags  []string
+		adult bool
+	}{
+		{name: "Moon Garden", tags: []string{"Fantasy", "Botanical"}},
+		{name: "Quiet Harbor", tags: []string{"fantasy", "Slow Burn"}},
+		{name: "Night Court", tags: []string{"Fan Fiction", "Gore"}, adult: true},
+	}
+	for _, entry := range entries {
+		metadata := apitest.ExampleMetadata(entry.name)
+		metadata["filename"] = entry.name + ".lumitheme"
+		metadata["tags"] = entry.tags
+		metadata["isNsfw"] = entry.adult
+		apitest.UploadAndFinish(t, router, session, works, metadata, []byte(entry.name))
+	}
+
+	cases := []struct {
+		query string
+		nsfw  string
+		want  []string
+	}{
+		{query: "fan", nsfw: "blurred", want: []string{"fantasy", "fan fiction"}},
+		{query: "FAN", nsfw: "hidden", want: []string{"fantasy"}},
+		{query: "burn", nsfw: "blurred", want: []string{"slow burn"}},
+		{query: "  ", nsfw: "blurred", want: nil},
+		{query: "zzz", nsfw: "blurred", want: nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.query+" "+tc.nsfw, func(t *testing.T) {
+			response := apitest.Send(t, router, httptest.NewRequest(
+				http.MethodGet, "/v1/tags?nsfw="+tc.nsfw+"&q="+url.QueryEscape(tc.query), nil,
+			))
+			if response.Code != http.StatusOK {
+				t.Fatalf("suggest status = %d, want 200: %s", response.Code, response.Body.String())
+			}
+			var body struct {
+				Tags []struct {
+					Value string `json:"value"`
+					Count int    `json:"count"`
+				} `json:"tags"`
+			}
+			if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+				t.Fatalf("decode suggestions: %v", err)
+			}
+			got := make([]string, len(body.Tags))
+			for i, tag := range body.Tags {
+				got[i] = tag.Value
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("suggestions for %q = %v, want %v", tc.query, got, tc.want)
+			}
+			if tc.query == "fan" && body.Tags[0].Count != 2 {
+				t.Errorf("fantasy count = %d, want 2 works", body.Tags[0].Count)
+			}
+		})
 	}
 }
 

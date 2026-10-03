@@ -365,6 +365,8 @@ func (s *Service) ImageSize(ctx context.Context, in MediaRequest) (MediaDownload
 		           join work_versions version on version.id = recorded.version_id
 		           where recorded.work_id = work.id and recorded.media_id = media.id
 		             and version.withdrawn_at is null
+		       ) and not exists (
+		           select 1 from work_public.work_media shown where shown.id = media.id
 		       ), coalesce(work.owner_id = $2, false), work.lifecycle = 'draft'
 		  from work_media media
 		  join works work on work.id = media.work_id

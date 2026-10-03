@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Input } from "@/components/ui/input";
 import {
   Sortable,
   SortableItem,
@@ -17,13 +18,7 @@ import {
 import { RailBack } from "@/components/workspace/WorkspaceRail";
 import { cn } from "@/lib/cn";
 import { chosenIndex, itemKeys, keyAfterMove } from "./collection";
-import {
-  AddAction,
-  ItemMoveActions,
-  Note,
-  RemoveAction,
-  TextField,
-} from "./fields";
+import { AddAction, ItemMoveActions, Note, RemoveAction } from "./fields";
 
 export type CollectionRow = {
   detail?: string;
@@ -186,7 +181,7 @@ function CollectionList({
             className="pointer-events-none absolute top-3.5 left-3 size-4 text-mute"
             size={16}
           />
-          <TextField
+          <Input
             className="pl-9"
             id={searchId}
             onChange={(event) => setSearch(event.target.value)}

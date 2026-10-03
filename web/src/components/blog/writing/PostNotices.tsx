@@ -6,6 +6,7 @@ import {
   Loader,
   Trash2,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Post } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
 import { readableMoment } from "@/lib/dates";
@@ -109,13 +110,7 @@ function Notice({
           </p>
         ) : null}
       </div>
-      <button
-        className="inline-flex min-h-11 shrink-0 items-center rounded-control px-3 font-ui text-meta font-medium text-ink underline-offset-4 outline-offset-3 hover:underline"
-        onClick={onOpenPublish}
-        type="button"
-      >
-        Open publishing controls
-      </button>
+      <Button onClick={onOpenPublish}>Open publishing controls</Button>
     </section>
   );
 }

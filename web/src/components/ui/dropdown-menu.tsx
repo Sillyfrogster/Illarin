@@ -3,28 +3,38 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check } from "lucide-react";
 import type { ComponentProps } from "react";
-import { cn } from "@/lib/cn";
+import { cn, popupRow, popupSurface } from "@/lib/cn";
 
-const DropdownMenu = DropdownMenuPrimitive.Root;
+/** DropdownMenu is a menu of actions or choices that never locks the page behind it. */
+function DropdownMenu(
+  props: ComponentProps<typeof DropdownMenuPrimitive.Root>,
+) {
+  return <DropdownMenuPrimitive.Root modal={false} {...props} />;
+}
+
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
+/** DropdownMenuContent is the menu's plane, flipping to whichever side of its trigger has room. */
 function DropdownMenuContent({
   className,
-  sideOffset = 10,
+  align = "start",
+  sideOffset = 6,
+  collisionPadding = 16,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
-        sideOffset={sideOffset}
-        collisionPadding={16}
+        align={align}
         className={cn(
-          "z-90 max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-[min(17rem,calc(100vw-2rem))] origin-[var(--radix-dropdown-menu-content-transform-origin)] overflow-y-auto rounded-plate bg-plane p-2 font-ui text-ink shadow-popover outline-none",
-          "inset-ring inset-ring-rule/70 motion-safe:data-[state=closed]:animate-pop-out motion-safe:data-[state=open]:animate-pop-in",
+          popupSurface,
+          "flex max-h-[min(30rem,var(--radix-dropdown-menu-content-available-height))] w-max max-w-[calc(100vw-2rem)] min-w-[max(12rem,var(--radix-dropdown-menu-trigger-width))] flex-col overflow-y-auto p-1 select-none",
           className,
         )}
+        collisionPadding={collisionPadding}
+        sideOffset={sideOffset}
         {...props}
       />
     </DropdownMenuPrimitive.Portal>
@@ -37,11 +47,7 @@ function DropdownMenuItem({
 }: ComponentProps<typeof DropdownMenuPrimitive.Item>) {
   return (
     <DropdownMenuPrimitive.Item
-      className={cn(
-        "flex min-h-11 cursor-pointer items-center gap-2.5 rounded-control px-3 text-ui outline-none select-none",
-        "text-ink focus-visible:outline-none data-[highlighted]:bg-accent-wash data-[highlighted]:text-ink data-[current=page]:text-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-45 [&_svg]:size-4 [&_svg]:shrink-0",
-        className,
-      )}
+      className={cn(popupRow, "data-[current=page]:text-accent", className)}
       {...props}
     />
   );
@@ -54,16 +60,12 @@ function DropdownMenuRadioItem({
 }: ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
   return (
     <DropdownMenuPrimitive.RadioItem
-      className={cn(
-        "flex min-h-11 cursor-pointer items-center gap-2.5 rounded-control px-3 text-ui outline-none select-none",
-        "focus-visible:outline-none data-[highlighted]:bg-accent-wash data-[highlighted]:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-45 data-[state=checked]:text-accent [&_svg]:size-4 [&_svg]:shrink-0",
-        className,
-      )}
+      className={cn(popupRow, "data-[state=checked]:text-accent", className)}
       {...props}
     >
       {children}
-      <DropdownMenuPrimitive.ItemIndicator className="ml-auto">
-        <Check />
+      <DropdownMenuPrimitive.ItemIndicator className="ml-auto flex">
+        <Check aria-hidden="true" />
       </DropdownMenuPrimitive.ItemIndicator>
     </DropdownMenuPrimitive.RadioItem>
   );
@@ -75,7 +77,7 @@ function DropdownMenuLabel({
 }: ComponentProps<typeof DropdownMenuPrimitive.Label>) {
   return (
     <DropdownMenuPrimitive.Label
-      className={cn("px-3 pt-2 pb-3", className)}
+      className={cn("px-2 pt-1.5 pb-2 text-meta text-mute", className)}
       {...props}
     />
   );
@@ -87,7 +89,7 @@ function DropdownMenuSeparator({
 }: ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
   return (
     <DropdownMenuPrimitive.Separator
-      className={cn("my-2 h-px bg-rule/70", className)}
+      className={cn("-mx-1 my-1 h-px shrink-0 bg-rule", className)}
       {...props}
     />
   );

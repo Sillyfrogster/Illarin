@@ -15,13 +15,13 @@ type SlotEntry = {
 };
 
 const SLOTS: SlotEntry[] = [
-  { keys: ["accent"], name: "Accent colour", lead: true },
+  { keys: ["accent"], name: "Accent color", lead: true },
   { keys: ["mode"], name: "Preferred mode", lead: true },
   { keys: ["radiusScale"], name: "Corner scale" },
   { keys: ["enableGlass"], name: "Glass surfaces" },
   { keys: ["fontScale", "font_scale"], name: "Type scale" },
   { keys: ["uiScale"], name: "Interface scale" },
-  { keys: ["characterAware"], name: "Character-aware colours" },
+  { keys: ["characterAware"], name: "Character-aware colors" },
   { keys: ["blur_strength"], name: "Backdrop blur" },
   { keys: ["shadow_width"], name: "Shadow width" },
   { keys: ["avatar_style"], name: "Avatar shape" },

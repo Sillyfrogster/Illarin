@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { ReadinessItem } from "@/lib/api/query";
 import { type ReadinessTarget, readinessTarget } from "@/lib/readiness";
 
@@ -31,13 +32,13 @@ export function ReadinessList({
                 {item.detail}
               </span>
               {target ? (
-                <button
-                  className="mt-1 inline-flex min-h-11 items-center text-meta font-medium text-accent outline-offset-3 hover:underline"
+                <Button
+                  className="mt-1 min-h-control text-meta"
                   onClick={() => onGo(target)}
-                  type="button"
+                  variant="link"
                 >
                   Edit required content
-                </button>
+                </Button>
               ) : null}
             </span>
           </li>

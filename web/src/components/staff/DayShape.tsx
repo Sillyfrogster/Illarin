@@ -1,4 +1,9 @@
-import { Slab, SlabHead, SlabNote, SlabTitle } from "@/components/ui/slab";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { Report } from "@/lib/api/staff";
 import { count, reportDate, seriesOf, shapeOf, weekday } from "@/lib/report";
 
@@ -26,15 +31,15 @@ export function DayShape({ report }: { report: Report }) {
   ];
 
   return (
-    <Slab>
-      <SlabHead>
-        <SlabTitle>The month's shape</SlabTitle>
-        <SlabNote>By visits</SlabNote>
-      </SlabHead>
-      <dl className="flex flex-col">
+    <Card>
+      <CardHeader>
+        <CardTitle>The month's shape</CardTitle>
+        <CardDescription>By visits</CardDescription>
+      </CardHeader>
+      <dl className="flex flex-col pt-2">
         {lines.map((line) => (
           <div
-            className="flex items-baseline justify-between gap-4 border-b border-rule/70 px-4 py-3 last:border-b-0"
+            className="flex items-baseline justify-between gap-4 border-b border-rule/70 px-5 py-3 last:border-b-0"
             key={line.label}
           >
             <dt className="font-ui text-meta text-mute">{line.label}</dt>
@@ -49,6 +54,6 @@ export function DayShape({ report }: { report: Report }) {
           </div>
         ))}
       </dl>
-    </Slab>
+    </Card>
   );
 }

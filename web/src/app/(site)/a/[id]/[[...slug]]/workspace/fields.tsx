@@ -1,34 +1,20 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
-import { Select } from "@/components/ui/select";
+import { ArrowDown, ArrowUp, FileText, Plus, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 
-const MOVE =
-  "inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink disabled:opacity-40 disabled:hover:bg-transparent";
-
-const CONTROL =
-  "w-full rounded-control border-0 bg-deep px-3 text-ui text-ink outline-offset-3 placeholder:text-mute disabled:opacity-60";
-
-export function Field({
-  children,
-  hint,
-  label,
-}: {
-  children: ReactNode;
-  hint?: string;
-  label: string;
-}) {
+/** FileMark marks a field written into the downloaded file, which waits for Publish on a published work. */
+export function FileMark() {
   return (
-    // biome-ignore lint/a11y/noLabelWithoutControl: The control is the child, and the rule cannot see through the boundary.
-    <label className="block">
-      <span className="mb-2 block text-label font-medium text-mute">
-        {label}
-        {hint ? <span className="font-normal"> · {hint}</span> : null}
+    <Tooltip content="This is written into the downloaded file, so a change reaches readers when you publish.">
+      <span className="inline-flex items-center gap-1 text-label font-medium text-mute">
+        <FileText aria-hidden="true" className="size-3.5" />
+        In the file
       </span>
-      {children}
-    </label>
+    </Tooltip>
   );
 }
 
@@ -53,113 +39,59 @@ export function FieldPair({ children }: { children: ReactNode }) {
   return <div className="grid gap-4 @sm:grid-cols-2">{children}</div>;
 }
 
-export function TextField(props: ComponentProps<"input">) {
-  return (
-    <input
-      {...props}
-      className={cn(CONTROL, "min-h-11 py-2", props.className)}
-    />
-  );
-}
-
-export function TextAreaField(props: ComponentProps<"textarea">) {
-  return (
-    <textarea
-      {...props}
-      className={cn(CONTROL, "resize-y py-3 leading-relaxed", props.className)}
-    />
-  );
-}
-
-export function ChoiceField(props: ComponentProps<"select">) {
-  return <Select {...props} className={cn("w-full", props.className)} />;
-}
-
-export function Switch({
-  checked,
-  hint,
-  label,
-  onChange,
-  pending,
-}: {
-  checked: boolean;
-  hint?: string;
-  label: string;
-  onChange: (checked: boolean) => void;
-  pending: boolean;
-}) {
-  return (
-    <label
-      className={cn(
-        "flex min-h-11 cursor-pointer items-start gap-3 rounded-control p-3 text-ui text-ink",
-        checked ? "bg-accent-wash" : "bg-deep",
-        pending && "opacity-60",
-      )}
-    >
-      <input
-        checked={checked}
-        className="mt-1 size-4 shrink-0 accent-[var(--v-action)]"
-        disabled={pending}
-        onChange={(event) => onChange(event.target.checked)}
-        type="checkbox"
-      />
-      <span className="min-w-0">
-        {label}
-        {hint ? (
-          <span className="mt-1 block text-meta text-mute">{hint}</span>
-        ) : null}
-      </span>
-    </label>
-  );
-}
-
 export function AddAction({
   children,
+  className,
   disabled,
   onClick,
 }: {
   children: ReactNode;
+  className?: string;
   disabled?: boolean;
   onClick: () => void;
 }) {
   return (
-    <button
-      className="inline-flex min-h-11 items-center gap-2 self-start rounded-control bg-deep px-4 text-meta font-medium text-ink outline-offset-3 hover:bg-rule/45 disabled:opacity-45"
+    <Button
+      className={cn("self-start", className)}
       disabled={disabled}
       onClick={onClick}
-      type="button"
     >
-      <Plus aria-hidden="true" size={16} />
+      <Plus aria-hidden="true" />
       {children}
-    </button>
+    </Button>
   );
 }
 
 export function RemoveAction({
   children,
+  className,
   disabled,
   label,
   onClick,
 }: {
   children?: ReactNode;
+  className?: string;
   disabled?: boolean;
   label?: string;
   onClick: () => void;
 }) {
-  return (
-    <button
+  const button = (
+    <Button
       aria-label={label}
-      className={cn(
-        "inline-flex min-h-11 items-center gap-2 rounded-control text-meta font-medium text-stop outline-offset-3 hover:bg-stop-wash disabled:opacity-45",
-        children ? "px-3" : "size-11 justify-center",
-      )}
+      className={cn("text-stop hover:text-stop", className)}
       disabled={disabled}
       onClick={onClick}
-      type="button"
+      size={children ? "default" : "icon"}
+      variant="ghost"
     >
-      <Trash2 aria-hidden="true" size={15} />
+      <Trash2 aria-hidden="true" />
       {children}
-    </button>
+    </Button>
+  );
+  return label && !children ? (
+    <Tooltip content={label}>{button}</Tooltip>
+  ) : (
+    button
   );
 }
 
@@ -214,24 +146,22 @@ export function ItemMoveActions({
 }) {
   return (
     <>
-      <button
-        className={MOVE}
+      <Button
         disabled={pending || moves.position === 0}
         onClick={moves.onEarlier}
-        type="button"
+        variant="ghost"
       >
-        <ArrowUp aria-hidden="true" size={14} />
+        <ArrowUp aria-hidden="true" />
         Earlier
-      </button>
-      <button
-        className={MOVE}
+      </Button>
+      <Button
         disabled={pending || moves.position === moves.total - 1}
         onClick={moves.onLater}
-        type="button"
+        variant="ghost"
       >
-        <ArrowDown aria-hidden="true" size={14} />
+        <ArrowDown aria-hidden="true" />
         Later
-      </button>
+      </Button>
     </>
   );
 }

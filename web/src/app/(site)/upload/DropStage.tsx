@@ -1,69 +1,23 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
-import { FileArchive, FileImage, FileJson } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useId, useRef } from "react";
+import { TypeMark } from "@/components/browse/TypeMark";
 import { Button } from "@/components/ui/button";
+import type { BrowseType } from "@/lib/api/query";
 import { cn } from "@/lib/cn";
+import { TYPE_LABELS } from "@/lib/work-types";
 
-const SHEETS = [
-  { Icon: FileImage, name: ".png", rest: -11, fanned: -20, shift: -44 },
-  { Icon: FileJson, name: ".json", rest: 0, fanned: 0, shift: 0 },
-  { Icon: FileArchive, name: ".charx", rest: 11, fanned: 20, shift: 44 },
-] as const;
+const READS: [BrowseType, string][] = [
+  ["character", "Image, CHARX or JSON card"],
+  ["lorebook", "JSON"],
+  ["preset", "SillyTavern or Lumiverse JSON"],
+  ["theme", "SillyTavern JSON or Lumiverse zip"],
+  ["pack", "Lumiverse JSON"],
+  ["extension", "SillyTavern or Spindle zip"],
+];
 
-/** FannedSheets draws three file sheets that spread apart while a file is held over the page. */
-export function FannedSheets({
-  open,
-  className,
-}: {
-  open: boolean;
-  className?: string;
-}) {
-  const still = useReducedMotion();
-  return (
-    <div
-      aria-hidden="true"
-      className={cn("relative h-40 w-64 shrink-0", className)}
-    >
-      {SHEETS.map(({ Icon, name, rest, fanned, shift }, index) => (
-        <motion.div
-          animate={
-            still
-              ? { rotate: rest }
-              : {
-                  rotate: open ? fanned : rest,
-                  x: open ? shift * 1.6 : shift,
-                  y: open ? (index === 1 ? -16 : -2) : index === 1 ? -6 : 4,
-                }
-          }
-          className={cn(
-            "absolute top-2 left-1/2 -ml-[3.25rem] flex h-32 w-[6.5rem] origin-bottom flex-col justify-between rounded-control p-2.5 shadow-[0_14px_30px_-16px_rgb(0_0_0/0.45)]",
-            index === 1 ? "z-10 bg-plane" : "bg-plane/90",
-          )}
-          initial={false}
-          key={name}
-          transition={{ type: "spring", stiffness: 320, damping: 22 }}
-        >
-          <Icon
-            className={cn(index === 1 ? "text-accent" : "text-mute")}
-            size={20}
-            strokeWidth={1.6}
-          />
-          <span className="grid gap-1">
-            <span className="h-1 w-4/5 rounded-full bg-rule" />
-            <span className="h-1 w-3/5 rounded-full bg-rule" />
-            <span className="mt-1 font-ui text-label font-medium text-mute">
-              {name}
-            </span>
-          </span>
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
-/** DropStage is where a file is chosen; the page above it takes a file dropped anywhere. */
+/** DropStage is where a file is chosen, with the formats Illarin reads for each type; the page around it takes a file dropped anywhere. */
 export function DropStage({
   onFile,
   over,
@@ -77,36 +31,37 @@ export function DropStage({
   return (
     <section
       aria-labelledby={`${field}-heading`}
-      className={cn(
-        "group relative flex flex-col items-center gap-8 overflow-hidden rounded-plate px-6 py-10 transition-colors duration-300 sm:flex-row sm:gap-10 sm:px-10 sm:py-12",
-        over ? "bg-accent-wash" : "bg-inset",
-      )}
+      className="flex min-w-0 flex-col gap-2 rounded-card bg-inset p-2"
     >
-      <FannedSheets
-        className="transition-transform duration-500 ease-[var(--ease-wipe)] group-hover:-translate-y-1 motion-reduce:transform-none"
-        open={over}
-      />
-      <div className="flex min-w-0 flex-col items-center text-center sm:items-start sm:text-left">
+      <div
+        className={cn(
+          "flex flex-1 flex-col items-center justify-center rounded-plate border border-dashed px-6 py-8 text-center sm:min-h-72 sm:py-10 transition-colors duration-160",
+          over ? "border-accent bg-accent-wash" : "border-rule bg-field",
+        )}
+      >
+        <span className="flex size-12 items-center justify-center rounded-plate bg-accent-wash text-accent">
+          <Upload aria-hidden="true" className="size-5" strokeWidth={1.8} />
+        </span>
         <h2
-          className="font-display text-title font-medium text-ink"
+          className="mt-5 font-display text-section font-medium text-ink"
           id={`${field}-heading`}
         >
-          {over ? "Let go to upload" : "Drop a file anywhere"}
+          Upload a file
         </h2>
-        <p className="mt-2 max-w-[40ch] text-ui text-mute">
-          A character card, lorebook, preset, theme, pack or extension zip. It
-          uploads the moment you choose it.
+        <p className="mt-1.5 max-w-[34ch] text-ui text-mute">
+          <span className="pointer-coarse:hidden">
+            Drop it anywhere on this page, or choose one.{" "}
+          </span>
+          It uploads as soon as you pick it.
         </p>
         <input
-          className="sr-only"
-          id={field}
+          hidden
           onChange={(event) => {
             const chosen = event.target.files?.[0];
             event.target.value = "";
             if (chosen) onFile(chosen);
           }}
           ref={input}
-          tabIndex={-1}
           type="file"
         />
         <Button
@@ -116,6 +71,22 @@ export function DropStage({
         >
           Choose a file
         </Button>
+      </div>
+
+      <div className="px-4 pt-3 pb-2">
+        <h3 className="text-meta font-medium text-ink">Illarin reads</h3>
+        <ul className="mt-2 grid list-none gap-x-6 p-0 sm:grid-cols-2">
+          {READS.map(([type, formats]) => (
+            <li
+              className="flex min-h-9 items-center gap-2.5 border-b border-rule/60 text-meta last:border-b-0 sm:nth-last-2:border-b-0"
+              key={type}
+            >
+              <TypeMark className="size-4 shrink-0 text-mute" type={type} />
+              <span className="text-ink">{TYPE_LABELS[type]}</span>
+              <span className="ml-auto truncate text-mute">{formats}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

@@ -9,13 +9,13 @@ import {
 import { FilePlus2, FileText, Layers, Package, Rows3 } from "lucide-react";
 import { type DragEvent, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RollingNumber } from "@/components/ui/rolling-number";
+import { Textarea } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
+import { timing } from "@/lib/timing";
 import { PictureTile, SectionRow } from "./ShelfPiece";
 import { type ShownImport, useShelf } from "./shelf";
 import { importCounts, importLabel } from "./shelf-places";
 
-const SPRING = { type: "spring", stiffness: 380, damping: 34 } as const;
 const MAX_MARKDOWN_BYTES = 1 << 20;
 const MARKDOWN_FILE = /\.(md|markdown|txt)$/i;
 const STACKED = 3;
@@ -135,7 +135,7 @@ function AddMarkdown({
       void read(event.dataTransfer.files[0]);
     },
   };
-  const morph = still ? { duration: 0 } : SPRING;
+  const morph = still ? { duration: 0 } : timing.quick;
 
   return (
     <div className="flex flex-col gap-3">
@@ -156,13 +156,13 @@ function AddMarkdown({
               animate={{ opacity: 1 }}
               className="flex flex-col gap-3"
               initial={{ opacity: 0 }}
-              transition={{ delay: still ? 0 : 0.08, duration: 0.2 }}
+              transition={{ ...timing.quick, delay: still ? 0 : 0.08 }}
             >
               <label className="sr-only" htmlFor={field}>
                 Markdown
               </label>
-              <textarea
-                className="min-h-48 w-full resize-y rounded-control bg-plane p-4 font-mono text-meta leading-relaxed text-ink outline-offset-2 placeholder:text-mute"
+              <Textarea
+                className="min-h-48 p-4 font-mono text-meta"
                 disabled={busy}
                 id={field}
                 onChange={(event) => {
@@ -324,7 +324,7 @@ function Progress({ held }: { held: ShownImport }) {
               animate={{ scaleX: piece.id in held.placed ? 1 : 0 }}
               className="absolute inset-0 origin-left rounded-full bg-action"
               initial={false}
-              transition={{ type: "spring", stiffness: 200, damping: 26 }}
+              transition={timing.settle}
             />
             {shelf.busy === piece.id || shelf.busy === held.id ? (
               <span className="absolute inset-0 animate-pulse bg-accent/60 motion-reduce:animate-none" />
@@ -333,10 +333,8 @@ function Progress({ held }: { held: ShownImport }) {
         ))}
       </div>
       <p className="text-label text-mute">
-        <span className="font-medium text-ink">
-          <RollingNumber value={done} />
-        </span>{" "}
-        of {held.pieces.length} placed
+        <span className="font-medium text-ink tabular-nums">{done}</span> of{" "}
+        {held.pieces.length} placed
       </p>
     </motion.div>
   );
@@ -365,7 +363,7 @@ function ImportCard({ held }: { held: ShownImport }) {
       <motion.header
         className="flex flex-col gap-4"
         layoutId={still ? undefined : `import-${held.id}`}
-        transition={SPRING}
+        transition={timing.quick}
       >
         <ImportHead held={held} />
         <Progress held={held} />
@@ -446,9 +444,7 @@ function LetGoOfAll({ held }: { held: ShownImport }) {
     <AnimatePresence initial={false} mode="popLayout">
       {asking ? (
         <motion.div className="flex items-center gap-1" key="ask" {...swap}>
-          <span className="pr-1 pl-2 text-meta text-ink">
-            Let go of {count}?
-          </span>
+          <span className="pr-1 pl-2 text-meta text-ink">Delete {count}?</span>
           <Button
             disabled={shelf.busy !== null}
             loading={shelf.busy === held.id}
@@ -456,7 +452,7 @@ function LetGoOfAll({ held }: { held: ShownImport }) {
             size="compact"
             variant="stop"
           >
-            Let go
+            Delete
           </Button>
           <Button
             onClick={() => setAsking(false)}
@@ -475,7 +471,7 @@ function LetGoOfAll({ held }: { held: ShownImport }) {
             size="compact"
             variant="ghost"
           >
-            Let go of all
+            Delete all
           </Button>
         </motion.div>
       )}
@@ -525,7 +521,7 @@ function OlderImports({ imports }: { imports: ShownImport[] }) {
           key={held.id}
           layoutId={still ? undefined : `import-${held.id}`}
           style={{ zIndex: STACKED - index, originY: 1 }}
-          transition={SPRING}
+          transition={timing.quick}
         >
           {index === 0 ? (
             <>

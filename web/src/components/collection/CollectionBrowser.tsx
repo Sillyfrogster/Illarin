@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowDownUp, ArrowLeft, ChevronDown, Search } from "lucide-react";
 import {
   type KeyboardEvent,
   type ReactNode,
@@ -11,18 +11,38 @@ import {
   useRef,
   useState,
 } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/cn";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { Switch } from "@/components/ui/switch";
+import { cn, focusRing } from "@/lib/cn";
 import {
   type CollectionItem,
   type CollectionOrder,
   viewCollection,
 } from "@/lib/collection";
+
+const ORDERS: Record<CollectionOrder, string> = {
+  given: "Original order",
+  name: "By name, A to Z",
+};
 
 type Row =
   | { kind: "heading"; group: string; key: string }
@@ -55,7 +75,7 @@ export function CollectionBrowser({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
         aria-describedby={undefined}
-        className="w-full"
+        className="max-w-[1120px]"
         onCloseAutoFocus={(event) => {
           if (!returnTo) return;
           event.preventDefault();
@@ -168,14 +188,15 @@ function Browser({
             pane === "index" && "hidden",
           )}
         >
-          <button
-            className="mb-4 inline-flex min-h-11 items-center gap-2 font-ui text-meta text-mute outline-offset-3 hover:text-ink sm:hidden"
+          <Button
+            className="-ml-3 mb-4 sm:hidden"
             onClick={() => setPane("index")}
-            type="button"
+            size="compact"
+            variant="ghost"
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
+            <ArrowLeft aria-hidden="true" />
             Back to the list
-          </button>
+          </Button>
           {current ? (
             <Panel key={current.key} labelledBy={`${names}-${current.key}`}>
               <div
@@ -239,7 +260,6 @@ function Controls({
   total: number;
 }) {
   const searchField = useId();
-  const orderField = useId();
   const box = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -249,13 +269,14 @@ function Controls({
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
-      <div className="flex min-w-0 flex-[1_1_240px] items-center gap-2.5 rounded-control bg-deep px-3 text-mute sm:flex-[0_1_340px]">
-        <Search aria-hidden="true" size={16} />
-        <label className="sr-only" htmlFor={searchField}>
-          Search the {noun}
-        </label>
-        <input
-          className="min-h-11 min-w-0 flex-auto border-0 bg-transparent font-ui text-ui text-ink outline-offset-3"
+      <label className="sr-only" htmlFor={searchField}>
+        Search the {noun}
+      </label>
+      <InputGroup className="flex-[1_1_240px] sm:flex-[0_1_340px]">
+        <InputGroupAddon>
+          <Search aria-hidden="true" />
+        </InputGroupAddon>
+        <InputGroupInput
           id={searchField}
           onChange={(event) => onSearch(event.target.value)}
           placeholder={`Search ${noun}`}
@@ -263,31 +284,35 @@ function Controls({
           type="search"
           value={search}
         />
-      </div>
-      <div className="flex items-center gap-2">
-        <label className="font-ui text-label text-mute" htmlFor={orderField}>
-          Order
-        </label>
-        <select
-          className="min-h-11 rounded-control bg-deep px-3 font-ui text-meta text-ink outline-offset-3"
-          id={orderField}
-          onChange={(event) => onOrder(event.target.value as CollectionOrder)}
-          value={order}
-        >
-          <option value="given">Original order</option>
-          <option value="name">By name, A to Z</option>
-        </select>
-      </div>
+      </InputGroup>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost">
+            <ArrowDownUp aria-hidden="true" />
+            {ORDERS[order]}
+            <ChevronDown aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Order</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            onValueChange={(next) => onOrder(next as CollectionOrder)}
+            value={order}
+          >
+            {(Object.keys(ORDERS) as CollectionOrder[]).map((one) => (
+              <DropdownMenuRadioItem key={one} value={one}>
+                {ORDERS[one]}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
       {off > 0 ? (
-        <label className="inline-flex min-h-11 items-center gap-2 font-ui text-label text-mute">
-          <input
-            checked={includeOff}
-            className="size-4 accent-[var(--v-action)]"
-            onChange={(event) => onIncludeOff(event.target.checked)}
-            type="checkbox"
-          />
-          Include the {off} that {off === 1 ? "is" : "are"} off
-        </label>
+        <Switch
+          checked={includeOff}
+          label={`Include the ${off} that ${off === 1 ? "is" : "are"} off`}
+          onCheckedChange={onIncludeOff}
+        />
       ) : null}
       {shown === total ? null : (
         <p className="font-ui text-label text-mute tabular-nums sm:ml-auto">
@@ -371,7 +396,7 @@ function Index({
           if (row.kind === "heading") {
             return (
               <div
-                className="flex items-end px-3 pb-1.5 font-ui text-label font-semibold tracking-[0.08em] text-mute uppercase"
+                className="flex items-end px-3 pb-1.5 font-ui text-meta text-mute"
                 data-index={slot.index}
                 key={row.key}
                 ref={virtual.measureElement}
@@ -393,7 +418,8 @@ function Index({
               <button
                 aria-selected={selected}
                 className={cn(
-                  "flex w-full cursor-pointer items-baseline gap-2.5 rounded-control px-3 py-2.5 text-left outline-offset-[-1px] hover:bg-deep/60 aria-selected:bg-deep aria-selected:shadow-[inset_2px_0_0_var(--v-action)]",
+                  "group/row flex min-h-control w-full cursor-pointer items-baseline gap-2.5 rounded-control px-3 py-2.5 text-left transition-colors duration-80 hover:bg-fill-hover aria-selected:bg-accent-wash",
+                  focusRing,
                   item.off && "opacity-60",
                 )}
                 data-row={item.key}
@@ -406,7 +432,7 @@ function Index({
                 type="button"
               >
                 <span
-                  className="min-w-0 flex-1 truncate font-ui text-ui font-medium text-ink"
+                  className="min-w-0 flex-1 truncate font-ui text-ui font-medium text-ink group-aria-selected/row:text-accent"
                   title={item.name}
                 >
                   {item.name}

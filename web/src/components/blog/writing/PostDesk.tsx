@@ -3,7 +3,8 @@
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Shell } from "@/components/layout/Shell";
-import { Trouble } from "@/components/ui/field";
+import { RegisterRail } from "@/components/register/RegisterRail";
+import { Alert } from "@/components/ui/alert";
 import { Gate } from "@/components/ui/gate";
 import { readWorkspace } from "@/lib/api/blog";
 import { readDeletedPosts, readPosts } from "@/lib/api/posts";
@@ -14,9 +15,9 @@ import {
   nothingThere,
   STANDINGS,
   type Standing,
+  standingName,
 } from "@/lib/post-standing";
 import { PostRow } from "./PostRow";
-import { StandingRail } from "./StandingRail";
 import { StartPost } from "./StartPost";
 
 export function PostDesk() {
@@ -62,17 +63,15 @@ export function PostDesk() {
   );
 
   return (
-    <Shell className="pt-10 pb-chapter lg:pt-14">
-      <header className="max-w-[52ch]">
-        <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
-          Your posts
-        </h1>
-        <p className="mt-4 font-prose text-lede text-mute">
+    <Shell className="pt-10 pb-chapter">
+      <header>
+        <h1 className="font-display text-title font-medium">Your posts</h1>
+        <p className="mt-2 font-ui text-ui text-mute">
           Everything you have written for the Illarin blog.
         </p>
       </header>
 
-      <div className="mt-10">
+      <div className="mt-6">
         <Inside
           account={account}
           counts={counts}
@@ -157,25 +156,30 @@ function Inside({
   return (
     <div className="min-w-0">
       <section aria-labelledby="written" className="min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2
-            className="font-display text-section font-medium tracking-tight text-ink"
-            id="written"
-          >
-            Posts
-          </h2>
+        <h2 className="sr-only" id="written">
+          Posts
+        </h2>
+        <div className="flex flex-wrap-reverse items-center justify-between gap-4">
+          <div className="min-w-0">
+            <RegisterRail
+              cells={STANDINGS.map((one) => ({
+                id: one,
+                name: standingName(one),
+                count: counts[one],
+              }))}
+              chosen={standing}
+              label="Which posts"
+              onChoose={onChoose}
+            />
+          </div>
           <StartPost onFailure={onFailure} workspace={workspace} />
         </div>
 
         {failure ? (
           <div className="mt-5">
-            <Trouble>{failure}</Trouble>
+            <Alert tone="stop">{failure}</Alert>
           </div>
         ) : null}
-
-        <div className="mt-5">
-          <StandingRail chosen={standing} counts={counts} onChoose={onChoose} />
-        </div>
 
         {standing === "deleted" ? (
           <p className="mt-5 text-ui text-mute">

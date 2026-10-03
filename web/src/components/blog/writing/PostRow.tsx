@@ -39,7 +39,7 @@ export function PostRow({
   const going = goingLiveAt(post);
 
   return (
-    <li className="group relative min-w-0 rounded-plate px-4 py-5 transition-colors duration-200 not-first:border-t not-first:border-rule/45 hover:border-transparent hover:bg-deep motion-reduce:transition-none sm:px-5">
+    <li className="group relative min-w-0 rounded-plate px-4 py-5 transition-colors duration-160 not-first:border-t not-first:border-rule/45 hover:border-transparent hover:bg-deep motion-reduce:transition-none sm:px-5">
       <div className="float-right relative z-2 ml-3">
         <PostOwnerMenu post={post} onChanged={onChanged} />
       </div>
@@ -83,7 +83,7 @@ export function PostRow({
           {post.deletion ? <Deadline until={post.deletion.until} /> : null}
           {state === "published" ? (
             <Link
-              className="inline-flex min-h-11 items-center font-ui text-label font-medium text-accent underline-offset-4 outline-offset-3 hover:underline"
+              className="inline-flex min-h-control items-center font-ui text-label font-medium text-accent underline-offset-4 outline-offset-3 hover:underline"
               href={postPath(post.slug)}
             >
               Read it on the blog

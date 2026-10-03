@@ -1,10 +1,10 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { DefaultCover } from "@/components/media/DefaultCover";
+import { Button } from "@/components/ui/button";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import type { BrowseType, NsfwPreference, WorkImage } from "@/lib/api/query";
 import { useAuth } from "@/lib/auth";
@@ -14,16 +14,16 @@ import {
   readWorkReveal,
   writeWorkReveal,
 } from "@/lib/nsfw-preference";
-import { CoverControl } from "./CoverControl";
+import { CoverDrop } from "./workspace/Identity";
 
 interface WorkMediaProps {
   id: string;
   media: WorkImage[];
   type: BrowseType;
-  typeLabel: string;
   name: string;
   isNsfw: boolean | null;
   preference: NsfwPreference;
+  coverInFile: boolean;
   writing: boolean;
 }
 
@@ -42,14 +42,13 @@ export function WorkMedia({
   id,
   media,
   type,
-  typeLabel,
   name,
   isNsfw,
   preference,
+  coverInFile,
   writing,
 }: WorkMediaProps) {
   const { account } = useAuth();
-  const reduced = useReducedMotion();
   const presentationMedia = coverMedia(media);
   const recorded = presentationMedia.findIndex((image) => image.isCover);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -85,39 +84,35 @@ export function WorkMedia({
     : "";
 
   return (
-    <div className="mx-auto w-full max-w-[350px]">
-      <motion.div
-        className="relative"
-        initial={false}
-        transition={{ type: "spring", stiffness: 180, damping: 22 }}
-        whileHover={reduced || useFallback ? undefined : { rotate: -1, y: -5 }}
-      >
+    <div className="w-full">
+      <div className="relative">
         {useFallback ? (
-          <div className="relative aspect-3/4 w-full overflow-hidden rounded-plate shadow-cover">
+          <div className="relative aspect-3/4 w-full overflow-hidden rounded-art">
             <DefaultCover type={type} />
           </div>
         ) : (
           <ImageZoom
             alt={name}
-            className="rounded-plate"
+            className="rounded-art"
             detailSrc={source}
             revealOnHover
           >
             <Image
               alt={name}
-              className="h-auto w-full rounded-plate bg-media shadow-cover"
+              className="h-auto w-full rounded-art bg-media"
               height={shown.height}
               onError={() => setFailed(true)}
               priority
-              sizes="(max-width: 900px) 88vw, 350px"
+              sizes="(max-width: 767px) 88vw, 520px"
               src={source}
               unoptimized
               width={shown.width}
             />
           </ImageZoom>
         )}
+        {writing ? <CoverDrop hasCover={!useFallback} /> : null}
         {isNsfw === true ? (
-          <p className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-control bg-media/85 px-2.5 py-1 text-label font-medium tracking-wide text-on-media uppercase">
+          <p className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-control bg-media/85 px-2.5 py-1 text-label font-medium text-on-media">
             {showClear ? (
               <Eye aria-hidden="true" className="size-3.5" />
             ) : (
@@ -127,29 +122,28 @@ export function WorkMedia({
           </p>
         ) : null}
         {canReveal && !revealed ? (
-          <button
-            className="absolute right-4 bottom-4 inline-flex min-h-11 items-center gap-2 rounded-control bg-field px-4 text-meta font-medium text-ink shadow-cover outline-offset-3"
+          <Button
+            className="absolute right-4 bottom-4 bg-field shadow-cover"
             onClick={() => {
               setRevealed(true);
               writeWorkReveal(id);
             }}
-            type="button"
           >
-            <Eye aria-hidden="true" className="size-4" />
+            <Eye aria-hidden="true" />
             Show images
-          </button>
+          </Button>
         ) : null}
-      </motion.div>
+      </div>
 
       {presentationMedia.length > 1 ? (
-        <ul className="mt-3 grid list-none grid-cols-5 gap-2">
+        <ul className="mt-2 grid list-none grid-cols-5 gap-1.5">
           {presentationMedia.map((image, index) => (
             <li key={image.id}>
               <button
                 aria-current={index === here}
-                aria-label={`Picture ${index + 1} of ${presentationMedia.length}`}
+                aria-label={`Image ${index + 1} of ${presentationMedia.length}`}
                 className={cn(
-                  "block aspect-square w-full overflow-hidden rounded-control bg-media outline-offset-3 transition-transform duration-200 motion-reduce:transition-none",
+                  "block aspect-square w-full overflow-hidden rounded-chip bg-media outline-offset-3 transition-transform duration-160 motion-reduce:transition-none",
                   index === here
                     ? "inset-ring-2 inset-ring-accent"
                     : "opacity-70 hover:-translate-y-0.5 hover:opacity-100",
@@ -177,12 +171,10 @@ export function WorkMedia({
         </ul>
       ) : null}
 
-      {writing ? (
-        <CoverControl
-          workId={id}
-          hasCover={presentationMedia.length > 0}
-          typeLabel={typeLabel}
-        />
+      {writing && coverInFile ? (
+        <p className="mt-2 text-label text-mute">
+          The cover is in the file, so a new one waits for Publish.
+        </p>
       ) : null}
     </div>
   );

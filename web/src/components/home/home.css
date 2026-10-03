@@ -1,0 +1,81 @@
+/* The headline's lines rise out of their own masks once, as the page opens. */
+.home-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+}
+
+.home-line > span {
+  display: block;
+  animation: home-rise 1s var(--ease-wipe) both;
+  animation-delay: calc(var(--line, 0) * 90ms + 80ms);
+}
+
+@keyframes home-rise {
+  from {
+    transform: translateY(105%);
+  }
+}
+
+.home-after {
+  animation: home-fade 0.9s var(--ease-wipe) 0.45s both;
+}
+
+@keyframes home-fade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+/* The cover rail runs two rows in opposite directions and stops while the pointer is on it. */
+.home-rail {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
+}
+
+.home-track {
+  display: flex;
+  width: max-content;
+  gap: 1rem;
+  animation: home-run var(--run, 90s) linear infinite;
+}
+
+.home-track[data-reverse] {
+  animation-direction: reverse;
+}
+
+.home-rail:hover .home-track {
+  animation-play-state: paused;
+}
+
+@keyframes home-run {
+  to {
+    transform: translateX(calc(-50% - 0.5rem));
+  }
+}
+
+/* The hero's picture settles from a slight zoom as the page opens. */
+.home-settle {
+  animation: home-settle 1.8s var(--ease-wipe) both;
+}
+
+@keyframes home-settle {
+  from {
+    scale: 1.06;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-line > span,
+  .home-after,
+  .home-settle,
+  .home-track {
+    animation: none;
+  }
+}

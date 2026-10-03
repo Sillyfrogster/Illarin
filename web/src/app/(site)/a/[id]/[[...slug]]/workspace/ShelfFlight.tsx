@@ -48,9 +48,9 @@ export function ShelfFlight({
       key={`${to.left}:${to.top}:${flight.title}`}
       onAnimationComplete={onLanded}
       transition={{
-        duration: 0.42,
+        duration: 0.24,
         ease: [0.22, 1, 0.36, 1],
-        opacity: { duration: 0.42, times: [0, 0.75, 1] },
+        opacity: { duration: 0.24, times: [0, 0.75, 1] },
       }}
     >
       <p className="font-display text-ui font-medium text-ink wrap-anywhere">

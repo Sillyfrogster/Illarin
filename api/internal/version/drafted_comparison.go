@@ -31,7 +31,7 @@ func (s *Service) CompareDraftedChanges(ctx context.Context, ownerID, workID uui
 	if err != nil {
 		return nil, err
 	}
-	groups := compareVersions(earlier, later)
+	groups := compareVersions(earlier, later, s.works.Registry().FileFields(later.Type))
 	if !sameMedia(earlier.OriginalFileID, later.OriginalFileID) {
 		groups = AddGroup(groups, "original_file", "Uploaded file", []Change{{Type: ChangeEdited, Name: "Original file"}})
 	}

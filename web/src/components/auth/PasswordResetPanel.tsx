@@ -4,15 +4,16 @@ import { Check, KeyRound, Mail } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { type FormEvent, type ReactNode, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, TextInput, Trouble } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { readRefusal, refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 
 type Result = { ok: true } | { ok: false; error: string };
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 async function post(
   endpoint: string,
@@ -89,7 +90,7 @@ export function PasswordResetRequestPanel() {
     return (
       <Landing
         action={
-          <Button asChild size="large" variant="primary">
+          <Button asChild variant="primary">
             <Link href="/sign-in">Return to sign in</Link>
           </Button>
         }
@@ -112,7 +113,7 @@ export function PasswordResetRequestPanel() {
         htmlFor="reset-email"
         label="Verified email address"
       >
-        <TextInput
+        <Input
           aria-describedby="reset-email-hint"
           autoCapitalize="none"
           autoComplete="email"
@@ -124,10 +125,10 @@ export function PasswordResetRequestPanel() {
         />
       </Field>
 
-      {trouble ? <Trouble>{trouble}</Trouble> : null}
+      {trouble ? <Alert tone="stop">{trouble}</Alert> : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button loading={pending} size="large" type="submit" variant="primary">
+        <Button loading={pending} type="submit" variant="primary">
           {pending ? "Sending a reset link" : "Send reset link"}
         </Button>
         <Button asChild variant="ghost">
@@ -165,7 +166,7 @@ export function PasswordResetCompletionPanel() {
     return (
       <Landing
         action={
-          <Button asChild size="large" variant="primary">
+          <Button asChild variant="primary">
             <Link href="/sign-in">Sign in with email</Link>
           </Button>
         }
@@ -185,7 +186,7 @@ export function PasswordResetCompletionPanel() {
     return (
       <Landing
         action={
-          <Button asChild size="large" variant="primary">
+          <Button asChild variant="primary">
             <Link href="/forgot-password">Request another link</Link>
           </Button>
         }
@@ -207,7 +208,7 @@ export function PasswordResetCompletionPanel() {
         htmlFor="reset-password"
         label="New password"
       >
-        <TextInput
+        <Input
           aria-describedby="reset-password-hint"
           autoComplete="new-password"
           id="reset-password"
@@ -217,9 +218,9 @@ export function PasswordResetCompletionPanel() {
         />
       </Field>
 
-      {trouble ? <Trouble>{trouble}</Trouble> : null}
+      {trouble ? <Alert tone="stop">{trouble}</Alert> : null}
 
-      <Button loading={pending} size="large" type="submit" variant="primary">
+      <Button loading={pending} type="submit" variant="primary">
         {pending ? "Setting your password" : "Set password"}
       </Button>
     </form>

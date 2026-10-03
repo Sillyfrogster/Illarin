@@ -116,9 +116,6 @@ func TestCreatorEditsImportedTagsOnDraftAndPublishedWork(t *testing.T) {
 	}
 	save(`["New tag"]`)
 	checkTags("/v1/works/"+id+"?draftedChanges=true", "New tag")
-	if published := apitest.PublishWorkVersion(t, r, session, id, `{"summary":"Updated tags"}`); published.Code != http.StatusOK {
-		t.Fatalf("publish edited tags: %d %s", published.Code, published.Body.String())
-	}
 	checkTags("/v1/works/"+id, "New tag")
 	for query, found := range map[string]bool{"New tag": true, "archivist": false} {
 		response := apitest.Send(t, r, httptest.NewRequest(http.MethodGet,

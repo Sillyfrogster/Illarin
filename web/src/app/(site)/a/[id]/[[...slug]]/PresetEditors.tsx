@@ -1,8 +1,17 @@
 "use client";
 
-import { X } from "lucide-react";
 import { useState } from "react";
-import { MorphingDisclosure } from "@/components/ui/morphing-disclosure";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type {
   PresetSetting,
   PresetVariable,
@@ -24,15 +33,10 @@ import {
 } from "./workspace/collection";
 import {
   AddAction,
-  ChoiceField,
-  Field,
   FieldGroup,
   FieldPair,
   Note,
   RemoveAction,
-  Switch,
-  TextAreaField,
-  TextField,
 } from "./workspace/fields";
 
 const PROMPT_ROLES: {
@@ -56,6 +60,13 @@ const PLACEMENTS: {
   { value: "pre_history", label: "Before the conversation" },
   { value: "in_history", label: "Inside the conversation" },
   { value: "post_history", label: "After the conversation" },
+];
+
+const SETTING_TYPES: { value: PresetSetting["type"]; label: string }[] = [
+  { value: "number", label: "A number" },
+  { value: "boolean", label: "Yes or no" },
+  { value: "text", label: "Text" },
+  { value: "string_list", label: "A list of text" },
 ];
 
 const WIDGETS: { value: PresetVariable["widget"]; label: string }[] = [
@@ -123,7 +134,7 @@ export function PromptListEditor({
         />
       }
       chosen={chosen}
-      emptyMessage="This preset has no prompt fragments yet."
+      emptyMessage="No prompt fragments yet"
       noun="fragment"
       onAdd={() =>
         onChange({
@@ -209,72 +220,69 @@ function GroupEditor({
   }
 
   return (
-    <MorphingDisclosure
-      summary={
-        groups.length === 0
-          ? "No headings"
-          : `${groups.length} ${groups.length === 1 ? "heading" : "headings"}`
-      }
-    >
-      <div className="flex flex-col gap-3 pt-3">
-        {groups.length === 0 ? (
-          <Note>
-            Fragments run in one list until you add a heading to group them
-            under.
-          </Note>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {groups.map((group, index) => (
-              <li className="flex items-center gap-1" key={group.id ?? index}>
-                <TextField
-                  aria-label={`Heading ${index + 1}`}
-                  disabled={pending}
-                  onChange={(event) =>
-                    onChange({
-                      fragments,
-                      groups: replaceAt(groups, index, {
-                        name: event.target.value,
-                      }),
-                    })
-                  }
-                  value={group.name}
-                />
-                <button
-                  aria-label={`Remove the heading ${group.name}`}
-                  className="grid size-11 shrink-0 place-items-center rounded-control text-mute outline-offset-3 hover:bg-stop-wash hover:text-stop disabled:opacity-45"
-                  disabled={pending}
-                  onClick={() => removeGroup(index)}
-                  type="button"
-                >
-                  <X aria-hidden="true" size={16} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
-          <TextField
-            aria-label="A new heading"
-            className="min-w-40 flex-1"
-            disabled={pending}
-            onChange={(event) => setAdding(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              event.preventDefault();
-              addGroup();
-            }}
-            placeholder="A new heading"
-            value={adding}
-          />
-          <AddAction
-            disabled={pending || adding.trim() === ""}
-            onClick={addGroup}
-          >
-            Add heading
-          </AddAction>
-        </div>
-      </div>
-    </MorphingDisclosure>
+    <Accordion collapsible type="single">
+      <AccordionItem value="headings">
+        <AccordionTrigger>
+          {groups.length === 0
+            ? "No headings"
+            : `${groups.length} ${groups.length === 1 ? "heading" : "headings"}`}
+        </AccordionTrigger>
+        <AccordionContent className="flex flex-col gap-3 pt-3">
+          {groups.length === 0 ? (
+            <Note>
+              Fragments run in one list until you add a heading to group them
+              under.
+            </Note>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {groups.map((group, index) => (
+                <li className="flex items-center gap-1" key={group.id ?? index}>
+                  <Input
+                    aria-label={`Heading ${index + 1}`}
+                    disabled={pending}
+                    onChange={(event) =>
+                      onChange({
+                        fragments,
+                        groups: replaceAt(groups, index, {
+                          name: event.target.value,
+                        }),
+                      })
+                    }
+                    value={group.name}
+                  />
+                  <RemoveAction
+                    disabled={pending}
+                    label={`Remove the heading ${group.name}`}
+                    onClick={() => removeGroup(index)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              aria-label="A new heading"
+              className="min-w-40 flex-1"
+              disabled={pending}
+              onChange={(event) => setAdding(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                addGroup();
+              }}
+              placeholder="A new heading"
+              value={adding}
+            />
+            <AddAction
+              disabled={pending || adding.trim() === ""}
+              onClick={addGroup}
+            >
+              Add heading
+            </AddAction>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
@@ -293,7 +301,7 @@ function FragmentFields({
   return (
     <div className="flex flex-col gap-6">
       <Field hint="optional, and never sent to a model" label="Name">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) =>
             onChange({ name: event.target.value || undefined })
@@ -307,8 +315,8 @@ function FragmentFields({
           checked={fragment.private ?? false}
           hint="Its text is sent only to an allowed connected app."
           label="Private prompt"
-          onChange={(isPrivate) => onChange({ private: isPrivate })}
-          pending={pending}
+          onCheckedChange={(isPrivate) => onChange({ private: isPrivate })}
+          disabled={pending}
         />
       ) : null}
 
@@ -320,7 +328,7 @@ function FragmentFields({
         </Note>
       ) : (
         <Field label="Fragment text">
-          <TextAreaField
+          <Textarea
             disabled={pending}
             onChange={(event) => onChange({ text: event.target.value })}
             rows={12}
@@ -331,75 +339,50 @@ function FragmentFields({
 
       <FieldGroup legend="How it is sent">
         <Field label="Message role">
-          <ChoiceField
+          <Select
             disabled={pending}
-            onChange={(event) =>
-              onChange({
-                role:
-                  event.target.value === ""
-                    ? undefined
-                    : (event.target.value as PromptFragment["role"]),
-              })
-            }
+            onValueChange={(role) => onChange({ role: role || undefined })}
+            options={[{ value: "", label: "Use app default" }, ...PROMPT_ROLES]}
             value={fragment.role ?? ""}
-          >
-            <option value="">Use app default</option>
-            {PROMPT_ROLES.map((role) => (
-              <option key={role.value} value={role.value}>
-                {role.label}
-              </option>
-            ))}
-          </ChoiceField>
+          />
         </Field>
         <Field label="Heading">
-          <ChoiceField
+          <Select
             disabled={pending}
-            onChange={(event) =>
-              onChange({ groupId: event.target.value || undefined })
+            onValueChange={(groupId) =>
+              onChange({ groupId: groupId || undefined })
             }
+            options={[
+              { value: "", label: "No heading" },
+              ...groups.flatMap((group) =>
+                group.id ? [{ value: group.id, label: group.name }] : [],
+              ),
+            ]}
             value={fragment.groupId ?? ""}
-          >
-            <option value="">No heading</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </ChoiceField>
+          />
         </Field>
         <Switch
           checked={fragment.enabled}
           hint="A switched-off fragment stays in the preset and reaches no model."
           label="Enabled"
-          onChange={(enabled) => onChange({ enabled })}
-          pending={pending}
+          onCheckedChange={(enabled) => onChange({ enabled })}
+          disabled={pending}
         />
       </FieldGroup>
 
       <FieldGroup legend="Placement">
         <Field label="Placement">
-          <ChoiceField
+          <Select
             disabled={pending}
-            onChange={(event) =>
-              onChange({
-                placement:
-                  event.target.value === ""
-                    ? undefined
-                    : (event.target.value as PromptFragment["placement"]),
-              })
+            onValueChange={(placement) =>
+              onChange({ placement: placement || undefined })
             }
+            options={[{ value: "", label: "Use app default" }, ...PLACEMENTS]}
             value={fragment.placement ?? ""}
-          >
-            <option value="">Use app default</option>
-            {PLACEMENTS.map((placement) => (
-              <option key={placement.value} value={placement.value}>
-                {placement.label}
-              </option>
-            ))}
-          </ChoiceField>
+          />
         </Field>
         <Field hint="messages back from the most recent" label="Depth">
-          <TextField
+          <Input
             disabled={pending}
             onChange={(event) =>
               onChange({
@@ -491,18 +474,17 @@ function SettingRow({
         value={setting.value}
       />
       <div className="flex flex-wrap items-center gap-1">
-        <button
-          className="inline-flex min-h-11 items-center rounded-control px-3 text-meta font-medium text-mute outline-offset-3 hover:bg-deep hover:text-ink disabled:opacity-45"
+        <Button
           disabled={pending}
           onClick={() =>
             onChange({
               value: supplied ? undefined : emptyValue(setting.type),
             })
           }
-          type="button"
+          variant="ghost"
         >
           {supplied ? "Leave it out" : "Fill it in"}
-        </button>
+        </Button>
         <RemoveAction
           disabled={pending}
           label={`Remove ${setting.name}`}
@@ -524,7 +506,7 @@ function NewSetting({
   const [type, setType] = useState<PresetSetting["type"]>("number");
   return (
     <div className="flex flex-wrap items-center gap-2 pt-2">
-      <TextField
+      <Input
         aria-label="A new setting's name"
         className="max-w-64 flex-1"
         disabled={pending}
@@ -532,20 +514,14 @@ function NewSetting({
         placeholder="The name your app reads"
         value={name}
       />
-      <ChoiceField
+      <Select
         aria-label="What the new setting holds"
         className="max-w-44 flex-1"
         disabled={pending}
-        onChange={(event) =>
-          setType(event.target.value as PresetSetting["type"])
-        }
+        onValueChange={setType}
+        options={SETTING_TYPES}
         value={type}
-      >
-        <option value="number">A number</option>
-        <option value="boolean">Yes or no</option>
-        <option value="text">Text</option>
-        <option value="string_list">A list of strings</option>
-      </ChoiceField>
+      />
       <AddAction
         disabled={pending || name.trim() === ""}
         onClick={() => {
@@ -598,14 +574,14 @@ function ValueField({
       <Switch
         checked={value.boolean ?? false}
         label={value.boolean ? "Yes" : "No"}
-        onChange={(boolean) => onChange({ boolean })}
-        pending={pending}
+        onCheckedChange={(boolean) => onChange({ boolean })}
+        disabled={pending}
       />
     );
   }
   if (type === "number") {
     return (
-      <TextField
+      <Input
         aria-label={label}
         disabled={pending}
         onChange={(event) =>
@@ -620,7 +596,7 @@ function ValueField({
   }
   if (type === "string_list") {
     return (
-      <TextAreaField
+      <Textarea
         aria-label={`${label}, one per line`}
         disabled={pending}
         onChange={(event) =>
@@ -633,22 +609,17 @@ function ValueField({
   }
   if (choices && choices.length > 0) {
     return (
-      <ChoiceField
+      <Select
         aria-label={label}
         disabled={pending}
-        onChange={(event) => onChange({ text: event.target.value })}
+        onValueChange={(text) => onChange({ text })}
+        options={choices.map((choice) => ({ value: choice, label: choice }))}
         value={value.text ?? ""}
-      >
-        {choices.map((choice) => (
-          <option key={choice} value={choice}>
-            {choice}
-          </option>
-        ))}
-      </ChoiceField>
+      />
     );
   }
   return (
-    <TextField
+    <Input
       aria-label={label}
       disabled={pending}
       onChange={(event) => onChange({ text: event.target.value })}
@@ -682,7 +653,7 @@ export function VariableSchemaEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="No variables yet. Add a variable to let readers customise prompt values."
+      emptyMessage="No variables yet"
       noun="variable"
       onAdd={() => onChange([...variables, { name: "", widget: "switch" }])}
       onChoose={onChoose}
@@ -730,7 +701,7 @@ function VariableFields({
   return (
     <div className="flex flex-col gap-6">
       <Field hint="what the fragments refer to it by" label="Name">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) => onChange({ name: event.target.value })}
           value={variable.name}
@@ -738,23 +709,16 @@ function VariableFields({
       </Field>
 
       <Field label="Input type">
-        <ChoiceField
+        <Select
           disabled={pending}
-          onChange={(event) =>
-            onChange({ widget: event.target.value as PresetVariable["widget"] })
-          }
+          onValueChange={(widget) => onChange({ widget })}
+          options={WIDGETS}
           value={variable.widget}
-        >
-          {WIDGETS.map((widget) => (
-            <option key={widget.value} value={widget.value}>
-              {widget.label}
-            </option>
-          ))}
-        </ChoiceField>
+        />
       </Field>
 
-      <Field hint="what a reader sees above the control" label="Label">
-        <TextField
+      <Field hint="what a reader sees above the field" label="Label">
+        <Input
           disabled={pending}
           onChange={(event) =>
             onChange({ label: event.target.value || undefined })
@@ -764,7 +728,7 @@ function VariableFields({
       </Field>
 
       <Field hint="the line under it" label="Description">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) =>
             onChange({ description: event.target.value || undefined })
@@ -779,7 +743,7 @@ function VariableFields({
           {options.map((option, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: Choices stay ordered and hold no local state.
             <div className="flex flex-wrap items-center gap-2" key={index}>
-              <TextField
+              <Input
                 aria-label={`Wording for choice ${index + 1}`}
                 className="min-w-32 flex-1"
                 disabled={pending}
@@ -793,7 +757,7 @@ function VariableFields({
                 placeholder="Wording"
                 value={option.label}
               />
-              <TextField
+              <Input
                 aria-label={`Value for choice ${index + 1}`}
                 className="min-w-32 flex-1"
                 disabled={pending}
@@ -827,7 +791,7 @@ function VariableFields({
               hint="what joins the chosen values in the prompt"
               label="Separator"
             >
-              <TextField
+              <Input
                 disabled={pending}
                 onChange={(event) =>
                   onChange({ separator: event.target.value || undefined })
@@ -843,7 +807,7 @@ function VariableFields({
         <FieldGroup legend="Allowed values">
           <FieldPair>
             <Field label="Minimum">
-              <TextField
+              <Input
                 disabled={pending}
                 onChange={(event) =>
                   onChange({
@@ -861,7 +825,7 @@ function VariableFields({
               />
             </Field>
             <Field label="Maximum">
-              <TextField
+              <Input
                 disabled={pending}
                 onChange={(event) =>
                   onChange({
@@ -880,7 +844,7 @@ function VariableFields({
             </Field>
           </FieldPair>
           <Field label="Step">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) =>
                 onChange({
@@ -925,7 +889,7 @@ export function ScriptListEditor({
   return (
     <CollectionStep
       chosen={chosen}
-      emptyMessage="No scripts yet. Add a script to find and replace text."
+      emptyMessage="No scripts yet"
       noun="script"
       onAdd={() =>
         onChange([...scripts, { enabled: true, find: "", replace: "" }])
@@ -969,7 +933,7 @@ function ScriptFields({
   return (
     <div className="flex flex-col gap-6">
       <Field hint="optional" label="Name">
-        <TextField
+        <Input
           disabled={pending}
           onChange={(event) =>
             onChange({ name: event.target.value || undefined })
@@ -980,7 +944,7 @@ function ScriptFields({
 
       <FieldPair>
         <Field label="Find">
-          <TextField
+          <Input
             className="font-mono"
             disabled={pending}
             onChange={(event) => onChange({ find: event.target.value })}
@@ -988,7 +952,7 @@ function ScriptFields({
           />
         </Field>
         <Field hint="g for every match, i to ignore case" label="Flags">
-          <TextField
+          <Input
             className="font-mono"
             disabled={pending}
             onChange={(event) =>
@@ -1000,7 +964,7 @@ function ScriptFields({
       </FieldPair>
 
       <Field label="Replacement text">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) => onChange({ replace: event.target.value })}
           rows={4}
@@ -1008,30 +972,30 @@ function ScriptFields({
         />
       </Field>
 
-      <FieldGroup legend="Input sources">
+      <FieldGroup legend="Runs on">
         {SCRIPT_TARGETS.map((target) => (
           <Switch
             checked={targets.includes(target.value)}
             key={target.value}
             label={target.label}
-            onChange={(on) =>
+            onCheckedChange={(on) =>
               onChange({ targets: toggle(targets, target.value, on) })
             }
-            pending={pending}
+            disabled={pending}
           />
         ))}
       </FieldGroup>
 
-      <FieldGroup legend="Output targets">
+      <FieldGroup legend="Changes">
         {SCRIPT_EFFECTS.map((effect) => (
           <Switch
             checked={affects.includes(effect.value)}
             key={effect.value}
             label={effect.label}
-            onChange={(on) =>
+            onCheckedChange={(on) =>
               onChange({ affects: toggle(affects, effect.value, on) })
             }
-            pending={pending}
+            disabled={pending}
           />
         ))}
       </FieldGroup>
@@ -1039,7 +1003,7 @@ function ScriptFields({
       <FieldGroup legend="Message range">
         <FieldPair>
           <Field hint="counted from the most recent" label="Nearest message">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) =>
                 onChange({
@@ -1054,7 +1018,7 @@ function ScriptFields({
             />
           </Field>
           <Field label="Furthest message">
-            <TextField
+            <Input
               disabled={pending}
               onChange={(event) =>
                 onChange({
@@ -1073,19 +1037,19 @@ function ScriptFields({
           checked={script.enabled}
           hint="A switched-off script stays in the preset and changes nothing."
           label="Enabled"
-          onChange={(enabled) => onChange({ enabled })}
-          pending={pending}
+          onCheckedChange={(enabled) => onChange({ enabled })}
+          disabled={pending}
         />
         <Switch
           checked={script.runOnEdit ?? false}
           label="Run it again when a message is edited"
-          onChange={(runOnEdit) => onChange({ runOnEdit })}
-          pending={pending}
+          onCheckedChange={(runOnEdit) => onChange({ runOnEdit })}
+          disabled={pending}
         />
       </FieldGroup>
 
       <Field hint="text cut out of the match, one per line" label="Trim">
-        <TextAreaField
+        <Textarea
           disabled={pending}
           onChange={(event) =>
             onChange({ trim: readLines(event.target.value) })

@@ -7,7 +7,7 @@ const DAY = 24 * HOUR;
 const WEEK = 7 * DAY;
 const BADGE_CEILING = 99;
 
-const relative = new Intl.RelativeTimeFormat("en-GB", { numeric: "auto" });
+const relative = new Intl.RelativeTimeFormat("en-US", { numeric: "auto" });
 
 const PROFILE_SETTINGS = "/settings/profile";
 
@@ -75,7 +75,8 @@ export function notificationWords(entry: Notification): NotificationWords {
       return {
         lead: "GitHub release waiting for",
         subject: workName,
-        detail: "Publish or discard your edits, then resume the import.",
+        detail:
+          "Publish or discard your drafted changes, then resume the import.",
         href: workPage ? `${workPage}#github-releases` : null,
       };
   }
@@ -104,7 +105,7 @@ export function arrivedAgo(value: string, now: Date): string {
   if (elapsed < DAY)
     return relative.format(-Math.floor(elapsed / HOUR), "hour");
   if (elapsed < WEEK) return relative.format(-Math.floor(elapsed / DAY), "day");
-  return arrived.toLocaleDateString("en-GB", {
+  return arrived.toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: arrived.getFullYear() === now.getFullYear() ? undefined : "numeric",

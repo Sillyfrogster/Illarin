@@ -24,24 +24,25 @@ import {
   ShieldOff,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import { type ComponentType, useRef, useState } from "react";
 import { CropPicture, cropsCleanly } from "@/components/media/CropPicture";
+import { Alert } from "@/components/ui/alert";
+import {
+  AvatarFallback,
+  AvatarImage,
+  Avatar as UiAvatar,
+} from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
-import {
-  Field,
-  Said,
-  TextArea,
-  TextInput,
-  Trouble,
-} from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
 import {
   arrayMove,
   Sortable,
   SortableItem,
   SortableItemHandle,
 } from "@/components/ui/sortable";
+import { Tooltip } from "@/components/ui/tooltip";
 import type { Profile, ProfileLink } from "@/lib/api/query";
 import type { SaveProfileRequest } from "@/lib/api/shapes";
 import { cn } from "@/lib/cn";
@@ -196,7 +197,7 @@ export function IdentityCard({
               className="flex-1"
               disabled={editing.saving}
               onClick={editing.cancel}
-              variant="outline"
+              variant="secondary"
             >
               Cancel
             </Button>
@@ -235,10 +236,14 @@ export function IdentityCard({
         )}
         {trouble ? (
           <div className="mt-3">
-            <Trouble>{trouble}</Trouble>
+            <Alert tone="stop">{trouble}</Alert>
           </div>
         ) : null}
-        {said ? <Said className="mt-3">{said}</Said> : null}
+        {said ? (
+          <Alert tone="done" className="mt-3">
+            {said}
+          </Alert>
+        ) : null}
       </div>
     </div>
   );
@@ -259,51 +264,50 @@ function Avatar({
 
   return (
     <div className="relative -mt-18 w-fit">
-      {picture ? (
-        <span className={cn(frame, "block overflow-hidden bg-deep")}>
-          <Image
+      <UiAvatar className={frame}>
+        {picture ? (
+          <AvatarImage
             alt=""
-            className="size-full object-cover"
+            fetchPriority="high"
             height={picture.height}
-            priority
             src={picture.url}
-            unoptimized
             width={picture.width}
           />
-        </span>
-      ) : (
-        <span
+        ) : null}
+        <AvatarFallback
           aria-hidden="true"
-          className={cn(
-            frame,
-            "grid place-items-center font-display text-[2.5rem] font-medium",
-            portraitGround(profile.handle),
-          )}
+          className={cn("text-[2.5rem]", portraitGround(profile.handle))}
+          delayMs={picture ? 600 : 0}
         >
           {profile.handle.slice(0, 1).toUpperCase()}
-        </span>
-      )}
+        </AvatarFallback>
+      </UiAvatar>
       {editing ? (
         <>
-          <button
-            aria-label={picture ? "Change picture" : "Add picture"}
-            className="absolute -right-1 -bottom-1 grid size-11 place-items-center rounded-full bg-action text-on-accent shadow-[0_6px_16px_-6px_var(--v-action)] outline-offset-3 hover:bg-action/90 disabled:opacity-45"
-            disabled={editing.picturePending}
-            onClick={() => picker.current?.click()}
-            type="button"
-          >
-            <PencilLine aria-hidden="true" className="size-4" />
-          </button>
-          {picture ? (
-            <button
-              className="absolute top-0 -right-1 grid size-9 place-items-center rounded-full bg-plane text-mute ring-1 ring-rule outline-offset-2 hover:text-stop"
-              aria-label="Remove picture"
+          <Tooltip content={picture ? "Change picture" : "Add picture"}>
+            <Button
+              aria-label={picture ? "Change picture" : "Add picture"}
+              className="absolute! -right-1 -bottom-1 rounded-full"
               disabled={editing.picturePending}
-              onClick={editing.onRemoveAvatar}
-              type="button"
+              onClick={() => picker.current?.click()}
+              size="icon"
+              variant="primary"
             >
-              <X aria-hidden="true" className="size-4" />
-            </button>
+              <PencilLine aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          {picture ? (
+            <Tooltip content="Remove picture">
+              <Button
+                aria-label="Remove picture"
+                className="absolute! top-0 -right-1 rounded-full bg-field hover:text-stop"
+                disabled={editing.picturePending}
+                onClick={editing.onRemoveAvatar}
+                size="icon-compact"
+              >
+                <X aria-hidden="true" />
+              </Button>
+            </Tooltip>
           ) : null}
           <input
             accept="image/png,image/jpeg,image/webp,image/gif"
@@ -378,7 +382,7 @@ function LinkRow({
   return (
     <li>
       <a
-        className="group flex min-h-11 items-center gap-3 rounded-control px-2 font-ui text-ui text-ink hover:bg-deep hover:text-ink"
+        className="group flex min-h-control items-center gap-3 rounded-control px-2 font-ui text-ui text-ink hover:bg-deep hover:text-ink"
         href={href}
         rel={external ? "nofollow ugc noopener" : undefined}
         target={external ? "_blank" : undefined}
@@ -388,7 +392,7 @@ function LinkRow({
         <span className="min-w-0 truncate text-mute">{text}</span>
         <ArrowUpRight
           aria-hidden="true"
-          className="ml-auto size-3.5 shrink-0 text-mute transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none"
+          className="ml-auto size-3.5 shrink-0 text-mute transition-transform duration-160 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none"
         />
       </a>
     </li>
@@ -415,7 +419,7 @@ function EditableWords({ editing }: { editing: Editing }) {
         }
         trouble={failed("biography")}
       >
-        <TextArea
+        <Textarea
           aria-invalid={Boolean(failed("biography")) || undefined}
           className="min-h-24 font-prose field-sizing-content"
           id="profile-bio"
@@ -435,7 +439,7 @@ function EditableWords({ editing }: { editing: Editing }) {
         label="Contact email"
         trouble={failed("contactEmail")}
       >
-        <TextInput
+        <Input
           aria-describedby="profile-contact-hint"
           aria-invalid={Boolean(failed("contactEmail")) || undefined}
           autoComplete="off"
@@ -507,7 +511,7 @@ function LinkEditor({
     >
       <SortableItemHandle disabled={links.length < 2} label={`Move ${name}`} />
       <div className="grid gap-1.5">
-        <TextInput
+        <Input
           aria-label={`Link ${index + 1} label`}
           maxLength={32}
           onChange={(event) =>
@@ -517,7 +521,7 @@ function LinkEditor({
           type="text"
           value={link.label}
         />
-        <TextInput
+        <Input
           aria-label={`Link ${index + 1} address`}
           maxLength={300}
           onChange={(event) =>
@@ -528,14 +532,17 @@ function LinkEditor({
           value={link.address}
         />
       </div>
-      <button
-        aria-label={`Remove ${name}`}
-        className="grid size-11 place-items-center rounded-control text-mute outline-offset-3 hover:bg-deep hover:text-stop"
-        onClick={() => onChange(removeLink(links, index))}
-        type="button"
-      >
-        <X aria-hidden="true" className="size-4" />
-      </button>
+      <Tooltip content={`Remove ${name}`}>
+        <Button
+          aria-label={`Remove ${name}`}
+          className="hover:text-stop"
+          onClick={() => onChange(removeLink(links, index))}
+          size="icon"
+          variant="ghost"
+        >
+          <X aria-hidden="true" />
+        </Button>
+      </Tooltip>
     </SortableItem>
   );
 }

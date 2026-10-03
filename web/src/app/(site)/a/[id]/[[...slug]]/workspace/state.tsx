@@ -7,6 +7,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -24,6 +25,7 @@ import type { AppName } from "@/lib/api/shapes";
 import {
   DRAFTED_CHANGES_SAVED,
   DRAFTED_CHANGES_STALE,
+  isOlderThanSaved,
   useDraftedChanges,
 } from "@/lib/drafted-changes";
 import { promptsMadePublic } from "../MakePublicConfirmation";
@@ -59,6 +61,8 @@ export type Pane =
   | { kind: "remove"; blockId: string }
   | { kind: "element"; blockId: string; elementId: string };
 
+export type Altitude = "write" | "arrange";
+
 type MakingPublic = { prompts: string[]; keepsAPrivatePrompt: boolean };
 
 type Workspace = {
@@ -66,6 +70,8 @@ type Workspace = {
   isOwner: boolean;
   isDraft: boolean;
   editing: boolean;
+  altitude: Altitude;
+  setAltitude: (altitude: Altitude) => void;
   sweep: number;
   blocks: WorkBlock[];
   addableBlocks: AddableBlock[];
@@ -103,6 +109,29 @@ type Workspace = {
 
 const WorkspaceContext = createContext<Workspace | null>(null);
 
+/** WorkspaceActions are the workspace's writes; the object never changes, so a block that only writes does not redraw when another block is written. */
+export type WorkspaceActions = Pick<
+  Workspace,
+  "writeElement" | "writeBlock" | "setCursor" | "say" | "openPane"
+> & { setHidden: (blockId: string, hidden: boolean) => void };
+
+const ActionsContext = createContext<WorkspaceActions | null>(null);
+
+type Focus = { cursor: string | null; editing: boolean };
+
+const FocusContext = createContext<Focus>({ cursor: null, editing: false });
+
+export function useWorkspaceActions(): WorkspaceActions {
+  const actions = useContext(ActionsContext);
+  if (!actions) throw new Error("This page has no editing workspace.");
+  return actions;
+}
+
+/** useWorkspaceFocus is which text is being written and whether the page is in edit mode, the two things a block's fields read. */
+export function useWorkspaceFocus(): Focus {
+  return useContext(FocusContext);
+}
+
 export function useWorkspace() {
   const workspace = useContext(WorkspaceContext);
   if (!workspace) throw new Error("This page has no editing workspace.");
@@ -119,6 +148,7 @@ export function WorkspaceProvider({
   allowedApps,
   eligibleApps,
   unpublishedChanges,
+  version,
   children,
 }: {
   addableBlocks: AddableBlock[];
@@ -130,6 +160,7 @@ export function WorkspaceProvider({
   allowedApps: AppName[];
   eligibleApps: AppName[];
   unpublishedChanges: boolean;
+  version: number;
   children: ReactNode;
 }) {
   const candidate = useDraftedChanges();
@@ -137,6 +168,7 @@ export function WorkspaceProvider({
   const [editing, setEditing] = useState(
     isOwner && searchParams.get("edit") === "true",
   );
+  const [altitude, setAltitude] = useState<Altitude>("write");
   const [sweep, setSweep] = useState(0);
   const [draft, setDraft] = useState(blocks);
   const [saved, setSaved] = useState(blocks);
@@ -363,12 +395,12 @@ export function WorkspaceProvider({
   }, []);
 
   useEffect(() => {
-    if (saving.current) return;
+    if (saving.current || isOlderThanSaved(workId, version)) return;
     applyServerBlocks(blocks);
-  }, [applyServerBlocks, blocks]);
+  }, [applyServerBlocks, blocks, version, workId]);
 
   useEffect(() => {
-    if (saving.current) return;
+    if (saving.current || isOlderThanSaved(workId, version)) return;
     const incomingDetails = {
       blurb: details.blurb,
       isNsfw: details.isNsfw,
@@ -381,7 +413,14 @@ export function WorkspaceProvider({
         : incomingDetails,
     );
     setSavedDetails(incomingDetails);
-  }, [details.blurb, details.isNsfw, details.name, details.tags]);
+  }, [
+    details.blurb,
+    details.isNsfw,
+    details.name,
+    details.tags,
+    version,
+    workId,
+  ]);
 
   const editBlockList = useCallback(
     (change: (blocks: WorkBlock[]) => WorkBlock[]) => {
@@ -409,12 +448,14 @@ export function WorkspaceProvider({
   const stopEditing = useCallback(() => {
     lastCursor.current = cursor;
     setEditing(false);
+    setAltitude("write");
     setCursor(null);
     setPane(null);
   }, [cursor]);
 
+  // Escape closes the open panel and nothing else; leaving edit mode is always Done
   useEffect(() => {
-    if (!editing) return;
+    if (!editing || !pane) return;
     const onEscape = (event: KeyboardEvent) => {
       if (
         event.key !== "Escape" ||
@@ -430,12 +471,11 @@ export function WorkspaceProvider({
       )
         return;
       event.preventDefault();
-      if (pane) setPane(null);
-      else stopEditing();
+      setPane(null);
     };
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
-  }, [editing, pane, stopEditing, makingPublic]);
+  }, [editing, pane, makingPublic]);
 
   const value: Workspace = {
     addableBlocks,
@@ -444,6 +484,8 @@ export function WorkspaceProvider({
     isOwner,
     isDraft,
     editing,
+    altitude,
+    setAltitude,
     sweep,
     blocks: draft,
     details: draftDetails,
@@ -509,9 +551,30 @@ export function WorkspaceProvider({
     },
   };
 
+  const latest = useRef(value);
+  useLayoutEffect(() => {
+    latest.current = value;
+  });
+  const actions = useMemo<WorkspaceActions>(
+    () => ({
+      openPane: (pane) => latest.current.openPane(pane),
+      say: (message) => latest.current.say(message),
+      setCursor: (next) => latest.current.setCursor(next),
+      setHidden: (blockId, hidden) =>
+        latest.current.arrangement.setHidden(blockId, hidden),
+      writeBlock: (block) => latest.current.writeBlock(block),
+      writeElement: (blockId, element) =>
+        latest.current.writeElement(blockId, element),
+    }),
+    [],
+  );
+  const focus = useMemo(() => ({ cursor, editing }), [cursor, editing]);
+
   return (
     <WorkspaceContext.Provider value={value}>
-      {children}
+      <ActionsContext.Provider value={actions}>
+        <FocusContext.Provider value={focus}>{children}</FocusContext.Provider>
+      </ActionsContext.Provider>
     </WorkspaceContext.Provider>
   );
 }

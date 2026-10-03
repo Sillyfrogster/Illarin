@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Trouble } from "@/components/ui/field";
-import { Slab } from "@/components/ui/slab";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { readReport, staffKeys } from "@/lib/api/staff";
 import { ActivityMatrix } from "./ActivityMatrix";
 import { DayShape } from "./DayShape";
@@ -19,8 +20,8 @@ export function StaffReport() {
 
   if (query.isError) {
     return (
-      <Slab className="max-w-[40rem] gap-4 p-5">
-        <Trouble>{query.error.message}</Trouble>
+      <Card className="max-w-[40rem] gap-4 p-5">
+        <Alert tone="stop">{query.error.message}</Alert>
         <Button
           className="self-start"
           loading={query.isFetching}
@@ -29,7 +30,7 @@ export function StaffReport() {
         >
           Try again
         </Button>
-      </Slab>
+      </Card>
     );
   }
   if (!report) return <ReportSkeleton />;
@@ -53,10 +54,10 @@ export function StaffReport() {
 function ReportSkeleton() {
   return (
     <div aria-hidden="true" className="flex flex-col gap-3">
-      <div className="h-[19rem] rounded-plate bg-deep motion-safe:animate-pulse" />
+      <Skeleton className="h-[19rem] rounded-card" />
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div className="h-72 rounded-plate bg-deep motion-safe:animate-pulse" />
-        <div className="h-72 rounded-plate bg-deep motion-safe:animate-pulse" />
+        <Skeleton className="h-72 rounded-card" />
+        <Skeleton className="h-72 rounded-card" />
       </div>
     </div>
   );

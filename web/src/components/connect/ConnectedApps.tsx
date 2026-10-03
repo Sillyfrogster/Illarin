@@ -3,8 +3,9 @@
 import { Plug, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Said, Trouble } from "@/components/ui/field";
+import { ItemGroup } from "@/components/ui/item";
 import { refusalMessage } from "@/lib/answer";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
@@ -18,8 +19,7 @@ import { ConnectedAppRow } from "./ConnectedAppRow";
 
 type Notice = { kind: "said" | "trouble"; message: string };
 
-const UNREACHABLE =
-  "We could not reach Illarin. Check your connection and try again.";
+const UNREACHABLE = "Can't reach Illarin. Check your connection and try again.";
 
 export function ConnectedApps() {
   const { account } = useAuth();
@@ -43,7 +43,7 @@ export function ConnectedApps() {
       const answer = response.ok ? data : error;
       if (!response.ok) {
         setLoadTrouble(
-          refusalMessage(answer, "We could not read your connected apps."),
+          refusalMessage(answer, "Illarin could not read your connected apps."),
         );
         setApps(null);
         return;
@@ -178,9 +178,9 @@ export function ConnectedApps() {
       {notice ? (
         <div className="mt-5">
           {notice.kind === "trouble" ? (
-            <Trouble>{notice.message}</Trouble>
+            <Alert tone="stop">{notice.message}</Alert>
           ) : (
-            <Said>{notice.message}</Said>
+            <Alert tone="done">{notice.message}</Alert>
           )}
         </div>
       ) : null}
@@ -217,7 +217,7 @@ export function ConnectedApps() {
             </p>
           </div>
         ) : (
-          <ul className="m-0 grid list-none gap-px overflow-hidden rounded-plate bg-rule p-0">
+          <ItemGroup label="Connected apps">
             {apps.map((app) => (
               <ConnectedAppRow
                 app={app}
@@ -230,7 +230,7 @@ export function ConnectedApps() {
                 revoking={revoking === app.id}
               />
             ))}
-          </ul>
+          </ItemGroup>
         )}
       </div>
     </section>

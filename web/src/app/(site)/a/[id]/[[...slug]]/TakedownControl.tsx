@@ -4,8 +4,9 @@ import { Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/input";
 import { takeDownWork } from "@/lib/api/query";
-import { Field, TextAreaField } from "./workspace/fields";
 
 export function TakedownControl({
   workId,
@@ -62,7 +63,7 @@ export function TakedownControl({
         </div>
         <form className="flex flex-col gap-3" onSubmit={ask}>
           <Field label="Reason shown to the creator">
-            <TextAreaField
+            <Textarea
               disabled={pending}
               onChange={(event) => setReason(event.target.value)}
               required
@@ -78,8 +79,8 @@ export function TakedownControl({
           {confirming ? (
             <div className="flex flex-col gap-3 rounded-plate bg-stop-wash p-4">
               <p className="text-ui text-ink">
-                Take down this {typeName}? Only its creator will be able to open
-                its page.
+                Take down this {typeName}? Only its creator can open its page
+                after.
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Button loading={pending} onClick={takeDown} variant="stop">

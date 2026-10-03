@@ -117,7 +117,7 @@ func readLumiversePalette(theme map[string]json.RawMessage) (block.ColorSet, err
 	}
 	if len(modes) == 0 {
 		return block.ColorSet{}, format.MalformedInput(fmt.Errorf(
-			"%s palette: no supported colours were found", LumiverseID,
+			"%s palette: no supported colors were found", LumiverseID,
 		))
 	}
 	if len(leftoverModes) > 0 {

@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowUp } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ArticleContents } from "@/components/blog/ArticleContents";
 import { Shell } from "@/components/layout/Shell";
 import {
   clauseAnchor,
@@ -9,7 +10,6 @@ import {
   type LegalHref,
   nextDocument,
 } from "@/lib/legal-documents";
-import { LegalContents } from "./LegalContents";
 
 export type LegalClause = {
   body: ReactNode;
@@ -44,8 +44,11 @@ export function LegalPage({
     <Shell className="pt-10 pb-chapter lg:pt-14">
       <div className="grid items-start gap-x-14 gap-y-8 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside className="grid gap-6 lg:sticky lg:top-[calc(var(--header-height)+2rem)]">
-          <nav aria-label="Legal documents">
-            <h2 className="font-ui text-meta font-medium text-mute">
+          <nav aria-labelledby="legal-pages">
+            <h2
+              className="font-ui text-meta font-medium text-mute"
+              id="legal-pages"
+            >
               Illarin&rsquo;s terms
             </h2>
             <ul className="mt-2 grid list-none">
@@ -53,7 +56,7 @@ export function LegalPage({
                 <li key={document.href}>
                   <Link
                     aria-current={document.href === href ? "page" : undefined}
-                    className="flex min-h-11 items-center font-ui text-ui text-mute outline-offset-3 hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-accent"
+                    className="flex min-h-control items-center font-ui text-ui text-mute hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-accent"
                     href={document.href}
                   >
                     {document.title}
@@ -62,12 +65,19 @@ export function LegalPage({
               ))}
             </ul>
           </nav>
-          <LegalContents clauses={clauses} />
+          <ArticleContents
+            entries={clauses.map((clause) => ({
+              anchor: clauseAnchor(clause.heading),
+              label: clause.heading,
+              level: 2,
+            }))}
+            label="In this document"
+          />
         </aside>
 
         <article className="min-w-0 max-w-[70ch]" id="document-top">
           <header>
-            <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
+            <h1 className="font-display text-display font-medium tracking-[-0.04em] text-balance">
               {title}
             </h1>
             <p className="mt-3 font-prose text-meta text-mute">
@@ -104,7 +114,7 @@ export function LegalPage({
           ) : null}
 
           <a
-            className="mt-group inline-flex min-h-11 items-center gap-2 font-ui text-meta text-mute outline-offset-3 hover:text-ink"
+            className="mt-group inline-flex min-h-control items-center gap-2 font-ui text-meta text-mute outline-offset-3 hover:text-ink"
             href="#document-top"
           >
             Back to the top

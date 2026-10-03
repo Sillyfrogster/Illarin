@@ -95,8 +95,8 @@ func (s *Service) CandidateReadiness(
 	}
 	items = append(items, ReadinessItem{
 		ID:     mediaRequirement,
-		Label:  "Pictures",
-		Detail: "A picture on this page has no file behind it.",
+		Label:  "Images",
+		Detail: "An image on this page is missing its file.",
 		Met:    pictures,
 	})
 	reviewed, err := uploadReviewed(ctx, tx, workID)
@@ -106,7 +106,7 @@ func (s *Service) CandidateReadiness(
 	items = append(items, ReadinessItem{
 		ID:     uploadRequirement,
 		Label:  "Uploaded file",
-		Detail: "An uploaded file is waiting to be accepted or cancelled.",
+		Detail: "Accept or discard the file you uploaded.",
 		Met:    reviewed,
 	})
 	return items, nil
