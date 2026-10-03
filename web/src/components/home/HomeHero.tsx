@@ -10,8 +10,12 @@ export function HomeHero() {
     <section className="relative isolate overflow-hidden bg-media text-over">
       <div
         aria-hidden="true"
-        className="home-settle absolute inset-y-0 right-0 -z-10 aspect-video bg-[url(/home/watcher-hero.webp)] bg-cover bg-top mask-[linear-gradient(to_right,transparent,#000_35%)] max-md:inset-x-0 max-md:aspect-auto max-md:bg-[url(/home/watcher-portrait.webp)] max-md:bg-[position:60%_15%] max-md:mask-[linear-gradient(to_bottom,#000_45%,transparent_85%)]"
+        className="home-settle absolute inset-y-0 right-0 -z-10 aspect-video bg-[url(/home/watcher-hero.webp)] bg-cover bg-top mask-[linear-gradient(to_right,transparent,#000_35%)] max-md:inset-x-0 max-md:aspect-auto max-md:bg-[position:71%_0%] max-md:mask-[linear-gradient(to_bottom,#000_45%,transparent_85%)]"
         data-artwork
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-10 bg-linear-to-r from-media/80 via-media/45 via-35% to-transparent to-60% max-md:hidden"
       />
       <div
         className={cn(
