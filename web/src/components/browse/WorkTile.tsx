@@ -12,10 +12,6 @@ import { TYPE_LABELS } from "@/lib/work-types";
 
 const TILE_TAGS = 4;
 
-/** TILE is the raised card frame a work's art and text sit in, on Browse and on the home page. */
-export const TILE =
-  "group/tile relative flex w-full min-w-0 flex-col rounded-card bg-plane p-2 shadow-card ring-1 ring-ink/8 focus-within:ring-accent";
-
 /** TileArt is a work's cover cropped to the card's 3:4 frame, its type's default cover when it has none, and a quiet mark when the cover is blurred. */
 export function TileArt({
   eager,

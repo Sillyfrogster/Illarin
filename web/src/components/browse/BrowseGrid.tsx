@@ -15,7 +15,7 @@ import { cn } from "@/lib/cn";
 import { workDisplayName } from "@/lib/work-name";
 import { OpenPanel } from "./OpenPanel";
 import { usePrefetchPeek } from "./peek";
-import { TILE, TileArt, TileText } from "./WorkTile";
+import { TileArt, TileText } from "./WorkTile";
 
 export const TILES =
   "m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5";
@@ -175,7 +175,12 @@ const Tile = memo(function Tile({
   work: BrowseWork;
 }) {
   return (
-    <div className={cn(TILE, open && "ring-accent")}>
+    <div
+      className={cn(
+        "group/tile relative flex w-full min-w-0 flex-col rounded-card bg-plane p-2 shadow-card ring-1 ring-ink/8 focus-within:ring-accent",
+        open && "ring-accent",
+      )}
+    >
       <TileArt eager={eager} preference={preference} work={work} />
       <TileText work={work} />
       <button
