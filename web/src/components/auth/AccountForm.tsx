@@ -278,7 +278,7 @@ export function AccountForm({
         ) : null}
 
         <Button
-          className="mt-1 shadow-none"
+          className="mt-1"
           loading={pending}
           type="submit"
           variant="primary"

@@ -18,8 +18,8 @@ export function AuthPage({
 }) {
   return (
     <Shell className="flex justify-center pt-8 pb-16 sm:pt-12 lg:pt-16">
-      <div className="w-full max-w-[30rem] overflow-hidden rounded-[1.75rem] bg-deep p-1 shadow-[0_18px_40px_-24px_rgb(0_0_0/0.35)]">
-        <div className="rounded-[1.5rem] bg-plane px-6 pt-8 pb-9 shadow-[0_1px_2px_rgb(0_0_0/0.06)] sm:px-9 sm:pt-10 sm:pb-10">
+      <div className="w-full max-w-[30rem] overflow-hidden rounded-card bg-deep p-1">
+        <div className="rounded-[calc(var(--radius-card)-4px)] bg-plane px-6 pt-8 pb-9 sm:px-9 sm:pt-10 sm:pb-10">
           <h1 className="font-display text-[clamp(1.75rem,2.6vw,2.125rem)] leading-[1.15] font-medium tracking-[-0.03em] text-balance">
             {title}
           </h1>
