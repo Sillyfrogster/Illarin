@@ -20,7 +20,6 @@ export async function buildSitemap(
   const entries: MetadataRoute.Sitemap = [
     { url: new URL("/", siteUrl).href },
     { url: new URL("/browse", siteUrl).href },
-    { url: new URL("/about", siteUrl).href },
     { url: new URL("/docs", siteUrl).href },
     ...DOCS.map(({ slug }) => ({
       url: new URL(`/docs/${slug}`, siteUrl).href,

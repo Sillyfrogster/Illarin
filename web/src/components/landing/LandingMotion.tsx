@@ -50,12 +50,12 @@ export function LandingMotion({ children }: { children: ReactNode }) {
           : mode === "unavailable"
             ? "Still version"
             : live
-              ? "Pause"
-              : "Play"}
+              ? "Pause motion"
+              : "Enable motion"}
       </Button>
       <output className="sr-only">
         {mode === "unavailable"
-          ? "The animation didn’t load, so the still shows."
+          ? "The animated artwork could not load. The still version is available."
           : ""}
       </output>
     </div>
