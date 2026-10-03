@@ -9,12 +9,12 @@ import { cn } from "@/lib/cn";
 import { TYPE_LABELS } from "@/lib/work-types";
 
 const READS: [BrowseType, string][] = [
-  ["character", "PNG, CHARX or JSON card"],
-  ["lorebook", "SillyTavern JSON"],
+  ["character", "Image, CHARX or JSON card"],
+  ["lorebook", "JSON"],
   ["preset", "SillyTavern or Lumiverse JSON"],
-  ["theme", "SillyTavern or Lumiverse JSON"],
+  ["theme", "SillyTavern JSON or Lumiverse zip"],
   ["pack", "Lumiverse JSON"],
-  ["extension", "Zip"],
+  ["extension", "SillyTavern or Spindle zip"],
 ];
 
 /** DropStage is where a file is chosen, with the formats Illarin reads for each type; the page around it takes a file dropped anywhere. */
