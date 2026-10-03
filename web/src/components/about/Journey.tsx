@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LandingMotion } from "./LandingMotion";
 import "./journey.css";
 
-export function HostedLanding({ children }: { children: ReactNode }) {
+export function Journey({ children }: { children: ReactNode }) {
   return (
     <LandingMotion>
       <div
@@ -15,7 +15,12 @@ export function HostedLanding({ children }: { children: ReactNode }) {
         data-duration="100"
       >
         <div className="stage">
-          <canvas id="world" aria-hidden="true" tabIndex={-1}></canvas>
+          <canvas
+            id="world"
+            aria-hidden="true"
+            tabIndex={-1}
+            data-artwork
+          ></canvas>
           <div className="vignette" aria-hidden="true"></div>
           <div className="film-grain" aria-hidden="true"></div>
           <section
@@ -25,6 +30,7 @@ export function HostedLanding({ children }: { children: ReactNode }) {
           >
             <Image
               className="still-art"
+              data-artwork
               src="/landing/flight/room-start.webp"
               alt="The first few pencil strokes of a character on an otherwise blank notebook page."
               width={1920}
@@ -32,7 +38,6 @@ export function HostedLanding({ children }: { children: ReactNode }) {
               unoptimized
             />
             <div className="copy">
-              <p className="chapter-note">A home for your imagination.</p>
               <h1 id="opening-title">
                 It starts with
                 <br />
@@ -50,6 +55,7 @@ export function HostedLanding({ children }: { children: ReactNode }) {
           >
             <Image
               className="still-art"
+              data-artwork
               src="/landing/flight/kingdom.webp"
               alt="A stone kingdom above a river, with mountains disappearing into violet dusk."
               loading="lazy"
@@ -77,6 +83,7 @@ export function HostedLanding({ children }: { children: ReactNode }) {
           >
             <Image
               className="still-art"
+              data-artwork
               src="/landing/flight/city.webp"
               alt="A futuristic city of violet lights and sky bridges, reflected in the river below."
               loading="lazy"
@@ -104,6 +111,7 @@ export function HostedLanding({ children }: { children: ReactNode }) {
           >
             <Image
               className="still-art"
+              data-artwork
               src="/landing/flight/gallery.webp"
               alt="A quiet moonlit gallery overlooking the city."
               loading="lazy"
@@ -128,7 +136,7 @@ export function HostedLanding({ children }: { children: ReactNode }) {
             <div className="gallery-caption">
               <span>Recently published on Illarin</span>
               <Link href="/browse">
-                Browse creations <ArrowUpRight aria-hidden="true" size={18} />
+                Browse <ArrowUpRight aria-hidden="true" size={18} />
               </Link>
             </div>
           </section>
@@ -139,6 +147,7 @@ export function HostedLanding({ children }: { children: ReactNode }) {
           >
             <Image
               className="still-art"
+              data-artwork
               src="/landing/flight/room-finished.webp"
               alt="The notebook now holds a finished, richly painted character in a violet cloak."
               loading="lazy"
@@ -147,25 +156,18 @@ export function HostedLanding({ children }: { children: ReactNode }) {
               unoptimized
             />
             <div className="copy">
-              <p className="chapter-note">
-                From the first idea to whatever comes next.
-              </p>
               <h2 id="ending-title" className="ending-wordmark">
                 illarin<span>.</span>
               </h2>
-              <p className="description">
-                A home for the things you make and the people you make them
-                with.
-              </p>
               <div className="actions">
                 <Button asChild variant="primary">
                   <Link href="/upload">
-                    Start creating <ArrowUpRight aria-hidden="true" />
+                    Publish <ArrowUpRight aria-hidden="true" />
                   </Link>
                 </Button>
                 <Button asChild variant="ghost">
                   <Link href="/browse">
-                    Browse creations <ArrowRight aria-hidden="true" />
+                    Browse <ArrowRight aria-hidden="true" />
                   </Link>
                 </Button>
               </div>
