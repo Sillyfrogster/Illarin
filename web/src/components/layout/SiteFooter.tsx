@@ -12,6 +12,7 @@ export function SiteFooter() {
   const destinations = [
     { label: "Guide", href: "/docs" },
     { label: "Blog", href: BLOG_HOME },
+    { label: "About", href: "/about" },
   ];
   return (
     <footer className="mt-chapter bg-field pb-16">
@@ -20,10 +21,6 @@ export function SiteFooter() {
         <div className="grid gap-group pt-10 sm:grid-cols-2 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-x-14">
           <div className="min-w-0">
             <BrandLogo className="w-40" />
-            <p className="mt-3 max-w-[34ch] font-prose text-meta leading-6 text-mute">
-              A hub for AI roleplay work, across apps. Every creator&rsquo;s
-              source file stays intact.
-            </p>
             <a
               className="mt-3 flex min-h-control w-fit items-center text-meta text-ink hover:text-accent"
               download

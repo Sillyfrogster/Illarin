@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BrowseRetry } from "@/components/browse/BrowseRetry";
 import { Button } from "@/components/ui/button";
 import type { BrowsePage } from "@/lib/api/query";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
-import { BrowseRetry } from "./BrowseRetry";
 
 export function BrowseChapter({ page }: { page: BrowsePage | null }) {
   const items = page?.items ?? [];
@@ -18,21 +18,21 @@ export function BrowseChapter({ page }: { page: BrowsePage | null }) {
             ? "Recent work could not load."
             : hidden
               ? "Recent work is hidden."
-              : "The first story could be yours."}
+              : "Nothing published yet"}
         </h3>
         <p role={!page ? "status" : undefined}>
           {!page
-            ? "Try again, or explore the community in Browse."
+            ? "Try again, or go to Browse."
             : hidden
-              ? "Published work is outside your content preference. You can change what you see in Browse."
-              : "Create a character or lorebook, or bring a work you’ve already started."}
+              ? "Everything here is adult work, and you hide adult work. Change that in Browse."
+              : "Upload a character or a lorebook and it shows up here."}
         </p>
         {!page ? (
           <BrowseRetry />
         ) : (
           <Button asChild variant="primary">
             <Link href={hidden ? "/browse" : "/upload"}>
-              {hidden ? "Go to Browse" : "Start creating"} →
+              {hidden ? "Browse" : "Publish"} →
             </Link>
           </Button>
         )}
@@ -73,7 +73,7 @@ export function BrowseChapter({ page }: { page: BrowsePage | null }) {
                   {work.isNsfw
                     ? page?.nsfwPreference === "shown"
                       ? " · Adult"
-                      : " · Adult, blurred"
+                      : " · Adult · blurred"
                     : ""}
                 </span>
                 <strong>{work.name || "Untitled"}</strong>
@@ -89,9 +89,7 @@ export function BrowseChapter({ page }: { page: BrowsePage | null }) {
         ))}
       </ul>
       {hidden ? (
-        <p className="content-preference">
-          Some works are outside your content preference.
-        </p>
+        <p className="content-preference">Some adult works are hidden.</p>
       ) : null}
     </>
   );
@@ -100,7 +98,7 @@ export function BrowseChapter({ page }: { page: BrowsePage | null }) {
 export function BrowseLoading() {
   return (
     <div className="gallery-state" aria-busy="true">
-      <output>Finding recent creations…</output>
+      <output>Loading works…</output>
     </div>
   );
 }
