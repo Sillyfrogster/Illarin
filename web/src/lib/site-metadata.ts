@@ -9,14 +9,14 @@ export const SITE_NAME = "Illarin";
 export const CARD_SIZE = { width: 1200, height: 630 } as const;
 
 export const SITE_DESCRIPTION =
-  "Characters, lorebooks, presets, themes and extensions for your roleplay app";
+  "Discover characters, lorebooks, presets and themes while keeping every creator's source file intact.";
 
 export const SITE_CARD = {
-  url: "/site-card.jpg",
-  alt: "Illarin",
+  url: "/site-card.png",
+  alt: "Illarin. Worlds worth sharing.",
   width: 1200,
   height: 630,
-  type: "image/jpeg",
+  type: "image/png",
 } as const;
 
 export function siteOpenGraph(): NonNullable<Metadata["openGraph"]> {

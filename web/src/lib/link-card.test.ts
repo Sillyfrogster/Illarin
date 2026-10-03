@@ -24,7 +24,7 @@ const work = {
     },
   ],
 };
-const image = await readFile("public/site-card.jpg");
+const image = await readFile("public/site-card.png");
 const originalFetch = globalThis.fetch;
 const fetchSpy = spyOn(globalThis, "fetch");
 afterEach(() => fetchSpy.mockReset());
