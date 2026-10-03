@@ -1,8 +1,7 @@
 "use client";
 
-import { SiGithub } from "@icons-pack/react-simple-icons";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type ReactElement, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +29,7 @@ function refusal(error: unknown, fallback: string): string {
 }
 
 /** FromGitHub starts an extension draft from a repository's latest release once the repository holds the proof file. */
-export function FromGitHub() {
+export function FromGitHub({ children }: { children: ReactElement }) {
   const router = useRouter();
   const [choice, setChoice] = useState<ReleaseChoice>(NO_RELEASE_CHOICE);
   const [proof, setProof] = useState("");
@@ -79,12 +78,7 @@ export function FromGitHub() {
         setMessage("");
       }}
     >
-      <DialogTrigger asChild>
-        <Button variant="secondary">
-          <SiGithub aria-hidden="true" className="size-4" />
-          From GitHub
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="p-6 sm:p-8">
         <DialogTitle className="pr-10 font-display text-title font-medium text-ink">
           Start an extension from GitHub

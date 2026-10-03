@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Upload as UploadIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -10,11 +11,13 @@ import {
   readUploadOperation,
   type UploadOperation,
 } from "@/lib/api/query";
+import type { BuildChoices } from "@/lib/api/shapes";
 import { useAuth } from "@/lib/auth";
 import { timing } from "@/lib/timing";
 import { workHref } from "@/lib/work-url";
-import { DropStage, FannedSheets } from "./DropStage";
+import { DropStage } from "./DropStage";
 import { ScanView, type Upload } from "./ScanView";
+import { StartFromNothing } from "./StartFromNothing";
 import { revokeScan, type ScanPart, scanFile } from "./scan-file";
 import { sendFile } from "./send-file";
 
@@ -40,8 +43,8 @@ const SWAP = {
   transition: timing.settle,
 } as const;
 
-/** UploadFlow sends a chosen file straight away, scans it on screen while it travels, and opens the draft it becomes. */
-export function UploadFlow() {
+/** UploadFlow offers the two starts side by side, sends a chosen file straight away, scans it on screen while it travels, and opens the draft it becomes. */
+export function UploadFlow({ choices }: { choices: BuildChoices | null }) {
   const { account } = useAuth();
   const router = useRouter();
   const still = useReducedMotion();
@@ -171,18 +174,23 @@ export function UploadFlow() {
           {...(still ? {} : SWAP)}
         >
           {phase.at === "choosing" ? (
-            <DropStage onFile={send} over={over} />
+            <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+              <DropStage onFile={send} over={over} />
+              <StartFromNothing choices={choices} />
+            </div>
           ) : (
-            <ScanView
-              file={phase.file}
-              onBeginAgain={() => setPhase({ at: "choosing" })}
-              onCheckAgain={() =>
-                setPhase({ ...phase, upload: { at: "reading" } })
-              }
-              onScanned={() => setScanned(true)}
-              parts={parts}
-              upload={phase.upload}
-            />
+            <div className="rounded-card bg-inset p-6 sm:p-8">
+              <ScanView
+                file={phase.file}
+                onBeginAgain={() => setPhase({ at: "choosing" })}
+                onCheckAgain={() =>
+                  setPhase({ ...phase, upload: { at: "reading" } })
+                }
+                onScanned={() => setScanned(true)}
+                parts={parts}
+                upload={phase.upload}
+              />
+            </div>
           )}
         </motion.div>
       </AnimatePresence>
@@ -192,15 +200,19 @@ export function UploadFlow() {
           <motion.div
             animate={{ opacity: 1 }}
             aria-hidden="true"
-            className="pointer-events-none fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-field/80 backdrop-blur-md"
+            className="pointer-events-none fixed inset-0 z-85 bg-field/90 p-4 sm:p-6"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
             transition={timing.quick}
           >
-            <FannedSheets className="scale-125" open />
-            <p className="font-display text-title font-medium text-ink">
-              Let go to upload
-            </p>
+            <div className="flex size-full flex-col items-center justify-center gap-4 rounded-card border border-dashed border-accent bg-accent-wash/60">
+              <span className="flex size-12 items-center justify-center rounded-plate bg-action text-on-accent">
+                <UploadIcon className="size-5" strokeWidth={1.8} />
+              </span>
+              <p className="font-display text-title font-medium text-ink">
+                Let go to upload
+              </p>
+            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -268,7 +280,7 @@ function Gate({
   href: string;
 }) {
   return (
-    <section className="mt-10 rounded-plate bg-deep p-6">
+    <section className="mt-10 rounded-card bg-inset p-6">
       <h2 className="font-display text-section font-medium text-ink">
         {heading}
       </h2>
