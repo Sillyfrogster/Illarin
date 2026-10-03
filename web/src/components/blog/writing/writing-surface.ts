@@ -26,7 +26,7 @@ const QUOTE =
 const CODE = [
   "[&_code]:rounded-[6px] [&_code]:bg-deep [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.88em]",
   "[&_pre]:my-8 [&_pre]:overflow-x-auto [&_pre]:rounded-plate [&_pre]:bg-deep [&_pre]:p-5",
-  "[&_pre_code]:block [&_pre_code]:min-w-max [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-meta [&_pre_code]:leading-7 [&_pre_code]:whitespace-pre",
+  "[&_pre_code]:block [&_pre_code]:min-w-max [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-meta [&_pre_code]:leading-[1.7] [&_pre_code]:whitespace-pre",
 ].join(" ");
 
 const TABLE = [

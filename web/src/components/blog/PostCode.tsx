@@ -32,7 +32,7 @@ export function PostCode({
         // biome-ignore lint/a11y/noNoninteractiveTabindex: A region that scrolls has to be reachable by keyboard.
         tabIndex={0}
       >
-        <pre className="font-mono text-meta leading-7 [tab-size:2]">
+        <pre className="font-mono text-meta leading-[1.7] [tab-size:2]">
           <code className="block min-w-max whitespace-pre">
             {highlightCode(source, language).map((run, index) => (
               <span
