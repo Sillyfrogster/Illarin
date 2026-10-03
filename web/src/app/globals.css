@@ -481,12 +481,22 @@ img {
 }
 
 ::view-transition-image-pair(.morph) {
-  animation: 560ms var(--ease-wipe) via-blur;
+  animation: 560ms var(--ease-wipe) both via-blur;
 }
 
+::view-transition-old(.morph),
+::view-transition-new(.morph) {
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* The page's group takes the new page's place, so the leaving page is lifted by how far it was scrolled to stay where it was */
 html:active-view-transition-type(nav-forward, nav-back)::view-transition-old(
     .page
   ) {
+  translate: 0 calc(-1 * var(--leave-scroll, 0px));
+  transform-origin: 50% calc(var(--leave-scroll, 0px) + 50vh);
   animation: 560ms var(--ease-wipe) both page-step-back;
 }
 

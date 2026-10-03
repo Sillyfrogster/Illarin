@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { BrowseWork, NsfwPreference } from "@/lib/api/query";
 import { tagSearchHref } from "@/lib/tag-search";
-import { workCoverTransition } from "@/lib/view-transitions";
+import { holdScroll, workCoverTransition } from "@/lib/view-transitions";
 import { workDisplayName } from "@/lib/work-name";
 import { TYPE_LABELS } from "@/lib/work-types";
 import { workHref } from "@/lib/work-url";
@@ -129,6 +129,7 @@ export function OpenPanel({
                 <Link
                   className="[color:inherit] hover:text-accent"
                   href={href}
+                  onClick={holdScroll}
                   transitionTypes={["nav-forward"]}
                 >
                   {workDisplayName(work.name)}
@@ -183,6 +184,7 @@ export function OpenPanel({
             <Link
               className="inline-flex items-center gap-1.5 self-start text-ui font-medium text-accent hover:underline"
               href={href}
+              onClick={holdScroll}
               transitionTypes={["nav-forward"]}
             >
               Open the page

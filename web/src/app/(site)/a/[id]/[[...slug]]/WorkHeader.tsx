@@ -10,7 +10,7 @@ import type { Profile, WorkConnectedApp, WorkDetail } from "@/lib/api/query";
 import { cn, focusRing } from "@/lib/cn";
 import { formattingWasRemoved } from "@/lib/rich-text";
 import { tagSearchHref } from "@/lib/tag-search";
-import { workCoverTransition } from "@/lib/view-transitions";
+import { holdScroll, workCoverTransition } from "@/lib/view-transitions";
 import { workDisplayName } from "@/lib/work-name";
 import { canSendWork } from "@/lib/work-send";
 import { CreatorLine } from "./card/CreatorLine";
@@ -195,6 +195,7 @@ export function WorkHeader({
               <Link
                 className="mr-auto inline-flex min-h-control items-center gap-2 text-meta text-mute hover:text-ink"
                 href="/browse"
+                onClick={holdScroll}
                 transitionTypes={["nav-back"]}
               >
                 <ArrowLeft aria-hidden="true" className="size-4" />
