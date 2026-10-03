@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { TypeMark } from "@/components/browse/TypeMark";
 import {
   Card,
@@ -78,12 +79,14 @@ export function TopWorks({ works }: { works: ReportWork[] }) {
 }
 
 function Cover({ work }: { work: ReportWork }) {
-  if (work.cover) {
+  const [failed, setFailed] = useState(false);
+  if (work.cover && !failed) {
     return (
       <Image
         alt=""
         className="size-8 shrink-0 rounded-chip bg-inset object-cover"
         height={64}
+        onError={() => setFailed(true)}
         src={work.cover}
         unoptimized
         width={64}
