@@ -1,11 +1,5 @@
 "use client";
 
-import {
-  motion,
-  useMotionTemplate,
-  useScroll,
-  useTransform,
-} from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { BlogCategory } from "@/lib/api/query";
@@ -16,15 +10,9 @@ export function BlogMasthead({ categories }: { categories: BlogCategory[] }) {
   const pathname = usePathname();
   const onArchive =
     pathname === BLOG_HOME || pathname.startsWith(`${BLOG_HOME}/page/`);
-  const { scrollY } = useScroll();
-  const depth = useTransform(scrollY, [0, 40], [0.1, 0.28], { clamp: true });
-  const lift = useMotionTemplate`drop-shadow(0 6px 12px rgb(0 0 0 / ${depth}))`;
 
   return (
-    <motion.div
-      className="sticky top-[var(--site-header-offset)] z-70 bg-plane"
-      style={{ filter: lift }}
-    >
+    <div className="sticky top-[var(--site-header-offset)] z-70 border-b border-rule bg-field">
       <div className="mx-auto flex w-full max-w-[var(--shell)] flex-wrap items-center justify-between gap-x-6 px-[var(--gutter)] py-2 sm:min-h-14 sm:flex-nowrap sm:py-0">
         <div className="flex min-w-0 items-center">
           <Link
@@ -67,6 +55,6 @@ export function BlogMasthead({ categories }: { categories: BlogCategory[] }) {
           </nav>
         ) : null}
       </div>
-    </motion.div>
+    </div>
   );
 }
