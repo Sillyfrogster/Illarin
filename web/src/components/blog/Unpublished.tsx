@@ -9,7 +9,7 @@ export function Unpublished({ explanation }: { explanation: string }) {
       <p aria-hidden="true" className="mb-5 text-meta font-medium text-accent">
         Post unpublished
       </p>
-      <h1 className="max-w-[21ch] font-display text-hero font-medium tracking-[-0.03em] break-words text-balance">
+      <h1 className="max-w-[21ch] font-display text-display font-medium tracking-[-0.03em] break-words text-balance">
         {UNPUBLISHED_MESSAGE}
       </h1>
       {explanation ? (

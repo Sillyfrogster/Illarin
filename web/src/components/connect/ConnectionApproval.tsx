@@ -350,13 +350,11 @@ function Frame({ children, lede }: { children: ReactNode; lede: string }) {
   return (
     <>
       <header>
-        <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
+        <h1 className="font-display text-title font-medium text-balance">
           Connect an app
         </h1>
         {lede ? (
-          <p className="mt-4 max-w-[58ch] font-prose text-lede text-mute">
-            {lede}
-          </p>
+          <p className="mt-2 max-w-[58ch] font-ui text-ui text-mute">{lede}</p>
         ) : null}
       </header>
       <div className="mt-9">{children}</div>

@@ -77,7 +77,7 @@ export function LegalPage({
 
         <article className="min-w-0 max-w-[70ch]" id="document-top">
           <header>
-            <h1 className="font-display text-[clamp(1.85rem,3.4vw,3rem)] leading-[1.05] font-medium tracking-[-0.045em] text-balance">
+            <h1 className="font-display text-display font-medium tracking-[-0.04em] text-balance">
               {title}
             </h1>
             <p className="mt-3 font-prose text-meta text-mute">

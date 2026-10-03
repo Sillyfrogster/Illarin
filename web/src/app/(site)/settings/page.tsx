@@ -33,12 +33,12 @@ export default async function SettingsPage({
     : query.discord;
 
   return (
-    <Shell className="max-w-[78rem] pt-12 pb-chapter lg:pt-14">
-      <header className="max-w-[52ch]">
-        <h1 className="font-display text-[clamp(2rem,3vw,2.75rem)] leading-[1.1] font-medium tracking-[-0.035em] text-balance">
+    <Shell className="pt-10 pb-chapter">
+      <header>
+        <h1 className="font-display text-title font-medium">
           Account settings
         </h1>
-        <p className="mt-3 font-prose text-ui text-mute">
+        <p className="mt-2 font-ui text-ui text-mute">
           Manage what Browse shows you, your sign-in methods and connected apps.
         </p>
       </header>

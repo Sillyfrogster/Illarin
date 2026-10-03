@@ -7,7 +7,7 @@ import { Byline } from "./Byline";
 import { titleBand } from "./post-title";
 
 const TITLE = {
-  short: "max-w-[18ch] text-hero",
+  short: "max-w-[18ch] text-display",
   medium: "max-w-[22ch] text-[clamp(2.1rem,4.3vw,3.4rem)]/[1.08]",
   long: "max-w-[28ch] text-[clamp(1.9rem,3.2vw,2.6rem)]/[1.14]",
 } as const;
