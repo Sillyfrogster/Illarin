@@ -304,7 +304,7 @@ export function GetWork({
         ) : (
           <Button
             asChild
-            className="min-w-0 flex-1 sm:max-w-80"
+            className="min-w-fit grow sm:max-w-80"
             ref={button as React.Ref<HTMLButtonElement>}
             variant="primary"
           >
@@ -459,7 +459,7 @@ function OlderButton({
   }
   if (older.state !== "ready") {
     return (
-      <Button className="min-w-0 flex-1 sm:max-w-80" loading variant="primary">
+      <Button className="min-w-fit grow sm:max-w-80" loading variant="primary">
         Download {version}
       </Button>
     );
@@ -467,7 +467,7 @@ function OlderButton({
   return (
     <Button
       asChild
-      className="min-w-0 flex-1 sm:max-w-80"
+      className="min-w-fit grow sm:max-w-80"
       ref={button as React.Ref<HTMLButtonElement>}
       variant="primary"
     >
@@ -502,7 +502,7 @@ function SendButton({
   const pending = isWaiting(app.send);
   return (
     <Button
-      className="min-w-0 flex-1 sm:max-w-80"
+      className="min-w-fit grow sm:max-w-80"
       disabled={pending}
       loading={busy}
       onClick={() => void onSend(app)}
