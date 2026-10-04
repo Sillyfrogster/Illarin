@@ -178,7 +178,12 @@ export function OpenPanel({
             ) : null}
             <div className="mt-auto flex flex-col gap-3 lg:hidden">
               {peek.work ? (
-                <GetIt apps={peek.apps} className="max-w-80" work={peek.work} />
+                <GetIt
+                  apps={peek.apps}
+                  className="max-w-80"
+                  key={peek.work.id}
+                  work={peek.work}
+                />
               ) : null}
             </div>
             <Link
@@ -195,7 +200,7 @@ export function OpenPanel({
           <div className="flex min-w-0 flex-col gap-4 md:col-span-2 lg:col-span-1 lg:pt-12 lg:pb-2">
             <div className="hidden lg:block">
               {peek.work ? (
-                <GetIt apps={peek.apps} work={peek.work} />
+                <GetIt apps={peek.apps} key={peek.work.id} work={peek.work} />
               ) : (
                 <Skeleton className="h-control w-full" />
               )}
