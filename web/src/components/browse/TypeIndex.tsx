@@ -147,7 +147,7 @@ function Butterfly({ landing }: { landing: string }) {
   return (
     <motion.span
       aria-hidden="true"
-      className="pointer-events-none absolute -top-2.5 -left-4 flex h-4.5 w-7 -rotate-[18deg] drop-shadow-[0_3px_10px_rgb(167_120_255/0.5)]"
+      className="pointer-events-none absolute -top-2.5 -left-4 flex h-4.5 w-7 -rotate-[18deg]"
       layoutId="butterfly"
       transition={still ? { duration: 0 } : FLIGHT}
     >
