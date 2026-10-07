@@ -160,9 +160,18 @@ func (s *MicrosoftGraphSender) token(ctx context.Context) (string, error) {
 
 func microsoftResponseError(action string, response *http.Response) error {
 	body, _ := io.ReadAll(io.LimitReader(response.Body, maxMicrosoftError))
-	detail := strings.TrimSpace(string(body))
-	if detail == "" {
-		return fmt.Errorf("%s: HTTP %d", action, response.StatusCode)
+	return &microsoftHTTPError{action: action, status: response.StatusCode, detail: strings.TrimSpace(string(body))}
+}
+
+type microsoftHTTPError struct {
+	action string
+	status int
+	detail string
+}
+
+func (e *microsoftHTTPError) Error() string {
+	if e.detail == "" {
+		return fmt.Sprintf("%s: HTTP %d", e.action, e.status)
 	}
-	return fmt.Errorf("%s: HTTP %d: %s", action, response.StatusCode, detail)
+	return fmt.Sprintf("%s: HTTP %d: %s", e.action, e.status, e.detail)
 }

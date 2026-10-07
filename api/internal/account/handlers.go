@@ -1,10 +1,14 @@
 package account
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"strconv"
 	"strings"
@@ -13,6 +17,7 @@ import (
 	"github.com/Sillyfrogster/Illarin/api/internal/api"
 	"github.com/Sillyfrogster/Illarin/api/internal/connect"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const (
@@ -509,8 +514,36 @@ func (h *Handlers) accountError(c *gin.Context, err error) {
 	case errors.Is(err, ErrEmailUnavailable):
 		api.Refuse(c, http.StatusConflict, "An account already uses that email. Sign in instead.")
 	default:
+		logSignUpFailure(err)
 		api.Refuse(c, http.StatusInternalServerError, "Could not create the account.")
 	}
+}
+
+func logSignUpFailure(err error) {
+	stage := "sign up"
+	if errors.Unwrap(err) != nil {
+		stage, _, _ = strings.Cut(err.Error(), ": ")
+	}
+	root := err
+	for errors.Unwrap(root) != nil {
+		root = errors.Unwrap(root)
+	}
+	cause := fmt.Sprintf("%T", root)
+	switch failure := root.(type) {
+	case *pgconn.PgError:
+		cause = "SQLSTATE " + failure.Code
+	case *textproto.Error:
+		cause = fmt.Sprintf("SMTP %d", failure.Code)
+	case *microsoftHTTPError:
+		cause = fmt.Sprintf("%s: HTTP %d", failure.action, failure.status)
+	default:
+		if errors.Is(err, context.DeadlineExceeded) {
+			cause = context.DeadlineExceeded.Error()
+		} else if errors.Is(err, context.Canceled) {
+			cause = context.Canceled.Error()
+		}
+	}
+	log.Printf("account sign-up failed: stage=%q cause=%q", stage, cause)
 }
 
 func setOAuthStateCookie(c *gin.Context, state string, expires time.Time) {
