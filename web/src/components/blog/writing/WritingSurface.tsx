@@ -3,12 +3,14 @@
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { TableKit } from "@tiptap/extension-table";
 import { Placeholder } from "@tiptap/extensions";
+import { Fragment, Slice } from "@tiptap/pm/model";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import type { PostMedia } from "@/lib/api/query";
 import type { PostBody } from "@/lib/post-body";
 import { Callout } from "./callout-node";
 import { HeadingAnchor } from "./heading-anchor";
+import { markdownPaste } from "./markdown-paste";
 import { Gallery, GalleryPicture, Picture } from "./picture-nodes";
 import { fromEditor, toEditor } from "./tiptap-document";
 import { WritingToolbar } from "./WritingToolbar";
@@ -53,6 +55,23 @@ export function WritingSurface({
     ],
     content: toEditor(body, media),
     editorProps: {
+      clipboardTextParser: (text, context, plainText, view) => {
+        const schema = view.state.schema;
+        const formatted = !plainText && markdownPaste(text, schema);
+        if (formatted) return formatted;
+        return Slice.maxOpen(
+          Fragment.from(
+            text
+              .split(/(?:\r\n?|\n)+/)
+              .map((line) =>
+                schema.nodes.paragraph.create(
+                  null,
+                  line ? schema.text(line, context.marks()) : null,
+                ),
+              ),
+          ),
+        );
+      },
       attributes: {
         class: WRITING_SURFACE,
         "aria-label": "Post body",
