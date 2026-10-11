@@ -93,6 +93,24 @@ func (h *Handlers) GetWorkConnectedApps(c *gin.Context) {
 	})
 }
 
+func (h *Handlers) ReceiveWork(c *gin.Context) {
+	noStore(c)
+	app, ok := h.connectedApp(c, PermissionReceiveWorks)
+	if !ok {
+		return
+	}
+	id, ok := api.PathID(c, "id")
+	if !ok {
+		return
+	}
+	queued, err := h.sends.Queue(c.Request.Context(), app.UserID, app.ID, id)
+	if err != nil {
+		h.sendError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, toAPIQueuedSend(queued))
+}
+
 func (h *Handlers) SendWork(c *gin.Context) {
 	id, ok := api.PathID(c, "id")
 	if !ok {

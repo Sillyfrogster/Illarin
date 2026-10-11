@@ -46,6 +46,7 @@ func Register(routes api.Routes, h *Handlers) {
 	registerAppRoute(routes, "/v1/sends/collect", d.Collect, map[string]gin.HandlerFunc{http.MethodPost: h.CollectSends})
 	routes.Handle(http.MethodDelete, "/v1/sends/:id", d.JSON, h.DiscardSend)
 	registerAppRoute(routes, "/v1/library/sync", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.SyncLibrary})
+	registerAppRoute(routes, "/v1/works/:id/receive", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.ReceiveWork})
 	routes.Handle(http.MethodGet, "/v1/works/:id/connected-apps", d.JSON, h.GetWorkConnectedApps)
 	routes.Handle(http.MethodPost, "/v1/works/:id/sends", d.JSON, h.SendWork)
 	registerAppRoute(routes, sendPathStart+":id/export", d.Download, map[string]gin.HandlerFunc{http.MethodGet: h.DownloadSendFile})

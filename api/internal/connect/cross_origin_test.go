@@ -79,6 +79,7 @@ func TestOnlyAppEndpointsAnswerCrossOriginPreflights(t *testing.T) {
 		{"/v1/connected-apps/me", []string{"GET", "PUT"}},
 		{"/v1/sends/collect", []string{"POST"}},
 		{"/v1/library/sync", []string{"POST"}},
+		{"/v1/works/00000000-0000-0000-0000-000000000001/receive", []string{"POST"}},
 		{"/send/00000000-0000-0000-0000-000000000001/export", []string{"GET"}},
 		{"/v1/link/requests", []string{"POST"}},
 		{"/v1/link/poll", []string{"POST"}},

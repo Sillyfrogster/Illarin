@@ -45,7 +45,7 @@ their existing codes or refresh token instead of an access token.
 
 This applies to `requests`, `poll`, `authorizations`, `token` and `refresh`
 under `/api/v1/connect/`, plus `/api/v1/connected-apps/me`, `/api/v1/sends/collect`,
-`/api/v1/library/sync`, and the signed `/send/<id>/export` addresses returned
+`/api/v1/library/sync`, `/api/v1/works/<workId>/receive`, and the signed `/send/<id>/export` addresses returned
 by collection. Signed downloads keep using the signature in their address.
 The compatibility aliases follow the same rule. Preflights allow
 `Authorization` and `Content-Type`; responses expose `Retry-After`,
@@ -607,6 +607,23 @@ old copy when replacing it. After installing an update, report the version
 number received with the send, since another version may have been published
 after sync. Receiving an update still needs `work:receive` and a compatible
 format; `library:sync` grants no permission to receive works.
+
+To request the latest published copy for the authenticated installation:
+
+```http
+POST /api/v1/works/<workId>/receive
+Authorization: Bearer ia1.…
+```
+
+This bearer-only route requires `work:receive` and answers `202` with the
+queued send fields (`id`, `connectedAppId`, `workId`, `state`, `queuedAt`,
+`settledAt`, `expiresAt` and `updatesInstall`). It queues only for the installation the
+credential belongs to, using its declared formats and the same access checks,
+queue limits and deduplication as a send from the site. It accepts no destination
+installation id. Collect the send through `/api/v1/sends/collect` and associate
+its `id` with the local copy the reader chose to update. A work withdrawn before
+collection is not delivered. Requesting a copy never changes the reported
+installed version.
 
 ### Takedown notices
 
