@@ -73,10 +73,17 @@ type LibraryReport struct {
 }
 
 type LibraryReportResult struct {
-	Accepted  int              `json:"accepted"`
-	Ignored   int              `json:"ignored"`
-	Removed   int              `json:"removed"`
-	Takedowns []TakedownNotice `json:"takedowns"`
+	Accepted  int                  `json:"accepted"`
+	Ignored   int                  `json:"ignored"`
+	Removed   int                  `json:"removed"`
+	Entries   []LibraryWorkVersion `json:"entries"`
+	Takedowns []TakedownNotice     `json:"takedowns"`
+}
+
+type LibraryWorkVersion struct {
+	WorkId        uuid.UUID `json:"workId"`
+	VersionNumber int       `json:"versionNumber"`
+	Notes         string    `json:"notes"`
 }
 
 type QueuedSend struct {

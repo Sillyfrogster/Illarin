@@ -74,6 +74,16 @@ func (s *Sends) Sync(
 	if err != nil {
 		return LibraryResult{}, fmt.Errorf("remove library entries: %w", err)
 	}
+	rows, err := queries.LibraryWorkVersions(ctx, uuidValue(app.ID))
+	if err != nil {
+		return LibraryResult{}, fmt.Errorf("read the library's published versions: %w", err)
+	}
+	latest := make([]LibraryVersion, 0, len(rows))
+	for _, row := range rows {
+		latest = append(latest, LibraryVersion{
+			WorkID: uuid.UUID(row.WorkID.Bytes), VersionNumber: int(row.Number), Notes: row.Notes,
+		})
+	}
 	takedowns, err := takeTakedownNotices(ctx, queries, app.ID)
 	if err != nil {
 		return LibraryResult{}, err
@@ -83,7 +93,7 @@ func (s *Sends) Sync(
 	}
 	return LibraryResult{
 		Accepted: int(accepted), Removed: int(dropped),
-		Ignored: len(entries) - int(accepted), Takedowns: takedowns,
+		Ignored: len(entries) - int(accepted), Entries: latest, Takedowns: takedowns,
 	}, nil
 }
 

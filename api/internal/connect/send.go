@@ -117,7 +117,14 @@ type LibraryResult struct {
 	Accepted  int
 	Removed   int
 	Ignored   int
+	Entries   []LibraryVersion
 	Takedowns []TakenDownWork
+}
+
+type LibraryVersion struct {
+	WorkID        uuid.UUID
+	VersionNumber int
+	Notes         string
 }
 
 type TakenDownWork struct {

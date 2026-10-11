@@ -1254,6 +1254,17 @@ select entry.connected_app_id,
    and work.lifecycle = 'published'
  group by entry.connected_app_id;
 
+-- name: LibraryWorkVersions :many
+select entry.work_id, version.number, version.notes
+  from app_library_entries as entry
+  join works as work on work.id = entry.work_id
+  join work_versions as version on version.id = work.published_version_id
+ where entry.connected_app_id = sqlc.arg('connected_app_id')
+   and work.deleted_at is null
+   and work.taken_down_at is null
+   and work.lifecycle = 'published'
+ order by entry.work_id;
+
 -- name: ReportLibraryEntries :execrows
 insert into app_library_entries
     (connected_app_id, work_id, version_number, reported_at)

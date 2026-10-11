@@ -57,9 +57,15 @@ func (h *Handlers) SyncLibrary(c *gin.Context) {
 		h.sendError(c, err)
 		return
 	}
+	entries := make([]LibraryWorkVersion, 0, len(result.Entries))
+	for _, entry := range result.Entries {
+		entries = append(entries, LibraryWorkVersion{
+			WorkId: entry.WorkID, VersionNumber: entry.VersionNumber, Notes: entry.Notes,
+		})
+	}
 	c.JSON(http.StatusOK, LibraryReportResult{
 		Accepted: result.Accepted, Removed: result.Removed, Ignored: result.Ignored,
-		Takedowns: toAPITakedownNotices(result.Takedowns),
+		Entries: entries, Takedowns: toAPITakedownNotices(result.Takedowns),
 	})
 }
 

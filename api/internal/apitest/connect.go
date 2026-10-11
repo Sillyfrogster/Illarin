@@ -161,7 +161,14 @@ type LibraryResult struct {
 	Accepted  int              `json:"accepted"`
 	Removed   int              `json:"removed"`
 	Ignored   int              `json:"ignored"`
+	Entries   []LibraryVersion `json:"entries"`
 	Takedowns []TakedownNotice `json:"takedowns"`
+}
+
+type LibraryVersion struct {
+	WorkID        string `json:"workId"`
+	VersionNumber int    `json:"versionNumber"`
+	Notes         string `json:"notes"`
 }
 
 type TakedownNotice struct {

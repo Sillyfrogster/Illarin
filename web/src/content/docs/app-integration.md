@@ -519,8 +519,8 @@ sharing and still receive and install an extension.
 ## Report your library
 
 `library:sync` mirrors the app's library so the site can show its owner what is
-installed and what has moved on since. It is outbound only: Illarin never writes
-this and never sends it back to another installation.
+installed and what has moved on since. Only the app writes its mirror. Each
+response carries the latest published versions and notes for that installation.
 
 ```http
 POST /api/v1/library/sync
@@ -562,14 +562,51 @@ is behind.
 Report immutable work ids and never addresses, in both directions, so a creator
 renaming something cannot break your state. Send incremental reports as things
 change and a full snapshot occasionally, so a missed update repairs itself.
-The response counts what was recorded:
+The response counts what was recorded and lists the latest published versions:
 
 ```json
-{"accepted": 142, "removed": 3, "ignored": 1, "takedowns": []}
+{
+  "accepted": 2,
+  "removed": 1,
+  "ignored": 0,
+  "entries": [
+    {"workId": "…", "versionNumber": 5, "notes": "Added another greeting."},
+    {"workId": "…", "versionNumber": 1, "notes": ""}
+  ],
+  "takedowns": []
+}
 ```
 
-`ignored` counts entries naming a work Illarin cannot offer, such as one that
-has since been deleted.
+| Field | Meaning |
+| --- | --- |
+| `accepted` | Entries recorded from this request |
+| `removed` | Mirror entries removed by this request or snapshot |
+| `ignored` | Reported entries Illarin could not record, such as a deleted work |
+| `entries` | Latest published versions for this installation's remaining accessible works |
+| `entries[].workId` | Immutable work id |
+| `entries[].versionNumber` | Latest published version number, not the installed number |
+| `entries[].notes` | Creator's notes for that version, or an empty string |
+| `takedowns` | Pending extension takedown notices, described below |
+
+### Show available updates
+
+`entries` covers the whole remaining mirror, even for an incremental report
+with no entries. It includes up-to-date copies as well as outdated ones. Works
+removed from the mirror, deleted, taken down or returned to draft are absent.
+Unlisted works remain accessible. Private drafted changes never reach this
+response. An empty result is `"entries": []`.
+
+Compare each returned `versionNumber` with the number stored against its
+`workId` in your app. A larger number means an update is available; show the
+creator's `notes` beside it. The response carries only the latest version's
+notes, not a combined history. Sync never changes the installed number unless
+your report changes it.
+
+Never overwrite a copy the reader edited without asking them first. Keep the
+old copy when replacing it. After installing an update, report the version
+number received with the send, since another version may have been published
+after sync. Receiving an update still needs `work:receive` and a compatible
+format; `library:sync` grants no permission to receive works.
 
 ### Takedown notices
 
@@ -578,7 +615,7 @@ next library report or send wait carries a notice naming it, whichever comes
 first:
 
 ```json
-{"accepted": 0, "removed": 0, "ignored": 0,
+{"accepted": 0, "removed": 0, "ignored": 0, "entries": [],
  "takedowns": [{"workId": "…", "name": "Quiet Toolbox",
                 "takenDownAt": "2026-09-14T06:00:00Z"}]}
 ```
@@ -637,6 +674,8 @@ Before calling an integration complete, verify all of these:
 - Send ids are deduplicated, so the same send arriving twice installs once.
 - Library reports name immutable work ids, stay inside every bound, carry the
   app's `appVersion`, and a snapshot carries no removals.
+- The app compares the latest `versionNumber` with the installed copy and shows
+  its `notes`; replacing an edited copy asks first and keeps the old copy.
 - An installation that declares an `extension-install` capability passes every
   item of the [extension install checklist](#extension-install-checklist).
 - All tests use synthetic accounts, names, codes, and works.

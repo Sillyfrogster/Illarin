@@ -1659,6 +1659,44 @@ func (q *Queries) InstalledAppVersions(ctx context.Context, arg InstalledAppVers
 	return items, nil
 }
 
+const libraryWorkVersions = `-- name: LibraryWorkVersions :many
+select entry.work_id, version.number, version.notes
+  from app_library_entries as entry
+  join works as work on work.id = entry.work_id
+  join work_versions as version on version.id = work.published_version_id
+ where entry.connected_app_id = $1
+   and work.deleted_at is null
+   and work.taken_down_at is null
+   and work.lifecycle = 'published'
+ order by entry.work_id
+`
+
+type LibraryWorkVersionsRow struct {
+	WorkID pgtype.UUID
+	Number int32
+	Notes  string
+}
+
+func (q *Queries) LibraryWorkVersions(ctx context.Context, connectedAppID pgtype.UUID) ([]LibraryWorkVersionsRow, error) {
+	rows, err := q.db.Query(ctx, libraryWorkVersions, connectedAppID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LibraryWorkVersionsRow
+	for rows.Next() {
+		var i LibraryWorkVersionsRow
+		if err := rows.Scan(&i.WorkID, &i.Number, &i.Notes); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const liftTakedown = `-- name: LiftTakedown :one
 with cleared as (
     update works as work
