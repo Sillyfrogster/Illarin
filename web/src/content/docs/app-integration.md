@@ -37,6 +37,25 @@ apps, or installations use the same display name.
 
 ## Security model
 
+App-integration endpoints accept cross-origin requests from any origin.
+Use `credentials: "omit"` in browser fetches. Send the connected app's access
+token in `Authorization: Bearer …`; an Illarin session cookie never
+authenticates an app. Connection setup, polling, token exchange and refresh use
+their existing codes or refresh token instead of an access token.
+
+This applies to `requests`, `poll`, `authorizations`, `token` and `refresh`
+under `/api/v1/connect/`, plus `/api/v1/connected-apps/me`, `/api/v1/sends/collect`,
+`/api/v1/library/sync`, and the signed `/send/<id>/export` addresses returned
+by collection. Signed downloads keep using the signature in their address.
+The compatibility aliases follow the same rule. Preflights allow
+`Authorization` and `Content-Type`; responses expose `Retry-After`,
+`Content-Disposition`, `X-Illarin-Format` and its compatibility name,
+`X-Illarin-Export-Target`.
+
+Illarin never sends `Access-Control-Allow-Credentials`. Every other endpoint,
+including connection approval and account settings, keeps refusing
+cross-origin browser access.
+
 Illarin authenticates the account owner and the installation they approve. It
 does not authenticate or endorse the software vendor. There is no client ID,
 client secret, registration, allowlist, or trusted app badge.

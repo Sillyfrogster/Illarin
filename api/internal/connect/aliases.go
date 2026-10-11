@@ -13,26 +13,28 @@ func registerAliases(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
 	routes.Handle(http.MethodGet, "/v1/assets/:id/instances", d.JSON, h.GetWorkConnectedApps)
 	routes.Handle(http.MethodPost, "/v1/assets/:id/deliveries", d.JSON, h.SendWork)
-	routes.Handle(http.MethodPost, "/v1/link/requests", d.JSON, h.StartConnectionRequest)
-	routes.Handle(http.MethodPost, oldPollPath, d.JSON, h.PollConnectionRequest)
+	registerAppRoute(routes, "/v1/link/requests", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.StartConnectionRequest})
+	registerAppRoute(routes, oldPollPath, d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.PollConnectionRequest})
 	routes.Handle(http.MethodGet, "/v1/link/requests/:userCode", d.JSON, h.GetConnectionRequest)
 	routes.Handle(http.MethodPost, "/v1/link/requests/:userCode/approve", d.JSON, h.ApproveConnectionRequest)
 	routes.Handle(http.MethodPost, "/v1/link/requests/:userCode/deny", d.JSON, h.DenyConnectionRequest)
-	routes.Handle(http.MethodPost, "/v1/link/authorizations", d.JSON, h.StartConnectionAuthorization)
+	registerAppRoute(routes, "/v1/link/authorizations", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.StartConnectionAuthorization})
 	routes.Handle(http.MethodGet, "/v1/link/authorizations/:requestCode", d.JSON, h.GetConnectionAuthorization)
 	routes.Handle(http.MethodPost, "/v1/link/authorizations/:requestCode/approve", d.JSON, h.ApproveConnectionAuthorization)
 	routes.Handle(http.MethodPost, "/v1/link/authorizations/:requestCode/deny", d.JSON, h.DenyConnectionAuthorization)
-	routes.Handle(http.MethodPost, "/v1/link/token", d.JSON, h.ExchangeConnectionAuthorization)
-	routes.Handle(http.MethodPost, "/v1/link/refresh", d.JSON, h.RefreshAppCredentials)
+	registerAppRoute(routes, "/v1/link/token", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.ExchangeConnectionAuthorization})
+	registerAppRoute(routes, "/v1/link/refresh", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.RefreshAppCredentials})
 	routes.Handle(http.MethodGet, "/v1/instances", d.JSON, h.ListConnectedApps)
-	routes.Handle(http.MethodGet, "/v1/instances/me", d.JSON, h.GetConnectedApp)
-	routes.Handle(http.MethodPut, "/v1/instances/me", d.JSON, h.UpdateCapabilities)
+	registerAppRoute(routes, "/v1/instances/me", d.JSON, map[string]gin.HandlerFunc{
+		http.MethodGet: h.GetConnectedApp,
+		http.MethodPut: h.UpdateCapabilities,
+	})
 	routes.Handle(http.MethodDelete, "/v1/instances/:id", d.JSON, h.RevokeConnectedApp)
-	routes.Handle(http.MethodPost, "/v1/deliveries/collect", d.Collect, h.CollectSends)
+	registerAppRoute(routes, "/v1/deliveries/collect", d.Collect, map[string]gin.HandlerFunc{http.MethodPost: h.CollectSends})
 	routes.Handle(http.MethodDelete, "/v1/deliveries/:id", d.JSON, h.DiscardSend)
 	routes.Handle(http.MethodGet, "/v1/works/:id/instances", d.JSON, h.GetWorkConnectedApps)
 	routes.Handle(http.MethodPost, "/v1/works/:id/deliveries", d.JSON, h.SendWork)
-	routes.Handle(http.MethodGet, "/delivery/:id/export", d.Download, h.DownloadSendFile)
+	registerAppRoute(routes, "/delivery/:id/export", d.Download, map[string]gin.HandlerFunc{http.MethodGet: h.DownloadSendFile})
 }
 
 const oldPollPath = "/v1/link/poll"

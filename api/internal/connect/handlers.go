@@ -25,27 +25,29 @@ func NewHandlers(apps *Apps, sends *Sends, files Files) *Handlers {
 
 func Register(routes api.Routes, h *Handlers) {
 	d := routes.Deadlines
-	routes.Handle(http.MethodPost, "/v1/connect/requests", d.JSON, h.StartConnectionRequest)
-	routes.Handle(http.MethodPost, "/v1/connect/poll", d.JSON, h.PollConnectionRequest)
+	registerAppRoute(routes, "/v1/connect/requests", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.StartConnectionRequest})
+	registerAppRoute(routes, "/v1/connect/poll", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.PollConnectionRequest})
 	routes.Handle(http.MethodGet, "/v1/connect/requests/:userCode", d.JSON, h.GetConnectionRequest)
 	routes.Handle(http.MethodPost, "/v1/connect/requests/:userCode/approve", d.JSON, h.ApproveConnectionRequest)
 	routes.Handle(http.MethodPost, "/v1/connect/requests/:userCode/deny", d.JSON, h.DenyConnectionRequest)
-	routes.Handle(http.MethodPost, "/v1/connect/authorizations", d.JSON, h.StartConnectionAuthorization)
+	registerAppRoute(routes, "/v1/connect/authorizations", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.StartConnectionAuthorization})
 	routes.Handle(http.MethodGet, "/v1/connect/authorizations/:requestCode", d.JSON, h.GetConnectionAuthorization)
 	routes.Handle(http.MethodPost, "/v1/connect/authorizations/:requestCode/approve", d.JSON, h.ApproveConnectionAuthorization)
 	routes.Handle(http.MethodPost, "/v1/connect/authorizations/:requestCode/deny", d.JSON, h.DenyConnectionAuthorization)
-	routes.Handle(http.MethodPost, "/v1/connect/token", d.JSON, h.ExchangeConnectionAuthorization)
-	routes.Handle(http.MethodPost, "/v1/connect/refresh", d.JSON, h.RefreshAppCredentials)
+	registerAppRoute(routes, "/v1/connect/token", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.ExchangeConnectionAuthorization})
+	registerAppRoute(routes, "/v1/connect/refresh", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.RefreshAppCredentials})
 	routes.Handle(http.MethodGet, "/v1/connected-apps", d.JSON, h.ListConnectedApps)
-	routes.Handle(http.MethodGet, "/v1/connected-apps/me", d.JSON, h.GetConnectedApp)
-	routes.Handle(http.MethodPut, "/v1/connected-apps/me", d.JSON, h.UpdateCapabilities)
+	registerAppRoute(routes, "/v1/connected-apps/me", d.JSON, map[string]gin.HandlerFunc{
+		http.MethodGet: h.GetConnectedApp,
+		http.MethodPut: h.UpdateCapabilities,
+	})
 	routes.Handle(http.MethodDelete, "/v1/connected-apps/:id", d.JSON, h.RevokeConnectedApp)
 	routes.Handle(http.MethodPut, "/v1/connected-apps/:id/permissions", d.JSON, h.SetConnectedAppPermissions)
-	routes.Handle(http.MethodPost, "/v1/sends/collect", d.Collect, h.CollectSends)
+	registerAppRoute(routes, "/v1/sends/collect", d.Collect, map[string]gin.HandlerFunc{http.MethodPost: h.CollectSends})
 	routes.Handle(http.MethodDelete, "/v1/sends/:id", d.JSON, h.DiscardSend)
-	routes.Handle(http.MethodPost, "/v1/library/sync", d.JSON, h.SyncLibrary)
+	registerAppRoute(routes, "/v1/library/sync", d.JSON, map[string]gin.HandlerFunc{http.MethodPost: h.SyncLibrary})
 	routes.Handle(http.MethodGet, "/v1/works/:id/connected-apps", d.JSON, h.GetWorkConnectedApps)
 	routes.Handle(http.MethodPost, "/v1/works/:id/sends", d.JSON, h.SendWork)
-	routes.Handle(http.MethodGet, sendPathStart+":id/export", d.Download, h.DownloadSendFile)
+	registerAppRoute(routes, sendPathStart+":id/export", d.Download, map[string]gin.HandlerFunc{http.MethodGet: h.DownloadSendFile})
 	registerAliases(routes, h)
 }
