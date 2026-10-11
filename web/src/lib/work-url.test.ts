@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   isWorkId,
+  readWorkLink,
   workHistoryHref,
   workHref,
   workRedirect,
@@ -9,6 +10,27 @@ import {
 
 const ID = "0f6b7a4c-3d21-4a5e-9c8b-1f2e3d4c5b6a";
 const CHRISSY = { id: ID, name: "Christine Novak" };
+
+test("reads Illarin work links by stable id, including old slugs", () => {
+  for (const link of [
+    `https://illarin.com/a/${ID}/old-name?history#version-2`,
+    `/a/${ID}`,
+    `  https://illarin.com/a/${ID}  `,
+  ]) {
+    expect(readWorkLink(link, "https://illarin.com")).toBe(ID);
+  }
+  for (const link of [
+    "",
+    "not a link",
+    `https://example.com/a/${ID}`,
+    `/a/${ID}bad`,
+    `https://illarin.com@evil.example/a/${ID}`,
+    `https://[bad`,
+    `/browse/${ID}`,
+  ]) {
+    expect(readWorkLink(link, "https://illarin.com")).toBe(null);
+  }
+});
 
 test("lowercases and joins words with single hyphens", () => {
   expect(workSlug("The Quiet Archivist")).toBe("the-quiet-archivist");

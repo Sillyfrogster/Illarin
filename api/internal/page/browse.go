@@ -249,6 +249,21 @@ func (s *Service) Featured(ctx context.Context, creatorID uuid.UUID, preference 
 	return items, nil
 }
 
+func (s *Service) Recommendations(ctx context.Context, creatorID uuid.UUID, preference work.NSFWPreference) ([]BrowseItem, int, error) {
+	rows, err := db.New(s.pool).RecommendedWorks(ctx, uuidToPgtype(creatorID))
+	if err != nil {
+		return nil, 0, fmt.Errorf("read recommendations: %w", err)
+	}
+	items := make([]BrowseItem, 0, len(rows))
+	for _, row := range rows {
+		if preference == work.NSFWHidden && (!row.IsNsfw.Valid || row.IsNsfw.Bool) {
+			continue
+		}
+		items = append(items, s.browseItem(db.BrowseWorksRow(row), false, preference))
+	}
+	return items, len(rows), nil
+}
+
 func (s *Service) browseItem(row db.BrowseWorksRow, ownProfile bool, preference work.NSFWPreference) BrowseItem {
 	draft := work.Lifecycle(row.Lifecycle) == work.LifecycleDraft
 	item := BrowseItem{

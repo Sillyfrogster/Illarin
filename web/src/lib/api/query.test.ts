@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { DRAFTED_CHANGES_STALE } from "@/lib/drafted-changes";
-import { saveWorkDetails } from "./query";
+import { fetchProfile, saveWorkDetails } from "./query";
 
 const ID = "00000000-0000-4000-8000-000000000024";
 const originalFetch = globalThis.fetch;
@@ -21,6 +21,20 @@ function useFetch(
 afterEach(() => {
   useFetch(originalFetch);
   Reflect.deleteProperty(globalThis, "window");
+});
+
+test("only a missing profile becomes not found; API failures remain errors", async () => {
+  useFetch(async () =>
+    Response.json({ error: "No such profile." }, { status: 404 }),
+  );
+  expect(await fetchProfile("fixture.creator")).toBeNull();
+
+  useFetch(async () =>
+    Response.json({ error: "Could not read the profile." }, { status: 500 }),
+  );
+  await expect(fetchProfile("fixture.creator")).rejects.toThrow(
+    "Could not load the profile",
+  );
 });
 
 describe("details client", () => {

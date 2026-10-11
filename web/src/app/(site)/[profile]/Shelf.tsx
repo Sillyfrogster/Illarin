@@ -50,6 +50,7 @@ export function Shelf({
   firstSteps,
   pinning,
   published,
+  recommendations,
 }: {
   featured: BrowseWork[];
   filters: BrowseFilters;
@@ -60,6 +61,7 @@ export function Shelf({
   firstSteps: ReactNode;
   pinning: Pinning | null;
   published: number;
+  recommendations: ReactNode;
 }) {
   const basePath = `/@${handle}`;
   const { navigate, pending } = useBrowseNavigation(basePath);
@@ -117,6 +119,8 @@ export function Shelf({
         published={published}
         trouble={pinning?.trouble ?? ""}
       />
+
+      {recommendations}
 
       <section aria-labelledby={`${panel}-heading`} className="min-w-0">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">

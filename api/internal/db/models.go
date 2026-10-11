@@ -486,6 +486,12 @@ type ProfileMedium struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type ProfileRecommendation struct {
+	UserID    pgtype.UUID
+	WorkID    pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+}
+
 type PublicProfile struct {
 	UserID        pgtype.UUID
 	DisplayName   string
@@ -719,7 +725,7 @@ type WorkPublicWork struct {
 	OwnerID            pgtype.UUID
 	Name               interface{}
 	Blurb              interface{}
-	Tags               interface{}
+	Tags               []string
 	CoverMediaID       pgtype.UUID
 	IsNsfw             bool
 	Visibility         string

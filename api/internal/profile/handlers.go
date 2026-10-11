@@ -215,6 +215,17 @@ func (h *Handlers) showProfile(c *gin.Context, found account.PublicProfile) {
 		}
 		shown.Featured = page.ToAPIBrowseWorks(featured)
 	}
+	if !found.Restricted {
+		recommended, count, err := h.pages.Recommendations(ctx, found.ID, preference)
+		if err != nil {
+			api.Refuse(c, http.StatusInternalServerError, "Could not read the profile.")
+			return
+		}
+		shown.Recommendations = page.ToAPIBrowseWorks(recommended)
+		if shown.IsOwner {
+			shown.RecommendationCount = count
+		}
+	}
 	recent, err := h.versions.RecentByCreator(ctx, found.ID, preference, recentVersionsRead)
 	if err != nil {
 		api.Refuse(c, http.StatusInternalServerError, "Could not read the profile.")
@@ -232,19 +243,20 @@ func toAPIProfile(found account.PublicProfile) Profile {
 		links = append(links, ProfileLink{Label: link.Label, Address: link.Address})
 	}
 	return Profile{
-		Id:             found.ID,
-		Handle:         found.Handle,
-		DisplayName:    found.DisplayName,
-		Biography:      found.Biography,
-		ContactEmail:   found.ContactEmail,
-		Links:          links,
-		Avatar:         toAPIPicture(account.Avatar, found.Avatar),
-		Banner:         toAPIPicture(account.Banner, found.Banner),
-		Tint:           found.Tint,
-		Featured:       []page.BrowseWork{},
-		RecentVersions: []RecentVersion{},
-		Works:          found.Works,
-		Restricted:     found.Restricted,
+		Id:              found.ID,
+		Handle:          found.Handle,
+		DisplayName:     found.DisplayName,
+		Biography:       found.Biography,
+		ContactEmail:    found.ContactEmail,
+		Links:           links,
+		Avatar:          toAPIPicture(account.Avatar, found.Avatar),
+		Banner:          toAPIPicture(account.Banner, found.Banner),
+		Tint:            found.Tint,
+		Featured:        []page.BrowseWork{},
+		Recommendations: []page.BrowseWork{},
+		RecentVersions:  []RecentVersion{},
+		Works:           found.Works,
+		Restricted:      found.Restricted,
 	}
 }
 

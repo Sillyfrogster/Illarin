@@ -1,5 +1,6 @@
 "use client";
 
+import { SiKofi } from "@icons-pack/react-simple-icons";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -8,7 +9,9 @@ import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
+import { KOFI_PAGE } from "@/lib/contact";
 import { timing } from "@/lib/timing";
 import { AccountMenu } from "./AccountMenu";
 import { BrowseMenu } from "./BrowseMenu";
@@ -72,17 +75,35 @@ export function SiteHeader() {
         </Link>
         <BrowseMenu />
         <div className="ml-auto flex items-center sm:gap-1">
+          <Tooltip content="Support Illarin on Ko-fi">
+            <Button
+              asChild
+              className="max-sm:size-control max-sm:p-0"
+              size="compact"
+              variant="ghost"
+            >
+              <a
+                aria-label="Support Illarin on Ko-fi"
+                href={KOFI_PAGE}
+                rel="noopener"
+                target="_blank"
+              >
+                <SiKofi aria-hidden="true" title="" />
+                <span className="max-sm:hidden">Support</span>
+              </a>
+            </Button>
+          </Tooltip>
           <Button
             asChild
-            className="publish max-sm:px-3 sm:mr-1 max-sm:[&_svg]:hidden"
+            className="publish max-sm:px-3 sm:mr-1 max-[380px]:size-control max-[380px]:p-0"
             variant="primary"
           >
             <Link
               aria-current={pathname === PUBLISH.href ? "page" : undefined}
               href={PUBLISH.href}
             >
-              <Plus aria-hidden="true" />
-              {PUBLISH.label}
+              <Plus aria-hidden="true" className="min-[381px]:max-sm:hidden" />
+              <span className="max-[380px]:sr-only">{PUBLISH.label}</span>
             </Link>
           </Button>
           <NotificationBell />

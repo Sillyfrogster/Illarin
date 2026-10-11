@@ -2309,6 +2309,95 @@ func (q *Queries) QueueSend(ctx context.Context, arg QueueSendParams) (QueueSend
 	return i, err
 }
 
+const recommendedWorks = `-- name: RecommendedWorks :many
+select a.id, a.name, coalesce(owner.username, 'unknown') as creator,
+       a.type, a.is_nsfw, a.tags, a.created_at::timestamptz as published_at, 0::int as activity, null::date as ranked_on, a.lifecycle,
+       cover.id as cover_id, cover.width as cover_width, cover.height as cover_height,
+       a.visibility, a.taken_down_at, a.taken_down_reason,
+       array(select offered.format ->> 'format'
+               from jsonb_array_elements(coalesce(summary.export, '[]'::jsonb)) as offered(format))::text[] as formats,
+       (select coalesce(sum(counted.count), 0) from work_day_counts counted
+         where counted.work_id = a.id and counted.kind = 'view')::int as view_count,
+       (select coalesce(sum(counted.count), 0) from work_day_counts counted
+         where counted.work_id = a.id and counted.kind in ('download', 'send'))::int as download_count
+  from profile_recommendations recommendation
+  join works a on a.id = recommendation.work_id
+  left join work_summaries summary on summary.work_id = a.id
+  left join users owner on owner.id = a.owner_id
+  left join work_media cover
+    on cover.id = a.cover_media_id and cover.work_id = a.id
+   and cover.is_current
+   and cover.width is not null and cover.height is not null
+   and cover.blob_id is not null
+ where recommendation.user_id = $1::uuid
+   and a.owner_id <> recommendation.user_id
+   and a.lifecycle = 'published' and a.visibility = 'listed'
+   and a.deleted_at is null and a.taken_down_at is null
+ order by recommendation.created_at, a.id
+`
+
+type RecommendedWorksRow struct {
+	ID              pgtype.UUID
+	Name            string
+	Creator         string
+	Type            string
+	IsNsfw          pgtype.Bool
+	Tags            []string
+	PublishedAt     pgtype.Timestamptz
+	Activity        int32
+	RankedOn        pgtype.Date
+	Lifecycle       string
+	CoverID         pgtype.UUID
+	CoverWidth      pgtype.Int4
+	CoverHeight     pgtype.Int4
+	Visibility      string
+	TakenDownAt     pgtype.Timestamptz
+	TakenDownReason pgtype.Text
+	Formats         []string
+	ViewCount       int32
+	DownloadCount   int32
+}
+
+func (q *Queries) RecommendedWorks(ctx context.Context, creatorID pgtype.UUID) ([]RecommendedWorksRow, error) {
+	rows, err := q.db.Query(ctx, recommendedWorks, creatorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RecommendedWorksRow
+	for rows.Next() {
+		var i RecommendedWorksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Creator,
+			&i.Type,
+			&i.IsNsfw,
+			&i.Tags,
+			&i.PublishedAt,
+			&i.Activity,
+			&i.RankedOn,
+			&i.Lifecycle,
+			&i.CoverID,
+			&i.CoverWidth,
+			&i.CoverHeight,
+			&i.Visibility,
+			&i.TakenDownAt,
+			&i.TakenDownReason,
+			&i.Formats,
+			&i.ViewCount,
+			&i.DownloadCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recordConnectionPoll = `-- name: RecordConnectionPoll :one
 update connection_requests
    set last_polled_at = now(),

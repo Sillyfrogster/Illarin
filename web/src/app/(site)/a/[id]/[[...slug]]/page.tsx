@@ -56,7 +56,7 @@ export default async function WorkPage({
   const cookie = (await cookies()).toString();
   const [connectedApps, creator] = await Promise.all([
     canSendWork(work) ? fetchWorkConnectedApps(work.id, cookie) : [],
-    fetchProfile(work.creator, cookie),
+    fetchProfile(work.creator, cookie).catch(() => null),
   ]);
   const typeLabel = TYPE_LABELS[work.type];
   const isDraft = work.lifecycle === "draft";

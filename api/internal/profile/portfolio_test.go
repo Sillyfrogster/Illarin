@@ -285,11 +285,16 @@ type portfolioProfile struct {
 		Number  int    `json:"number"`
 		Summary string `json:"summary"`
 	} `json:"recentVersions"`
-	Works      int   `json:"works"`
-	Followers  int   `json:"followers"`
-	Following  *bool `json:"following"`
-	IsOwner    bool  `json:"isOwner"`
-	Restricted bool  `json:"restricted"`
+	Recommendations []struct {
+		ID      string `json:"id"`
+		Creator string `json:"creator"`
+	} `json:"recommendations"`
+	RecommendationCount int   `json:"recommendationCount"`
+	Works               int   `json:"works"`
+	Followers           int   `json:"followers"`
+	Following           *bool `json:"following"`
+	IsOwner             bool  `json:"isOwner"`
+	Restricted          bool  `json:"restricted"`
 }
 
 type portfolioInbox struct {

@@ -249,12 +249,13 @@ export async function fetchProfile(
   handle: string,
   cookie?: string,
 ): Promise<Profile | null> {
-  const { data, error } = await api<Profile>(
+  const { data, error, response } = await api<Profile>(
     "GET",
     `/v1/profiles/${encodeURIComponent(handle)}`,
     { headers: cookie ? { cookie } : undefined },
   );
-  if (error || !data) return null;
+  if (response.status === 404) return null;
+  if (error || !data) throw new Error("Could not load the profile");
   return data;
 }
 

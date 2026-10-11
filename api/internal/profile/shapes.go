@@ -23,23 +23,29 @@ type SaveFeaturedRequest struct {
 	WorkIds []uuid.UUID `json:"workIds"`
 }
 
+type AddRecommendationRequest struct {
+	WorkId uuid.UUID `json:"workId"`
+}
+
 type Profile struct {
-	Avatar         *ProfilePicture   `json:"avatar,omitempty"`
-	Banner         *ProfilePicture   `json:"banner,omitempty"`
-	Biography      string            `json:"biography"`
-	ContactEmail   string            `json:"contactEmail"`
-	DisplayName    string            `json:"displayName"`
-	Featured       []page.BrowseWork `json:"featured"`
-	Followers      int               `json:"followers"`
-	Following      *bool             `json:"following,omitempty"`
-	Handle         string            `json:"handle"`
-	Id             uuid.UUID         `json:"id"`
-	IsOwner        bool              `json:"isOwner"`
-	Links          []ProfileLink     `json:"links"`
-	RecentVersions []RecentVersion   `json:"recentVersions"`
-	Restricted     bool              `json:"restricted"`
-	Tint           string            `json:"tint"`
-	Works          int               `json:"works"`
+	Avatar              *ProfilePicture   `json:"avatar,omitempty"`
+	Banner              *ProfilePicture   `json:"banner,omitempty"`
+	Biography           string            `json:"biography"`
+	ContactEmail        string            `json:"contactEmail"`
+	DisplayName         string            `json:"displayName"`
+	Featured            []page.BrowseWork `json:"featured"`
+	Followers           int               `json:"followers"`
+	Following           *bool             `json:"following,omitempty"`
+	Handle              string            `json:"handle"`
+	Id                  uuid.UUID         `json:"id"`
+	IsOwner             bool              `json:"isOwner"`
+	Links               []ProfileLink     `json:"links"`
+	RecentVersions      []RecentVersion   `json:"recentVersions"`
+	Recommendations     []page.BrowseWork `json:"recommendations"`
+	RecommendationCount int               `json:"recommendationCount"`
+	Restricted          bool              `json:"restricted"`
+	Tint                string            `json:"tint"`
+	Works               int               `json:"works"`
 }
 
 type ProfilePicture struct {

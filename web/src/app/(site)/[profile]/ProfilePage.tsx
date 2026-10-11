@@ -23,6 +23,7 @@ import { Banner } from "./Banner";
 import { FirstSteps } from "./FirstSteps";
 import { type Editing, IdentityCard, type ProfileDraft } from "./IdentityCard";
 import { RecentVersions } from "./RecentVersions";
+import { Recommendations } from "./Recommendations";
 import { RestrictedControl } from "./RestrictedControl";
 import { Shelf } from "./Shelf";
 
@@ -224,6 +225,13 @@ export function ProfilePage({
                 : null
             }
             published={profile.works}
+            recommendations={
+              <Recommendations
+                onChange={setProfile}
+                preference={initialPage?.nsfwPreference ?? "blurred"}
+                profile={profile}
+              />
+            }
           />
         </div>
 

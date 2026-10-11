@@ -38,6 +38,8 @@ func Register(routes api.Routes, h *Handlers) {
 	routes.Handle(http.MethodDelete, "/v1/profiles/:handle/follow", d.JSON, h.StopFollowingCreator)
 	routes.Handle(http.MethodPut, "/v1/account/profile", d.JSON, h.SavePublicProfile)
 	routes.Handle(http.MethodPut, "/v1/account/profile/featured", d.JSON, h.SaveFeatured)
+	routes.Handle(http.MethodPost, "/v1/account/profile/recommendations", d.JSON, h.AddRecommendation)
+	routes.Handle(http.MethodDelete, "/v1/account/profile/recommendations/:id", d.JSON, h.RemoveRecommendation)
 	routes.Handle(http.MethodPut, "/v1/account/profile/avatar", d.Upload, h.SetAvatar)
 	routes.Handle(http.MethodDelete, "/v1/account/profile/avatar", d.JSON, h.RemoveAvatar)
 	routes.Handle(http.MethodPut, "/v1/account/profile/banner", d.Upload, h.SetBanner)

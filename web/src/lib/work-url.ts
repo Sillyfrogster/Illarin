@@ -9,6 +9,18 @@ export function isWorkId(segment: string): boolean {
   return WORK_ID.test(segment);
 }
 
+export function readWorkLink(input: string, origin: string): string | null {
+  try {
+    const link = new URL(input.trim(), origin);
+    const [, route, id] = link.pathname.split("/");
+    return link.origin === origin && route === "a" && id && isWorkId(id)
+      ? id
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function workSlug(name: string): string {
   const normalized = name
     .normalize("NFKD")

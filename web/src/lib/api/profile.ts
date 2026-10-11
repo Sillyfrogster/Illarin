@@ -40,6 +40,16 @@ export function followCreator(handle: string): Promise<Answer<CreatorFollow>> {
   );
 }
 
+export function recommendWork(workId: string): Promise<Answer<Profile>> {
+  return ask<Profile>("POST", "/account/profile/recommendations", {
+    body: { workId },
+  });
+}
+
+export function removeRecommendation(workId: string): Promise<Answer<Profile>> {
+  return ask<Profile>("DELETE", `/account/profile/recommendations/${workId}`);
+}
+
 export function stopFollowingCreator(
   handle: string,
 ): Promise<Answer<CreatorFollow>> {

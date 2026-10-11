@@ -39,12 +39,16 @@ export function BrowseMenu() {
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
-          className="gap-1 px-3 text-ink data-[current=page]:text-accent"
+          className="gap-1 px-3 text-ink data-[current=page]:text-accent max-sm:px-1 max-[380px]:size-control max-[380px]:p-0"
           data-current={pathname === BROWSE.href ? "page" : undefined}
           variant="ghost"
         >
-          {BROWSE.label}
-          <ChevronDown aria-hidden="true" className="text-mute" />
+          <LayoutGrid aria-hidden="true" className="min-[381px]:hidden" />
+          <span className="max-[380px]:sr-only">{BROWSE.label}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="text-mute max-[380px]:hidden"
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-60">
