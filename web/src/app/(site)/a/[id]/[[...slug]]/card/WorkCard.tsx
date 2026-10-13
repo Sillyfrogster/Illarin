@@ -122,9 +122,10 @@ export function WorkCard({
                   stage.turned && "[transform:rotateY(180deg)]",
                 )}
               >
+                {/* Firefox needs a transform on the front to hide its back face. */}
                 <div
                   aria-hidden={stage.turned || undefined}
-                  className="relative flex flex-col overflow-hidden rounded-card bg-plane p-3 shadow-card ring-1 ring-ink/8 [grid-area:1/1] [backface-visibility:hidden]"
+                  className="relative flex flex-col overflow-hidden rounded-card bg-plane p-3 shadow-card ring-1 ring-ink/8 [grid-area:1/1] [backface-visibility:hidden] [transform:rotateY(0deg)]"
                   inert={stage.turned || undefined}
                 >
                   <div className="relative" data-card-art>
