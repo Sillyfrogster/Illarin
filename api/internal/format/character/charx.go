@@ -57,9 +57,7 @@ func (m CharXModule) Parse(
 const (
 	cardEntry = "card.json"
 	// MemberNamespace marks a preserved file that came out of an archive.
-	MemberNamespace        = "archive:"
-	maxArchiveMemberBytes  = 1 << 20
-	maxArchiveMembersBytes = 4 << 20
+	MemberNamespace = "archive:"
 )
 
 // archivedMembers keeps the archived files Illarin reads nothing from.
@@ -71,22 +69,14 @@ func archivedMembers(ctx context.Context, file format.Inspection) ([]format.Rema
 		}
 	}
 	kept := make([]format.Remainder, 0)
-	budget := uint64(maxArchiveMembersBytes)
 	for _, entry := range file.ZIPEntries {
 		if entry.Directory || entry.Name == cardEntry || pictures[entry.Name] {
 			continue
-		}
-		if entry.UncompressedSize > maxArchiveMemberBytes || entry.UncompressedSize > budget {
-			return nil, format.LimitExceeded(fmt.Errorf(
-				"the archived %s is %d bytes, past what a card may carry beside it",
-				entry.Name, entry.UncompressedSize,
-			))
 		}
 		payload, err := readArchivedMember(ctx, file, entry.Name)
 		if err != nil {
 			return nil, err
 		}
-		budget -= entry.UncompressedSize
 		kept = append(kept, format.Remainder{
 			Owner:     format.OwnerWork,
 			Namespace: MemberNamespace + entry.Name,
@@ -106,7 +96,7 @@ func readArchivedMember(
 		return nil, fmt.Errorf("open the archived %s: %w", name, err)
 	}
 	defer opened.Close()
-	held, err := io.ReadAll(io.LimitReader(opened, maxArchiveMemberBytes))
+	held, err := io.ReadAll(opened)
 	if err != nil {
 		return nil, fmt.Errorf("read the archived %s: %w", name, err)
 	}
@@ -181,7 +171,7 @@ func lumiverseExpressions(ctx context.Context, file format.Inspection) (map[stri
 			Groups map[string]map[string]string `json:"groups"`
 		} `json:"expression_groups"`
 	}
-	if json.NewDecoder(io.LimitReader(opened, maxArchiveMemberBytes)).Decode(&modules) != nil {
+	if json.NewDecoder(opened).Decode(&modules) != nil {
 		return named, nil
 	}
 	for label, entry := range modules.Expressions.Mappings {

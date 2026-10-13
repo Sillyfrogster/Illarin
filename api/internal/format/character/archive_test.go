@@ -3,9 +3,9 @@ package character
 import (
 	"archive/zip"
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"maps"
 	"math/rand/v2"
@@ -36,17 +36,32 @@ func TestACharXKeepsTheFilesIllarinReadsNothingFrom(t *testing.T) {
 
 func TestACharXGivesBackTheFilesIllarinReadsNothingFrom(t *testing.T) {
 	t.Parallel()
-	modules := []byte(`{"scripts":[{"type":"regex","in":"a","out":"b"}]}`)
-	parsed := resolveAndParse(t, charxWithMembers(t, plainCard, map[string][]byte{
-		"lumiverse_modules.json": modules,
-	}))
-
-	written := write(t, CharXModule{}, format.ExportWork{
-		Type: Type, Header: format.Header{Name: "Ana"},
-		Elements: parsed.Elements, Preserved: parsed.Remainder,
-	})
-	if held := archiveEntry(t, written.Body, "lumiverse_modules.json"); !bytes.Equal(held, modules) {
-		t.Fatalf("gave back %q, want %q", held, modules)
+	expressions := make(map[string][]byte)
+	for index := range 22 {
+		expressions[fmt.Sprintf("assets/other/image/expr_%02d.avif", index)] = incompressible(200000)
+	}
+	for _, test := range []struct {
+		name    string
+		members map[string][]byte
+	}{
+		{"module settings", map[string][]byte{
+			"lumiverse_modules.json": []byte(`{"scripts":[{"type":"regex","in":"a","out":"b"}]}`),
+		}},
+		{"one extra over 1 MiB", map[string][]byte{"large.bin": incompressible(1<<20 + 1)}},
+		{"AVIF expressions over 4 MiB combined", expressions},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			parsed := resolveAndParse(t, charxWithMembers(t, plainCard, test.members))
+			written := write(t, CharXModule{}, format.ExportWork{
+				Type: Type, Header: format.Header{Name: "Ana"},
+				Elements: parsed.Elements, Preserved: parsed.Remainder,
+			})
+			for name, original := range test.members {
+				if held := archiveEntry(t, written.Body, name); !bytes.Equal(held, original) {
+					t.Fatalf("%s changed on download: got %d bytes, want %d unchanged bytes", name, len(held), len(original))
+				}
+			}
+		})
 	}
 }
 
@@ -64,27 +79,6 @@ func TestACardBodyNeverCarriesAnArchivedFile(t *testing.T) {
 		if strings.Contains(string(written.Body), "archive:") {
 			t.Fatalf("%s carried an archived file into the card", module.ID())
 		}
-	}
-}
-
-func TestAnArchivedFileTooLargeToKeepTurnsTheCardAway(t *testing.T) {
-	t.Parallel()
-	file := charxWithMembers(t, plainCard, map[string][]byte{
-		"huge.bin": incompressible(maxArchiveMemberBytes + 1),
-	})
-	module := CharXModule{}
-	match, held := module.Match(file)
-	if !held {
-		t.Fatal("the module matched nothing")
-	}
-
-	_, err := module.Parse(context.Background(), file, match)
-	reason, classified := format.FailureOf(err)
-	if !classified || reason != format.FailureLimitExceeded {
-		t.Fatalf("err = %v, want a refusal naming the limit", err)
-	}
-	if !strings.Contains(err.Error(), "huge.bin") {
-		t.Fatalf("err = %v, want it to name the archived file", err)
 	}
 }
 
