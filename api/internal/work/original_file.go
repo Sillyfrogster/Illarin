@@ -141,18 +141,13 @@ func clearSupersededCover(ctx context.Context, tx pgx.Tx, workID uuid.UUID) erro
 }
 
 func avatarMedia(media []PreparedMedia) *uuid.UUID {
-	var alternate *uuid.UUID
 	for _, item := range media {
 		if item.Role == MediaAvatar {
 			id := item.ID
 			return &id
 		}
-		if item.Role == MediaAvatarAlt && alternate == nil {
-			id := item.ID
-			alternate = &id
-		}
 	}
-	return alternate
+	return nil
 }
 
 // OriginalFile is an uploaded file and the pictures read out of it

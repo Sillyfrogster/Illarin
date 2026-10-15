@@ -13,7 +13,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/media"
+	"github.com/google/uuid"
 )
 
 func TestACharXKeepsTheFilesIllarinReadsNothingFrom(t *testing.T) {
@@ -175,4 +178,123 @@ func archiveEntry(t *testing.T, body []byte, name string) []byte {
 	}
 	t.Fatalf("the written archive holds no %q", name)
 	return nil
+}
+
+func TestACharXNamesItsExpressionsForLumiverse(t *testing.T) {
+	t.Parallel()
+	stale := `{"version":1,"regex_scripts":[{"name":"keep"}],
+		"expressions":{"enabled":false,"defaultExpression":"happy",
+			"mappings":{"happy":"assets/other/image/expr_happy.png"}}}`
+	for _, test := range []struct {
+		name      string
+		preserved []format.Remainder
+		enabled   bool
+		fallback  string
+	}{
+		{"made here", nil, true, ""},
+		{"made in Lumiverse", []format.Remainder{archived(lumiverseModulesEntry, stale)}, false, "happy"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			happy, sad := uuid.New(), uuid.New()
+			written := write(t, CharXModule{}, format.ExportWork{
+				Type: Type, Header: format.Header{Name: "Ana"},
+				Elements: []block.Element{
+					greetings("Hello"),
+					images(block.RoleExpressions,
+						block.ImageItem{ID: uuid.New(), MediaID: happy, Name: "happy"},
+						block.ImageItem{ID: uuid.New(), MediaID: sad, Name: "Twin/sad"},
+					),
+				},
+				Images: map[uuid.UUID]format.ExportMedia{
+					happy: {MediaType: "image/png", Data: []byte("happy-bytes")},
+					sad:   {MediaType: "image/png", Data: []byte("sad-bytes")},
+				},
+				Preserved: test.preserved,
+			})
+			files := archiveEntries(t, written.Body)
+			var modules struct {
+				Version     int `json:"version"`
+				Expressions struct {
+					Enabled           bool              `json:"enabled"`
+					DefaultExpression string            `json:"defaultExpression"`
+					Mappings          map[string]string `json:"mappings"`
+				} `json:"expressions"`
+				ExpressionGroups struct {
+					Groups map[string]map[string]string `json:"groups"`
+				} `json:"expression_groups"`
+				RegexScripts []json.RawMessage `json:"regex_scripts"`
+			}
+			if err := json.Unmarshal(files[lumiverseModulesEntry], &modules); err != nil {
+				t.Fatalf("read %s: %v (entries %v)", lumiverseModulesEntry, err, slices.Sorted(maps.Keys(files)))
+			}
+			if got := files[modules.Expressions.Mappings["happy"]]; !bytes.Equal(got, []byte("happy-bytes")) {
+				t.Errorf("happy points at %q holding %q", modules.Expressions.Mappings["happy"], got)
+			}
+			if got := files[modules.ExpressionGroups.Groups["Twin"]["sad"]]; !bytes.Equal(got, []byte("sad-bytes")) {
+				t.Errorf("Twin/sad points at %q holding %q", modules.ExpressionGroups.Groups["Twin"]["sad"], got)
+			}
+			if modules.Version != 1 || modules.Expressions.Enabled != test.enabled ||
+				modules.Expressions.DefaultExpression != test.fallback {
+				t.Errorf("modules = %+v", modules)
+			}
+			if test.preserved != nil && len(modules.RegexScripts) != 1 {
+				t.Errorf("regex scripts = %s, want the kept one", modules.RegexScripts)
+			}
+		})
+	}
+}
+
+func TestACharXGivesBackEveryPictureIllarinDoesNotWriteItself(t *testing.T) {
+	t.Parallel()
+	card := `{"spec":"chara_card_v3","spec_version":"3.0","data":{"name":"Ana","assets":[
+		{"type":"icon","uri":"embeded://assets/icon/image/main.png","name":"main","ext":"png"},
+		{"type":"icon","uri":"embeded://assets/icon/image/alt.png","name":"Winter","ext":"png"},
+		{"type":"user_icon","uri":"embeded://assets/user/you.png","name":"you","ext":"png"}
+	]}}`
+	members := map[string][]byte{
+		"assets/icon/image/main.png":             testPNG(t),
+		"assets/icon/image/alt.png":              testPNG(t),
+		"assets/user/you.png":                    testPNG(t),
+		"assets/other/image/landing_layer_a.png": testPNG(t),
+		lumiverseModulesEntry: []byte(`{"version":1,
+			"alternate_avatars":[{"id":"w","label":"Winter","path":"assets/icon/image/alt.png"}],
+			"landing_perspective_layers":[{"id":"a","path":"assets/other/image/landing_layer_a.png","intensity":1}]}`),
+	}
+	parsed := resolveAndParse(t, charxWithMembers(t, card, members))
+	for _, picture := range parsed.Media {
+		if picture.Role != media.Avatar {
+			t.Errorf("read a %s picture, want only the avatar", picture.Role)
+		}
+	}
+
+	written := write(t, CharXModule{}, format.ExportWork{
+		Type: Type, Header: format.Header{Name: "Ana"}, Elements: parsed.Elements,
+		Cover:     &format.ExportMedia{MediaType: "image/png", Data: testPNG(t)},
+		Preserved: parsed.Remainder,
+	})
+	files := archiveEntries(t, written.Body)
+	for _, name := range []string{
+		"assets/icon/image/alt.png", "assets/user/you.png", "assets/other/image/landing_layer_a.png",
+	} {
+		if !bytes.Equal(files[name], members[name]) {
+			t.Errorf("the archive does not give back %s", name)
+		}
+	}
+	var listed []cardFileRecord
+	if err := json.Unmarshal(writtenBody(t, files[cardEntry], V3)["assets"], &listed); err != nil {
+		t.Fatal(err)
+	}
+	uris := make([]string, 0, len(listed))
+	for _, record := range listed {
+		uris = append(uris, record.URI)
+	}
+	slices.Sort(uris)
+	want := []string{
+		"embeded://assets/icon/image/alt.png", "embeded://assets/icon/image/main.png",
+		"embeded://assets/user/you.png",
+	}
+	if !slices.Equal(uris, want) {
+		t.Errorf("card lists %v, want %v", uris, want)
+	}
 }

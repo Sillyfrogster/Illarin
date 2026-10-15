@@ -98,11 +98,22 @@ func declaration(id string) format.Declaration {
 			}
 		}
 	}
+	if id != V2 {
+		expressions := roles[block.RoleExpressions]
+		expressions.Write.Grade = format.SupportPartial
+		expressions.Write.Condition = &format.ContentCondition{
+			Description: "an expression with no name, because apps match each expression to a mood by its name",
+			Matches:     hasUnnamedImage,
+		}
+		roles[block.RoleExpressions] = expressions
+	}
 	if id == V3 {
-		gallery := roles[block.RoleGallery]
-		gallery.Write.Destination = "Written into the card itself."
-		gallery.Write.ShownBy = []string{"risu"}
-		roles[block.RoleGallery] = gallery
+		for _, role := range []block.Role{block.RoleGallery, block.RoleExpressions} {
+			pictures := roles[role]
+			pictures.Write.Destination = "Written into the card itself."
+			pictures.Write.ShownBy = []string{"risu"}
+			roles[role] = pictures
+		}
 	}
 	consumedKeys := []string{
 		"name", "nickname", "character_version", "creator", "description",
@@ -442,6 +453,13 @@ func hasNamedText(content block.Content) bool {
 		}
 	}
 	return false
+}
+
+func hasUnnamedImage(content block.Content) bool {
+	set, ok := content.(block.ImageSet)
+	return ok && slices.ContainsFunc(set.Images, func(image block.ImageItem) bool {
+		return strings.TrimSpace(image.Name) == ""
+	})
 }
 
 func hasMultilineTurn(content block.Content) bool {

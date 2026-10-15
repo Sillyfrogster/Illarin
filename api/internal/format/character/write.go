@@ -120,7 +120,12 @@ func withLegacyFields(card []byte, body map[string]json.RawMessage) ([]byte, err
 func writeCharX(work format.ExportWork) (format.MainFile, error) {
 	body, entries := cardFields(work, CharX)
 	files, records := archivedFiles(work)
-	body["assets"] = records
+	if modules, named := lumiverseModules(records, work.Preserved); named {
+		files = append(files, modules)
+	}
+	members := archivedMemberFiles(work.Preserved, files)
+	files = append(files, members...)
+	body["assets"] = keys.Must(slices.Concat(listedRecords(records), keptRecords(work.Preserved, members)))
 	if err := RestorePreserved(body, entries, work.Preserved); err != nil {
 		return format.MainFile{}, err
 	}
@@ -134,7 +139,7 @@ func writeCharX(work format.ExportWork) (format.MainFile, error) {
 	if err := writeArchiveFile(archive, cardEntry, card); err != nil {
 		return format.MainFile{}, err
 	}
-	for _, file := range slices.Concat(files, archivedMemberFiles(work.Preserved, files)) {
+	for _, file := range files {
 		if err := writeArchiveFile(archive, file.path, file.data); err != nil {
 			return format.MainFile{}, err
 		}
@@ -167,6 +172,40 @@ func archivedMemberFiles(preserved []format.Remainder, written []archivedFile) [
 		given = append(given, archivedFile{path: name, data: data})
 	}
 	return given
+}
+
+func listedRecords(records []cardFileRecord) []json.RawMessage {
+	listed := make([]json.RawMessage, 0, len(records))
+	for _, record := range records {
+		listed = append(listed, keys.Must(record))
+	}
+	return listed
+}
+
+// keptRecords lists the card's own records for the files given back untouched and for pictures held elsewhere.
+func keptRecords(preserved []format.Remainder, members []archivedFile) []json.RawMessage {
+	given := make(map[string]bool, len(members))
+	for _, member := range members {
+		given[member.path] = true
+	}
+	var original []json.RawMessage
+	for _, row := range preserved {
+		if row.Owner == format.OwnerWork && row.Namespace == cardNamespace {
+			_ = json.Unmarshal(keys.Object(row.Payload)["assets"], &original)
+		}
+	}
+	kept := make([]json.RawMessage, 0, len(original))
+	for _, raw := range original {
+		var record cardFileRecord
+		if json.Unmarshal(raw, &record) != nil || record.URI == defaultFileURI {
+			continue
+		}
+		if entry, embedded := strings.CutPrefix(record.URI, embeddedPrefix); embedded && !given[entry] {
+			continue
+		}
+		kept = append(kept, raw)
+	}
+	return kept
 }
 
 func writeArchiveFile(archive *zip.Writer, name string, data []byte) error {
@@ -327,7 +366,7 @@ func inlineFiles(work format.ExportWork, embedded bool) json.RawMessage {
 	return keys.Must(records)
 }
 
-func archivedFiles(work format.ExportWork) ([]archivedFile, json.RawMessage) {
+func archivedFiles(work format.ExportWork) ([]archivedFile, []cardFileRecord) {
 	files := make([]archivedFile, 0)
 	records := make([]cardFileRecord, 0)
 	taken := make(map[string]bool)
@@ -349,7 +388,7 @@ func archivedFiles(work format.ExportWork) ([]archivedFile, json.RawMessage) {
 			Name: picture.name, Ext: extension,
 		})
 	}
-	return files, keys.Must(records)
+	return files, records
 }
 
 const (

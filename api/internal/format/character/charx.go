@@ -12,6 +12,7 @@ import (
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
 	"github.com/Sillyfrogster/Illarin/api/internal/media"
 )
 
@@ -38,15 +39,16 @@ func (m CharXModule) Parse(
 	if err != nil {
 		return format.Parsed{}, err
 	}
-	expressions, err := lumiverseExpressions(ctx, file)
+	lumiverse, err := readLumiverseNames(ctx, file)
 	if err != nil {
 		return format.Parsed{}, err
 	}
-	parsed, err := read.parsed(m.ID(), archivedImages(read, file, expressions))
+	pictures := archivedImages(read, file, lumiverse)
+	parsed, err := read.parsed(m.ID(), pictures)
 	if err != nil {
 		return format.Parsed{}, err
 	}
-	members, err := archivedMembers(ctx, file)
+	members, err := archivedMembers(ctx, file, pictures)
 	if err != nil {
 		return format.Parsed{}, err
 	}
@@ -60,11 +62,19 @@ const (
 	MemberNamespace = "archive:"
 )
 
-// archivedMembers keeps the archived files Illarin reads nothing from.
-func archivedMembers(ctx context.Context, file format.Inspection) ([]format.Remainder, error) {
-	pictures := make(map[string]bool, len(file.Images))
+// archivedMembers keeps every archived file except the pictures Illarin read into the work.
+func archivedMembers(
+	ctx context.Context,
+	file format.Inspection,
+	read []format.Media,
+) ([]format.Remainder, error) {
+	taken := make(map[uint32]bool, len(read))
+	for _, picture := range read {
+		taken[picture.ImageID] = true
+	}
+	pictures := make(map[string]bool, len(read))
 	for _, image := range file.Images {
-		if image.Location.Container == format.ZIP {
+		if image.Location.Container == format.ZIP && taken[image.ID] {
 			pictures[image.Location.Name] = true
 		}
 	}
@@ -150,9 +160,16 @@ type cardFile struct {
 
 const lumiverseModulesEntry = "lumiverse_modules.json"
 
-// lumiverseExpressions names the expressions Lumiverse lists outside card.json, by archive path.
-func lumiverseExpressions(ctx context.Context, file format.Inspection) (map[string]string, error) {
-	named := make(map[string]string)
+type lumiverseNames struct {
+	// expressions holds each expression's label by archive path.
+	expressions map[string]string
+	// untouched holds the alternate avatars and perspective layers, which only Lumiverse reads.
+	untouched map[string]bool
+}
+
+// readLumiverseNames reads the pictures Lumiverse lists outside card.json, by archive path.
+func readLumiverseNames(ctx context.Context, file format.Inspection) (lumiverseNames, error) {
+	named := lumiverseNames{expressions: make(map[string]string), untouched: make(map[string]bool)}
 	if !slices.ContainsFunc(file.ZIPEntries, func(entry format.ZIPEntry) bool {
 		return entry.Name == lumiverseModulesEntry
 	}) {
@@ -160,7 +177,7 @@ func lumiverseExpressions(ctx context.Context, file format.Inspection) (map[stri
 	}
 	opened, err := file.OpenZIPEntry(ctx, lumiverseModulesEntry)
 	if err != nil {
-		return nil, fmt.Errorf("open the archived %s: %w", lumiverseModulesEntry, err)
+		return named, fmt.Errorf("open the archived %s: %w", lumiverseModulesEntry, err)
 	}
 	defer opened.Close()
 	var modules struct {
@@ -170,27 +187,94 @@ func lumiverseExpressions(ctx context.Context, file format.Inspection) (map[stri
 		ExpressionGroups struct {
 			Groups map[string]map[string]string `json:"groups"`
 		} `json:"expression_groups"`
+		AlternateAvatars []struct {
+			Path string `json:"path"`
+		} `json:"alternate_avatars"`
+		PerspectiveLayers []struct {
+			Path string `json:"path"`
+		} `json:"landing_perspective_layers"`
 	}
 	if json.NewDecoder(opened).Decode(&modules) != nil {
 		return named, nil
 	}
 	for label, entry := range modules.Expressions.Mappings {
-		named[archivePath(entry)] = label
+		named.expressions[archivePath(entry)] = label
 	}
 	for group, labels := range modules.ExpressionGroups.Groups {
 		for label, entry := range labels {
-			named[archivePath(entry)] = group + "/" + label
+			named.expressions[archivePath(entry)] = group + "/" + label
 		}
 	}
+	for _, avatar := range modules.AlternateAvatars {
+		named.untouched[archivePath(avatar.Path)] = true
+	}
+	for _, layer := range modules.PerspectiveLayers {
+		named.untouched[archivePath(layer.Path)] = true
+	}
 	return named, nil
+}
+
+// lumiverseModules lists the written expressions in the file Lumiverse reads them from
+func lumiverseModules(records []cardFileRecord, preserved []format.Remainder) (archivedFile, bool) {
+	mappings := make(map[string]string)
+	groups := make(map[string]map[string]string)
+	for _, record := range records {
+		if record.Type != emotionFileType {
+			continue
+		}
+		entry := strings.TrimPrefix(record.URI, embeddedPrefix)
+		group, label, grouped := strings.Cut(record.Name, "/")
+		if !grouped {
+			mappings[record.Name] = entry
+			continue
+		}
+		if groups[group] == nil {
+			groups[group] = make(map[string]string)
+		}
+		groups[group][label] = entry
+	}
+	if len(mappings) == 0 && len(groups) == 0 {
+		return archivedFile{}, false
+	}
+	modules := map[string]json.RawMessage{"version": keys.Must(1)}
+	var kept struct {
+		Expressions struct {
+			Enabled           *bool  `json:"enabled"`
+			DefaultExpression string `json:"defaultExpression"`
+		} `json:"expressions"`
+	}
+	for _, row := range preserved {
+		if name, archived := ArchivedMemberName(row.Namespace); archived && name == lumiverseModulesEntry {
+			if data, readable := ArchivedMember(row.Payload); readable {
+				_ = json.Unmarshal(data, &modules)
+				_ = json.Unmarshal(data, &kept)
+			}
+		}
+	}
+	delete(modules, "expressions")
+	delete(modules, "expression_groups")
+	if len(mappings) > 0 {
+		enabled := kept.Expressions.Enabled == nil || *kept.Expressions.Enabled
+		fallback := kept.Expressions.DefaultExpression
+		if _, mapped := mappings[fallback]; !mapped {
+			fallback = ""
+		}
+		modules["expressions"] = keys.Must(map[string]any{
+			"enabled": enabled, "defaultExpression": fallback, "mappings": mappings,
+		})
+	}
+	if len(groups) > 0 {
+		modules["expression_groups"] = keys.Must(map[string]any{"groups": groups})
+	}
+	return archivedFile{path: lumiverseModulesEntry, data: keys.Must(modules)}, true
 }
 
 func archivePath(name string) string {
 	return strings.TrimPrefix(strings.ReplaceAll(name, "\\", "/"), "./")
 }
 
-// archivedImages routes every bundled image, naming the ones the card or Lumiverse names.
-func archivedImages(read card, file format.Inspection, expressions map[string]string) []format.Media {
+// archivedImages reads the bundled pictures a work shows, and leaves the extra icons and Lumiverse's own pictures in the archive.
+func archivedImages(read card, file format.Inspection, lumiverse lumiverseNames) []format.Media {
 	var files []cardFile
 	if raw, ok := read.fields["assets"]; ok {
 		_ = json.Unmarshal(raw, &files)
@@ -198,6 +282,7 @@ func archivedImages(read card, file format.Inspection, expressions map[string]st
 	named := make(map[uint32]bool)
 	found := make([]format.Media, 0, len(file.Images))
 	hasAvatar := false
+	spareIcons := make([]uint32, 0)
 	for _, entry := range files {
 		path, embedded := strings.CutPrefix(entry.URI, embeddedPrefix)
 		if !embedded {
@@ -208,7 +293,14 @@ func archivedImages(read card, file format.Inspection, expressions map[string]st
 			continue
 		}
 		named[image] = true
-		role, wanted := cardFileRole(entry, hasAvatar)
+		if lumiverse.untouched[archivePath(path)] {
+			continue
+		}
+		if entry.Type == iconFileType && (hasAvatar || entry.Name != mainIconFileName) {
+			spareIcons = append(spareIcons, image)
+			continue
+		}
+		role, wanted := cardFileRole(entry)
 		if !wanted {
 			continue
 		}
@@ -220,32 +312,35 @@ func archivedImages(read card, file format.Inspection, expressions map[string]st
 		})
 	}
 	for _, image := range file.Images {
-		if image.Location.Container != format.ZIP || named[image.ID] {
+		path := archivePath(image.Location.Name)
+		if image.Location.Container != format.ZIP || named[image.ID] || lumiverse.untouched[path] {
 			continue
 		}
-		role := archivedRole(image.Location.Name, hasAvatar)
-		name, listed := expressions[archivePath(image.Location.Name)]
+		role := archivedRole(path)
+		name, listed := lumiverse.expressions[path]
 		if listed {
 			role = media.Expression
 		}
 		if role == media.Avatar {
+			if hasAvatar {
+				continue
+			}
 			hasAvatar = true
 		}
 		found = append(found, format.Media{
 			Role: role, ImageID: image.ID, ElementRole: elementRole(role), Name: name,
 		})
 	}
+	if !hasAvatar && len(spareIcons) > 0 {
+		found = append(found, format.Media{Role: media.Avatar, ImageID: spareIcons[0]})
+	}
 	return found
 }
 
 // archivedRole reads the layout the spec recommends, and guesses nothing beyond it.
-func archivedRole(name string, hasAvatar bool) media.Role {
-	folder := archivePath(name)
+func archivedRole(folder string) media.Role {
 	switch {
 	case strings.HasPrefix(folder, "assets/icon/"):
-		if hasAvatar {
-			return media.AvatarAlt
-		}
 		return media.Avatar
 	case strings.HasPrefix(folder, "assets/emotion/"):
 		return media.Expression
@@ -265,13 +360,10 @@ func elementRole(role media.Role) block.Role {
 	}
 }
 
-func cardFileRole(file cardFile, hasAvatar bool) (media.Role, bool) {
+func cardFileRole(file cardFile) (media.Role, bool) {
 	switch file.Type {
-	case "icon":
-		if !hasAvatar && file.Name == "main" {
-			return media.Avatar, true
-		}
-		return media.AvatarAlt, true
+	case iconFileType:
+		return media.Avatar, true
 	case "emotion":
 		return media.Expression, true
 	case "user_icon":

@@ -50,8 +50,8 @@ func TestCharacterDeclarationsTellTheTruthAboutVersionedRoles(t *testing.T) {
 	v3 := CCv3Module{}.Declaration()
 	for _, role := range []block.Role{block.RoleGallery, block.RoleExpressions} {
 		if support := v3.Roles[role]; support.Read.Grade != format.SupportNone ||
-			support.Write.Grade != format.SupportFull {
-			t.Errorf("CCv3 %s support = %+v, want read none and write full", role, support)
+			support.Write.Grade == format.SupportNone {
+			t.Errorf("CCv3 %s support = %+v, want written but never read", role, support)
 		}
 	}
 	if len(v2.Slots) != 0 || len(v3.Slots) != 0 || len((CharXModule{}).Declaration().Slots) != 0 {
@@ -242,7 +242,7 @@ func TestAPictureCarryingACardIsExtractedAsTheAvatar(t *testing.T) {
 	}
 }
 
-func TestCharXNamesEachArchivedPictureByWhatTheCardCallsIt(t *testing.T) {
+func TestCharXReadsTheCoverAndExpressionsAndKeepsTheRestOfTheCardsList(t *testing.T) {
 	t.Parallel()
 	file := charxCard(t, `{
 		"spec":"chara_card_v3","spec_version":"3.0",
@@ -261,7 +261,7 @@ func TestCharXNamesEachArchivedPictureByWhatTheCardCallsIt(t *testing.T) {
 	})
 
 	parsed := resolveAndParse(t, file)
-	want := []media.Role{media.Avatar, media.AvatarAlt, media.Expression}
+	want := []media.Role{media.Avatar, media.Expression}
 	if len(parsed.Media) != len(want) {
 		t.Fatalf("media = %+v, want %d pictures", parsed.Media, len(want))
 	}
