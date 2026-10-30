@@ -60,6 +60,13 @@ func githubFixture(t *testing.T, attachment string, archive []byte, proofOverrid
 			body, _ := json.Marshal([]map[string]any{{"id": 51, "tag_name": "v2", "published_at": time.Now().UTC().Format(time.RFC3339), "assets": assets}})
 			return githubAnswer(body), nil
 		case strings.Contains(request.URL.Path, "/zipball/") || strings.Contains(request.URL.Path, "/releases/assets/101"):
+			accept := "application/vnd.github+json"
+			if strings.Contains(request.URL.Path, "/releases/assets/") {
+				accept = "application/octet-stream"
+			}
+			if got := request.Header.Get("Accept"); got != accept {
+				t.Errorf("archive Accept = %q, want %q", got, accept)
+			}
 			return githubAnswer(archive), nil
 		default:
 			return githubAnswer([]byte(`[]`)), nil

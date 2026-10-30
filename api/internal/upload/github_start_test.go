@@ -3,6 +3,7 @@ package upload_test
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -48,6 +49,9 @@ func (f *fakeRepository) client() *http.Client {
 			body, _ := json.Marshal(listed)
 			return githubAnswer(body), nil
 		case strings.Contains(request.URL.Path, "/zipball/"):
+			if got := request.Header.Get("Accept"); got != "application/vnd.github+json" {
+				return nil, fmt.Errorf("source archive Accept = %q, want application/vnd.github+json", got)
+			}
 			for _, release := range f.releases {
 				if strings.HasSuffix(request.URL.Path, "/zipball/"+release.Tag) {
 					return githubAnswer(release.Archive), nil

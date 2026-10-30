@@ -176,10 +176,12 @@ func (g githubClient) releases(ctx context.Context, repository string) ([]github
 
 func (g githubClient) archive(ctx context.Context, repository, tag string, assetID int64) ([]byte, string, error) {
 	path, filename := "/repos/"+repository+"/zipball/"+url.PathEscape(tag), tag+".zip"
+	accept := "application/vnd.github+json"
 	if assetID != 0 {
 		path = fmt.Sprintf("/repos/%s/releases/assets/%d", repository, assetID)
 		filename = "release.zip"
+		accept = "application/octet-stream"
 	}
-	body, err := g.get(ctx, path, "application/octet-stream", extension.MaxArchiveBytes)
+	body, err := g.get(ctx, path, accept, extension.MaxArchiveBytes)
 	return body, filename, err
 }
