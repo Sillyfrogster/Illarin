@@ -161,9 +161,9 @@ func writeSillyTavernScripts(
 			stScriptFind:     keys.Must(script.Find),
 			stScriptReplace:  keys.Must(script.Replace),
 			stScriptDisabled: keys.Must(!script.Enabled),
+			stScriptTrim:     keys.Must(append([]string{}, script.Trim...)),
 		}
 		keys.WriteIfSet(fields, stScriptName, script.Name != "", script.Name)
-		keys.WriteIfSet(fields, stScriptTrim, script.Trim != nil, script.Trim)
 		keys.WriteIfSet(fields, stScriptOnEdit, script.RunOnEdit, script.RunOnEdit)
 		keys.WriteIfSet(fields, stScriptMinDepth, script.MinDepth != nil, script.MinDepth)
 		keys.WriteIfSet(fields, stScriptMaxDepth, script.MaxDepth != nil, script.MaxDepth)

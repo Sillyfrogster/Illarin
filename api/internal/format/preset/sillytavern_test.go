@@ -3,12 +3,47 @@ package preset
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/block"
 	"github.com/Sillyfrogster/Illarin/api/internal/format"
 	"github.com/Sillyfrogster/Illarin/api/internal/format/keys"
 )
+
+func TestSillyTavernScriptTrimmingSurvivesStoredContent(t *testing.T) {
+	t.Parallel()
+	for _, trim := range []string{`[]`, `[" ","prefix"]`} {
+		t.Run(trim, func(t *testing.T) {
+			parsed := parse(t, strings.Replace(sillyTavernPreset, `"trimStrings": []`, `"trimStrings": `+trim, 1))
+			for i, element := range parsed.Elements {
+				stored, err := element.ContentJSON()
+				if err != nil {
+					t.Fatal(err)
+				}
+				parsed.Elements[i].Content, err = block.DecodeContent(element.Type, stored)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			var body struct {
+				Extensions struct {
+					Scripts []map[string]json.RawMessage `json:"regex_scripts"`
+				} `json:"extensions"`
+			}
+			if err := json.Unmarshal(write(t, SillyTavernModule{}, parsed).Body, &body); err != nil {
+				t.Fatal(err)
+			}
+			if len(body.Extensions.Scripts) != 1 {
+				t.Fatalf("exported %d scripts, want 1", len(body.Extensions.Scripts))
+			}
+			got := body.Extensions.Scripts[0]["trimStrings"]
+			if string(got) != trim {
+				t.Errorf("trimStrings = %s, want %s", got, trim)
+			}
+		})
+	}
+}
 
 func TestSillyTavernExportsUseNativeMarkersAndPromptFlags(t *testing.T) {
 	t.Parallel()
