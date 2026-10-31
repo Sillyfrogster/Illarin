@@ -1,9 +1,11 @@
 package upload_test
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -11,11 +13,73 @@ import (
 	"time"
 
 	"github.com/Sillyfrogster/Illarin/api/internal/apitest"
+	"github.com/Sillyfrogster/Illarin/api/internal/format"
+	"github.com/Sillyfrogster/Illarin/api/internal/format/extension"
+	"github.com/Sillyfrogster/Illarin/api/internal/postgres"
+	"github.com/Sillyfrogster/Illarin/api/internal/storage"
+	"github.com/Sillyfrogster/Illarin/api/internal/testdb"
 	"github.com/Sillyfrogster/Illarin/api/internal/upload"
 	"github.com/Sillyfrogster/Illarin/api/internal/version"
+	"github.com/Sillyfrogster/Illarin/api/internal/work"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type slowArchiveStore struct{ storage.Store }
+
+func (s slowArchiveStore) Put(ctx context.Context, reader io.Reader) (storage.StoredBlob, error) {
+	timer := time.NewTimer(300 * time.Millisecond)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return storage.StoredBlob{}, ctx.Err()
+	case <-timer.C:
+		return s.Store.Put(ctx, reader)
+	}
+}
+
+func TestGitHubStartPreparesSlowArchivesBeforeItsTransaction(t *testing.T) {
+	t.Parallel()
+	pool := testdb.ConnectWith(t, func(settings *postgres.Settings) {
+		settings.IdleTransactionTimeout = 100 * time.Millisecond
+	})
+	owner := uuid.New()
+	if _, err := pool.Exec(t.Context(), `insert into users (id, username) values ($1, 'extension.creator')`, owner); err != nil {
+		t.Fatal(err)
+	}
+	blobs, err := storage.NewStore(pool, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry := format.NewRegistry()
+	for _, module := range extension.Modules() {
+		if err := registry.Register(module); err != nil {
+			t.Fatal(err)
+		}
+	}
+	works := work.NewService(pool, registry, slowArchiveStore{blobs})
+	repository := &fakeRepository{releases: []fakeRelease{{
+		ID: 1, Tag: "v1", Published: time.Now().Add(-time.Hour), Archive: toolboxAt(t, "1.0.0", "one"),
+	}}}
+	service := upload.NewGitHubReleases(upload.NewService(pool, works), version.NewService(pool, works), apitest.ProofKey, repository.client())
+	address := "https://github.com/example/toolbox"
+	repository.proof, err = service.StartProof(owner, address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	started, err := service.Start(t.Context(), owner, address, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lifecycle string
+	if err := pool.QueryRow(t.Context(), `select work.lifecycle from works work
+		join extension_release_sources source on source.work_id = work.id where work.id = $1`, started.ID).Scan(&lifecycle); err != nil {
+		t.Fatal(err)
+	}
+	if lifecycle != "draft" {
+		t.Fatalf("started extension = %q, want a connected draft", lifecycle)
+	}
+}
 
 type fakeRelease struct {
 	ID         int64

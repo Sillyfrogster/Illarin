@@ -80,16 +80,24 @@ func (s *GitHubReleases) Start(ctx context.Context, ownerID uuid.UUID, repositor
 	if attachment != nil {
 		filename = *attachment
 	}
+	job, prepared, err := s.uploads.readRelease(ctx, ownerID, nil, filename, archive)
+	if err != nil {
+		return Started{}, startRefusal(err)
+	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Started{}, err
 	}
 	defer tx.Rollback(ctx)
-	started, err := s.uploads.startFromRelease(ctx, tx, ownerID, filename, archive)
+	if err := s.uploads.works.EnsureAccountStorage(ctx, tx, ownerID, replacementBlobIDs(job, prepared)); err != nil {
+		return Started{}, startRefusal(err)
+	}
+	id, err := s.uploads.writeUploadResult(ctx, tx, job, prepared)
 	if err != nil {
 		return Started{}, startRefusal(err)
 	}
+	started := Started{ID: id, Name: prepared.Name}
 	if _, err := tx.Exec(ctx, `insert into extension_release_sources (work_id, repository, proof, attachment, include_prereleases, verified_at)
 		values ($1, $2, $3, $4, $5, $6)`, started.ID, parsed, proof, attachment, includePrereleases, latest.PublishedAt); err != nil {
 		return Started{}, err
