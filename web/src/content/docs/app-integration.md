@@ -150,8 +150,10 @@ all or none, and can change the choice later in account settings without
 connecting again. Read what was granted from `connectedApp.permissions` in the
 credentials, `GET /api/v1/connected-apps/me` or a refresh; never assume the
 requested set. A call that needs a permission the owner has not granted, or has
-since removed, answers `403`, including with an access token issued before the
-change. Handle that by telling the owner what is off, not by retrying.
+since removed, answers `403`. Handle that by telling the owner what is off, not
+by retrying. A change to the permissions ends every access token issued before
+it, so the next call answers `401` and the refresh that follows returns the
+current permissions.
 
 **Change on 22 September 2026:** approving no longer grants the requested set.
 An installation connected after this date holds only what its owner checked.
@@ -331,12 +333,17 @@ A successful device poll or browser exchange returns:
 }
 ```
 
-Treat the token strings as opaque. An access token lasts 15 minutes. Send it in
-the authorization header, never a query parameter:
+Treat the token strings as opaque. An access token lasts 30 days, or until the
+owner changes the installation's permissions. Read its expiry from
+`accessTokenExpiresAt` and do not assume a length. Send it in the authorization
+header, never a query parameter:
 
 ```http
 Authorization: Bearer ia1.…
 ```
+
+**Change on 13 November 2026:** an access token lasts 30 days, up from 15
+minutes, so an installation refreshes about once a month.
 
 Refresh shortly before access expiry, allowing for clock skew:
 

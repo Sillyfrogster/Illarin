@@ -1013,6 +1013,10 @@ with changed as (
      using changed
      where entry.connected_app_id = changed.id
        and not changed.permissions @> array['library:sync']
+), ended_access as (
+    delete from app_access_tokens as token
+     using changed
+     where token.connected_app_id = changed.id
 )
 select permissions from changed;
 

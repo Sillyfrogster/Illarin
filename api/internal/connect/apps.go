@@ -22,7 +22,7 @@ import (
 const (
 	requestLifetime       = 10 * time.Minute
 	authorizationLifetime = 5 * time.Minute
-	accessTokenLifetime   = 15 * time.Minute
+	accessTokenLifetime   = 30 * 24 * time.Hour
 	refreshIdleLifetime   = 90 * 24 * time.Hour
 	refreshReuseWindow    = 90 * 24 * time.Hour
 

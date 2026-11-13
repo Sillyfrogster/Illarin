@@ -69,7 +69,7 @@ func TestOnlyTheOwnersChoiceGrantsPermissions(t *testing.T) {
 	}
 }
 
-func TestAChangedPermissionBindsIssuedCredentialsAndSurvivesRefresh(t *testing.T) {
+func TestAChangedPermissionEndsIssuedAccessTokensAndSurvivesRefresh(t *testing.T) {
 	t.Parallel()
 	r, session, pool := harness.NewConnectRouter(t)
 	app := apitest.ConnectApp(t, r, session, "Paper Lantern", "desk", bothPermissions)
@@ -87,13 +87,15 @@ func TestAChangedPermissionBindsIssuedCredentialsAndSurvivesRefresh(t *testing.T
 		return apitest.Send(t, r, apitest.AsApp(t, http.MethodPost, "/v1/library/sync", token,
 			map[string]any{"snapshot": true, "entries": []any{}})).Code
 	}
-	if code := libraryWrite(app.AccessToken); code != http.StatusForbidden {
-		t.Errorf("library write with an already-issued token = %d, want 403", code)
+	if code := libraryWrite(app.AccessToken); code != http.StatusUnauthorized {
+		t.Errorf("library write with a token issued before the change = %d, want 401", code)
 	}
 
-	apitest.DeclareFormats(t, r, app.AccessToken, []string{"test_opaque"})
+	renewed := apitest.DecodeResponse[apitest.AppCredentials](t, apitest.SendJSON(t, r, http.MethodPost, "/v1/connect/refresh",
+		apitest.JSONText(t, map[string]string{"refreshToken": app.RefreshToken})))
+	apitest.DeclareFormats(t, r, renewed.AccessToken, []string{"test_opaque"})
 	refreshed := apitest.SendJSON(t, r, http.MethodPost, "/v1/connect/refresh",
-		apitest.JSONText(t, map[string]string{"refreshToken": app.RefreshToken}))
+		apitest.JSONText(t, map[string]string{"refreshToken": renewed.RefreshToken}))
 	credentials := apitest.DecodeResponse[apitest.AppCredentials](t, refreshed)
 	if len(credentials.ConnectedApp.Permissions) != 0 {
 		t.Errorf("after an update and a refresh the app holds %v, want nothing", credentials.ConnectedApp.Permissions)
